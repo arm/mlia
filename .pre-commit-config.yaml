@@ -1,0 +1,103 @@
+# Copyright 2021, Arm Ltd.
+# SPDX-License-Identifier: Apache-2.0
+
+# pre-commit checks
+#
+# General policy:
+
+# - tools that *fix* issues are preferred to tools that only *gripe*
+#   about issues, both can coexist, but when the conflict we
+#   selectivly reconfigure the griper not the fixer.
+#
+
+repos:
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v3.4.0
+  hooks:
+    - id: check-yaml
+
+    - id: end-of-file-fixer
+
+    - id: trailing-whitespace
+
+    - id: mixed-line-ending
+      args: ['--fix=lf']
+      description: Forces to replace line ending by the UNIX 'lf' character.
+
+    - id: detect-private-key
+
+    - id: check-executables-have-shebangs
+
+    - id: check-added-large-files
+      args: ['--maxkb=100', "--enforce-all"]
+
+- repo: https://github.com/Lucas-C/pre-commit-hooks
+  rev: v1.1.9
+  hooks:
+    - id: remove-tabs
+      args: [--whitespaces-count, '8']
+
+- repo: https://github.com/asottile/reorder_python_imports
+  rev: v2.4.0
+  hooks:
+    - id: reorder-python-imports
+
+- repo: https://github.com/psf/black
+  rev: 20.8b1
+  hooks:
+    - id: black
+
+- repo: https://gitlab.com/pycqa/flake8
+  rev: '3.9.0'
+  hooks:
+    - id: flake8
+
+- repo: https://github.com/pre-commit/mirrors-pylint
+  rev: v2.6.0
+  hooks:
+  - id: pylint
+
+- repo: https://github.com/pre-commit/mirrors-mypy
+  rev: v0.790
+  hooks:
+  -   id: mypy
+
+- repo: https://github.com/PyCQA/pydocstyle
+  rev: 6.0.0
+  hooks:
+    - id: pydocstyle
+
+- repo: https://github.com/markdownlint/markdownlint
+  # Advancing requires ruby 2.6.0 which is not provided in 18.04 LTS
+  rev: v0.9.0
+  hooks:
+    - id: markdownlint
+
+- repo: https://github.com/ryanrhee/shellcheck-py
+  rev: v0.7.1.1
+  hooks:
+    - id: shellcheck
+      args: [-f, gcc, -x]
+
+- repo: local
+  hooks:
+    - id: pytest
+      name: pytest
+      stages: [manual]
+      language: system
+      entry: pytest
+      types: [python]
+      pass_filenames: false
+
+    - id: pytest-cov
+      name: pytest coverage
+      stages: [push]
+      language: system
+
+      # Initially set the required coverage % to 0, as the project
+      # adds test coverage, periodically increase this limit to prevent
+      # significant coverage regression.
+      entry: pytest --cov --cov-fail-under=0
+
+      types: [python]
+      pass_filenames: false
