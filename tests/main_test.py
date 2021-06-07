@@ -7,11 +7,13 @@ Please refer to official pytest documentation.
 
 https://docs.pytest.org/en/latest/contents.html
 """
+from typing import Any
+
 import pytest
 from mlia import main
 
 
-def test_option_version(capfd):
+def test_option_version(capfd: Any) -> None:
     """Test --version."""
     with pytest.raises(SystemExit) as ex:
         main.main(["--version"])

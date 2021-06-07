@@ -14,6 +14,7 @@ RUN apt-get update && apt-get install -y \
     python3-dev \
     python3-pip \
     ruby-dev \
+    shellcheck \
   && rm -rf /var/lib/apt/lists/*
 
 RUN locale-gen en_US.UTF-8
@@ -31,7 +32,17 @@ USER foo
 ENV PATH="/home/foo/.local/bin:${PATH}"
 
 RUN pip3 install virtualenv
-RUN pip3 install pre-commit
+
+# Create the virtualenv that CI will run within, we do this here in
+# the Dockerfile to avoid the time of creating and populating this
+# virtualenv on every test run.  The downside of this decision is that
+# we fix package versions at image creation, the upside of this
+# decision is.. we fix package versions at image creation ;-)
+RUN virtualenv --quiet --clear --python python3.6 "/home/foo/v"
+RUN /home/foo/v/bin/pip install --upgrade pip setuptools
+
+COPY requirements-dev.txt /home/foo/
+RUN /home/foo/v/bin/pip install -r /home/foo/requirements-dev.txt
 
 RUN mkdir /home/foo/.pip
 COPY pip.conf /home/foo/.pip/pip.conf
@@ -45,16 +56,7 @@ COPY pydistutils.cfg /home/foo/.pydistutils.cfg
 RUN mkdir /home/foo/fake-repo
 COPY pre-commit-config.yaml /home/foo/fake-repo/foo.yaml
 RUN cd /home/foo/fake-repo && git init
-RUN cd /home/foo/fake-repo && pre-commit install-hooks -c foo.yaml
+RUN cd /home/foo/fake-repo && /home/foo/v/bin/pre-commit install-hooks -c foo.yaml
 RUN rm -rf /home/foo/fake-repo
-
-# Create the virtualenv that CI will run within, we do this here in
-# the Dockerfile to avoid the time of creating and populating this
-# virtualenv on every test run.  The downside of this decision is that
-# we fix package versions at image creation, the upside of this
-# decision is.. we fix package versions at image creation ;-)
-RUN virtualenv --quiet --clear --python python3.6 "/home/foo/v"
-RUN /home/foo/v/bin/pip install --upgrade pip setuptools
-RUN /home/foo/v/bin/pip install pytest pytest-cov pytest-mock pyfakefs
 
 COPY self-check-helper.sh .

@@ -7,3 +7,5 @@
 build
 dist
 src/*.egg-info
+.vscode
+venv
