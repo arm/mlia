@@ -21,7 +21,10 @@ setup(
         #        "scripts/foo.sh",
     ],
     setup_requires=["setuptools_scm"],
-    install_requires=["ethos-u-vela==3.0.0"],
+    install_requires=[
+        "ethos-u-vela==3.0.0",
+        "typing_extensions==3.10.0.0",
+    ],
     maintainer="ML Inference Advisor",
     maintainer_email="matteo.martincigh@arm.com",
 )
