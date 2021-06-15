@@ -5,6 +5,7 @@ from typing import Tuple
 
 import pytest
 from ethosu.vela.compiler_driver import TensorAllocator
+from ethosu.vela.scheduler import OptimizationStrategy
 from mlia.tools.vela import OptimizedModel
 from mlia.tools.vela import VelaCompiler
 
@@ -21,7 +22,7 @@ def test_default_vela_compiler() -> None:
     assert default_compiler.arena_cache_size is None
     assert default_compiler.tensor_allocator == TensorAllocator.HillClimb
     assert default_compiler.cpu_tensor_alignment == 16
-    assert default_compiler.optimization_strategy == "Performance"
+    assert default_compiler.optimization_strategy == OptimizationStrategy.Performance
     assert default_compiler.output_dir is None
 
 

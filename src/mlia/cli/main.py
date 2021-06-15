@@ -12,6 +12,7 @@ from typing import Tuple
 from mlia import __version__
 from mlia.cli.commands import operators
 from mlia.cli.commands import ParamAnnotation
+from mlia.cli.commands import performance
 
 
 def params(command: Callable) -> Dict[str, Tuple[type, ParamAnnotation]]:
@@ -25,7 +26,7 @@ def params(command: Callable) -> Dict[str, Tuple[type, ParamAnnotation]]:
 
 def init_commands(parser: argparse.ArgumentParser) -> None:
     """Init cli subcommands."""
-    commands = [operators]
+    commands = [operators, performance]
 
     subparsers = parser.add_subparsers(dest="command")
     subparsers.required = True

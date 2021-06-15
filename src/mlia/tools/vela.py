@@ -15,6 +15,7 @@ from ethosu.vela.model_reader import ModelReaderOptions
 from ethosu.vela.model_reader import read_model
 from ethosu.vela.nn_graph import Graph
 from ethosu.vela.operation import Op
+from ethosu.vela.scheduler import OptimizationStrategy
 from ethosu.vela.scheduler import SchedulerOptions
 from ethosu.vela.supported_operators import SupportedOperators
 from typing_extensions import Literal
@@ -95,8 +96,6 @@ AcceleratorConfigType = Literal[
     "ethos-u65-512",
 ]
 
-OptimizationStrategyType = Literal["Performance", "Size"]
-
 TensorAllocatorType = Literal["LinearAlloc", "Greedy", "HillClimb"]
 
 
@@ -113,7 +112,7 @@ class VelaCompiler:
         arena_cache_size: Optional[int] = None,
         tensor_allocator: TensorAllocatorType = "HillClimb",
         cpu_tensor_alignment: int = 16,
-        optimization_strategy: OptimizationStrategyType = "Performance",
+        optimization_strategy: OptimizationStrategy = OptimizationStrategy.Performance,
         output_dir: Optional[str] = None,
     ):
         """Init Vela wrapper instance."""

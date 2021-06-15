@@ -10,3 +10,11 @@ def test_operators_command(test_models_path: Path) -> None:
 
     exit_code = main(["operators", str(model)])
     assert exit_code == 0
+
+
+def test_performance_command(test_models_path: Path) -> None:
+    """Test performance command."""
+    model = test_models_path / "simple_3_layers_model.tflite"
+
+    exit_code = main(["performance", str(model)])
+    assert exit_code == 0
