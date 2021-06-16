@@ -1,8 +1,10 @@
 """Tests for module tools/vela."""
 from pathlib import Path
+from typing import List
+from typing import Tuple
 
+import pytest
 from ethosu.vela.compiler_driver import TensorAllocator
-from mlia.tools.vela import operations
 from mlia.tools.vela import OptimizedModel
 from mlia.tools.vela import VelaCompiler
 
@@ -52,21 +54,69 @@ def test_vela_compiler_with_parameters() -> None:
 
 def test_model_optimization(test_models_path: Path) -> None:
     """Test model optimization."""
-    model = test_models_path / "simple_3_layer_model.tflite"
+    model = test_models_path / "simple_3_layers_model.tflite"
 
     compiler = VelaCompiler()
     optimized_model = compiler.compile_model(model)
     assert isinstance(optimized_model, OptimizedModel)
 
 
-def test_operations(test_models_path: Path) -> None:
+@pytest.mark.parametrize(
+    "model, expected_ops",
+    [
+        (
+            "simple_3_layers_model.tflite",
+            [
+                ("dense_input", "Placeholder", (False, [])),
+                ("sequential/dense/MatMul_reshape", "Const", (False, [])),
+                (
+                    "sequential/dense/MatMul;sequential/dense/BiasAdd",
+                    "FullyConnected",
+                    (
+                        True,
+                        [],
+                    ),
+                ),
+                ("sequential/dense_1/MatMul_reshape", "Const", (False, [])),
+                (
+                    "sequential/dense_1/MatMul;sequential/dense_1/BiasAdd;sequential/"
+                    "dense_1/Relu",
+                    "FullyConnected",
+                    (
+                        True,
+                        [],
+                    ),
+                ),
+                ("sequential/dense_2/MatMul_reshape", "Const", (False, [])),
+                (
+                    "Identity",
+                    "FullyConnected",
+                    (
+                        True,
+                        [],
+                    ),
+                ),
+            ],
+        )
+    ],
+)
+def test_operations(
+    test_models_path: Path, model: str, expected_ops: List[Tuple]
+) -> None:
     """Test operations function."""
-    model = test_models_path / "simple_3_layer_model.tflite"
-    ops = operations(model)
+    model_path = test_models_path / model
 
-    assert len(ops) == 10
+    compiler = VelaCompiler()
+    model_metadata = compiler.read_model(model_path)
+    ops = model_metadata.operations()
 
-    op = ops[0]
-    assert op.name() == "dense_input"
-    assert op.type() == "Placeholder"
-    assert op.run_on_npu() == (False, [])
+    assert len(ops) == len(expected_ops)
+    for i, op in enumerate(ops):
+        (
+            expected_name,
+            expected_type,
+            (expected_run_on_npu, expected_reasons),
+        ) = expected_ops[i]
+        assert op.name() == expected_name
+        assert op.type() == expected_type
+        assert op.run_on_npu() == (expected_run_on_npu, expected_reasons)

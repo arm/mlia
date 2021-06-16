@@ -170,9 +170,11 @@ class VelaCompiler:
 
     def _scheduler_options(self) -> SchedulerOptions:
         """Return SchedulerOptions instance."""
+        arch = self._architecture_features()
+
         return SchedulerOptions(
             optimization_strategy=self.optimization_strategy,
-            sram_target=self.arena_cache_size,
+            sram_target=arch.arena_cache_size,
             verbose_schedule=False,
         )
 
@@ -195,11 +197,3 @@ class VelaCompiler:
             output_dir=self.output_dir,
             cpu_tensor_alignment=self.cpu_tensor_alignment,
         )
-
-
-def operations(model: Union[str, Path]) -> List[Operation]:
-    """Return list of model operations."""
-    compiler = VelaCompiler()
-    model_metadata = compiler.read_model(model)
-
-    return model_metadata.operations()

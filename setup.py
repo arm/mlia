@@ -16,7 +16,7 @@ setup(
     long_description=_readme(),
     packages=find_packages("src"),
     package_dir={"": "src"},
-    entry_points={"console_scripts": ["mlia = mlia.main:main"]},
+    entry_points={"console_scripts": ["mlia = mlia.cli.main:main"]},
     scripts=[
         #        "scripts/foo.sh",
     ],
@@ -24,6 +24,7 @@ setup(
     install_requires=[
         "ethos-u-vela==3.0.0",
         "typing_extensions==3.10.0.0",
+        "tabulate==0.8.9",
     ],
     maintainer="ML Inference Advisor",
     maintainer_email="matteo.martincigh@arm.com",
