@@ -23,7 +23,8 @@ setup(
     setup_requires=["setuptools_scm"],
     install_requires=[
         "ethos-u-vela==3.0.0",
-        "typing_extensions==3.7.4.0",
+        "typing_extensions==3.7.4",
+        "numpy==1.19.5",
         "tabulate==0.8.9",
         "tensorflow==2.5.0",
         "tensorflow-model-optimization==0.5.0",
