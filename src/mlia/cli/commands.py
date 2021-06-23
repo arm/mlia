@@ -59,53 +59,61 @@ def performance(
     """Print model's performance stats."""
     performance_metrics = collect_performance_metrics(model)
 
-    print("Performance estimation:")
-
-    print(
-        "NPU cycles: {} {}".format(
-            performance_metrics.npu_cycles, performance_metrics.cycles_per_batch_unit
-        )
-    )
-    print(
-        "SRAM Access cycles: {} {}".format(
-            performance_metrics.sram_access_cycles,
+    table_data = (
+        (
+            "NPU cycles",
+            f"{performance_metrics.npu_cycles:12d}",
             performance_metrics.cycles_per_batch_unit,
-        )
-    )
-    print(
-        "DRAM Access cycles: {} {}".format(
-            performance_metrics.dram_access_cycles,
+        ),
+        (
+            "SRAM Access cycles",
+            f"{performance_metrics.sram_access_cycles:12d}",
             performance_metrics.cycles_per_batch_unit,
-        )
-    )
-    print(
-        "On-chip Flash Access cycles: {} {}".format(
-            performance_metrics.on_chip_flash_access_cycles,
+        ),
+        (
+            "DRAM Access cycles",
+            f"{performance_metrics.dram_access_cycles:12d}",
             performance_metrics.cycles_per_batch_unit,
-        )
-    )
-    print(
-        "Off-chip Flash Access cycles: {} {}".format(
-            performance_metrics.off_chip_flash_access_cycles,
+        ),
+        (
+            "On-chip Flash Access cycles",
+            f"{performance_metrics.on_chip_flash_access_cycles:12d}",
             performance_metrics.cycles_per_batch_unit,
-        )
-    )
-    print(
-        "Total cycles: {} {}".format(
-            performance_metrics.total_cycles, performance_metrics.cycles_per_batch_unit
-        )
-    )
-
-    print(
-        "Batch Inference time: {} {}".format(
-            performance_metrics.batch_inference_time,
+        ),
+        (
+            "Off-chip Flash Access cycles",
+            f"{performance_metrics.off_chip_flash_access_cycles:12d}",
+            performance_metrics.cycles_per_batch_unit,
+        ),
+        (
+            "Total cycles",
+            f"{performance_metrics.total_cycles:12d}",
+            performance_metrics.cycles_per_batch_unit,
+        ),
+        (
+            "Batch Inference cycles",
+            f"{performance_metrics.batch_inference_time:7.2f}",
             performance_metrics.inference_time_unit,
-        )
-    )
-    print(
-        "Inferences per second: {} {}".format(
-            performance_metrics.inferences_per_second,
+        ),
+        (
+            "Inferences per second",
+            f"{performance_metrics.inferences_per_second:7.2f}",
             performance_metrics.inferences_per_second_unit,
+        ),
+        (
+            "Batch size",
+            f"{performance_metrics.batch_size:d}",
+            "",
+        ),
+    )
+
+    print(
+        tabulate(
+            (
+                (fill(metric_column, 30), fill(value_column, 15), fill(unit_column, 15))
+                for metric_column, value_column, unit_column in table_data
+            ),
+            headers=["Metric", "Value", "Unit"],
+            tablefmt="grid",
         )
     )
-    print("Batch size: {}".format(performance_metrics.batch_size))
