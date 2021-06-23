@@ -21,7 +21,7 @@ class ParamAnnotation:
 def operators(
     model: Annotated[str, ParamAnnotation(description="TFLite model", positional=True)]
 ) -> None:
-    """Print model's operation list."""
+    """Print the model's operator list."""
     mladvisor = MLAdvisor()
     model_metadata = mladvisor.inspect(model)
 
