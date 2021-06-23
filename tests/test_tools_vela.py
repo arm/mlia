@@ -6,8 +6,8 @@ from typing import Tuple
 import pytest
 from ethosu.vela.compiler_driver import TensorAllocator
 from ethosu.vela.scheduler import OptimizationStrategy
-from mlia.tools.vela import OptimizedModel
-from mlia.tools.vela import VelaCompiler
+from mlia.tools.vela_wrapper import OptimizedModel
+from mlia.tools.vela_wrapper import VelaCompiler
 
 
 def test_default_vela_compiler() -> None:

@@ -5,7 +5,7 @@ from typing import NamedTuple
 from typing import Tuple
 from typing import Union
 
-from mlia.tools.vela import VelaCompiler
+from mlia.tools.vela_wrapper import VelaCompiler
 
 
 class Operation(NamedTuple):

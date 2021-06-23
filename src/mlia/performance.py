@@ -4,7 +4,7 @@
 from pathlib import Path
 from typing import Union
 
-import mlia.tools.vela as vela_wrapper
+import mlia.tools.vela_wrapper as vela_wrapper
 import numpy as np
 from ethosu.vela.architecture_features import ArchitectureFeatures
 from ethosu.vela.npu_performance import PassCycles
