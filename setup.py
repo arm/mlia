@@ -27,7 +27,7 @@ setup(
         "numpy==1.19.5",
         "tabulate==0.8.9",
         "tensorflow==2.5.0",
-        "tensorflow-model-optimization==0.5.0",
+        "tensorflow-model-optimization==0.6.0",
     ],
     maintainer="ML Inference Advisor",
     maintainer_email="matteo.martincigh@arm.com",
