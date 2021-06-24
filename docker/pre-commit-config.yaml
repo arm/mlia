@@ -88,12 +88,7 @@ repos:
       name: pytest coverage
       stages: [push]
       language: system
-
-      # Initially set the required coverage % to 0, as the project
-      # adds test coverage, periodically increase this limit to prevent
-      # significant coverage regression.
-      entry: pytest --cov --cov-report term-missing --cov-fail-under=0
-
+      entry: pytest --cov=mlia --cov-report term-missing --cov-fail-under=90 tests/
       types: [python]
       pass_filenames: false
       verbose: true
