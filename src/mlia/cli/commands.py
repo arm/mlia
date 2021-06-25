@@ -56,7 +56,7 @@ def operators(
 def performance(
     model: Annotated[str, ParamAnnotation(description="TFLite model", positional=True)]
 ) -> None:
-    """Print model's performance stats."""
+    """Print the model's performance stats."""
     performance_metrics = collect_performance_metrics(model)
 
     table_data = (

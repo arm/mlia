@@ -104,7 +104,4 @@ def test_prune_simple_model_fully(target_sparsity: int) -> None:
     _test_sparsity_per_layers(base_metrics, initial_sparsity, layers_to_prune)
     _test_sparsity_per_layers(pruned_metrics, target_sparsity, layers_to_prune)
 
-    print(base_compressed_size)
-    print(pruned_compressed_size)
-
     assert base_compressed_size > pruned_compressed_size
