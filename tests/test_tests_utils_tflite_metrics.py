@@ -1,4 +1,4 @@
-"""Test for module optimizations/tflite_metrics."""
+"""Test for module tests/utils/tflite_metrics."""
 import os
 import tempfile
 from math import isclose
@@ -8,8 +8,9 @@ from typing import List
 import numpy as np
 import pytest
 import tensorflow as tf
-from mlia.optimizations.tflite_metrics import ReportClusterMode
-from mlia.optimizations.tflite_metrics import TFLiteMetrics
+
+from tests.utils.tflite_metrics import ReportClusterMode
+from tests.utils.tflite_metrics import TFLiteMetrics
 
 
 def _dummy_keras_model() -> tf.keras.Model:

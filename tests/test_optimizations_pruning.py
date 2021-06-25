@@ -6,10 +6,10 @@ from typing import Union
 import numpy as np
 import pytest
 import tensorflow as tf
-from mlia.optimizations import tflite_metrics
-from mlia.optimizations import utils
 from mlia.optimizations.pruning import Pruner
-from mlia.optimizations.tflite_metrics import TFLiteMetrics
+
+from tests.utils import general as test_utils
+from tests.utils import tflite_metrics
 
 
 def _build_model() -> tf.keras.Model:
@@ -55,7 +55,9 @@ def _train_model(model: tf.keras.Model) -> None:
 
 
 def _test_sparsity_per_layers(
-    metrics: TFLiteMetrics, desired_sparsity: float, layers_to_prune: List[str]
+    metrics: tflite_metrics.TFLiteMetrics,
+    desired_sparsity: float,
+    layers_to_prune: List[str],
 ) -> None:
     sparsity_per_layer = metrics.sparsity_per_layer()
     for name, sparsity in sparsity_per_layer.items():
@@ -76,12 +78,12 @@ def test_prune_simple_model_fully(target_sparsity: int) -> None:
 
     base_model = _build_model()
     _train_model(base_model)
-    base_model_path = utils.save_keras_model(base_model)
+    base_model_path = test_utils.save_keras_model(base_model)
     base_compressed_size = tflite_metrics.get_gzipped_file_size(base_model_path)
 
-    tflite_base_model = utils.convert_to_tflite(base_model)
-    tflite_base_path = utils.save_tflite_model(tflite_base_model)
-    base_metrics = TFLiteMetrics(tflite_base_path)
+    tflite_base_model = test_utils.convert_to_tflite(base_model)
+    tflite_base_path = test_utils.save_tflite_model(tflite_base_model)
+    base_metrics = tflite_metrics.TFLiteMetrics(tflite_base_path)
 
     pruner = Pruner(
         base_model,
@@ -94,12 +96,12 @@ def test_prune_simple_model_fully(target_sparsity: int) -> None:
     )
     pruner.apply_pruning()
     pruned_model = pruner.get_model()
-    pruned_model_path = utils.save_keras_model(pruned_model)
+    pruned_model_path = test_utils.save_keras_model(pruned_model)
     pruned_compressed_size = tflite_metrics.get_gzipped_file_size(pruned_model_path)
 
-    tflite_pruned_model = utils.convert_to_tflite(pruned_model)
-    tflite_pruned_path = utils.save_tflite_model(tflite_pruned_model)
-    pruned_metrics = TFLiteMetrics(tflite_pruned_path)
+    tflite_pruned_model = test_utils.convert_to_tflite(pruned_model)
+    tflite_pruned_path = test_utils.save_tflite_model(tflite_pruned_model)
+    pruned_metrics = tflite_metrics.TFLiteMetrics(tflite_pruned_path)
 
     _test_sparsity_per_layers(base_metrics, initial_sparsity, layers_to_prune)
     _test_sparsity_per_layers(pruned_metrics, target_sparsity, layers_to_prune)

@@ -1,7 +1,8 @@
-"""Test for module optimizations/utils."""
+"""Test for module tests/utils/test_utils."""
 import pytest
 import tensorflow as tf
-from mlia.optimizations import utils
+
+from tests.utils import general as test_utils
 
 
 @pytest.fixture(scope="function")
@@ -21,14 +22,14 @@ def dummy_keras_model() -> tf.keras.Model:
 
 def test_convert_to_tflite(dummy_keras_model: tf.keras.Model) -> None:
     """Test converting keras model to tflite."""
-    tflite_model = utils.convert_to_tflite(dummy_keras_model)
+    tflite_model = test_utils.convert_to_tflite(dummy_keras_model)
 
     assert tflite_model
 
 
 def test_save_keras_model(dummy_keras_model: tf.keras.Model) -> None:
     """Test saving keras model."""
-    saved_path = utils.save_keras_model(dummy_keras_model)
+    saved_path = test_utils.save_keras_model(dummy_keras_model)
     loaded_model = tf.keras.models.load_model(saved_path)
 
     assert loaded_model.summary() == dummy_keras_model.summary()
@@ -36,8 +37,8 @@ def test_save_keras_model(dummy_keras_model: tf.keras.Model) -> None:
 
 def test_save_tflite_model(dummy_keras_model: tf.keras.Model) -> None:
     """Test saving tflite model."""
-    dummy_tflite_model = utils.convert_to_tflite(dummy_keras_model)
-    saved_path = utils.save_tflite_model(dummy_tflite_model)
+    dummy_tflite_model = test_utils.convert_to_tflite(dummy_keras_model)
+    saved_path = test_utils.save_tflite_model(dummy_tflite_model)
     interpreter = tf.lite.Interpreter(model_path=saved_path)
 
     assert interpreter

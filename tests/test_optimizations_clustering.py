@@ -6,12 +6,11 @@ from typing import Union
 import numpy as np
 import pytest
 import tensorflow as tf
-from mlia.optimizations import tflite_metrics
-from mlia.optimizations import utils
 from mlia.optimizations.clustering import Clusterer
 from mlia.optimizations.pruning import Pruner
-from mlia.optimizations.tflite_metrics import ReportClusterMode
-from mlia.optimizations.tflite_metrics import TFLiteMetrics
+
+from tests.utils import general as test_utils
+from tests.utils import tflite_metrics
 
 
 def _build_model() -> tf.keras.Model:
@@ -79,7 +78,9 @@ def _prune_model(
 
 
 def _test_sparsity_per_layers(
-    metrics: TFLiteMetrics, desired_sparsity: float, layers_to_prune: List[str]
+    metrics: tflite_metrics.TFLiteMetrics,
+    desired_sparsity: float,
+    layers_to_prune: List[str],
 ) -> None:
     sparsity_per_layer = metrics.sparsity_per_layer()
     for name, sparsity in sparsity_per_layer.items():
@@ -104,15 +105,15 @@ def test_cluster_simple_model_fully(
     if sparsity_aware:
         base_model = _prune_model(base_model, target_sparsity, layers_to_cluster)
 
-    base_model_path = utils.save_keras_model(base_model)
+    base_model_path = test_utils.save_keras_model(base_model)
     base_compressed_size = tflite_metrics.get_gzipped_file_size(base_model_path)
 
-    tflite_base_model = utils.convert_to_tflite(base_model)
-    tflite_base_path = utils.save_tflite_model(tflite_base_model)
-    base_metrics = TFLiteMetrics(tflite_base_path)
+    tflite_base_model = test_utils.convert_to_tflite(base_model)
+    tflite_base_path = test_utils.save_tflite_model(tflite_base_model)
+    base_metrics = tflite_metrics.TFLiteMetrics(tflite_base_path)
 
     base_clusters_per_axis = base_metrics.num_unique_weights(
-        ReportClusterMode.NUM_CLUSTERS_PER_AXIS
+        tflite_metrics.ReportClusterMode.NUM_CLUSTERS_PER_AXIS
     )
 
     for key, value in base_clusters_per_axis.items():
@@ -126,17 +127,17 @@ def test_cluster_simple_model_fully(
     )
     clusterer.apply_clustering()
     clustered_model = clusterer.get_model()
-    clustered_model_path = utils.save_keras_model(clustered_model)
+    clustered_model_path = test_utils.save_keras_model(clustered_model)
     clustered_compressed_size = tflite_metrics.get_gzipped_file_size(
         clustered_model_path
     )
 
-    tflite_clustered_model = utils.convert_to_tflite(clustered_model)
-    tflite_clustered_path = utils.save_tflite_model(tflite_clustered_model)
-    clustered_metrics = TFLiteMetrics(tflite_clustered_path)
+    tflite_clustered_model = test_utils.convert_to_tflite(clustered_model)
+    tflite_clustered_path = test_utils.save_tflite_model(tflite_clustered_model)
+    clustered_metrics = tflite_metrics.TFLiteMetrics(tflite_clustered_path)
 
     clustered_clusters_per_axis = clustered_metrics.num_unique_weights(
-        ReportClusterMode.NUM_CLUSTERS_PER_AXIS
+        tflite_metrics.ReportClusterMode.NUM_CLUSTERS_PER_AXIS
     )
 
     for key, value in clustered_clusters_per_axis.items():
