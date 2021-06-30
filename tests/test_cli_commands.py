@@ -1,20 +1,15 @@
 """Tests for cli.commands module."""
-from pathlib import Path
-
-from mlia.cli.main import main
-
-
-def test_operators_command(test_models_path: Path) -> None:
-    """Test operators command."""
-    model = test_models_path / "simple_3_layers_model.tflite"
-
-    exit_code = main(["operators", str(model)])
-    assert exit_code == 0
+import pytest
+from mlia.cli.commands import performance
 
 
-def test_performance_command(test_models_path: Path) -> None:
-    """Test performance command."""
-    model = test_models_path / "simple_3_layers_model.tflite"
+def test_command_no_device() -> None:
+    """Test that command should fail if no device provided."""
+    with pytest.raises(Exception, match="Device is not provided"):
+        performance("some_model.tflite")
 
-    exit_code = main(["performance", str(model)])
-    assert exit_code == 0
+
+def test_command_unknown_device() -> None:
+    """Test that command should fail if unknown device passed."""
+    with pytest.raises(Exception, match="Unsupported device unknown"):
+        performance("some_model.tflite", device="unknown")

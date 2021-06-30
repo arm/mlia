@@ -22,6 +22,7 @@ setup(
     ],
     setup_requires=["setuptools_scm"],
     install_requires=[
+        "six==1.15",
         "ethos-u-vela==3.0.0",
         "typing_extensions==3.7.4",
         "numpy==1.19.5",

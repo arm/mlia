@@ -1,12 +1,11 @@
 """Vela wrapper module."""
 import itertools
 from pathlib import Path
-from typing import cast
 from typing import List
 from typing import Optional
-from typing import Tuple
 from typing import Union
 
+import numpy as np
 from ethosu.vela.architecture_features import ArchitectureFeatures
 from ethosu.vela.compiler_driver import compiler_driver
 from ethosu.vela.compiler_driver import CompilerOptions
@@ -14,44 +13,18 @@ from ethosu.vela.compiler_driver import TensorAllocator
 from ethosu.vela.model_reader import ModelReaderOptions
 from ethosu.vela.model_reader import read_model
 from ethosu.vela.nn_graph import Graph
+from ethosu.vela.npu_performance import PassCycles
 from ethosu.vela.operation import Op
 from ethosu.vela.scheduler import OptimizationStrategy
 from ethosu.vela.scheduler import SchedulerOptions
 from ethosu.vela.supported_operators import SupportedOperators
+from ethosu.vela.tensor import Tensor
+from mlia.config import EthosUConfiguration
+from mlia.config import TFLiteModel
+from mlia.metadata import NpuSupported
+from mlia.metadata import Operation
+from mlia.metrics import PerformanceMetrics
 from typing_extensions import Literal
-
-
-class Operation:
-    """Operation details class."""
-
-    def __init__(self, op: Op) -> None:
-        """Init operation details instance."""
-        self.op = op
-
-    def name(self) -> str:
-        """Return operation name."""
-        return cast(str, self.op.name)
-
-    def type(self) -> str:
-        """Return operation type."""
-        return str(self.op.type)
-
-    def run_on_npu(self) -> Tuple[bool, List[Tuple[str, str]]]:
-        """Return true if operation can run on NPU."""
-        supported_operators = SupportedOperators()
-        if self.op.type not in SupportedOperators.supported_operators:
-            return False, []
-
-        operation_constraints = itertools.chain(
-            supported_operators.generic_constraints,
-            supported_operators.specific_constraints[self.op.type],
-        )
-        for constraint in operation_constraints:
-            op_valid, op_reason = constraint(self.op)
-            if not op_valid:
-                return False, [(constraint.__doc__, op_reason)]
-
-        return True, []
 
 
 class Model:
@@ -60,14 +33,6 @@ class Model:
     def __init__(self, nng: Graph) -> None:
         """Instance of the model metadata."""
         self.nng = nng
-
-    def operations(self) -> List[Operation]:
-        """Return operation details."""
-        op_details = [
-            Operation(op) for sg in self.nng.subgraphs for op in sg.get_all_ops()
-        ]
-
-        return op_details
 
 
 class OptimizedModel:
@@ -98,6 +63,8 @@ AcceleratorConfigType = Literal[
 
 TensorAllocatorType = Literal["LinearAlloc", "Greedy", "HillClimb"]
 
+OptimizationStrategyType = Literal["Performance", "Size"]
+
 
 class VelaCompiler:
     """Vela compiler wrapper."""
@@ -105,14 +72,14 @@ class VelaCompiler:
     def __init__(
         self,
         config_files: Optional[Union[str, List[str]]] = None,
-        system_config: str = "internal-default",
-        memory_mode: str = "internal-default",
+        system_config: str = ArchitectureFeatures.DEFAULT_CONFIG,
+        memory_mode: str = ArchitectureFeatures.DEFAULT_CONFIG,
         accelerator_config: AcceleratorConfigType = "ethos-u55-256",
-        max_block_dependency: int = 3,
+        max_block_dependency: int = ArchitectureFeatures.MAX_BLOCKDEP,
         arena_cache_size: Optional[int] = None,
         tensor_allocator: TensorAllocatorType = "HillClimb",
-        cpu_tensor_alignment: int = 16,
-        optimization_strategy: OptimizationStrategy = OptimizationStrategy.Performance,
+        cpu_tensor_alignment: int = Tensor.AllocationQuantum,
+        optimization_strategy: OptimizationStrategyType = "Performance",
         output_dir: Optional[str] = None,
     ):
         """Init Vela wrapper instance."""
@@ -124,7 +91,7 @@ class VelaCompiler:
         self.arena_cache_size = arena_cache_size
         self.tensor_allocator = TensorAllocator[tensor_allocator]
         self.cpu_tensor_alignment = cpu_tensor_alignment
-        self.optimization_strategy = optimization_strategy
+        self.optimization_strategy = OptimizationStrategy[optimization_strategy]
         self.output_dir = output_dir
 
     def read_model(self, model: Union[str, Path]) -> Model:
@@ -196,3 +163,83 @@ class VelaCompiler:
             output_dir=self.output_dir,
             cpu_tensor_alignment=self.cpu_tensor_alignment,
         )
+
+
+def get_vela_compiler(device: EthosUConfiguration) -> VelaCompiler:
+    """Get Vela compiler instance for provided device configuration."""
+    compiler_options = device.compiler_options
+
+    return VelaCompiler(
+        config_files=compiler_options.config_files,
+        system_config=compiler_options.system_config,
+        memory_mode=compiler_options.memory_mode,
+        accelerator_config=compiler_options.accelerator_config,
+        max_block_dependency=compiler_options.max_block_dependency,
+        arena_cache_size=compiler_options.arena_cache_size,
+        tensor_allocator=compiler_options.tensor_allocator,
+        cpu_tensor_alignment=compiler_options.cpu_tensor_alignment,
+        optimization_strategy=compiler_options.optimization_strategy,
+        output_dir=compiler_options.output_dir,
+    )
+
+
+def estimate_performance(
+    model: TFLiteModel, device: EthosUConfiguration
+) -> PerformanceMetrics:
+    """Return performance estimations for the model/device."""
+    vela_compiler = get_vela_compiler(device)
+    optimized_model = vela_compiler.compile_model(model.model_path)
+
+    arch = optimized_model.arch
+    cycles = optimized_model.nng.cycles
+    batch_size = optimized_model.nng.batch_size
+
+    # this logic comes from Vela's module stats_writer.py
+    midpoint_fps = np.nan
+    midpoint_inference_time = cycles[PassCycles.Total] / arch.core_clock
+    if midpoint_inference_time > 0:
+        midpoint_fps = 1 / midpoint_inference_time
+
+    return PerformanceMetrics(
+        npu_cycles=int(cycles[PassCycles.Npu]),
+        sram_access_cycles=int(cycles[PassCycles.SramAccess]),
+        dram_access_cycles=int(cycles[PassCycles.DramAccess]),
+        on_chip_flash_access_cycles=int(cycles[PassCycles.OnChipFlashAccess]),
+        off_chip_flash_access_cycles=int(cycles[PassCycles.OffChipFlashAccess]),
+        total_cycles=int(cycles[PassCycles.Total]),
+        batch_inference_time=midpoint_inference_time * 1000,
+        inferences_per_second=midpoint_fps,
+        batch_size=batch_size,
+    )
+
+
+def supported_operators(
+    model: TFLiteModel, device: EthosUConfiguration
+) -> List[Operation]:
+    """Return list of model's operations."""
+    vela_compiler = get_vela_compiler(device)
+    initial_model = vela_compiler.read_model(model.model_path)
+
+    return [
+        Operation(op.name, str(op.type), run_on_npu(op))
+        for sg in initial_model.nng.subgraphs
+        for op in sg.get_all_ops()
+    ]
+
+
+def run_on_npu(op: Op) -> NpuSupported:
+    """Return true if operation can run on NPU."""
+    supported_operators = SupportedOperators()
+    if op.type not in SupportedOperators.supported_operators:
+        return NpuSupported(False, [])
+
+    operation_constraints = itertools.chain(
+        supported_operators.generic_constraints,
+        supported_operators.specific_constraints[op.type],
+    )
+    for constraint in operation_constraints:
+        op_valid, op_reason = constraint(op)
+        if not op_valid:
+            return NpuSupported(False, [(constraint.__doc__, op_reason)])
+
+    return NpuSupported(True, [])

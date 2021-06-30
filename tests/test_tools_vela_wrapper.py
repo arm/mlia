@@ -6,7 +6,10 @@ from typing import Tuple
 import pytest
 from ethosu.vela.compiler_driver import TensorAllocator
 from ethosu.vela.scheduler import OptimizationStrategy
+from mlia.config import EthosU55
+from mlia.config import TFLiteModel
 from mlia.tools.vela_wrapper import OptimizedModel
+from mlia.tools.vela_wrapper import supported_operators
 from mlia.tools.vela_wrapper import VelaCompiler
 
 
@@ -49,7 +52,7 @@ def test_vela_compiler_with_parameters() -> None:
     assert compiler.arena_cache_size == 10
     assert compiler.tensor_allocator == TensorAllocator.Greedy
     assert compiler.cpu_tensor_alignment == 4
-    assert compiler.optimization_strategy == "Size"
+    assert compiler.optimization_strategy == OptimizationStrategy.Size
     assert compiler.output_dir == "output"
 
 
@@ -105,11 +108,10 @@ def test_operations(
     test_models_path: Path, model: str, expected_ops: List[Tuple]
 ) -> None:
     """Test operations function."""
-    model_path = test_models_path / model
+    tflite_model = TFLiteModel(str(test_models_path / model))
+    device = EthosU55()
 
-    compiler = VelaCompiler()
-    model_metadata = compiler.read_model(model_path)
-    ops = model_metadata.operations()
+    ops = supported_operators(tflite_model, device)
 
     assert len(ops) == len(expected_ops)
     for i, op in enumerate(ops):
@@ -118,6 +120,6 @@ def test_operations(
             expected_type,
             (expected_run_on_npu, expected_reasons),
         ) = expected_ops[i]
-        assert op.name() == expected_name
-        assert op.type() == expected_type
-        assert op.run_on_npu() == (expected_run_on_npu, expected_reasons)
+        assert op.name == expected_name
+        assert op.op_type == expected_type
+        assert op.run_on_npu == (expected_run_on_npu, expected_reasons)
