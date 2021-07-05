@@ -41,7 +41,7 @@ def report_performance_estimation(perf_metrics: PerformanceMetrics) -> None:
             perf_metrics.cycles_per_batch_unit,
         ),
         (
-            "Batch Inference cycles",
+            "Batch Inference time",
             f"{perf_metrics.batch_inference_time:7,.2f}",
             perf_metrics.inference_time_unit,
         ),
