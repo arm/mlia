@@ -1,3 +1,4 @@
+# Copyright 2021, Arm Ltd.
 """Tests for module tools/vela."""
 from pathlib import Path
 from typing import List

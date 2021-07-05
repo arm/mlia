@@ -1,5 +1,4 @@
 # Copyright 2021, Arm Ltd.
-# SPDX-License-Identifier: Apache-2.0
 
 # Execution environment for self check and tests of this repository.
 # The self check and test entry point is check-me.sh in the top level

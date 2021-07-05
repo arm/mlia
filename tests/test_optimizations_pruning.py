@@ -1,3 +1,4 @@
+# Copyright 2021, Arm Ltd.
 """Test for module optimizations/pruning."""
 from math import isclose
 from typing import List

@@ -1,3 +1,4 @@
+# Copyright 2021, Arm Ltd.
 """Vela wrapper module."""
 import itertools
 from pathlib import Path

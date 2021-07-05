@@ -1,3 +1,4 @@
+# Copyright 2021, Arm Ltd.
 """Model and IP configuration."""
 from typing import Any
 from typing import List

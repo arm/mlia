@@ -1,3 +1,4 @@
+# Copyright 2021, Arm Ltd.
 """Model's metadata module."""
 from typing import List
 from typing import NamedTuple

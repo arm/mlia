@@ -1,3 +1,4 @@
+# Copyright 2021, Arm Ltd.
 """Test for module tests/utils/tflite_metrics."""
 import os
 import tempfile

@@ -1,4 +1,5 @@
-"""Script for generate sample TFLite models."""
+# Copyright 2021, Arm Ltd.
+"""Script for generating sample TFLite models."""
 import argparse
 from pathlib import Path
 from typing import Any

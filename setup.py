@@ -1,5 +1,4 @@
 # Copyright 2021, Arm Ltd.
-# SPDX-License-Identifier: Apache-2.0
 """Module to setup the python package."""
 from setuptools import find_packages
 from setuptools import setup

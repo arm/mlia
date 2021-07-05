@@ -1,4 +1,5 @@
-"""Cli main entry point."""
+# Copyright 2021, Arm Ltd.
+"""CLI main entry point."""
 import argparse
 import sys
 from typing import List

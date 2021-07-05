@@ -1,7 +1,6 @@
 #!/bin/bash
 
 # Copyright 2021, Arm Ltd.
-# SPDX-License-Identifier: Apache-2.0
 
 # Helper script to run sanity checks and tests on this project.  The
 # top level entry point script is check-me.sh in the top level

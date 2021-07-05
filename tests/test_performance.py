@@ -1,5 +1,4 @@
 # Copyright 2021, Arm Ltd.
-# SPDX-License-Identifier: Apache-2.0
 """Performance estimation tests."""
 from pathlib import Path
 

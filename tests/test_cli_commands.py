@@ -1,3 +1,4 @@
+# Copyright 2021, Arm Ltd.
 """Tests for cli.commands module."""
 import pytest
 from mlia.cli.commands import performance

@@ -1,4 +1,5 @@
-"""Cli commands module."""
+# Copyright 2021, Arm Ltd.
+"""CLI commands module."""
 from typing import Any
 
 from mlia.config import EthosU55

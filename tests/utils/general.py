@@ -1,3 +1,4 @@
+# Copyright 2021, Arm Ltd.
 """Collection of useful functions for optimizations."""
 import tempfile
 from typing import Any

@@ -1,3 +1,4 @@
+# Copyright 2021, Arm Ltd.
 """
 Contains class Clusterer that clusters unique weights per layer to a specified number.
 

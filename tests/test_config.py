@@ -1,3 +1,4 @@
+# Copyright 2021, Arm Ltd.
 """Tests for config module."""
 import pytest
 from mlia.config import CompilerOptions

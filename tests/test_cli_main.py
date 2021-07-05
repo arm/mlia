@@ -1,5 +1,4 @@
 # Copyright 2021, Arm Ltd.
-# SPDX-License-Identifier: Apache-2.0
 """Module for running tests.
 
 This file contains tests which will be execute by pytest.

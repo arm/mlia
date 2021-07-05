@@ -1,3 +1,4 @@
+# Copyright 2021, Arm Ltd.
 """Reports module."""
 from textwrap import fill
 from typing import List
