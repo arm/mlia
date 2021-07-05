@@ -1,29 +1,43 @@
 # Copyright 2021, Arm Ltd.
-"""CLI commands module."""
+"""Cli commands module."""
+import sys
 from typing import Any
 
+from mlia._typing import OutputFormat
+from mlia._typing import PathOrFileLike
 from mlia.config import EthosU55
 from mlia.config import EthosU65
 from mlia.config import EthosUConfiguration
 from mlia.config import TFLiteModel
 from mlia.operators import supported_operators
 from mlia.performance import collect_performance_metrics
-from mlia.reporters import report_performance_estimation
-from mlia.reporters import report_supported_operators
+from mlia.reporters import report
 
 
-def operators(model: str, **device_args: Any) -> None:
+def operators(
+    model: str,
+    output_format: OutputFormat = "txt",
+    output: PathOrFileLike = sys.stdout,
+    **device_args: Any,
+) -> None:
     """Print the model's operator list."""
     tflite_model, device = TFLiteModel(model), get_device(**device_args)
     ops = supported_operators(tflite_model, device)
-    report_supported_operators(ops)
+
+    report(ops, fmt=output_format, output=output)
 
 
-def performance(model: str, **device_args: Any) -> None:
+def performance(
+    model: str,
+    output_format: OutputFormat = "txt",
+    output: PathOrFileLike = sys.stdout,
+    **device_args: Any,
+) -> None:
     """Print model's performance stats."""
     tflite_model, device = TFLiteModel(model), get_device(**device_args)
     perf_metrics = collect_performance_metrics(tflite_model, device)
-    report_performance_estimation(perf_metrics)
+
+    report(perf_metrics, fmt=output_format, output=output)
 
 
 def get_device(**kwargs: Any) -> EthosUConfiguration:

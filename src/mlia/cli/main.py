@@ -69,14 +69,41 @@ def add_model_options(parser: argparse.ArgumentParser) -> None:
     model_group.add_argument("model", help="TFLite model")
 
 
+def add_output_options(parser: argparse.ArgumentParser) -> None:
+    """Add output specific options."""
+    output_group = parser.add_argument_group("output_opts", "Output options")
+    output_group.add_argument(
+        "--output_format",
+        choices=["txt", "json", "csv"],
+        default="txt",
+        help="Output format (default: %(default)s)",
+    )
+    output_group.add_argument(
+        "--output",
+        default=sys.stdout,
+        help=(
+            "Name of the file where report will be saved. If no file "
+            "name is specified, the report will be displayed on the standard output"
+        ),
+    )
+
+
 def init_commands(parser: argparse.ArgumentParser) -> None:
     """Init cli subcommands."""
     subparsers = parser.add_subparsers(title="Commands", dest="command")
     subparsers.required = True
 
     commands = [
-        (operators, ["ops"], [add_device_options, add_model_options]),
-        (performance, ["perf"], [add_device_options, add_model_options]),
+        (
+            operators,
+            ["ops"],
+            [add_device_options, add_model_options, add_output_options],
+        ),
+        (
+            performance,
+            ["perf"],
+            [add_device_options, add_model_options, add_output_options],
+        ),
     ]
 
     for command in commands:
