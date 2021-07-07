@@ -6,63 +6,88 @@ In order to do this, we need to have a base model and corresponding training dat
 We also have to specify a subset of layers we want to prune.
 """
 from typing import List
+from typing import Optional
+from typing import Tuple
 
 import numpy as np
 import tensorflow as tf
 import tensorflow_model_optimization as tfmot
+from mlia.optimizations.common import Optimizer
+from mlia.optimizations.common import OptimizerConfiguration
 
 
-class Pruner:
+class PruningConfiguration(OptimizerConfiguration):
+    """Pruning configuration."""
+
+    def __init__(
+        self,
+        optimization_target: float,
+        layers_to_optimize: Optional[List[str]] = None,
+        x_train: Optional[np.array] = None,
+        y_train: Optional[np.array] = None,
+        batch_size: int = 1,
+        num_epochs: int = 1,
+    ):
+        """Init pruning configuration."""
+        self.optimization_target = optimization_target
+        self.layers_to_optimize = layers_to_optimize
+        self.x_train = x_train
+        self.y_train = y_train
+        self.batch_size = batch_size
+        self.num_epochs = num_epochs
+
+
+class Pruner(Optimizer):
     """
     Pruner class. Used to prune a model to a specified sparsity.
 
     Sample usage:
     pruner = Pruner(
         base_model,
-        x_train,
-        y_train,
-        target_sparsity,
-        batch_size,
-        num_epochs,
-        layers_to_prune,
+        optimizer_configuration,
     )
     pruner.apply_pruning()
     pruned_model = pruner.get_model()
     """
 
     def __init__(
-        self,
-        model: tf.keras.Model,
-        x_train: np.array,
-        y_train: np.array,
-        target_sparsity: float,
-        batch_size: int,
-        num_epochs: int,
-        layers_to_prune: List[str],
+        self, model: tf.keras.Model, optimizer_configuration: PruningConfiguration
     ):
         """Init Pruner instance."""
         self.model = model
-        self.x_train = x_train
-        self.y_train = y_train
-        self.target_sparsity = target_sparsity
-        self.batch_size = batch_size
-        self.num_epochs = num_epochs
-        self.layers_to_prune = layers_to_prune
+        self.optimizer_configuration = optimizer_configuration
 
-    def get_model(self) -> tf.keras.Model:
-        """Return the model instance from the pruner."""
-        return self.model
+        if (
+            self.optimizer_configuration.x_train is None
+            or self.optimizer_configuration.y_train is None
+        ):
+            (
+                self.optimizer_configuration.x_train,
+                self.optimizer_configuration.y_train,
+            ) = self._mock_train_data(1)
+
+    def _mock_train_data(self, num_imgs: int) -> Tuple[np.array, np.array]:
+        return (
+            np.random.rand(num_imgs, *self.model.input_shape[1:]),
+            np.random.randint(1, self.model.output_shape[-1], (num_imgs)),
+        )
 
     def _setup_pruning_params(self) -> dict:
-        num_images = self.x_train.shape[0]
+        assert self.optimizer_configuration.x_train is not None
+        num_images = self.optimizer_configuration.x_train.shape[0]
 
         end_step = (
-            np.ceil(num_images / self.batch_size).astype(np.int32) * self.num_epochs
+            np.ceil(num_images / self.optimizer_configuration.batch_size).astype(
+                np.int32
+            )
+            * self.optimizer_configuration.num_epochs
         )
 
         pruning_params = {
             "pruning_schedule": tfmot.sparsity.keras.ConstantSparsity(
-                target_sparsity=self.target_sparsity, begin_step=0, end_step=end_step
+                target_sparsity=self.optimizer_configuration.optimization_target,
+                begin_step=0,
+                end_step=end_step,
             ),
         }
 
@@ -73,7 +98,10 @@ class Pruner:
     ) -> tf.keras.layers.Layer:
         pruning_params = self._setup_pruning_params()
 
-        if layer.name in self.layers_to_prune:
+        # To make mypy happy.
+        assert self.optimizer_configuration.layers_to_optimize is not None
+
+        if layer.name in self.optimizer_configuration.layers_to_optimize:
             return tfmot.sparsity.keras.prune_low_magnitude(layer, **pruning_params)
 
         return layer
@@ -81,14 +109,21 @@ class Pruner:
     def _init_for_pruning(self) -> None:
         # Use `tf.keras.models.clone_model` to apply `apply_pruning_to_layer`
         # to the layers of the model.
-        prunable_model = tf.keras.models.clone_model(
-            self.model, clone_function=self._apply_pruning_to_layer
-        )
+
+        if self.optimizer_configuration.layers_to_optimize is None:
+            pruning_params = self._setup_pruning_params()
+            prunable_model = tfmot.sparsity.keras.prune_low_magnitude(
+                self.model, **pruning_params
+            )
+        else:
+            prunable_model = tf.keras.models.clone_model(
+                self.model, clone_function=self._apply_pruning_to_layer
+            )
 
         self.model = prunable_model
 
     def _train_pruning(self) -> None:
-        loss_fn = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
+        loss_fn = tf.keras.losses.SparseCategoricalCrossentropy()
         self.model.compile(optimizer="adam", loss=loss_fn, metrics=["accuracy"])
 
         # Model callbacks
@@ -96,18 +131,22 @@ class Pruner:
 
         # Fitting data
         self.model.fit(
-            self.x_train,
-            self.y_train,
-            batch_size=self.batch_size,
-            epochs=self.num_epochs,
+            self.optimizer_configuration.x_train,
+            self.optimizer_configuration.y_train,
+            batch_size=self.optimizer_configuration.batch_size,
+            epochs=self.optimizer_configuration.num_epochs,
             callbacks=callbacks,
         )
 
     def _strip_pruning(self) -> None:
         self.model = tfmot.sparsity.keras.strip_pruning(self.model)
 
-    def apply_pruning(self) -> None:
-        """Apply all steps of pruning at once."""
+    def apply_optimization(self) -> None:
+        """Apply all steps of pruning sequentially."""
         self._init_for_pruning()
         self._train_pruning()
         self._strip_pruning()
+
+    def get_model(self) -> tf.keras.Model:
+        """Get model."""
+        return self.model

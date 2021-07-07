@@ -2,15 +2,16 @@
 """Test for module optimizations/pruning."""
 from math import isclose
 from typing import List
-from typing import Union
+from typing import Optional
+from typing import Tuple
 
 import numpy as np
 import pytest
 import tensorflow as tf
 from mlia.optimizations.pruning import Pruner
-
-from tests.utils import general as test_utils
-from tests.utils import tflite_metrics
+from mlia.optimizations.pruning import PruningConfiguration
+from mlia.utils import general as test_utils
+from mlia.utils import tflite_metrics
 
 
 def _build_model() -> tf.keras.Model:
@@ -23,6 +24,9 @@ def _build_model() -> tf.keras.Model:
             tf.keras.layers.Conv2D(
                 filters=12, kernel_size=(3, 3), activation="relu", name="conv1"
             ),
+            tf.keras.layers.Conv2D(
+                filters=12, kernel_size=(3, 3), activation="relu", name="conv2"
+            ),
             tf.keras.layers.MaxPool2D(2, 2),
             tf.keras.layers.Flatten(),
             tf.keras.layers.Dense(10),
@@ -32,7 +36,7 @@ def _build_model() -> tf.keras.Model:
     return keras_model
 
 
-def _get_dataset() -> Union[np.array, np.array]:
+def _get_dataset() -> Tuple[np.array, np.array]:
     mnist = tf.keras.datasets.mnist
     (x_train, y_train), _ = mnist.load_data()
     x_train = x_train / 255.0
@@ -58,9 +62,16 @@ def _train_model(model: tf.keras.Model) -> None:
 def _test_sparsity_per_layers(
     metrics: tflite_metrics.TFLiteMetrics,
     desired_sparsity: float,
-    layers_to_prune: List[str],
+    layers_to_prune: Optional[List[str]],
 ) -> None:
     sparsity_per_layer = metrics.sparsity_per_layer()
+
+    if layers_to_prune is None:
+        layers_to_prune = ["conv1", "conv2"]
+
+    # To make mypy happy.
+    assert layers_to_prune is not None
+
     for name, sparsity in sparsity_per_layer.items():
         if name in layers_to_prune:
             assert isclose(
@@ -68,14 +79,17 @@ def _test_sparsity_per_layers(
             ), "Layer '{}' has incorrect sparsity.".format(name)
 
 
-@pytest.mark.parametrize("target_sparsity", (0.1, 0.5, 0.9))
-def test_prune_simple_model_fully(target_sparsity: int) -> None:
+@pytest.mark.parametrize("target_sparsity", (0.1, 0.9))
+@pytest.mark.parametrize("mock_data", (False, True))
+@pytest.mark.parametrize("layers_to_prune", (["conv1"], ["conv1", "conv2"], None))
+def test_prune_simple_model_fully(
+    target_sparsity: int, mock_data: bool, layers_to_prune: Optional[List[str]]
+) -> None:
     """Simple mnist test to see if pruning works correctly."""
     x_train, y_train = _get_dataset()
     initial_sparsity = 0.0
     batch_size = 1000
     num_epochs = 10
-    layers_to_prune = ["conv1"]
 
     base_model = _build_model()
     _train_model(base_model)
@@ -86,16 +100,29 @@ def test_prune_simple_model_fully(target_sparsity: int) -> None:
     tflite_base_path = test_utils.save_tflite_model(tflite_base_model)
     base_metrics = tflite_metrics.TFLiteMetrics(tflite_base_path)
 
-    pruner = Pruner(
-        base_model,
-        x_train,
-        y_train,
-        target_sparsity,
-        batch_size,
-        num_epochs,
-        layers_to_prune,
-    )
-    pruner.apply_pruning()
+    if mock_data:
+        pruner = Pruner(
+            base_model,
+            PruningConfiguration(
+                target_sparsity,
+                layers_to_prune,
+            ),
+        )
+
+    else:
+        pruner = Pruner(
+            base_model,
+            PruningConfiguration(
+                target_sparsity,
+                layers_to_prune,
+                x_train,
+                y_train,
+                batch_size,
+                num_epochs,
+            ),
+        )
+
+    pruner.apply_optimization()
     pruned_model = pruner.get_model()
     pruned_model_path = test_utils.save_keras_model(pruned_model)
     pruned_compressed_size = tflite_metrics.get_gzipped_file_size(pruned_model_path)

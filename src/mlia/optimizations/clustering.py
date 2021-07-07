@@ -6,15 +6,31 @@ In order to do this, we need to have a base model and corresponding training dat
 We also have to specify a subset of layers we want to cluster.
 """
 from typing import List
+from typing import Optional
 
 import tensorflow as tf
 import tensorflow_model_optimization as tfmot
+from mlia.optimizations.common import Optimizer
+from mlia.optimizations.common import OptimizerConfiguration
 from tensorflow_model_optimization.python.core.clustering.keras.experimental import (
     cluster as experimental_cluster,
 )
 
 
-class Clusterer:
+class ClusteringConfiguration(OptimizerConfiguration):
+    """Clustering configuration."""
+
+    def __init__(
+        self,
+        optimization_target: int,
+        layers_to_optimize: Optional[List[str]] = None,
+    ):
+        """Init clustering configuration."""
+        self.optimization_target = optimization_target
+        self.layers_to_optimize = layers_to_optimize
+
+
+class Clusterer(Optimizer):
     """
     Clusterer class.
 
@@ -23,33 +39,24 @@ class Clusterer:
     Sample usage:
     clusterer = Clusterer(
         base_model,
-        target_num_clusters,
-        layers_to_cluster,
+        optimizer_configuration
     )
     clusterer.apply_clustering()
     clustered_model = clusterer.get_model()
     """
 
     def __init__(
-        self,
-        model: tf.keras.Model,
-        target_num_clusters: int,
-        layers_to_cluster: List[str],
+        self, model: tf.keras.Model, optimizer_configuration: ClusteringConfiguration
     ):
         """Init Clusterer instance."""
         self.model = model
-        self.target_num_clusters = target_num_clusters
-        self.layers_to_cluster = layers_to_cluster
-
-    def get_model(self) -> tf.keras.Model:
-        """Return the model instance from the clusterer."""
-        return self.model
+        self.optimizer_configuration = optimizer_configuration
 
     def _setup_clustering_params(self) -> dict:
         CentroidInitialization = tfmot.clustering.keras.CentroidInitialization
 
         clustering_params = {
-            "number_of_clusters": self.target_num_clusters,
+            "number_of_clusters": self.optimizer_configuration.optimization_target,
             "cluster_centroids_init": CentroidInitialization.LINEAR,
             "preserve_sparsity": True,
         }
@@ -61,7 +68,10 @@ class Clusterer:
     ) -> tf.keras.layers.Layer:
         clustering_params = self._setup_clustering_params()
 
-        if layer.name in self.layers_to_cluster:
+        # To make mypy happy.
+        assert self.optimizer_configuration.layers_to_optimize is not None
+
+        if layer.name in self.optimizer_configuration.layers_to_optimize:
             layer = experimental_cluster.cluster_weights(layer, **clustering_params)
 
         return layer
@@ -69,16 +79,27 @@ class Clusterer:
     def _init_for_clustering(self) -> None:
         # Use `tf.keras.models.clone_model` to apply `apply_clustering_to_layer`
         # to the layers of the model.
-        clustered_model = tf.keras.models.clone_model(
-            self.model, clone_function=self._apply_clustering_to_layer
-        )
+        if self.optimizer_configuration.layers_to_optimize is None:
+            clustering_params = self._setup_clustering_params()
+            clustered_model = experimental_cluster.cluster_weights(
+                self.model, **clustering_params
+            )
+
+        else:
+            clustered_model = tf.keras.models.clone_model(
+                self.model, clone_function=self._apply_clustering_to_layer
+            )
 
         self.model = clustered_model
 
     def _strip_clustering(self) -> None:
         self.model = tfmot.clustering.keras.strip_clustering(self.model)
 
-    def apply_clustering(self) -> None:
+    def apply_optimization(self) -> None:
         """Apply all steps of clustering at once."""
         self._init_for_clustering()
         self._strip_clustering()
+
+    def get_model(self) -> tf.keras.Model:
+        """Get model."""
+        return self.model

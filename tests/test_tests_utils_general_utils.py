@@ -2,8 +2,7 @@
 """Test for module tests/utils/test_utils."""
 import pytest
 import tensorflow as tf
-
-from tests.utils import general as test_utils
+from mlia.utils import general as test_utils
 
 
 @pytest.fixture(scope="function")

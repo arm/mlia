@@ -2,16 +2,18 @@
 """Test for module optimizations/clustering."""
 from math import isclose
 from typing import List
-from typing import Union
+from typing import Optional
+from typing import Tuple
 
 import numpy as np
 import pytest
 import tensorflow as tf
 from mlia.optimizations.clustering import Clusterer
+from mlia.optimizations.clustering import ClusteringConfiguration
 from mlia.optimizations.pruning import Pruner
-
-from tests.utils import general as test_utils
-from tests.utils import tflite_metrics
+from mlia.optimizations.pruning import PruningConfiguration
+from mlia.utils import general as test_utils
+from mlia.utils import tflite_metrics
 
 
 def _build_model() -> tf.keras.Model:
@@ -24,6 +26,9 @@ def _build_model() -> tf.keras.Model:
             tf.keras.layers.Conv2D(
                 filters=12, kernel_size=(3, 3), activation="relu", name="conv1"
             ),
+            tf.keras.layers.Conv2D(
+                filters=12, kernel_size=(3, 3), activation="relu", name="conv2"
+            ),
             tf.keras.layers.MaxPool2D(2, 2),
             tf.keras.layers.Flatten(),
             tf.keras.layers.Dense(10),
@@ -33,7 +38,7 @@ def _build_model() -> tf.keras.Model:
     return keras_model
 
 
-def _get_dataset() -> Union[np.array, np.array]:
+def _get_dataset() -> Tuple[np.array, np.array]:
     mnist = tf.keras.datasets.mnist
     (x_train, y_train), _ = mnist.load_data()
     x_train = x_train / 255.0
@@ -57,7 +62,7 @@ def _train_model(model: tf.keras.Model) -> None:
 
 
 def _prune_model(
-    model: tf.keras.Model, target_sparsity: float, layers_to_prune: List[str]
+    model: tf.keras.Model, target_sparsity: float, layers_to_prune: Optional[List[str]]
 ) -> tf.keras.Model:
     x_train, y_train = _get_dataset()
     batch_size = 1000
@@ -65,14 +70,16 @@ def _prune_model(
 
     pruner = Pruner(
         model,
-        x_train,
-        y_train,
-        target_sparsity,
-        batch_size,
-        num_epochs,
-        layers_to_prune,
+        PruningConfiguration(
+            target_sparsity,
+            layers_to_prune,
+            x_train,
+            y_train,
+            batch_size,
+            num_epochs,
+        ),
     )
-    pruner.apply_pruning()
+    pruner.apply_optimization()
     pruned_model = pruner.get_model()
 
     return pruned_model
@@ -81,9 +88,12 @@ def _prune_model(
 def _test_sparsity_per_layers(
     metrics: tflite_metrics.TFLiteMetrics,
     desired_sparsity: float,
-    layers_to_prune: List[str],
+    layers_to_prune: Optional[List[str]],
 ) -> None:
     sparsity_per_layer = metrics.sparsity_per_layer()
+    if layers_to_prune is None:
+        layers_to_prune = ["conv1", "conv2"]
+    assert layers_to_prune is not None
     for name, sparsity in sparsity_per_layer.items():
         if name in layers_to_prune:
             assert isclose(
@@ -92,12 +102,14 @@ def _test_sparsity_per_layers(
 
 
 @pytest.mark.parametrize("sparsity_aware", (False, True))
-@pytest.mark.parametrize("target_num_clusters", (32, 16, 8, 4))
+@pytest.mark.parametrize("target_num_clusters", (32, 4))
+@pytest.mark.parametrize("layers_to_cluster", (["conv1"], ["conv1", "conv2"], None))
 def test_cluster_simple_model_fully(
-    target_num_clusters: int, sparsity_aware: bool
+    target_num_clusters: int,
+    sparsity_aware: bool,
+    layers_to_cluster: Optional[List[str]],
 ) -> None:
     """Simple mnist test to see if clustering works correctly."""
-    layers_to_cluster = ["conv1"]
     target_sparsity = 0.5
 
     base_model = _build_model()
@@ -123,10 +135,12 @@ def test_cluster_simple_model_fully(
 
     clusterer = Clusterer(
         base_model,
-        target_num_clusters,
-        layers_to_cluster,
+        ClusteringConfiguration(
+            target_num_clusters,
+            layers_to_cluster,
+        ),
     )
-    clusterer.apply_clustering()
+    clusterer.apply_optimization()
     clustered_model = clusterer.get_model()
     clustered_model_path = test_utils.save_keras_model(clustered_model)
     clustered_compressed_size = tflite_metrics.get_gzipped_file_size(
