@@ -20,12 +20,17 @@ from ethosu.vela.scheduler import OptimizationStrategy
 from ethosu.vela.scheduler import SchedulerOptions
 from ethosu.vela.supported_operators import SupportedOperators
 from ethosu.vela.tensor import Tensor
+from ethosu.vela.tflite_mapping import optype_to_builtintype
 from mlia.config import EthosUConfiguration
 from mlia.config import TFLiteModel
 from mlia.metadata import NpuSupported
 from mlia.metadata import Operation
 from mlia.metrics import PerformanceMetrics
+from mlia.utils import suppress_any_output
 from typing_extensions import Literal
+
+
+VELA_INTERNAL_OPS = (Op.Placeholder, Op.SubgraphInput, Op.Const)
 
 
 class Model:
@@ -112,7 +117,8 @@ class VelaCompiler:
         compiler_options = self._compiler_options()
         scheduler_options = self._scheduler_options()
 
-        compiler_driver(nng, arch, compiler_options, scheduler_options)
+        with suppress_any_output():
+            compiler_driver(nng, arch, compiler_options, scheduler_options)
 
         return OptimizedModel(nng, arch, compiler_options, scheduler_options)
 
@@ -121,7 +127,8 @@ class VelaCompiler:
         """Read tflite model."""
         model_path = str(model) if isinstance(model, Path) else model
 
-        return read_model(model_path, ModelReaderOptions())
+        with suppress_any_output():
+            return read_model(model_path, ModelReaderOptions())
 
     def _architecture_features(self) -> ArchitectureFeatures:
         """Return ArchitectureFeatures instance."""
@@ -222,9 +229,10 @@ def supported_operators(
     initial_model = vela_compiler.read_model(model.model_path)
 
     return [
-        Operation(op.name, str(op.type), run_on_npu(op))
+        Operation(op.name, optype_to_builtintype(op.type), run_on_npu(op))
         for sg in initial_model.nng.subgraphs
         for op in sg.get_all_ops()
+        if op.type not in VELA_INTERNAL_OPS
     ]
 
 
@@ -232,7 +240,11 @@ def run_on_npu(op: Op) -> NpuSupported:
     """Return true if operation can run on NPU."""
     supported_operators = SupportedOperators()
     if op.type not in SupportedOperators.supported_operators:
-        return NpuSupported(False, [])
+        reasons = (
+            [("CPU only operator", "")] if op.type not in VELA_INTERNAL_OPS else []
+        )
+
+        return NpuSupported(False, reasons)
 
     operation_constraints = itertools.chain(
         supported_operators.generic_constraints,

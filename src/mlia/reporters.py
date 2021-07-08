@@ -233,9 +233,10 @@ class SupportedOperatorsReporter(Reporter):
         ops = cast(List[Operation], data)
         table_data = (
             (
+                i + 1,
                 fill(op.name, 30),
-                fill(op.op_type, 15),
-                fill(str(op.run_on_npu.supported), 20),
+                fill(op.op_type, 25),
+                fill("Yes" if op.run_on_npu.supported else "No", 20),
                 tabulate(
                     (
                         (fill(reason, 30), fill(description, 40))
@@ -244,12 +245,13 @@ class SupportedOperatorsReporter(Reporter):
                     tablefmt="plain",
                 ),
             )
-            for op in ops
+            for i, op in enumerate(ops)
         )
 
         return tabulate(
             table_data,
             headers=[
+                "#",
                 "Operation name",
                 "Operation type",
                 "Supported on NPU",

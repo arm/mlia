@@ -72,30 +72,26 @@ def test_model_optimization(test_models_path: Path) -> None:
         (
             "simple_3_layers_model.tflite",
             [
-                ("dense_input", "Placeholder", (False, [])),
-                ("sequential/dense/MatMul_reshape", "Const", (False, [])),
                 (
                     "sequential/dense/MatMul;sequential/dense/BiasAdd",
-                    "FullyConnected",
+                    "FULLY_CONNECTED",
                     (
                         True,
                         [],
                     ),
                 ),
-                ("sequential/dense_1/MatMul_reshape", "Const", (False, [])),
                 (
                     "sequential/dense_1/MatMul;sequential/dense_1/BiasAdd;sequential/"
                     "dense_1/Relu",
-                    "FullyConnected",
+                    "FULLY_CONNECTED",
                     (
                         True,
                         [],
                     ),
                 ),
-                ("sequential/dense_2/MatMul_reshape", "Const", (False, [])),
                 (
                     "Identity",
-                    "FullyConnected",
+                    "FULLY_CONNECTED",
                     (
                         True,
                         [],

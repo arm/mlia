@@ -1,5 +1,5 @@
 # Copyright 2021, Arm Ltd.
-"""Advisor module."""
+"""Operators module."""
 from typing import List
 
 from mlia.config import EthosUConfiguration
