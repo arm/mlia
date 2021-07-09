@@ -6,6 +6,7 @@ from typing import List
 from typing import Optional
 
 from mlia import __version__
+from mlia.cli.commands import keras_to_tflite
 from mlia.cli.commands import model_optimization
 from mlia.cli.commands import operators
 from mlia.cli.commands import performance
@@ -126,6 +127,26 @@ def add_keras_model_options(parser: argparse.ArgumentParser) -> None:
     model_group.add_argument("model", help="Keras model")
 
 
+def add_quantize_option(parser: argparse.ArgumentParser) -> None:
+    """Add quantization if needed."""
+    quantization_group = parser.add_argument_group(
+        "quantization_opts", "Quantization options"
+    )
+    quantization_group.add_argument(
+        "--quantized",
+        default=False,
+        action="store_true",
+        help="""Quantizes model to int8 if provided.
+        Leaves it as fp32 if otherwise.""",
+    )
+
+
+def add_out_path(parser: argparse.ArgumentParser) -> None:
+    """Add option for output path instead of temporary directory."""
+    out_path_group = parser.add_argument_group("out_path", "Output path")
+    out_path_group.add_argument("--out_path", default=None)
+
+
 def init_commands(parser: argparse.ArgumentParser) -> None:
     """Init cli subcommands."""
     subparsers = parser.add_subparsers(title="Commands", dest="command")
@@ -146,6 +167,11 @@ def init_commands(parser: argparse.ArgumentParser) -> None:
             model_optimization,
             ["mopt"],
             [add_keras_model_options, add_optimization_options],
+        ),
+        (
+            keras_to_tflite,
+            ["k2l"],
+            [add_keras_model_options, add_out_path, add_quantize_option],
         ),
     ]
 

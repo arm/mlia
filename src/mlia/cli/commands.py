@@ -2,6 +2,7 @@
 """Cli commands module."""
 import sys
 from typing import Any
+from typing import Optional
 
 import tensorflow as tf
 from mlia._typing import OutputFormat
@@ -18,7 +19,9 @@ from mlia.optimizations.pruning import Pruner
 from mlia.optimizations.pruning import PruningConfiguration
 from mlia.performance import collect_performance_metrics
 from mlia.reporters import report
+from mlia.utils.general import convert_to_tflite
 from mlia.utils.general import save_keras_model
+from mlia.utils.general import save_tflite_model
 
 
 def operators(
@@ -47,17 +50,31 @@ def performance(
     report([device, perf_metrics], fmt=output_format, output=output)
 
 
-def model_optimization(model: str, **optimizer_args: Any) -> None:
+def model_optimization(
+    model: str, out_path: Optional[str] = None, **optimizer_args: Any
+) -> str:
     """Apply specified optimization to the model and save resulting file."""
     keras_model = tf.keras.models.load_model(model)
     optimizer = _get_optimizer(keras_model, **optimizer_args)
 
     optimizer.apply_optimization()
     optimized_model = optimizer.get_model()
+    optimized_model_path = save_keras_model(optimized_model, out_path)
 
-    saved_model_path = save_keras_model(optimized_model)
+    print(f"Model {model} saved to {optimized_model_path}")
 
-    print(f"Model {model} saved to {saved_model_path}")
+    return optimized_model_path
+
+
+def keras_to_tflite(model: str, out_path: str, quantized: bool) -> str:
+    """Convert keras model to tflite format and save resulting file."""
+    keras_model = tf.keras.models.load_model(model)
+    tflite_model = convert_to_tflite(keras_model, quantized)
+    tflite_model_path = save_tflite_model(tflite_model, out_path)
+
+    print(f"Model {model} saved to {tflite_model_path}")
+
+    return tflite_model_path
 
 
 def _get_device(**kwargs: Any) -> EthosUConfiguration:

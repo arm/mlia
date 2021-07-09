@@ -86,3 +86,20 @@ def test_model_optimization_command(args: List[str]) -> None:
 
     exit_code = main(["model_optimization", model_path] + args)
     assert exit_code == 0
+
+
+@pytest.mark.parametrize(
+    "quantize",
+    [True, False],
+)
+def test_keras_to_tflite_command(quantize: bool) -> None:
+    """Test keras_to_flite command."""
+    model = generate_keras_model()
+    model_path = save_keras_model(model)
+
+    if quantize:
+        exit_code = main(["keras_to_tflite", model_path, "--quantize"])
+    else:
+        exit_code = main(["keras_to_tflite", model_path])
+
+    assert exit_code == 0
