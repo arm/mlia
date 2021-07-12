@@ -9,288 +9,483 @@ from contextlib import ExitStack
 from pathlib import Path
 from textwrap import fill
 from typing import Any
-from typing import cast
+from typing import Callable
 from typing import Dict
 from typing import List
+from typing import Optional
+from typing import Union
 
 from mlia._typing import FileLike
 from mlia._typing import OutputFormat
 from mlia._typing import PathOrFileLike
+from mlia.config import EthosUConfiguration
 from mlia.metadata import Operation
 from mlia.metrics import PerformanceMetrics
 from tabulate import tabulate
 
 
-class DataTypeChecker:
-    """Class contains methods for checking data types."""
-
-    def is_perf_metrics(self, data: Any) -> bool:
-        """Return true if data is performance metrics."""
-        return isinstance(data, PerformanceMetrics)
-
-    def is_operations(self, data: Any) -> bool:
-        """Return true if data is list of the model's operations."""
-        return isinstance(data, list) and all(
-            isinstance(item, Operation) for item in data
-        )
-
-
-class Reporter(ABC):
-    """Abstract class for the reporter."""
-
-    def __init__(self) -> None:
-        """Init reporter."""
-        self.type_checker = DataTypeChecker()
+class Report(ABC):
+    """Abstract class for the report."""
 
     @abstractmethod
-    def supported_formats(self, data: Any) -> List[str]:
-        """Abstract method to check supported data."""
+    def to_json(self) -> Any:
+        """Convert to json serializible format."""
 
-    def report(self, data: Any, fmt: str, output: FileLike, **kwargs: Any) -> None:
-        """Produce report."""
-        if fmt == "txt":
-            self.text(data, output, **kwargs)
-        elif fmt == "json":
-            self.json(data, output, **kwargs)
-        elif fmt == "csv":
-            self.csv(data, output, **kwargs)
-        else:
-            raise Exception(f"Unknown format {fmt}")
+    @abstractmethod
+    def to_csv(self) -> List:
+        """Convert to csv serializible format."""
 
-    def to_json(self, data: Any, **kwargs: Any) -> Dict:
-        """Get json representation for the data."""
-        raise NotImplementedError()
-
-    def to_csv(self, data: Any, **kwargs: Any) -> List[Any]:
-        """Get csv representation for the data."""
-        raise NotImplementedError()
-
-    def to_text(self, data: Any, **kwargs: Any) -> str:
-        """Get text representation for the data."""
-        raise NotImplementedError()
-
-    def json(self, data: Any, output: FileLike, **kwargs: Any) -> None:
-        """Produce report in json format."""
-        json_data = self.to_json(data, **kwargs)
-
-        json.dump(json_data, output, indent=4)
-
-    def text(self, data: Any, output: FileLike, **kwargs: Any) -> None:
-        """Produce report in text format."""
-        text_data = self.to_text(data, **kwargs)
-
-        print(text_data, file=output)
-
-    def csv(self, data: Any, output: FileLike, **kwargs: Any) -> None:
-        """Produce report in csv format."""
-        csv_data = self.to_csv(data, **kwargs)
-
-        csv_writer = csv.writer(output)
-        csv_writer.writerows(csv_data)
+    @abstractmethod
+    def to_text(self) -> str:
+        """Convert to human readable format."""
 
 
-class PerformanceEstimationReporter(Reporter):
-    """Performance estimation reporter."""
+class Format:
+    """Column or cell format."""
 
-    def supported_formats(self, data: Any) -> List[str]:
-        """Check if data is performance metrics."""
-        if self.type_checker.is_perf_metrics(data):
-            return ["txt", "csv", "json"]
+    def __init__(
+        self,
+        wrap_width: Optional[int] = None,
+        str_fmt: Optional[str] = None,
+    ) -> None:
+        """Init format instance.
 
-        return []
+        Format could be applied either to a column or an individual cell.
 
-    def to_json(self, data: Any, **kwargs: Any) -> Dict:
-        """Get json representation for the data."""
-        perf_metrics = cast(PerformanceMetrics, data)
-        table_data = self._convert(perf_metrics, False)
+        :param wrap_width: width of the wrapped text value
+        :param str_fmt: string format to be applied to the value
+        """
+        self.wrap_width = wrap_width
+        self.str_fmt = str_fmt
 
-        return {
-            "performance_metrics": [
-                {"metric": metric_column, "value": value_column, "unit": unit_column}
-                for metric_column, value_column, unit_column in table_data
-            ]
-        }
 
-    def to_text(self, data: Any, **kwargs: Any) -> str:
-        """Get text representation for the data."""
-        perf_metrics = cast(PerformanceMetrics, data)
-        table_data = self._convert(perf_metrics)
+class Cell:
+    """Cell definition.
+
+    This a wrapper class for a particular value in the table. Could be used
+    for applying specific format to this value.
+    """
+
+    def __init__(self, value: Any, fmt: Optional[Format] = None) -> None:
+        """Init cell definition.
+
+        :param value: cell's value
+        :param fmt: cell's format
+        """
+        self.value = value
+        self.fmt = fmt
+
+    def __str__(self) -> str:
+        """Return string representation."""
+        if self.fmt and self.fmt.str_fmt:
+            return "{:{fmt}}".format(self.value, fmt=self.fmt.str_fmt)
+
+        return str(self.value)
+
+
+class Column:
+    """Column definition."""
+
+    def __init__(
+        self,
+        header: str,
+        alias: Optional[str] = None,
+        fmt: Optional[Format] = None,
+        only_for: Optional[List[str]] = None,
+    ) -> None:
+        """Init column definition.
+
+        :param header: column's header
+        :param alias: columns's alias, could be used as column's name
+        :param fmt: format that will be applied for all column's values
+        :param only_for: list of the formats where this column should be
+        represented. May be used to differentiate data representation in
+        different formats
+        """
+        self.header = header
+        self.alias = alias
+        self.fmt = fmt
+        self.only_for = only_for
+
+    def supports_format(self, fmt: str) -> bool:
+        """Return true if column should be shown."""
+        return not self.only_for or fmt in self.only_for
+
+
+class Table(Report):
+    """Table definition.
+
+    This class could be used for representing tabular data.
+    """
+
+    def __init__(
+        self,
+        columns: List[Column],
+        rows: List[Any],
+        name: Optional[str] = None,
+    ) -> None:
+        """Init table definition.
+
+        :param columns: list of the table's columns
+        :param rows: list of the table's rows
+        :param name: name of the table
+        """
+        self.columns = columns
+        self.rows = rows
+        self.name = name
+
+    def to_json(self) -> Union[Dict, List[Dict]]:
+        """Convert table to dict object."""
+
+        def item_to_json(item: Any) -> Any:
+            value = item
+            if isinstance(item, Cell):
+                value = item.value
+
+            if isinstance(value, Table):
+                return value.to_json()
+
+            return value
+
+        json_data = [
+            {
+                col.alias or col.header: item_to_json(item)
+                for (item, col) in zip(row, self.columns)
+                if col.supports_format("json")
+            }
+            for row in self.rows
+        ]
+
+        if not self.name:
+            return json_data
+
+        return {self.name: json_data}
+
+    def to_text(self, nested: bool = False) -> str:
+        """Produce report in human readable format."""
+        headers = [] if nested else [c.header for c in self.columns]
+
+        def item_to_text(item: Any, col: Column) -> str:
+            """Convert item to text."""
+            if isinstance(item, Table):
+                return item.to_text(True)
+
+            as_text = str(item)
+
+            if col.fmt:
+                if col.fmt.wrap_width:
+                    as_text = fill(as_text, col.fmt.wrap_width)
+
+            return as_text
 
         return tabulate(
             (
                 (
-                    fill(metric_column, 30),
-                    fill(value_column, 15),
-                    fill(unit_column, 15),
+                    item_to_text(item, col)
+                    for item, col in zip(row, self.columns)
+                    if col.supports_format("txt")
                 )
-                for metric_column, value_column, unit_column in table_data
+                for row in self.rows
             ),
-            headers=["Metric", "Value", "Unit"],
-            tablefmt="grid",
+            headers=headers,
+            tablefmt="plain" if nested else "grid",
             disable_numparse=True,
         )
 
-    def to_csv(self, data: Any, **kwargs: Any) -> List[Any]:
-        """Get csv representation for the data."""
-        perf_metrics = cast(PerformanceMetrics, data)
+    def to_csv(self) -> List[Any]:
+        """Convert table to csv format."""
+        headers = [[c.header for c in self.columns if c.supports_format("csv")]]
 
-        headers = [("Metric", "Value", "Unit")]
-        return headers + self._convert(perf_metrics, False)
+        def item_data(item: Any) -> Any:
+            if isinstance(item, Cell):
+                return item.value
 
-    def _convert(
-        self, perf_metrics: PerformanceMetrics, convert_to_text: bool = True
-    ) -> List[Any]:
-        """Convert metrics object to tabular data."""
-        cycles = [
-            (
-                metric,
-                f"{value:12,d}" if convert_to_text else value,
-                perf_metrics.cycles_per_batch_unit,
-            )
-            for (metric, value) in [
-                ("NPU cycles", perf_metrics.npu_cycles),
-                ("SRAM Access cycles", perf_metrics.sram_access_cycles),
-                ("DRAM Access cycles", perf_metrics.dram_access_cycles),
-                (
-                    "On-chip Flash Access cycles",
-                    perf_metrics.on_chip_flash_access_cycles,
-                ),
-                (
-                    "Off-chip Flash Access cycles",
-                    perf_metrics.off_chip_flash_access_cycles,
-                ),
-                ("Total cycles", perf_metrics.total_cycles),
+            if isinstance(item, Table):
+                return ""
+
+            return item
+
+        rows = [
+            [
+                item_data(item)
+                for (item, col) in zip(row, self.columns)
+                if col.supports_format("csv")
             ]
+            for row in self.rows
         ]
 
-        inferences = [
-            (metric, f"{value:7,.2f}" if convert_to_text else value, unit)
-            for metric, value, unit in [
-                (
-                    "Batch Inference time",
-                    perf_metrics.batch_inference_time,
-                    perf_metrics.inference_time_unit,
-                ),
-                (
-                    "Inferences per second",
-                    perf_metrics.inferences_per_second,
-                    perf_metrics.inferences_per_second_unit,
-                ),
-            ]
-        ]
-
-        batch = [
-            (
-                "Batch size",
-                f"{perf_metrics.batch_size:d}"
-                if convert_to_text
-                else perf_metrics.batch_size,
-                "",
-            )
-        ]
-
-        return cycles + inferences + batch
+        return headers + rows
 
 
-class SupportedOperatorsReporter(Reporter):
-    """Supporter operators reporter."""
+def report_operators(ops: List[Operation]) -> Report:
+    """Return table representation for the list of operators."""
+    columns = [
+        Column("#", only_for=["txt"]),
+        Column(
+            "Operator name",
+            alias="operator_name",
+            fmt=Format(wrap_width=30),
+        ),
+        Column(
+            "Operator type",
+            alias="operator_type",
+            fmt=Format(wrap_width=25),
+        ),
+        Column(
+            "Supported on NPU",
+            alias="supported_on_npu",
+            fmt=Format(wrap_width=20),
+        ),
+        Column("Reason", alias="reason"),
+    ]
 
-    def supported_formats(self, data: Any) -> List[str]:
-        """Check if data is operation info."""
-        if self.type_checker.is_operations(data):
-            return ["txt", "json", "csv"]
-
-        return []
-
-    def to_json(self, data: Any, **kwargs: Any) -> Dict:
-        """Get json representation for the data."""
-        ops = cast(List[Operation], data)
-        return {
-            "operations": [
-                {
-                    "name": op.name,
-                    "type": op.op_type,
-                    "npu_supported": op.run_on_npu.supported,
-                    "reasons": [
-                        {"reason": reason, "description": description}
-                        for reason, description in op.run_on_npu.reasons
-                    ],
-                }
-                for op in ops
-            ]
-        }
-
-    def to_csv(self, data: Any, **kwargs: Any) -> List[Any]:
-        """Get csv representation for the data."""
-        ops = cast(List[Operation], data)
-        headers = [("Name", "Type", "NPU supported")]
-        table_data = [(op.name, op.op_type, str(op.run_on_npu.supported)) for op in ops]
-
-        return headers + table_data
-
-    def to_text(self, data: Any, **kwargs: Any) -> str:
-        """Get text representation for the data."""
-        ops = cast(List[Operation], data)
-        table_data = (
-            (
-                i + 1,
-                fill(op.name, 30),
-                fill(op.op_type, 25),
-                fill("Yes" if op.run_on_npu.supported else "No", 20),
-                tabulate(
-                    (
-                        (fill(reason, 30), fill(description, 40))
-                        for reason, description in op.run_on_npu.reasons
+    rows = [
+        (
+            i + 1,
+            op.name,
+            op.op_type,
+            op.run_on_npu.supported,
+            Table(
+                columns=[
+                    Column(
+                        "Reason",
+                        alias="reason",
+                        fmt=Format(wrap_width=30),
                     ),
-                    tablefmt="plain",
-                ),
-            )
-            for i, op in enumerate(ops)
+                    Column(
+                        "Description",
+                        alias="description",
+                        fmt=Format(wrap_width=40),
+                    ),
+                ],
+                rows=[
+                    (reason, description)
+                    for reason, description in op.run_on_npu.reasons
+                ],
+            ),
         )
+        for i, op in enumerate(ops)
+    ]
 
-        return tabulate(
-            table_data,
-            headers=[
-                "#",
-                "Operation name",
-                "Operation type",
-                "Supported on NPU",
-                "Reason",
-            ],
-            tablefmt="grid",
+    return Table(columns, rows, name="operators")
+
+
+def report_device(device: EthosUConfiguration) -> Report:
+    """Return table representation for the device."""
+    columns = [
+        Column("IP class", alias="ip_class", fmt=Format(wrap_width=30)),
+        Column("MAC", alias="mac"),
+        Column("Accelerator config", alias="accelerator_config"),
+        Column("System config", alias="system_config"),
+        Column("Memory mode", alias="memory_mod"),
+    ]
+
+    rows = [
+        (
+            device.ip_class,
+            device.mac,
+            device.compiler_options.accelerator_config,
+            device.compiler_options.system_config,
+            device.compiler_options.memory_mode,
         )
+    ]
+
+    return Table(columns, rows, name="device")
 
 
-_reporters: List[Reporter] = []
+def report_perf_metrics(perf_metrics: PerformanceMetrics) -> Report:
+    """Return table representation for the perf metrics."""
+    columns = [
+        Column("Metric", alias="metric", fmt=Format(wrap_width=30)),
+        Column("Value", alias="value", fmt=Format(wrap_width=15)),
+        Column("Unit", alias="unit", fmt=Format(wrap_width=15)),
+    ]
+
+    cycles = [
+        (
+            metric,
+            Cell(value, Format(str_fmt="12,d")),
+            perf_metrics.cycles_per_batch_unit,
+        )
+        for (metric, value) in [
+            ("NPU cycles", perf_metrics.npu_cycles),
+            ("SRAM Access cycles", perf_metrics.sram_access_cycles),
+            ("DRAM Access cycles", perf_metrics.dram_access_cycles),
+            (
+                "On-chip Flash Access cycles",
+                perf_metrics.on_chip_flash_access_cycles,
+            ),
+            (
+                "Off-chip Flash Access cycles",
+                perf_metrics.off_chip_flash_access_cycles,
+            ),
+            ("Total cycles", perf_metrics.total_cycles),
+        ]
+    ]
+
+    inferences = [
+        (metric, Cell(value, Format(str_fmt="7,.2f")), unit)
+        for metric, value, unit in [
+            (
+                "Batch Inference time",
+                perf_metrics.batch_inference_time,
+                perf_metrics.inference_time_unit,
+            ),
+            (
+                "Inferences per second",
+                perf_metrics.inferences_per_second,
+                perf_metrics.inferences_per_second_unit,
+            ),
+        ]
+    ]
+
+    batch = [("Batch size", Cell(perf_metrics.batch_size, Format(str_fmt="d")), "")]
+    rows = cycles + inferences + batch
+
+    return Table(columns, rows, name="overall_performance")
 
 
-def register(reporter: Reporter) -> None:
-    """Report registration."""
-    _reporters.append(reporter)
+class CompoundReport(Report):
+    """Compound report.
+
+    This class could be used for producing multiply reports at once.
+    """
+
+    def __init__(self, reports: List[Report]) -> None:
+        """Init compound report instance."""
+        self.reports = reports
+
+    def to_json(self) -> Any:
+        """Convert to json serializible format.
+
+        Method attempts to create compound dictionary based on provided
+        parts.
+        """
+        result = {}
+        for item in self.reports:
+            result.update(item.to_json())
+
+        return result
+
+    def to_csv(self) -> List:
+        """Convert to csv serializible format.
+
+        CSV format does support only one table. In order to be able to export
+        multiply tables they should be merged before that. This method tries to
+        do next:
+
+        - if all tables have the same length then just concatenate them
+        - if one table has many rows and other just one (two with headers), then
+          for each row in table with many rows duplicate values from other tables
+        """
+        csv_data = [item.to_csv() for item in self.reports]
+        lengths = [len(csv_item_data) for csv_item_data in csv_data]
+
+        same_length = len(set(lengths)) == 1
+        if same_length:
+            # all lists are of the same length, merge them into one
+            return [[cell for item in row for cell in item] for row in zip(*csv_data)]
+
+        main_obj_indexes = [i for i, item in enumerate(csv_data) if len(item) > 2]
+        one_main_obj = len(main_obj_indexes) == 1
+
+        reference_obj_indexes = [i for i, item in enumerate(csv_data) if len(item) == 2]
+        other_only_ref_objs = len(reference_obj_indexes) == len(csv_data) - 1
+
+        if one_main_obj and other_only_ref_objs:
+            main_obj = csv_data[main_obj_indexes[0]]
+            return [
+                item
+                + [
+                    ref_item
+                    for ref_table_index in reference_obj_indexes
+                    for ref_item in csv_data[ref_table_index][0 if i == 0 else 1]
+                ]
+                for i, item in enumerate(main_obj)
+            ]
+
+        raise Exception("Unable to export data in csv format")
+
+    def to_text(self) -> str:
+        """Convert to human readable format."""
+        return "\n".join(item.to_text() for item in self.reports)
 
 
-register(PerformanceEstimationReporter())
-register(SupportedOperatorsReporter())
+class CompoundFormatter:
+    """Compound data formatter."""
+
+    def __init__(self, formatters: List[Callable]) -> None:
+        """Init compound formatter."""
+        self.formatters = formatters
+
+    def __call__(self, data: Any) -> Report:
+        """Produce report."""
+        reports = [formatter(item) for item, formatter in zip(data, self.formatters)]
+        return CompoundReport(reports)
+
+
+def json_reporter(report: Report, output: FileLike, **kwargs: Any) -> None:
+    """Produce report in json format."""
+    json.dump(report.to_json(), output, indent=4)
+
+
+def text_reporter(report: Report, output: FileLike, **kwargs: Any) -> None:
+    """Produce report in text format."""
+    print(report.to_text(), file=output)
+
+
+def csv_reporter(report: Report, output: FileLike, **kwargs: Any) -> None:
+    """Produce report in csv format."""
+    csv_writer = csv.writer(output)
+    csv_writer.writerows(report.to_csv())
 
 
 def report(
     data: Any,
+    formatter: Optional[Callable[[Any], Report]] = None,
     fmt: OutputFormat = "txt",
     output: PathOrFileLike = sys.stdout,
     **kwargs: Any,
 ) -> None:
     """Produce report based on provided data."""
-    for reporter in _reporters:
-        if fmt not in reporter.supported_formats(data):
-            continue
+    # check if provided format value is supported
+    formats = {"json": json_reporter, "txt": text_reporter, "csv": csv_reporter}
+    if fmt not in formats:
+        raise Exception(f"Unknown format {fmt}")
 
-        with ExitStack() as stack:
-            if isinstance(output, (str, Path)):
-                stream = stack.enter_context(open(output, "w"))
-            else:
-                stream = output
+    if not formatter:
+        # if no formatter provided try to find one based on the type of data
+        formatter = find_appropriate_formatter(data)
 
-            reporter.report(data, fmt, stream, **kwargs)
-            break
-    else:
-        raise Exception(f"No reporter found for {data} and format {fmt}")
+    with ExitStack() as exit_stack:
+        if isinstance(output, (str, Path)):
+            # open file and add it to the ExitStack context manager
+            # in that case it will be automatically closed
+            stream = exit_stack.enter_context(open(output, "w"))
+        else:
+            stream = output
+
+        # convert data into serializible form
+        formatted_data = formatter(data)
+        # find handler for the format
+        format_handler = formats[fmt]
+        # produce report in requested format
+        format_handler(formatted_data, stream, **kwargs)
+
+
+def find_appropriate_formatter(data: Any) -> Callable:
+    """Find appropriate formatter for the provided data."""
+    if isinstance(data, PerformanceMetrics):
+        return report_perf_metrics
+
+    if isinstance(data, list) and all(isinstance(item, Operation) for item in data):
+        return report_operators
+
+    if isinstance(data, EthosUConfiguration):
+        return report_device
+
+    if isinstance(data, (list, tuple)):
+        formatters = [find_appropriate_formatter(item) for item in data]
+        return CompoundFormatter(formatters)
+
+    raise Exception("Unable to find appropriate formatter")

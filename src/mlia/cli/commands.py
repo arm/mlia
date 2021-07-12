@@ -31,7 +31,7 @@ def operators(
     tflite_model, device = TFLiteModel(model), _get_device(**device_args)
     ops = supported_operators(tflite_model, device)
 
-    report(ops, fmt=output_format, output=output)
+    report([device, ops], fmt=output_format, output=output)
 
 
 def performance(
@@ -44,7 +44,7 @@ def performance(
     tflite_model, device = TFLiteModel(model), _get_device(**device_args)
     perf_metrics = collect_performance_metrics(tflite_model, device)
 
-    report(perf_metrics, fmt=output_format, output=output)
+    report([device, perf_metrics], fmt=output_format, output=output)
 
 
 def model_optimization(model: str, **optimizer_args: Any) -> None:
