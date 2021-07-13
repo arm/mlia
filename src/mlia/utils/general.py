@@ -1,7 +1,12 @@
 # Copyright 2021, Arm Ltd.
 """Collection of useful functions for optimizations."""
+import os
 import tempfile
+from contextlib import contextmanager
+from contextlib import redirect_stderr
+from contextlib import redirect_stdout
 from typing import Any
+from typing import Generator
 
 import tensorflow as tf
 
@@ -40,3 +45,11 @@ def deep_clone_model(model: tf.keras.Model) -> tf.keras.Model:
     cloned_model.set_weights(model.get_weights())
 
     return cloned_model
+
+
+@contextmanager
+def suppress_any_output() -> Generator[Any, Any, Any]:
+    """Context manager for suppressing output."""
+    with open(os.devnull, "w") as dev_null:
+        with redirect_stderr(dev_null), redirect_stdout(dev_null):
+            yield

@@ -26,7 +26,7 @@ from mlia.config import TFLiteModel
 from mlia.metadata import NpuSupported
 from mlia.metadata import Operation
 from mlia.metrics import PerformanceMetrics
-from mlia.utils import suppress_any_output
+from mlia.utils.general import suppress_any_output
 from typing_extensions import Literal
 
 
