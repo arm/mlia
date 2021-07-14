@@ -135,7 +135,7 @@ def test_table_representation() -> None:
         ]
         rows = [(1, 2, 3), (4, 5, Cell(123123, fmt=Format(str_fmt="10,d")))]
 
-        return Table(columns, rows, "sample_table")
+        return Table(columns, rows, name="Sample table", alias="sample_table")
 
     table = sample_table()
     csv_repr = table.to_csv()
@@ -151,12 +151,13 @@ def test_table_representation() -> None:
 
     text_report = table.to_text()
     expected_text_report = """
-+------------+------------+------------+
-| Header 1   | Header 2   | Header 3   |
-+============+============+============+
-| 1          | 2          | 3          |
-+------------+------------+------------+
-| 4          | 5          | 123,123    |
-+------------+------------+------------+
+╒════════════╤════════════╤════════════╕
+│ Header 1   │ Header 2   │ Header 3   │
+╞════════════╪════════════╪════════════╡
+│ 1          │ 2          │ 3          │
+├────────────┼────────────┼────────────┤
+│ 4          │ 5          │ 123,123    │
+╘════════════╧════════════╧════════════╛
 """.strip()
+    print(text_report)
     assert text_report == expected_text_report

@@ -29,9 +29,9 @@ def operators(
 ) -> None:
     """Print the model's operator list."""
     tflite_model, device = TFLiteModel(model), _get_device(**device_args)
-    ops = supported_operators(tflite_model, device)
+    operators = supported_operators(tflite_model, device)
 
-    report([device, ops], fmt=output_format, output=output)
+    report([device, operators.ops, operators], fmt=output_format, output=output)
 
 
 def performance(

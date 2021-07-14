@@ -25,6 +25,7 @@ from mlia.config import EthosUConfiguration
 from mlia.config import TFLiteModel
 from mlia.metadata import NpuSupported
 from mlia.metadata import Operation
+from mlia.metadata import Operations
 from mlia.metrics import PerformanceMetrics
 from mlia.utils.general import suppress_any_output
 from typing_extensions import Literal
@@ -221,19 +222,19 @@ def estimate_performance(
     )
 
 
-def supported_operators(
-    model: TFLiteModel, device: EthosUConfiguration
-) -> List[Operation]:
+def supported_operators(model: TFLiteModel, device: EthosUConfiguration) -> Operations:
     """Return list of model's operations."""
     vela_compiler = get_vela_compiler(device)
     initial_model = vela_compiler.read_model(model.model_path)
 
-    return [
-        Operation(op.name, optype_to_builtintype(op.type), run_on_npu(op))
-        for sg in initial_model.nng.subgraphs
-        for op in sg.get_all_ops()
-        if op.type not in VELA_INTERNAL_OPS
-    ]
+    return Operations(
+        [
+            Operation(op.name, optype_to_builtintype(op.type), run_on_npu(op))
+            for sg in initial_model.nng.subgraphs
+            for op in sg.get_all_ops()
+            if op.type not in VELA_INTERNAL_OPS
+        ]
+    )
 
 
 def run_on_npu(op: Op) -> NpuSupported:

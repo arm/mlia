@@ -8,6 +8,7 @@ from abc import abstractmethod
 from contextlib import ExitStack
 from pathlib import Path
 from textwrap import fill
+from textwrap import indent
 from typing import Any
 from typing import Callable
 from typing import Dict
@@ -20,6 +21,7 @@ from mlia._typing import OutputFormat
 from mlia._typing import PathOrFileLike
 from mlia.config import EthosUConfiguration
 from mlia.metadata import Operation
+from mlia.metadata import Operations
 from mlia.metrics import PerformanceMetrics
 from tabulate import tabulate
 
@@ -46,7 +48,7 @@ class Format:
     def __init__(
         self,
         wrap_width: Optional[int] = None,
-        str_fmt: Optional[str] = None,
+        str_fmt: Optional[Union[str, Callable[[Any], str]]] = None,
     ) -> None:
         """Init format instance.
 
@@ -77,8 +79,12 @@ class Cell:
 
     def __str__(self) -> str:
         """Return string representation."""
-        if self.fmt and self.fmt.str_fmt:
-            return "{:{fmt}}".format(self.value, fmt=self.fmt.str_fmt)
+        if self.fmt:
+            if isinstance(self.fmt.str_fmt, str):
+                return "{:{fmt}}".format(self.value, fmt=self.fmt.str_fmt)
+
+            if callable(self.fmt.str_fmt):
+                return self.fmt.str_fmt(self.value)
 
         return str(self.value)
 
@@ -122,17 +128,20 @@ class Table(Report):
         self,
         columns: List[Column],
         rows: List[Any],
-        name: Optional[str] = None,
+        name: str,
+        alias: Optional[str] = None,
     ) -> None:
         """Init table definition.
 
         :param columns: list of the table's columns
         :param rows: list of the table's rows
         :param name: name of the table
+        :param alias: alias for the table
         """
         self.columns = columns
         self.rows = rows
         self.name = name
+        self.alias = alias
 
     def to_json(self) -> Union[Dict, List[Dict]]:
         """Convert table to dict object."""
@@ -156,10 +165,10 @@ class Table(Report):
             for row in self.rows
         ]
 
-        if not self.name:
+        if not self.alias:
             return json_data
 
-        return {self.name: json_data}
+        return {self.alias: json_data}
 
     def to_text(self, nested: bool = False) -> str:
         """Produce report in human readable format."""
@@ -188,7 +197,7 @@ class Table(Report):
                 for row in self.rows
             ),
             headers=headers,
-            tablefmt="plain" if nested else "grid",
+            tablefmt="plain" if nested else "fancy_grid",
             disable_numparse=True,
         )
 
@@ -215,6 +224,47 @@ class Table(Report):
         ]
 
         return headers + rows
+
+
+class SingleRow(Table):
+    """Table with a single row."""
+
+    def to_text(self, nested: bool = False) -> str:
+        """Produce report in human readable format."""
+        if len(self.rows) != 1:
+            raise Exception("Table should have only one row")
+
+        items = "\n".join(
+            column.header.ljust(35) + str(item).rjust(25)
+            for row in self.rows
+            for item, column in zip(row, self.columns)
+            if column.supports_format("txt")
+        )
+
+        return "\n".join([self.name, indent(items, "  ")])
+
+
+def report_operators_stat(operations: Operations) -> Report:
+    """Return table representation for the ops stats."""
+    columns = [
+        Column("Number of operators", alias="num_of_operators"),
+        Column("Number of NPU supported operators", "num_of_npu_supported_operators"),
+        Column("Unsupported ops ratio", "npu_unsupported_ratio"),
+    ]
+    rows = [
+        (
+            operations.total_number,
+            operations.npu_supported_number,
+            Cell(
+                operations.npu_unsupported_ratio * 100,
+                fmt=Format(str_fmt=lambda x: "{0:.0f}%".format(x)),
+            ),
+        )
+    ]
+
+    return SingleRow(
+        columns, rows, name="Operators statistics", alias="operators_stats"
+    )
 
 
 def report_operators(ops: List[Operation]) -> Report:
@@ -244,7 +294,9 @@ def report_operators(ops: List[Operation]) -> Report:
             i + 1,
             op.name,
             op.op_type,
-            op.run_on_npu.supported,
+            Cell(
+                op.run_on_npu.supported, Format(str_fmt=lambda x: "Yes" if x else "No")
+            ),
             Table(
                 columns=[
                     Column(
@@ -262,12 +314,13 @@ def report_operators(ops: List[Operation]) -> Report:
                     (reason, description)
                     for reason, description in op.run_on_npu.reasons
                 ],
+                name="Reasons",
             ),
         )
         for i, op in enumerate(ops)
     ]
 
-    return Table(columns, rows, name="operators")
+    return Table(columns, rows, name="Operators", alias="operators")
 
 
 def report_device(device: EthosUConfiguration) -> Report:
@@ -290,7 +343,7 @@ def report_device(device: EthosUConfiguration) -> Report:
         )
     ]
 
-    return Table(columns, rows, name="device")
+    return Table(columns, rows, name="Device information", alias="device")
 
 
 def report_perf_metrics(perf_metrics: PerformanceMetrics) -> Report:
@@ -342,7 +395,7 @@ def report_perf_metrics(perf_metrics: PerformanceMetrics) -> Report:
     batch = [("Batch size", Cell(perf_metrics.batch_size, Format(str_fmt="d")), "")]
     rows = cycles + inferences + batch
 
-    return Table(columns, rows, name="overall_performance")
+    return Table(columns, rows, name="Overall performance", alias="overall_performance")
 
 
 class CompoundReport(Report):
@@ -480,6 +533,9 @@ def find_appropriate_formatter(data: Any) -> Callable:
 
     if isinstance(data, list) and all(isinstance(item, Operation) for item in data):
         return report_operators
+
+    if isinstance(data, Operations):
+        return report_operators_stat
 
     if isinstance(data, EthosUConfiguration):
         return report_device

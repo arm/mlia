@@ -108,10 +108,14 @@ def test_operations(
     tflite_model = TFLiteModel(str(test_models_path / model))
     device = EthosU55()
 
-    ops = supported_operators(tflite_model, device)
+    operations = supported_operators(tflite_model, device)
 
-    assert len(ops) == len(expected_ops)
-    for i, op in enumerate(ops):
+    assert operations.total_number == len(expected_ops)
+    assert operations.npu_supported_number == operations.total_number
+    assert operations.npu_supported_ratio == 1.0
+    assert operations.npu_unsupported_ratio == 0.0
+
+    for i, op in enumerate(operations.ops):
         (
             expected_name,
             expected_type,
