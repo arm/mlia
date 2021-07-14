@@ -1,5 +1,5 @@
 # Copyright 2021, Arm Ltd.
-"""Test for module tests/utils/tflite_metrics."""
+"""Test for module utils/tflite_metrics."""
 import os
 import tempfile
 from math import isclose

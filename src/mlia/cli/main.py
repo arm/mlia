@@ -6,6 +6,7 @@ from typing import List
 from typing import Optional
 
 from mlia import __version__
+from mlia.cli.commands import model_optimization
 from mlia.cli.commands import operators
 from mlia.cli.commands import performance
 
@@ -63,9 +64,40 @@ def add_device_options(parser: argparse.ArgumentParser) -> None:
     )
 
 
-def add_model_options(parser: argparse.ArgumentParser) -> None:
+def add_optimization_options(parser: argparse.ArgumentParser) -> None:
+    """Add optimization specific options."""
+    optimization_group = parser.add_argument_group(
+        "optimization_opts", "Optimization options"
+    )
+
+    optimization_group.add_argument(
+        "--optimization_type",
+        required=True,
+        choices=("pruning", "clustering"),
+        help="Optimization type [required]",
+    )
+    optimization_group.add_argument(
+        "--optimization_target",
+        required=True,
+        type=float,
+        help="""Target for optimization
+            (for pruning this is sparsity between (0,1),
+            for clustering this is the number of clusters (positive integer))
+            [required]""",
+    )
+    optimization_group.add_argument(
+        "--layers_to_optimize",
+        nargs="+",
+        type=str,
+        help="""Name of the layers to optimize (separated by space)
+            example: conv1 conv2 conv3
+            [default: every layer]""",
+    )
+
+
+def add_tflite_model_options(parser: argparse.ArgumentParser) -> None:
     """Add model specific options."""
-    model_group = parser.add_argument_group("model_opts", "Model options")
+    model_group = parser.add_argument_group("tflite_model_opts", "Tflite model options")
     model_group.add_argument("model", help="TFLite model")
 
 
@@ -88,6 +120,12 @@ def add_output_options(parser: argparse.ArgumentParser) -> None:
     )
 
 
+def add_keras_model_options(parser: argparse.ArgumentParser) -> None:
+    """Add model specific options."""
+    model_group = parser.add_argument_group("keras_model_opts", "Keras model options")
+    model_group.add_argument("model", help="Keras model")
+
+
 def init_commands(parser: argparse.ArgumentParser) -> None:
     """Init cli subcommands."""
     subparsers = parser.add_subparsers(title="Commands", dest="command")
@@ -97,12 +135,17 @@ def init_commands(parser: argparse.ArgumentParser) -> None:
         (
             operators,
             ["ops"],
-            [add_device_options, add_model_options, add_output_options],
+            [add_device_options, add_tflite_model_options, add_output_options],
         ),
         (
             performance,
             ["perf"],
-            [add_device_options, add_model_options, add_output_options],
+            [add_device_options, add_tflite_model_options, add_output_options],
+        ),
+        (
+            model_optimization,
+            ["mopt"],
+            [add_keras_model_options, add_optimization_options],
         ),
     ]
 

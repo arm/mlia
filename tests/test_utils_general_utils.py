@@ -1,5 +1,5 @@
 # Copyright 2021, Arm Ltd.
-"""Test for module tests/utils/test_utils."""
+"""Test for module utils/test_utils."""
 import pytest
 import tensorflow as tf
 from mlia.utils import general as test_utils

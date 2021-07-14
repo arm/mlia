@@ -12,6 +12,9 @@ from typing import List
 
 import pytest
 from mlia.cli.main import main
+from mlia.utils.general import save_keras_model
+
+from tests.utils.generate_keras_model import generate_keras_model
 
 
 def test_option_version(capfd: Any) -> None:
@@ -48,4 +51,38 @@ def test_performance_command(args: List[str], test_models_path: Path) -> None:
     model = test_models_path / "simple_3_layers_model.tflite"
 
     exit_code = main(args + [str(model)])
+    assert exit_code == 0
+
+
+@pytest.mark.parametrize(
+    "args",
+    [
+        ["--optimization_type", "pruning", "--optimization_target", "0.5"],
+        ["--optimization_type", "clustering", "--optimization_target", "32"],
+        [
+            "--optimization_type",
+            "pruning",
+            "--optimization_target",
+            "0.5",
+            "--layers_to_optimize",
+            "conv1",
+            "conv2",
+        ],
+        [
+            "--optimization_type",
+            "clustering",
+            "--optimization_target",
+            "32",
+            "--layers_to_optimize",
+            "conv1",
+            "conv2",
+        ],
+    ],
+)
+def test_model_optimization_command(args: List[str]) -> None:
+    """Test operators command."""
+    model = generate_keras_model()
+    model_path = save_keras_model(model)
+
+    exit_code = main(["model_optimization", model_path] + args)
     assert exit_code == 0

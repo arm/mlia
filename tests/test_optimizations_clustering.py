@@ -15,27 +15,7 @@ from mlia.optimizations.pruning import PruningConfiguration
 from mlia.utils import general as test_utils
 from mlia.utils import tflite_metrics
 
-
-def _build_model() -> tf.keras.Model:
-    """Build a simple CNN model."""
-    # Create a dummy model
-    keras_model = tf.keras.Sequential(
-        [
-            tf.keras.Input(shape=(28, 28)),
-            tf.keras.layers.Reshape((28, 28, 1)),
-            tf.keras.layers.Conv2D(
-                filters=12, kernel_size=(3, 3), activation="relu", name="conv1"
-            ),
-            tf.keras.layers.Conv2D(
-                filters=12, kernel_size=(3, 3), activation="relu", name="conv2"
-            ),
-            tf.keras.layers.MaxPool2D(2, 2),
-            tf.keras.layers.Flatten(),
-            tf.keras.layers.Dense(10),
-        ]
-    )
-
-    return keras_model
+from tests.utils.generate_keras_model import generate_keras_model
 
 
 def _get_dataset() -> Tuple[np.array, np.array]:
@@ -112,7 +92,7 @@ def test_cluster_simple_model_fully(
     """Simple mnist test to see if clustering works correctly."""
     target_sparsity = 0.5
 
-    base_model = _build_model()
+    base_model = generate_keras_model()
     _train_model(base_model)
 
     if sparsity_aware:
