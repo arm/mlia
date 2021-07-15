@@ -29,34 +29,14 @@ from typing_extensions import Literal
             [report_operators, None],
         ),
         (
-            PerformanceMetrics(
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-            ),
+            PerformanceMetrics(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
             [report_perf_metrics, None],
         ),
         (
             [
                 (
                     [Operation("test_operation", "test_type", NpuSupported(False, []))],
-                    PerformanceMetrics(
-                        0,
-                        0,
-                        0,
-                        0,
-                        0,
-                        0,
-                        0,
-                        0,
-                        0,
-                    ),
+                    PerformanceMetrics(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
                 )
             ],
             [None],

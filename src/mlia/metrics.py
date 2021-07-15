@@ -16,6 +16,11 @@ class PerformanceMetrics:
         batch_inference_time: float,
         inferences_per_second: float,
         batch_size: int,
+        unknown_memory_area_size: int,
+        sram_memory_area_size: int,
+        dram_memory_area_size: int,
+        on_chip_flash_memory_area_size: int,
+        off_chip_flash_memory_area_size: int,
     ) -> None:
         """Initialize the performance metrics instance."""
         self.npu_cycles = npu_cycles
@@ -31,3 +36,9 @@ class PerformanceMetrics:
         self.cycles_per_batch_unit = "cycles/batch"
         self.inference_time_unit = "ms"
         self.inferences_per_second_unit = "inf/s"
+
+        self.unknown_memory_area_size = unknown_memory_area_size
+        self.sram_memory_area_size = sram_memory_area_size
+        self.dram_memory_area_size = dram_memory_area_size
+        self.on_chip_flash_memory_area_size = on_chip_flash_memory_area_size
+        self.off_chip_flash_memory_area_size = off_chip_flash_memory_area_size

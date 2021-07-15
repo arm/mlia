@@ -2,6 +2,7 @@
 """Vela wrapper module."""
 import itertools
 from pathlib import Path
+from typing import Dict
 from typing import List
 from typing import Optional
 from typing import Union
@@ -19,6 +20,7 @@ from ethosu.vela.operation import Op
 from ethosu.vela.scheduler import OptimizationStrategy
 from ethosu.vela.scheduler import SchedulerOptions
 from ethosu.vela.supported_operators import SupportedOperators
+from ethosu.vela.tensor import MemArea
 from ethosu.vela.tensor import Tensor
 from ethosu.vela.tflite_mapping import optype_to_builtintype
 from mlia.config import EthosUConfiguration
@@ -195,17 +197,29 @@ def get_vela_compiler(device: EthosUConfiguration) -> VelaCompiler:
 def estimate_performance(
     model: TFLiteModel, device: EthosUConfiguration
 ) -> PerformanceMetrics:
-    """Return performance estimations for the model/device."""
+    """Return performance estimations for the model/device.
+
+    Logic for this function comes from vela module stats_writer.py
+    """
     vela_compiler = get_vela_compiler(device)
     optimized_model = vela_compiler.compile_model(model.model_path)
 
-    arch = optimized_model.arch
-    cycles = optimized_model.nng.cycles
-    batch_size = optimized_model.nng.batch_size
+    return _performance_metrics(optimized_model)
 
-    # this logic comes from Vela's module stats_writer.py
+
+def _performance_metrics(optimized_model: OptimizedModel) -> PerformanceMetrics:
+    """Return performance metrics for optimized model."""
+    cycles = optimized_model.nng.cycles
+
+    def memory_usage(mem_area: MemArea) -> int:
+        """Get memory usage for the proviced memory area type."""
+        memory_used: Dict[MemArea, int] = optimized_model.nng.memory_used
+        bandwidths = optimized_model.nng.bandwidths
+
+        return memory_used.get(mem_area, 0) if np.sum(bandwidths[mem_area]) > 0 else 0
+
     midpoint_fps = np.nan
-    midpoint_inference_time = cycles[PassCycles.Total] / arch.core_clock
+    midpoint_inference_time = cycles[PassCycles.Total] / optimized_model.arch.core_clock
     if midpoint_inference_time > 0:
         midpoint_fps = 1 / midpoint_inference_time
 
@@ -218,7 +232,12 @@ def estimate_performance(
         total_cycles=int(cycles[PassCycles.Total]),
         batch_inference_time=midpoint_inference_time * 1000,
         inferences_per_second=midpoint_fps,
-        batch_size=batch_size,
+        batch_size=optimized_model.nng.batch_size,
+        unknown_memory_area_size=memory_usage(MemArea.Unknown),
+        sram_memory_area_size=memory_usage(MemArea.Sram),
+        dram_memory_area_size=memory_usage(MemArea.Dram),
+        on_chip_flash_memory_area_size=memory_usage(MemArea.OnChipFlash),
+        off_chip_flash_memory_area_size=memory_usage(MemArea.OffChipFlash),
     )
 
 

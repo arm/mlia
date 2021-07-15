@@ -393,7 +393,20 @@ def report_perf_metrics(perf_metrics: PerformanceMetrics) -> Report:
     ]
 
     batch = [("Batch size", Cell(perf_metrics.batch_size, Format(str_fmt="d")), "")]
-    rows = cycles + inferences + batch
+
+    memory_usage = [
+        (metric, Cell(value / 1024.0, Format(str_fmt="12.2f")), "KiB")
+        for (metric, value) in [
+            ("Unknown memory area used", perf_metrics.unknown_memory_area_size),
+            ("SRAM used", perf_metrics.sram_memory_area_size),
+            ("DRAM used", perf_metrics.dram_memory_area_size),
+            ("On-chip flash used", perf_metrics.on_chip_flash_memory_area_size),
+            ("Off-chip flash used", perf_metrics.off_chip_flash_memory_area_size),
+        ]
+        if value > 0
+    ]
+
+    rows = memory_usage + cycles + inferences + batch
 
     return Table(columns, rows, name="Overall performance", alias="overall_performance")
 
