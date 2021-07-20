@@ -14,7 +14,7 @@ from mlia.cli.commands import performance
 
 def add_device_options(parser: argparse.ArgumentParser) -> None:
     """Add device specific options."""
-    device_group = parser.add_argument_group("device_opts", "Device options")
+    device_group = parser.add_argument_group("device options")
     device_group.add_argument(
         "--device",
         choices=("ethos-u55", "ethos-u65"),
@@ -74,9 +74,7 @@ def add_device_options(parser: argparse.ArgumentParser) -> None:
 
 def add_optimization_options(parser: argparse.ArgumentParser) -> None:
     """Add optimization specific options."""
-    optimization_group = parser.add_argument_group(
-        "optimization_opts", "Optimization options"
-    )
+    optimization_group = parser.add_argument_group("optimization options")
 
     optimization_group.add_argument(
         "--optimization_type",
@@ -105,13 +103,13 @@ def add_optimization_options(parser: argparse.ArgumentParser) -> None:
 
 def add_tflite_model_options(parser: argparse.ArgumentParser) -> None:
     """Add model specific options."""
-    model_group = parser.add_argument_group("tflite_model_opts", "Tflite model options")
+    model_group = parser.add_argument_group("TFLite model options")
     model_group.add_argument("model", help="TFLite model")
 
 
 def add_output_options(parser: argparse.ArgumentParser) -> None:
     """Add output specific options."""
-    output_group = parser.add_argument_group("output_opts", "Output options")
+    output_group = parser.add_argument_group("output options")
     output_group.add_argument(
         "--output_format",
         choices=["txt", "json", "csv"],
@@ -130,7 +128,7 @@ def add_output_options(parser: argparse.ArgumentParser) -> None:
 
 def add_keras_model_options(parser: argparse.ArgumentParser) -> None:
     """Add model specific options."""
-    model_group = parser.add_argument_group("keras_model_opts", "Keras model options")
+    model_group = parser.add_argument_group("Keras model options")
     model_group.add_argument("model", help="Keras model")
 
 
