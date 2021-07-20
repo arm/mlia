@@ -57,25 +57,37 @@ def simple_conv_model() -> Any:
     return model
 
 
-def get_model_path(model_name: str, output_dir: Optional[str]) -> Path:
+def get_model_path(
+    model_name: str, output_dir: Optional[str], ext: str = "tflite"
+) -> Path:
     """Get model path."""
-    tflite_file_path = Path(f"{model_name}.tflite")
+    model_path = Path(f"{model_name}.{ext}")
     if not output_dir:
-        return tflite_file_path
+        return model_path
 
     output_dir_path = Path(output_dir)
     if not output_dir_path.exists():
         output_dir_path.mkdir()
 
-    return output_dir_path / tflite_file_path
+    return output_dir_path / model_path
 
 
-def save_model(tflite_model: Any, model_name: str, output_dir: Optional[str]) -> None:
-    """Save model."""
+def save_tflite_model(
+    tflite_model: Any, model_name: str, output_dir: Optional[str]
+) -> None:
+    """Save TFLite model."""
     tflite_file_path = get_model_path(model_name, output_dir)
     with open(tflite_file_path, "wb") as tflite_file:
         print(f"Model {model_name} saved to {tflite_file_path}")
         tflite_file.write(tflite_model)
+
+
+def save_keras_model(
+    model: tf.keras.Model, model_name: str, output_dir: Optional[str]
+) -> None:
+    """Save Keras model."""
+    keras_file_path = get_model_path(model_name, output_dir, "h5")
+    model.save(keras_file_path, include_optimizer=True)
 
 
 def representative_dataset(model: Any) -> Callable:
@@ -89,7 +101,9 @@ def representative_dataset(model: Any) -> Callable:
     return dataset
 
 
-def gen_models(output_dir: Optional[str], specific_model: Optional[str]) -> None:
+def gen_models(
+    output_dir: Optional[str], specific_model: Optional[str], save_keras: bool
+) -> None:
     """Generate test models."""
     for model_name, model_creator in models.items():
         if specific_model and model_name != specific_model:
@@ -97,6 +111,8 @@ def gen_models(output_dir: Optional[str], specific_model: Optional[str]) -> None
 
         print(f"==> Generate {model_name} ...")
         model = model_creator()
+        if save_keras:
+            save_keras_model(model, model_name, output_dir)
 
         converter = tf.lite.TFLiteConverter.from_keras_model(model)
 
@@ -107,19 +123,25 @@ def gen_models(output_dir: Optional[str], specific_model: Optional[str]) -> None
         converter.inference_output_type = tf.int8
 
         tflite_model = converter.convert()
-        save_model(tflite_model, model_name, output_dir)
+        save_tflite_model(tflite_model, model_name, output_dir)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--output_dir", help="Path to the output directory where models will be saved"
+        "--output-dir", help="Path to the output directory where models will be saved"
     )
     parser.add_argument(
-        "--model_name",
+        "--model-name",
         help="Name of the particular model to generate",
         choices=models.keys(),
     )
+    parser.add_argument(
+        "--save-keras",
+        action="store_true",
+        default=False,
+        help="Save Keras model in addition to the TFLite model",
+    )
     args = parser.parse_args()
 
-    gen_models(args.output_dir, args.model_name)
+    gen_models(args.output_dir, args.model_name, args.save_keras)
