@@ -53,7 +53,7 @@ def add_device_options(parser: argparse.ArgumentParser) -> None:
     )
     device_group.add_argument("--arena-cache-size", type=int, help="Arena cache size")
     device_group.add_argument(
-        "--tensor_allocator",
+        "--tensor-allocator",
         choices=("LinearAlloc", "Greedy", "HillClimb"),
         default="HillClimb",
         help="Tensor allocator algorithm",
@@ -77,13 +77,13 @@ def add_optimization_options(parser: argparse.ArgumentParser) -> None:
     optimization_group = parser.add_argument_group("optimization options")
 
     optimization_group.add_argument(
-        "--optimization_type",
+        "--optimization-type",
         required=True,
         choices=("pruning", "clustering"),
         help="Optimization type [required]",
     )
     optimization_group.add_argument(
-        "--optimization_target",
+        "--optimization-target",
         required=True,
         type=float,
         help="""Target for optimization
@@ -92,7 +92,7 @@ def add_optimization_options(parser: argparse.ArgumentParser) -> None:
             [required]""",
     )
     optimization_group.add_argument(
-        "--layers_to_optimize",
+        "--layers-to-optimize",
         nargs="+",
         type=str,
         help="""Name of the layers to optimize (separated by space)
@@ -111,7 +111,7 @@ def add_output_options(parser: argparse.ArgumentParser) -> None:
     """Add output specific options."""
     output_group = parser.add_argument_group("output options")
     output_group.add_argument(
-        "--output_format",
+        "--output-format",
         choices=["txt", "json", "csv"],
         default="txt",
         help="Output format (default: %(default)s)",
