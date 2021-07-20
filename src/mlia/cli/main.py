@@ -29,6 +29,13 @@ def add_device_options(parser: argparse.ArgumentParser) -> None:
         help="MAC value (default: %(default)s)",
     )
     device_group.add_argument(
+        "--config",
+        type=str,
+        action="append",
+        dest="config_files",
+        help="Vela configuration file(s) in Python ConfigParser .ini file format",
+    )
+    device_group.add_argument(
         "--system-config",
         default="internal-default",
         help="System configuration (default: %(default)s)",

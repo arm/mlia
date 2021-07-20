@@ -6,7 +6,12 @@ import pytest
 
 
 @pytest.fixture
-def test_models_path() -> Path:
+def test_models_path(test_resources_path: Path) -> Path:
     """Return test models path."""
-    test_resources_path = Path(__file__).parent / "test_resources/models"
-    return test_resources_path.absolute()
+    return (test_resources_path / "models").absolute()
+
+
+@pytest.fixture
+def test_resources_path() -> Path:
+    """Return test resources path."""
+    return Path(__file__).parent / "test_resources"

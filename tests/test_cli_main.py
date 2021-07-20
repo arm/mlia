@@ -1,11 +1,5 @@
 # Copyright 2021, Arm Ltd.
-"""Module for running tests.
-
-This file contains tests which will be execute by pytest.
-Please refer to official pytest documentation.
-
-https://docs.pytest.org/en/latest/contents.html
-"""
+"""Tests for main module."""
 from pathlib import Path
 from typing import Any
 from typing import List
@@ -51,6 +45,28 @@ def test_performance_command(args: List[str], test_models_path: Path) -> None:
     model = test_models_path / "simple_3_layers_model.tflite"
 
     exit_code = main(args + [str(model)])
+    assert exit_code == 0
+
+
+def test_performance_custom_vela_init(
+    test_resources_path: Path, test_models_path: Path
+) -> None:
+    """Test performance command with custom vela.ini."""
+    vela_ini = test_resources_path / "vela/sample_vela.ini"
+    model = test_models_path / "simple_3_layers_model.tflite"
+
+    args = [
+        "performance",
+        str(model),
+        "--config",
+        str(vela_ini),
+        "--system-config",
+        "Ethos_U55_High_End_Embedded",
+        "--memory-mode",
+        "Shared_Sram",
+    ]
+
+    exit_code = main(args)
     assert exit_code == 0
 
 
