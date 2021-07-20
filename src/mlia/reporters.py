@@ -210,7 +210,7 @@ class Table(Report):
                 return item.value
 
             if isinstance(item, Table):
-                return ""
+                return ";".join(str(cell) for row in item.rows for cell in row)
 
             return item
 

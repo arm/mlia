@@ -141,3 +141,43 @@ def test_table_representation() -> None:
 """.strip()
     print(text_report)
     assert text_report == expected_text_report
+
+
+def test_csv_nested_table_representation() -> None:
+    """Test representation of the nested tables in csv format."""
+
+    def sample_table(num_of_cols: int) -> Table:
+        columns = [
+            Column("Header 1", alias="header1"),
+            Column("Header 2", alias="header2"),
+        ]
+
+        rows = [
+            (
+                1,
+                Table(
+                    columns=[
+                        Column(f"Nested column {i+1}") for i in range(num_of_cols)
+                    ],
+                    rows=[[f"value{i+1}" for i in range(num_of_cols)]],
+                    name="Nested table",
+                ),
+            )
+        ]
+
+        return Table(columns, rows, name="Sample table", alias="sample_table")
+
+    assert sample_table(num_of_cols=2).to_csv() == [
+        ["Header 1", "Header 2"],
+        [1, "value1;value2"],
+    ]
+
+    assert sample_table(num_of_cols=1).to_csv() == [
+        ["Header 1", "Header 2"],
+        [1, "value1"],
+    ]
+
+    assert sample_table(num_of_cols=0).to_csv() == [
+        ["Header 1", "Header 2"],
+        [1, ""],
+    ]
