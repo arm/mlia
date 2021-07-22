@@ -1,6 +1,5 @@
 # Copyright 2021, Arm Ltd.
 """Test for module optimizations/clustering."""
-from math import isclose
 from typing import List
 from typing import Optional
 from typing import Tuple
@@ -24,8 +23,8 @@ def _get_dataset() -> Tuple[np.array, np.array]:
     x_train = x_train / 255.0
 
     # Use subset of 60000 examples to keep unit test speed fast.
-    x_train = x_train[0:1000]
-    y_train = y_train[0:1000]
+    x_train = x_train[0:1]
+    y_train = y_train[0:1]
 
     return x_train, y_train
 
@@ -45,8 +44,8 @@ def _prune_model(
     model: tf.keras.Model, target_sparsity: float, layers_to_prune: Optional[List[str]]
 ) -> tf.keras.Model:
     x_train, y_train = _get_dataset()
-    batch_size = 1000
-    num_epochs = 10
+    batch_size = 1
+    num_epochs = 1
 
     pruner = Pruner(
         model,
@@ -65,20 +64,48 @@ def _prune_model(
     return pruned_model
 
 
-def _test_sparsity_per_layers(
+def _test_num_unique_weights(
     metrics: tflite_metrics.TFLiteMetrics,
-    desired_sparsity: float,
-    layers_to_prune: Optional[List[str]],
+    target_num_clusters: int,
+    layers_to_cluster: Optional[List[str]],
 ) -> None:
-    sparsity_per_layer = metrics.sparsity_per_layer()
-    if layers_to_prune is None:
-        layers_to_prune = ["conv1", "conv2"]
-    assert layers_to_prune is not None
-    for name, sparsity in sparsity_per_layer.items():
-        if name in layers_to_prune:
-            assert isclose(
-                sparsity, desired_sparsity, abs_tol=0.01
-            ), "Layer '{}' has incorrect sparsity.".format(name)
+    clustered_uniqueness_dict = metrics.num_unique_weights(
+        tflite_metrics.ReportClusterMode.NUM_CLUSTERS_PER_AXIS
+    )
+    num_clustered_layers = 0
+    num_optimizable_layers = len(clustered_uniqueness_dict)
+    if layers_to_cluster:
+        expected_num_clustered_layers = len(layers_to_cluster)
+    else:
+        expected_num_clustered_layers = num_optimizable_layers
+    for layer_name in clustered_uniqueness_dict:
+        # the +1 is there temporarily because of a bug that's been fixed
+        # but the fix hasn't been merged yet.
+        # Will need to be removed in the future.
+        if clustered_uniqueness_dict[layer_name][0] <= (target_num_clusters + 1):
+            num_clustered_layers = num_clustered_layers + 1
+    # make sure we are having exactly as many clustered layers as we wanted
+    assert num_clustered_layers == expected_num_clustered_layers
+
+
+def _test_sparsity(
+    metrics: tflite_metrics.TFLiteMetrics,
+    target_sparsity: float,
+    layers_to_cluster: Optional[List[str]],
+) -> None:
+    pruned_sparsity_dict = metrics.sparsity_per_layer()
+    num_sparse_layers = 0
+    num_optimizable_layers = len(pruned_sparsity_dict)
+    error_margin = 0.03
+    if layers_to_cluster:
+        expected_num_sparse_layers = len(layers_to_cluster)
+    else:
+        expected_num_sparse_layers = num_optimizable_layers
+    for layer_name in pruned_sparsity_dict:
+        if abs(pruned_sparsity_dict[layer_name] - target_sparsity) < error_margin:
+            num_sparse_layers = num_sparse_layers + 1
+    # make sure we are having exactly as many sparse layers as we wanted
+    assert num_sparse_layers == expected_num_sparse_layers
 
 
 @pytest.mark.parametrize("sparsity_aware", (False, True))
@@ -98,20 +125,9 @@ def test_cluster_simple_model_fully(
     if sparsity_aware:
         base_model = _prune_model(base_model, target_sparsity, layers_to_cluster)
 
-    base_model_path = test_utils.save_keras_model(base_model)
-    base_compressed_size = tflite_metrics.get_gzipped_file_size(base_model_path)
-
     tflite_base_model = test_utils.convert_to_tflite(base_model)
     tflite_base_path = test_utils.save_tflite_model(tflite_base_model)
-    base_metrics = tflite_metrics.TFLiteMetrics(tflite_base_path)
-
-    base_clusters_per_axis = base_metrics.num_unique_weights(
-        tflite_metrics.ReportClusterMode.NUM_CLUSTERS_PER_AXIS
-    )
-
-    for key, value in base_clusters_per_axis.items():
-        if "conv1" in key:
-            assert value[0] > target_num_clusters
+    base_compressed_size = tflite_metrics.get_gzipped_file_size(tflite_base_path)
 
     clusterer = Clusterer(
         base_model,
@@ -122,27 +138,19 @@ def test_cluster_simple_model_fully(
     )
     clusterer.apply_optimization()
     clustered_model = clusterer.get_model()
-    clustered_model_path = test_utils.save_keras_model(clustered_model)
-    clustered_compressed_size = tflite_metrics.get_gzipped_file_size(
-        clustered_model_path
-    )
 
     tflite_clustered_model = test_utils.convert_to_tflite(clustered_model)
     tflite_clustered_path = test_utils.save_tflite_model(tflite_clustered_model)
-    clustered_metrics = tflite_metrics.TFLiteMetrics(tflite_clustered_path)
+    clustered_compressed_size = tflite_metrics.get_gzipped_file_size(
+        tflite_clustered_path
+    )
+    clustered_tflite_metrics = tflite_metrics.TFLiteMetrics(tflite_clustered_path)
 
-    clustered_clusters_per_axis = clustered_metrics.num_unique_weights(
-        tflite_metrics.ReportClusterMode.NUM_CLUSTERS_PER_AXIS
+    _test_num_unique_weights(
+        clustered_tflite_metrics, target_num_clusters, layers_to_cluster
     )
 
-    for key, value in clustered_clusters_per_axis.items():
-        if "conv1" in key:
-            # Note: <= needed because of a bug.
-            # Should be changed once latest stable tensorflow version updated with fix.
-            # see: https://github.com/tensorflow/model-optimization/pull/702
-            assert value[0] <= target_num_clusters
-
     if sparsity_aware:
-        _test_sparsity_per_layers(clustered_metrics, target_sparsity, layers_to_cluster)
+        _test_sparsity(clustered_tflite_metrics, target_sparsity, layers_to_cluster)
 
     assert base_compressed_size > clustered_compressed_size

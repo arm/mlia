@@ -94,11 +94,8 @@ def test_command_invalid_optimization_target(
 @pytest.mark.parametrize(
     "optimization_type, optimization_target",
     [
-        ["pruning", 0.01],
         ["pruning", 0.5],
-        ["pruning", 0.99],
         ["clustering", 3.0],
-        ["clustering", 420.0],
     ],
 )
 def test_command_valid_optimization_target(

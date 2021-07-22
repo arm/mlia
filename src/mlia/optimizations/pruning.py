@@ -14,6 +14,7 @@ import tensorflow as tf
 import tensorflow_model_optimization as tfmot
 from mlia.optimizations.common import Optimizer
 from mlia.optimizations.common import OptimizerConfiguration
+from tensorflow_model_optimization.python.core.sparsity.keras import pruning_wrapper
 
 
 class PruningConfiguration(OptimizerConfiguration):
@@ -73,21 +74,14 @@ class Pruner(Optimizer):
         )
 
     def _setup_pruning_params(self) -> dict:
-        assert self.optimizer_configuration.x_train is not None
-        num_images = self.optimizer_configuration.x_train.shape[0]
-
-        end_step = (
-            np.ceil(num_images / self.optimizer_configuration.batch_size).astype(
-                np.int32
-            )
-            * self.optimizer_configuration.num_epochs
-        )
 
         pruning_params = {
-            "pruning_schedule": tfmot.sparsity.keras.ConstantSparsity(
-                target_sparsity=self.optimizer_configuration.optimization_target,
+            "pruning_schedule": tfmot.sparsity.keras.PolynomialDecay(
+                initial_sparsity=0,
+                final_sparsity=self.optimizer_configuration.optimization_target,
                 begin_step=0,
-                end_step=end_step,
+                end_step=self.optimizer_configuration.num_epochs,
+                frequency=1,
             ),
         }
 
@@ -138,6 +132,20 @@ class Pruner(Optimizer):
             callbacks=callbacks,
         )
 
+    def _assert_sparsity_reached(self) -> None:
+        for layer in self.model.layers:
+            if isinstance(layer, pruning_wrapper.PruneLowMagnitude):
+                for weight in layer.layer.get_prunable_weights():
+                    nonzero_weights = np.count_nonzero(
+                        tf.keras.backend.get_value(weight)
+                    )
+                    all_weights = tf.keras.backend.get_value(weight).size
+                    np.testing.assert_approx_equal(
+                        self.optimizer_configuration.optimization_target,
+                        1 - nonzero_weights / all_weights,
+                        significant=2,
+                    )
+
     def _strip_pruning(self) -> None:
         self.model = tfmot.sparsity.keras.strip_pruning(self.model)
 
@@ -145,6 +153,7 @@ class Pruner(Optimizer):
         """Apply all steps of pruning sequentially."""
         self._init_for_pruning()
         self._train_pruning()
+        self._assert_sparsity_reached()
         self._strip_pruning()
 
     def get_model(self) -> tf.keras.Model:
