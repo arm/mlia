@@ -1,44 +1,58 @@
 # Copyright 2021, Arm Ltd.
 """Metrics module."""
+from mlia.config import EthosUConfiguration
 
 
-class PerformanceMetrics:
-    """Contains all the performance metrics Vela generates in a run."""
+class NPUCycles:
+    """NPU cycles metrics."""
 
     def __init__(
         self,
-        npu_cycles: int,
-        sram_access_cycles: int,
-        dram_access_cycles: int,
-        on_chip_flash_access_cycles: int,
-        off_chip_flash_access_cycles: int,
-        total_cycles: int,
-        batch_inference_time: float,
-        inferences_per_second: float,
-        batch_size: int,
+        npu_axi0_rd_data_beat_received: int,
+        npu_axi0_wr_data_beat_written: int,
+        npu_axi1_rd_data_beat_received: int,
+        npu_active_cycles: int,
+        npu_idle_cycles: int,
+        npu_total_cycles: int,
+    ):
+        """Init NPU cycles metrics instance."""
+        self.npu_axi0_rd_data_beat_received = npu_axi0_rd_data_beat_received
+        self.npu_axi0_wr_data_beat_written = npu_axi0_wr_data_beat_written
+        self.npu_axi1_rd_data_beat_received = npu_axi1_rd_data_beat_received
+        self.npu_active_cycles = npu_active_cycles
+        self.npu_idle_cycles = npu_idle_cycles
+        self.npu_total_cycles = npu_total_cycles
+
+
+class MemoryUsage:
+    """Memory usage metrics."""
+
+    def __init__(
+        self,
         unknown_memory_area_size: int,
         sram_memory_area_size: int,
         dram_memory_area_size: int,
         on_chip_flash_memory_area_size: int,
         off_chip_flash_memory_area_size: int,
-    ) -> None:
-        """Initialize the performance metrics instance."""
-        self.npu_cycles = npu_cycles
-        self.sram_access_cycles = sram_access_cycles
-        self.dram_access_cycles = dram_access_cycles
-        self.on_chip_flash_access_cycles = on_chip_flash_access_cycles
-        self.off_chip_flash_access_cycles = off_chip_flash_access_cycles
-        self.total_cycles = total_cycles
-        self.batch_inference_time = batch_inference_time
-        self.inferences_per_second = inferences_per_second
-        self.batch_size = batch_size
-
-        self.cycles_per_batch_unit = "cycles/batch"
-        self.inference_time_unit = "ms"
-        self.inferences_per_second_unit = "inf/s"
-
+    ):
+        """Init memory usage metrics instance."""
         self.unknown_memory_area_size = unknown_memory_area_size
         self.sram_memory_area_size = sram_memory_area_size
         self.dram_memory_area_size = dram_memory_area_size
         self.on_chip_flash_memory_area_size = on_chip_flash_memory_area_size
         self.off_chip_flash_memory_area_size = off_chip_flash_memory_area_size
+
+
+class PerformanceMetrics:
+    """Performance metrics."""
+
+    def __init__(
+        self,
+        device: EthosUConfiguration,
+        npu_cycles: NPUCycles,
+        memory_usage: MemoryUsage,
+    ) -> None:
+        """Initialize the performance metrics instance."""
+        self.device = device
+        self.npu_cycles = npu_cycles
+        self.memory_usage = memory_usage

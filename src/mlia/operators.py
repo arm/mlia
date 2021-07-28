@@ -1,5 +1,7 @@
 # Copyright 2021, Arm Ltd.
 """Operators module."""
+import logging
+
 from mlia.config import EthosUConfiguration
 from mlia.config import IPConfiguration
 from mlia.config import ModelConfiguration
@@ -8,14 +10,22 @@ from mlia.metadata import Operations
 from mlia.tools import vela_wrapper
 
 
+LOGGER = logging.getLogger("mlia.operators")
+
+
 def supported_operators(
     model: ModelConfiguration, device: IPConfiguration
 ) -> Operations:
     """Return list of model's operations."""
+    LOGGER.info("Checking op compatibility ...")
+
     if not isinstance(model, TFLiteModel):
         raise Exception("Unsupported model configuration")
 
     if not isinstance(device, EthosUConfiguration):
         raise Exception("Unsupported ip configuration")
 
-    return vela_wrapper.supported_operators(model, device)
+    ops = vela_wrapper.supported_operators(model, device)
+    LOGGER.info("Done")
+
+    return ops

@@ -30,15 +30,15 @@ class Report(ABC):
     """Abstract class for the report."""
 
     @abstractmethod
-    def to_json(self) -> Any:
+    def to_json(self, **kwargs: Any) -> Any:
         """Convert to json serializible format."""
 
     @abstractmethod
-    def to_csv(self) -> List:
+    def to_csv(self, **kwargs: Any) -> List:
         """Convert to csv serializible format."""
 
     @abstractmethod
-    def to_text(self) -> str:
+    def to_text(self, **kwargs: Any) -> str:
         """Convert to human readable format."""
 
 
@@ -143,7 +143,7 @@ class Table(Report):
         self.name = name
         self.alias = alias
 
-    def to_json(self) -> Union[Dict, List[Dict]]:
+    def to_json(self, **kwargs: Any) -> Union[Dict, List[Dict]]:
         """Convert table to dict object."""
 
         def item_to_json(item: Any) -> Any:
@@ -170,14 +170,20 @@ class Table(Report):
 
         return {self.alias: json_data}
 
-    def to_text(self, nested: bool = False) -> str:
+    def to_text(
+        self,
+        nested: bool = False,
+        show_title: bool = True,
+        space: Union[bool, str] = False,
+        **kwargs: Any,
+    ) -> str:
         """Produce report in human readable format."""
         headers = [] if nested else [c.header for c in self.columns]
 
         def item_to_text(item: Any, col: Column) -> str:
             """Convert item to text."""
             if isinstance(item, Table):
-                return item.to_text(True)
+                return item.to_text(True, **kwargs)
 
             as_text = str(item)
 
@@ -187,21 +193,36 @@ class Table(Report):
 
             return as_text
 
-        return tabulate(
-            (
+        title = ""
+        if show_title and not nested:
+            title = f"{self.name}:\n"
+
+        if space in (True, "top"):
+            title = "\n" + title
+
+        footer = ""
+        if space in (True, "bottom"):
+            footer = "\n"
+
+        return (
+            title
+            + tabulate(
                 (
-                    item_to_text(item, col)
-                    for item, col in zip(row, self.columns)
-                    if col.supports_format("txt")
-                )
-                for row in self.rows
-            ),
-            headers=headers,
-            tablefmt="plain" if nested else "fancy_grid",
-            disable_numparse=True,
+                    (
+                        item_to_text(item, col)
+                        for item, col in zip(row, self.columns)
+                        if col.supports_format("txt")
+                    )
+                    for row in self.rows
+                ),
+                headers=headers,
+                tablefmt="plain" if nested else "fancy_grid",
+                disable_numparse=True,
+            )
+            + footer
         )
 
-    def to_csv(self) -> List[Any]:
+    def to_csv(self, **kwargs: Any) -> List[Any]:
         """Convert table to csv format."""
         headers = [[c.header for c in self.columns if c.supports_format("csv")]]
 
@@ -229,7 +250,13 @@ class Table(Report):
 class SingleRow(Table):
     """Table with a single row."""
 
-    def to_text(self, nested: bool = False) -> str:
+    def to_text(
+        self,
+        nested: bool = False,
+        show_title: bool = True,
+        space: Union[bool, str] = False,
+        **kwargs: Any,
+    ) -> str:
         """Produce report in human readable format."""
         if len(self.rows) != 1:
             raise Exception("Table should have only one row")
@@ -241,7 +268,7 @@ class SingleRow(Table):
             if column.supports_format("txt")
         )
 
-        return "\n".join([self.name, indent(items, "  ")])
+        return "\n".join([f"{self.name}:", indent(items, "  ")])
 
 
 def report_operators_stat(operations: Operations) -> Report:
@@ -354,61 +381,49 @@ def report_perf_metrics(perf_metrics: PerformanceMetrics) -> Report:
         Column("Unit", alias="unit", fmt=Format(wrap_width=15)),
     ]
 
+    cycles_metrics = perf_metrics.npu_cycles
     cycles = [
-        (
-            metric,
-            Cell(value, Format(str_fmt="12,d")),
-            perf_metrics.cycles_per_batch_unit,
-        )
+        (metric, Cell(value, Format(str_fmt="12,d")), "cycles")
         for (metric, value) in [
-            ("NPU cycles", perf_metrics.npu_cycles),
-            ("SRAM Access cycles", perf_metrics.sram_access_cycles),
-            ("DRAM Access cycles", perf_metrics.dram_access_cycles),
-            (
-                "On-chip Flash Access cycles",
-                perf_metrics.on_chip_flash_access_cycles,
-            ),
-            (
-                "Off-chip Flash Access cycles",
-                perf_metrics.off_chip_flash_access_cycles,
-            ),
-            ("Total cycles", perf_metrics.total_cycles),
+            ("NPU active cycles", cycles_metrics.npu_active_cycles),
+            ("NPU idle cycles", cycles_metrics.npu_idle_cycles),
+            ("NPU total cycles", cycles_metrics.npu_total_cycles),
         ]
     ]
 
-    inferences = [
-        (metric, Cell(value, Format(str_fmt="7,.2f")), unit)
-        for metric, value, unit in [
+    data_beats = [
+        (metric, Cell(value, Format(str_fmt="12,d")), "beats")
+        for (metric, value) in [
             (
-                "Batch Inference time",
-                perf_metrics.batch_inference_time,
-                perf_metrics.inference_time_unit,
+                "NPU AXI0 RD data beat received",
+                cycles_metrics.npu_axi0_rd_data_beat_received,
             ),
             (
-                "Inferences per second",
-                perf_metrics.inferences_per_second,
-                perf_metrics.inferences_per_second_unit,
+                "NPU AXI0 WR data beat written",
+                cycles_metrics.npu_axi0_wr_data_beat_written,
+            ),
+            (
+                "NPU AXI1 RD data beat received",
+                cycles_metrics.npu_axi1_rd_data_beat_received,
             ),
         ]
     ]
 
-    batch = [("Batch size", Cell(perf_metrics.batch_size, Format(str_fmt="d")), "")]
-
+    memory_metrics = perf_metrics.memory_usage
     memory_usage = [
         (metric, Cell(value / 1024.0, Format(str_fmt="12.2f")), "KiB")
         for (metric, value) in [
-            ("Unknown memory area used", perf_metrics.unknown_memory_area_size),
-            ("SRAM used", perf_metrics.sram_memory_area_size),
-            ("DRAM used", perf_metrics.dram_memory_area_size),
-            ("On-chip flash used", perf_metrics.on_chip_flash_memory_area_size),
-            ("Off-chip flash used", perf_metrics.off_chip_flash_memory_area_size),
+            ("Unknown memory area used", memory_metrics.unknown_memory_area_size),
+            ("SRAM used", memory_metrics.sram_memory_area_size),
+            ("DRAM used", memory_metrics.dram_memory_area_size),
+            ("On-chip flash used", memory_metrics.on_chip_flash_memory_area_size),
+            ("Off-chip flash used", memory_metrics.off_chip_flash_memory_area_size),
         ]
         if value > 0
     ]
 
-    rows = memory_usage + cycles + inferences + batch
-
-    return Table(columns, rows, name="Overall performance", alias="overall_performance")
+    rows = memory_usage + cycles + data_beats
+    return Table(columns, rows, name="Performance metrics", alias="performance_metrics")
 
 
 class CompoundReport(Report):
@@ -421,7 +436,7 @@ class CompoundReport(Report):
         """Init compound report instance."""
         self.reports = reports
 
-    def to_json(self) -> Any:
+    def to_json(self, **kwargs: Any) -> Any:
         """Convert to json serializible format.
 
         Method attempts to create compound dictionary based on provided
@@ -429,11 +444,11 @@ class CompoundReport(Report):
         """
         result = {}
         for item in self.reports:
-            result.update(item.to_json())
+            result.update(item.to_json(**kwargs))
 
         return result
 
-    def to_csv(self) -> List:
+    def to_csv(self, **kwargs: Any) -> List:
         """Convert to csv serializible format.
 
         CSV format does support only one table. In order to be able to export
@@ -472,9 +487,9 @@ class CompoundReport(Report):
 
         raise Exception("Unable to export data in csv format")
 
-    def to_text(self) -> str:
+    def to_text(self, **kwargs: Any) -> str:
         """Convert to human readable format."""
-        return "\n".join(item.to_text() for item in self.reports)
+        return "\n".join(item.to_text(**kwargs) for item in self.reports)
 
 
 class CompoundFormatter:
@@ -492,18 +507,18 @@ class CompoundFormatter:
 
 def json_reporter(report: Report, output: FileLike, **kwargs: Any) -> None:
     """Produce report in json format."""
-    json.dump(report.to_json(), output, indent=4)
+    json.dump(report.to_json(**kwargs), output, indent=4)
 
 
 def text_reporter(report: Report, output: FileLike, **kwargs: Any) -> None:
     """Produce report in text format."""
-    print(report.to_text(), file=output)
+    print(report.to_text(**kwargs), file=output)
 
 
 def csv_reporter(report: Report, output: FileLike, **kwargs: Any) -> None:
     """Produce report in csv format."""
     csv_writer = csv.writer(output)
-    csv_writer.writerows(report.to_csv())
+    csv_writer.writerows(report.to_csv(**kwargs))
 
 
 def report(

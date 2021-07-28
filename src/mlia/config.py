@@ -1,10 +1,13 @@
 # Copyright 2021, Arm Ltd.
 """Model and IP configuration."""
 from typing import Any
+from typing import cast
+from typing import Dict
 from typing import List
 from typing import Optional
 from typing import Union
 
+import tensorflow as tf
 from typing_extensions import Literal
 
 
@@ -18,6 +21,11 @@ class TFLiteModel(ModelConfiguration):
     def __init__(self, model_path: str):
         """Init TFLite model configuration."""
         self.model_path = model_path
+
+    def input_details(self) -> List[Dict]:
+        """Get model's input details."""
+        interpreter = tf.lite.Interpreter(model_path=self.model_path)
+        return cast(List[Dict], interpreter.get_input_details())
 
 
 class CompilerOptions:

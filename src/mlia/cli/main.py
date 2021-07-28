@@ -1,7 +1,11 @@
 # Copyright 2021, Arm Ltd.
 """CLI main entry point."""
 import argparse
+import datetime
+import logging
 import sys
+from inspect import signature
+from pathlib import Path
 from typing import List
 from typing import Optional
 
@@ -10,6 +14,58 @@ from mlia.cli.commands import keras_to_tflite
 from mlia.cli.commands import model_optimization
 from mlia.cli.commands import operators
 from mlia.cli.commands import performance
+
+LOGGER = logging.getLogger("mlia.cli")
+
+INFO_MESSAGE = f"""
+ML Inference Advisor {__version__}
+
+Help the design and optimization of neural network models for efficient inference on a target CPU, GPU and NPU
+
+Supported targets:
+
+ - Ethos-U55 <op compatibility, perf estimation, model opt>
+ - Ethos-U65 <op compatibility, perf estimation, model opt>
+
+ARM {datetime.datetime.now():%Y} Copyright Reserved
+"""
+
+
+def setup_logging(logs_dir: str, verbose: bool = False) -> None:
+    """Set up loggers."""
+    logs_dir_path = Path(logs_dir)
+    if not logs_dir_path.exists():
+        logs_dir_path.mkdir()
+
+    default_formatter = logging.Formatter(
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    )
+
+    now = datetime.datetime.now()
+    timestamp = f"{now:%Y%m%d_%H%M%S}"
+
+    for logger_name in ["mlia.tools.aiet", "mlia.tools.vela"]:
+        module_name = logger_name.split(".")[-1]
+
+        handler = logging.FileHandler(
+            logs_dir_path / f"{timestamp}_{module_name}.log", delay=True
+        )
+        handler.setLevel(logging.DEBUG)
+        handler.setFormatter(default_formatter)
+
+        logger = logging.getLogger(logger_name)
+        logger.setLevel(logging.DEBUG)
+        logger.addHandler(handler)
+
+        if verbose:
+            stdout_handler = logging.StreamHandler(sys.stdout)
+            stdout_handler.setFormatter(logging.Formatter("%(name)s - %(message)s"))
+            logger.addHandler(stdout_handler)
+
+    for logger_name in ["mlia.cli", "mlia.performance", "mlia.operators"]:
+        logger = logging.getLogger(logger_name)
+        logger.setLevel(logging.INFO)
+        logger.addHandler(logging.StreamHandler(sys.stdout))
 
 
 def add_device_options(parser: argparse.ArgumentParser) -> None:
@@ -126,6 +182,14 @@ def add_output_options(parser: argparse.ArgumentParser) -> None:
     )
 
 
+def add_debug_options(parser: argparse.ArgumentParser) -> None:
+    """Add debug options."""
+    debug_group = parser.add_argument_group("debug options")
+    debug_group.add_argument(
+        "--verbose", default=False, action="store_true", help="Produce verbose output"
+    )
+
+
 def add_keras_model_options(parser: argparse.ArgumentParser) -> None:
     """Add model specific options."""
     model_group = parser.add_argument_group("Keras model options")
@@ -166,7 +230,12 @@ def init_commands(parser: argparse.ArgumentParser) -> None:
         (
             performance,
             ["perf"],
-            [add_device_options, add_tflite_model_options, add_output_options],
+            [
+                add_device_options,
+                add_tflite_model_options,
+                add_output_options,
+                add_debug_options,
+            ],
         ),
         (
             model_optimization,
@@ -190,30 +259,60 @@ def init_commands(parser: argparse.ArgumentParser) -> None:
             opt_group(command_parser)
 
 
-def run_command(args: argparse.Namespace) -> None:
+def run_command(args: argparse.Namespace) -> int:
     """Run command."""
-    kwargs = {
-        param_name: param_value
-        for param_name, param_value in args.__dict__.items()
-        if param_name not in ["func", "command"]
-    }
-    args.func(**kwargs)
+    result = 1
+    try:
+        verbose = "verbose" in args and args.verbose
+
+        setup_logging(args.working_dir, verbose)
+        LOGGER.info(INFO_MESSAGE)
+
+        # these parameters should not be passed into command function
+        skipped_params = ["func", "command", "verbose"]
+
+        # pass these parameters only if command expects them
+        expected_params = ["working_dir"]
+        func_params = signature(args.func).parameters
+
+        kwargs = {
+            param_name: param_value
+            for param_name, param_value in vars(args).items()
+            if param_name not in skipped_params
+            and (param_name not in expected_params or param_name in func_params)
+        }
+        args.func(**kwargs)
+    except KeyboardInterrupt:
+        LOGGER.error("Execution has been interrupted")
+    except Exception as e:
+        LOGGER.error(
+            f"Execution failed with error: {e}. Please use log files in directory "
+            f"{args.working_dir} for more details or enable verbose mode",
+            exc_info=e if verbose else None,
+        )
+    else:
+        result = 0
+
+    return result
 
 
 def main(argv: Optional[List[str]] = None) -> int:
     """Entry point of the application."""
     parser = argparse.ArgumentParser(
-        description="ML Inference advisor command line tool",
+        description=INFO_MESSAGE, formatter_class=argparse.RawDescriptionHelpFormatter
     )
     parser.add_argument(
         "--version", action="version", version=f"%(prog)s { __version__}"
     )
+    parser.add_argument(
+        "--working-dir",
+        default="mlia_output",
+        help="Path to the directory where MLIA will store logs, models, etc",
+    )
     init_commands(parser)
 
     args = parser.parse_args(argv)
-    run_command(args)
-
-    return 0
+    return run_command(args)
 
 
 if __name__ == "__main__":

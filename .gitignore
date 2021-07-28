@@ -8,3 +8,5 @@ dist
 src/*.egg-info
 .vscode
 venv
+e2e_config
+mlia_output

@@ -8,8 +8,11 @@ from typing import Callable
 from typing import List
 
 import pytest
+from mlia.config import EthosU55
 from mlia.metadata import NpuSupported
 from mlia.metadata import Operation
+from mlia.metrics import MemoryUsage
+from mlia.metrics import NPUCycles
 from mlia.metrics import PerformanceMetrics
 from mlia.reporters import Cell
 from mlia.reporters import Column
@@ -29,14 +32,20 @@ from typing_extensions import Literal
             [report_operators, None],
         ),
         (
-            PerformanceMetrics(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+            PerformanceMetrics(
+                EthosU55(), NPUCycles(0, 0, 0, 0, 0, 0), MemoryUsage(0, 0, 0, 0, 0)
+            ),
             [report_perf_metrics, None],
         ),
         (
             [
                 (
                     [Operation("test_operation", "test_type", NpuSupported(False, []))],
-                    PerformanceMetrics(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+                    PerformanceMetrics(
+                        EthosU55(),
+                        NPUCycles(0, 0, 0, 0, 0, 0),
+                        MemoryUsage(0, 0, 0, 0, 0),
+                    ),
                 )
             ],
             [None],
@@ -131,6 +140,7 @@ def test_table_representation() -> None:
 
     text_report = table.to_text()
     expected_text_report = """
+Sample table:
 ╒════════════╤════════════╤════════════╕
 │ Header 1   │ Header 2   │ Header 3   │
 ╞════════════╪════════════╪════════════╡
@@ -139,7 +149,6 @@ def test_table_representation() -> None:
 │ 4          │ 5          │ 123,123    │
 ╘════════════╧════════════╧════════════╛
 """.strip()
-    print(text_report)
     assert text_report == expected_text_report
 
 

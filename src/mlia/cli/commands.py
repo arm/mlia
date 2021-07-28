@@ -1,5 +1,6 @@
 # Copyright 2021, Arm Ltd.
 """Cli commands module."""
+import logging
 import sys
 from typing import Any
 from typing import Optional
@@ -23,6 +24,8 @@ from mlia.utils.general import convert_to_tflite
 from mlia.utils.general import save_keras_model
 from mlia.utils.general import save_tflite_model
 
+LOGGER = logging.getLogger("mlia.cli")
+
 
 def operators(
     model: str,
@@ -32,26 +35,31 @@ def operators(
 ) -> None:
     """Print the model's operator list."""
     tflite_model, device = TFLiteModel(model), _get_device(**device_args)
-    operators = supported_operators(tflite_model, device)
+    report(device, fmt="txt", space="bottom")
 
-    report([device, operators.ops, operators], fmt=output_format, output=output)
+    operators = supported_operators(tflite_model, device)
+    report([operators.ops, operators], fmt=output_format, output=output, space="top")
 
 
 def performance(
     model: str,
     output_format: OutputFormat = "txt",
     output: PathOrFileLike = sys.stdout,
+    working_dir: Optional[str] = None,
     **device_args: Any,
 ) -> None:
     """Print model's performance stats."""
     tflite_model, device = TFLiteModel(model), _get_device(**device_args)
-    perf_metrics = collect_performance_metrics(tflite_model, device)
+    report(device, fmt="txt", space="bottom")
 
-    report([device, perf_metrics], fmt=output_format, output=output)
+    perf_metrics = collect_performance_metrics(tflite_model, device, working_dir)
+    report(perf_metrics, fmt=output_format, output=output, space="top")
 
 
 def model_optimization(
-    model: str, out_path: Optional[str] = None, **optimizer_args: Any
+    model: str,
+    out_path: Optional[str] = None,
+    **optimizer_args: Any,
 ) -> str:
     """Apply specified optimization to the model and save resulting file."""
     keras_model = tf.keras.models.load_model(model)
@@ -61,18 +69,22 @@ def model_optimization(
     optimized_model = optimizer.get_model()
     optimized_model_path = save_keras_model(optimized_model, out_path)
 
-    print(f"Model {model} saved to {optimized_model_path}")
+    LOGGER.info(f"Model {model} saved to {optimized_model_path}")
 
     return optimized_model_path
 
 
-def keras_to_tflite(model: str, out_path: str, quantized: bool) -> str:
+def keras_to_tflite(
+    model: str,
+    out_path: str,
+    quantized: bool,
+) -> str:
     """Convert keras model to tflite format and save resulting file."""
     keras_model = tf.keras.models.load_model(model)
     tflite_model = convert_to_tflite(keras_model, quantized)
     tflite_model_path = save_tflite_model(tflite_model, out_path)
 
-    print(f"Model {model} saved to {tflite_model_path}")
+    LOGGER.info(f"Model {model} saved to {tflite_model_path}")
 
     return tflite_model_path
 
@@ -84,7 +96,8 @@ def _get_device(**kwargs: Any) -> EthosUConfiguration:
 
     if device.lower() == "ethos-u55":
         return EthosU55(**kwargs)
-    elif device.lower() == "ethos-u65":
+
+    if device.lower() == "ethos-u65":
         return EthosU65(**kwargs)
 
     raise Exception(f"Unsupported device: {device}")
