@@ -1,8 +1,14 @@
 # Copyright 2021, Arm Ltd.
 """Vela wrapper module."""
 import itertools
+import logging
+from contextlib import contextmanager
+from contextlib import ExitStack
+from contextlib import redirect_stderr
+from contextlib import redirect_stdout
 from pathlib import Path
 from typing import Dict
+from typing import Generator
 from typing import List
 from typing import Optional
 from typing import Union
@@ -16,6 +22,7 @@ from ethosu.vela.model_reader import ModelReaderOptions
 from ethosu.vela.model_reader import read_model
 from ethosu.vela.nn_graph import Graph
 from ethosu.vela.npu_performance import PassCycles
+from ethosu.vela.operation import CustomType
 from ethosu.vela.operation import Op
 from ethosu.vela.scheduler import OptimizationStrategy
 from ethosu.vela.scheduler import SchedulerOptions
@@ -23,15 +30,18 @@ from ethosu.vela.supported_operators import SupportedOperators
 from ethosu.vela.tensor import MemArea
 from ethosu.vela.tensor import Tensor
 from ethosu.vela.tflite_mapping import optype_to_builtintype
+from ethosu.vela.tflite_writer import write_tflite
 from mlia.config import EthosUConfiguration
 from mlia.config import TFLiteModel
 from mlia.metadata import NpuSupported
 from mlia.metadata import Operation
 from mlia.metadata import Operations
 from mlia.metrics import PerformanceMetrics
-from mlia.utils.general import suppress_any_output
+from mlia.utils.general import LoggerWriter
 from typing_extensions import Literal
 
+
+LOGGER = logging.getLogger("mlia.tools.vela")
 
 VELA_INTERNAL_OPS = (Op.Placeholder, Op.SubgraphInput, Op.Const)
 
@@ -42,6 +52,15 @@ class Model:
     def __init__(self, nng: Graph) -> None:
         """Instance of the model metadata."""
         self.nng = nng
+
+    @property
+    def optimized(self) -> bool:
+        """Return true if model is already optimized."""
+        return any(
+            op.attrs.get("custom_type") == CustomType.ExistingNpuOp
+            for sg in self.nng.subgraphs
+            for op in sg.get_all_ops()
+        )
 
 
 class OptimizedModel:
@@ -59,6 +78,10 @@ class OptimizedModel:
         self.arch = arch
         self.compiler_options = compiler_options
         self.scheduler_options = scheduler_options
+
+    def save(self, output_filename: str) -> None:
+        """Save instance of the optimized model to the file."""
+        write_tflite(self.nng, output_filename)
 
 
 AcceleratorConfigType = Literal[
@@ -105,13 +128,17 @@ class VelaCompiler:
 
     def read_model(self, model: Union[str, Path]) -> Model:
         """Read model."""
-        nng = self._read_model(model)
+        LOGGER.debug(f"Read model {model}")
 
+        nng = self._read_model(model)
         return Model(nng)
 
-    def compile_model(self, model: Union[str, Path]) -> OptimizedModel:
+    def compile_model(self, model: Union[str, Path, Model]) -> OptimizedModel:
         """Compile the model."""
-        nng = self._read_model(model)
+        if isinstance(model, (str, Path)):
+            nng = self._read_model(model)
+        else:
+            nng = model.nng
 
         if not nng:
             raise Exception("Unable to read model")
@@ -120,7 +147,7 @@ class VelaCompiler:
         compiler_options = self._compiler_options()
         scheduler_options = self._scheduler_options()
 
-        with suppress_any_output():
+        with redirect_output():
             compiler_driver(nng, arch, compiler_options, scheduler_options)
 
         return OptimizedModel(nng, arch, compiler_options, scheduler_options)
@@ -130,7 +157,7 @@ class VelaCompiler:
         """Read tflite model."""
         model_path = str(model) if isinstance(model, Path) else model
 
-        with suppress_any_output():
+        with redirect_output():
             return read_model(model_path, ModelReaderOptions())
 
     def _architecture_features(self) -> ArchitectureFeatures:
@@ -176,6 +203,19 @@ class VelaCompiler:
         )
 
 
+@contextmanager
+def redirect_output() -> Generator[None, None, None]:
+    """Redirect Vela's output to the logger."""
+    stdout_to_log = LoggerWriter(LOGGER, logging.INFO)
+    stderr_to_log = LoggerWriter(LOGGER, logging.ERROR)
+
+    with ExitStack() as exit_stack:
+        exit_stack.enter_context(redirect_stdout(stdout_to_log))  # type: ignore
+        exit_stack.enter_context(redirect_stderr(stderr_to_log))  # type: ignore
+
+        yield
+
+
 def get_vela_compiler(device: EthosUConfiguration) -> VelaCompiler:
     """Get Vela compiler instance for provided device configuration."""
     compiler_options = device.compiler_options
@@ -201,10 +241,33 @@ def estimate_performance(
 
     Logic for this function comes from vela module stats_writer.py
     """
+    LOGGER.debug(
+        f"Estimate performance for the model {model.model_path} "
+        f"on device {device.ip_class}"
+    )
+
+    vela_compiler = get_vela_compiler(device)
+
+    initial_model = vela_compiler.read_model(model.model_path)
+    if initial_model.optimized:
+        raise Exception("Unable to estimate performance for the given optimized model")
+
+    optimized_model = vela_compiler.compile_model(initial_model)
+
+    return _performance_metrics(optimized_model)
+
+
+def optimize_model(
+    model: TFLiteModel, device: EthosUConfiguration, output_filename: str
+) -> None:
+    """Optimize model and return it's path after optimization."""
+    LOGGER.debug(f"Optimize model {model.model_path} for device {device.ip_class}")
+
     vela_compiler = get_vela_compiler(device)
     optimized_model = vela_compiler.compile_model(model.model_path)
 
-    return _performance_metrics(optimized_model)
+    LOGGER.debug(f"Save optimized model into {output_filename}")
+    optimized_model.save(output_filename)
 
 
 def _performance_metrics(optimized_model: OptimizedModel) -> PerformanceMetrics:
@@ -243,6 +306,8 @@ def _performance_metrics(optimized_model: OptimizedModel) -> PerformanceMetrics:
 
 def supported_operators(model: TFLiteModel, device: EthosUConfiguration) -> Operations:
     """Return list of model's operations."""
+    LOGGER.debug(f"Check supported operators for the model {model.model_path}")
+
     vela_compiler = get_vela_compiler(device)
     initial_model = vela_compiler.read_model(model.model_path)
 

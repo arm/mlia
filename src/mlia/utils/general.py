@@ -1,13 +1,9 @@
 # Copyright 2021, Arm Ltd.
 """Collection of useful functions for optimizations."""
-import os
+import logging
 import tempfile
-from contextlib import contextmanager
-from contextlib import redirect_stderr
-from contextlib import redirect_stdout
 from typing import Any
 from typing import Callable
-from typing import Generator
 from typing import Iterable
 from typing import Optional
 
@@ -73,9 +69,18 @@ def deep_clone_model(model: tf.keras.Model) -> tf.keras.Model:
     return cloned_model
 
 
-@contextmanager
-def suppress_any_output() -> Generator[Any, Any, Any]:
-    """Context manager for suppressing output."""
-    with open(os.devnull, "w") as dev_null:
-        with redirect_stderr(dev_null), redirect_stdout(dev_null):
-            yield
+class LoggerWriter:
+    """Redirect printed messages to the logger."""
+
+    def __init__(self, logger: logging.Logger, level: int):
+        """Init logger writer."""
+        self.logger = logger
+        self.level = level
+
+    def write(self, message: str) -> None:
+        """Write message."""
+        if message.strip() != "":
+            self.logger.log(self.level, message)
+
+    def flush(self) -> None:
+        """Flush buffers."""

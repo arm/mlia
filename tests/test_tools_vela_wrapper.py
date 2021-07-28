@@ -1,6 +1,7 @@
 # Copyright 2021, Arm Ltd.
-"""Tests for module tools/vela."""
+"""Tests for module tools/vela_wrapper."""
 from pathlib import Path
+from typing import Any
 from typing import List
 from typing import Tuple
 
@@ -9,7 +10,11 @@ from ethosu.vela.compiler_driver import TensorAllocator
 from ethosu.vela.scheduler import OptimizationStrategy
 from mlia.config import EthosU55
 from mlia.config import TFLiteModel
+from mlia.tools.vela_wrapper import estimate_performance
+from mlia.tools.vela_wrapper import get_vela_compiler
+from mlia.tools.vela_wrapper import optimize_model
 from mlia.tools.vela_wrapper import OptimizedModel
+from mlia.tools.vela_wrapper import PerformanceMetrics
 from mlia.tools.vela_wrapper import supported_operators
 from mlia.tools.vela_wrapper import VelaCompiler
 
@@ -57,13 +62,52 @@ def test_vela_compiler_with_parameters() -> None:
     assert compiler.output_dir == "output"
 
 
-def test_model_optimization(test_models_path: Path) -> None:
+def test_compile_model(test_models_path: Path) -> None:
     """Test model optimization."""
     model = test_models_path / "simple_3_layers_model.tflite"
+    compiler = get_vela_compiler(EthosU55())
 
-    compiler = VelaCompiler()
     optimized_model = compiler.compile_model(model)
     assert isinstance(optimized_model, OptimizedModel)
+
+
+def test_optimize_model(test_models_path: Path, tmpdir: Any) -> None:
+    """Test model optimization and saving into file."""
+    model = test_models_path / "simple_3_layers_model.tflite"
+    tmp_file = Path(tmpdir) / "temp.tflite"
+
+    optimize_model(TFLiteModel(str(model)), EthosU55(), str(tmp_file.absolute()))
+
+    assert tmp_file.is_file()
+    assert tmp_file.stat().st_size > 0
+
+
+def test_get_compiler_for_device() -> None:
+    """Test getting Vela compiler for the device."""
+    device = EthosU55(
+        mac=32,
+        config_files="test_vela.ini",
+        system_config="test_system_config",
+        memory_mode="test_memory_mode",
+        max_block_dependency=1,
+        arena_cache_size=123,
+        tensor_allocator="Greedy",
+        cpu_tensor_alignment=1,
+        optimization_strategy="Size",
+        output_dir="output",
+    )
+
+    compile = get_vela_compiler(device)
+
+    assert compile.config_files == "test_vela.ini"
+    assert compile.system_config == "test_system_config"
+    assert compile.memory_mode == "test_memory_mode"
+    assert compile.accelerator_config == "ethos-u55-32"
+    assert compile.arena_cache_size == 123
+    assert compile.tensor_allocator == TensorAllocator.Greedy
+    assert compile.cpu_tensor_alignment == 1
+    assert compile.output_dir == "output"
+    assert compile.optimization_strategy == OptimizationStrategy.Size
 
 
 @pytest.mark.parametrize(
@@ -124,3 +168,27 @@ def test_operations(
         assert op.name == expected_name
         assert op.op_type == expected_type
         assert op.run_on_npu == (expected_run_on_npu, expected_reasons)
+
+
+def test_estimate_performance(test_models_path: Path) -> None:
+    """Test getting performance estimations."""
+    model = TFLiteModel(str(test_models_path / "simple_3_layers_model.tflite"))
+    perf_metrics = estimate_performance(model, EthosU55())
+
+    assert isinstance(perf_metrics, PerformanceMetrics)
+
+
+def test_estimate_performance_already_optimized(
+    test_models_path: Path, tmpdir: Any
+) -> None:
+    """Test that performance estimation should fail for already optimized model."""
+    device = EthosU55()
+    model = TFLiteModel(str(test_models_path / "simple_3_layers_model.tflite"))
+    optimized_model_path = str(Path(tmpdir) / "optimized_model.tflite")
+
+    optimize_model(model, device, optimized_model_path)
+
+    with pytest.raises(
+        Exception, match="Unable to estimate performance for the given optimized model"
+    ):
+        estimate_performance(TFLiteModel(optimized_model_path), device)
