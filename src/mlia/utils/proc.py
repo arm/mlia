@@ -1,12 +1,16 @@
 # Copyright 2021, Arm Ltd.
 """Utils related to process management."""
+import os
 import signal
 import subprocess
 import time
 from abc import ABC
 from abc import abstractmethod
+from contextlib import contextmanager
 from contextlib import suppress
+from pathlib import Path
 from typing import Any
+from typing import Generator
 from typing import Iterable
 from typing import List
 from typing import Optional
@@ -152,3 +156,15 @@ class CommandExecutor:
         )
 
         return RunningCommand(process)
+
+
+@contextmanager
+def working_directory(working_dir: Path) -> Generator[Path, None, None]:
+    """Temporary change working directory."""
+    current_working_dir = Path.cwd()
+    os.chdir(working_dir)
+
+    try:
+        yield working_dir
+    finally:
+        os.chdir(current_working_dir)

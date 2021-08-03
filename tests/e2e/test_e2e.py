@@ -1,12 +1,15 @@
 # Copyright 2021, Arm Ltd.
 """End to end tests for MLIA CLI."""
 import os
+import shutil
+import subprocess
 from pathlib import Path
 from typing import List
 from typing import Optional
 
 import pytest
 from mlia.utils.proc import CommandExecutor
+from mlia.utils.proc import working_directory
 
 
 def run_command(cmd: List[str]) -> None:
@@ -125,3 +128,67 @@ class TestEndToEnd:
         command = ["mlia", "performance", "--verbose", "--device", device, str(model)]
 
         run_command(command)
+
+    def test_installation_script(self, tmp_path: Path) -> None:
+        """Test MLIA installation script."""
+        config_dir = get_config_dir()
+        if not config_dir:
+            raise Exception("E2E configuration directory is not provided")
+
+        install_dir_path = tmp_path / "dist"
+        install_dir_path.mkdir()
+
+        def copy_archives(subfolder_path: Path, pattern: str = "*.tar.gz") -> None:
+            """Copy archives into installation dir."""
+            if not subfolder_path.is_dir():
+                return
+
+            archives = subfolder_path.glob(pattern)
+            for archive in archives:
+                shutil.copy2(archive, install_dir_path)
+
+        for item in ["systems", "software"]:
+            copy_archives(config_dir / item)
+
+        def copy_env_path(env_var: str) -> None:
+            """Copy file to the installation dir."""
+            env_var_value = os.environ.get(env_var)
+
+            if env_var_value:
+                env_var_path = Path(env_var_value)
+                shutil.copy2(env_var_path, install_dir_path)
+
+        for item in ["AIET_ARTIFACT_PATH", "MLIA_ARTIFACT_PATH"]:
+            copy_env_path(item)
+
+        shutil.copy2("scripts/install.sh", tmp_path)
+
+        with working_directory(tmp_path):
+            run_command(["ls", "-R", str(tmp_path)])
+
+            venv = "e2e_venv"
+            command = ["./install.sh", "-d", str(install_dir_path), "-e", venv]
+            run_command(command)
+
+            assert Path(venv).is_dir()
+
+            def run_in_env(cmd: str) -> subprocess.CompletedProcess:
+                """Execute command in virt env."""
+                activate_env_cmd = f"source {venv}/bin/activate"
+                cmds = "\n".join([activate_env_cmd, cmd])
+                print(f"Run command: {cmds}")
+                return subprocess.run(
+                    cmds, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+                )
+
+            for cmd in [
+                "mlia --help",
+                "mlia ops --help",
+                "mlia perf --help",
+                "aiet --help",
+                "aiet system list",
+                "aiet software list",
+            ]:
+                result = run_in_env(cmd)
+                assert result.returncode == 0
+                print(result.stdout.decode())

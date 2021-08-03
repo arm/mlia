@@ -31,9 +31,9 @@ def mark_tests_as_skipped(config: Any, items: Any, marker: str) -> None:
         and selected_markers.find(f"not {marker}") == -1
     )
     for item in items:
-        if not marker_enabled and marker in item.own_markers:
+        if not marker_enabled and item.get_closest_marker(marker) is not None:
             item.add_marker(
-                pytest.skip(
-                    "Tests with marker {} are disabled by default".format(marker)
+                pytest.mark.skip(
+                    reason="Tests with marker {} are disabled by default".format(marker)
                 )
             )
