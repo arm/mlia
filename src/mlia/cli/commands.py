@@ -1,5 +1,5 @@
 # Copyright 2021, Arm Ltd.
-"""Cli commands module."""
+"""CLI commands module."""
 import logging
 import sys
 from typing import Any

@@ -286,8 +286,8 @@ def run_command(args: argparse.Namespace) -> int:
         LOGGER.error("Execution has been interrupted")
     except Exception as e:
         LOGGER.error(
-            f"Execution failed with error: {e}. Please use log files in directory "
-            f"{args.working_dir} for more details or enable verbose mode",
+            f"Execution failed with error: {e}. Please check the log files in the "
+            f"{args.working_dir} directory for more details, or enable verbose mode",
             exc_info=e if verbose else None,
         )
     else:

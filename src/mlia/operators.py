@@ -17,7 +17,7 @@ def supported_operators(
     model: ModelConfiguration, device: IPConfiguration
 ) -> Operations:
     """Return list of model's operations."""
-    LOGGER.info("Checking op compatibility ...")
+    LOGGER.info("Checking operator compatibility ...")
 
     if not isinstance(model, TFLiteModel):
         raise Exception("Unsupported model configuration")

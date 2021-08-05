@@ -40,7 +40,7 @@ def ethosu_performance_metrics(
     model: TFLiteModel, device: EthosUConfiguration, working_dir: Optional[str] = None
 ) -> PerformanceMetrics:
     """Return performance metrics for the EthousU device."""
-    LOGGER.info("Get memory usage metrics ...")
+    LOGGER.info("Getting the memory usage metrics ...")
 
     vela_perf_metrics = vela.estimate_performance(model, device)
     memory_usage = MemoryUsage(
@@ -52,7 +52,7 @@ def ethosu_performance_metrics(
     )
     LOGGER.info("Done")
 
-    LOGGER.info("Optimize model ...")
+    LOGGER.info("Optimizing the model ...")
     model_filename = f"{Path(model.model_path).stem}_vela.tflite"
 
     optimized_model_path = str(
@@ -61,7 +61,7 @@ def ethosu_performance_metrics(
     vela.optimize_model(model, device, optimized_model_path)
     LOGGER.info("Done")
 
-    LOGGER.info("Get performance metrics ...")
+    LOGGER.info("Getting the performance metrics ...")
     LOGGER.info(
         "WARNING: This task may require several minutes (press ctrl-c to interrupt)"
     )
