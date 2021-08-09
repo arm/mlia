@@ -216,6 +216,23 @@ def add_out_path(parser: argparse.ArgumentParser) -> None:
     out_path_group.add_argument("--out_path", default=None)
 
 
+def add_custom_supported_operators_options(parser: argparse.ArgumentParser) -> None:
+    """Add custom options for the command 'operators'."""
+    parser.add_argument(
+        "--supported-ops-report",
+        action="store_true",
+        default=False,
+        help=(
+            "Generate the SUPPORTED_OPS.md file in the "
+            "current working directory and exit"
+        ),
+    )
+
+    model_group = parser.add_argument_group("TFLite model options")
+    # make model parameter optional
+    model_group.add_argument("model", nargs="?", help="TFLite model")
+
+
 def init_commands(parser: argparse.ArgumentParser) -> None:
     """Init cli subcommands."""
     subparsers = parser.add_subparsers(title="Commands", dest="command")
@@ -225,7 +242,11 @@ def init_commands(parser: argparse.ArgumentParser) -> None:
         (
             operators,
             ["ops"],
-            [add_device_options, add_tflite_model_options, add_output_options],
+            [
+                add_device_options,
+                add_output_options,
+                add_custom_supported_operators_options,
+            ],
         ),
         (
             performance,

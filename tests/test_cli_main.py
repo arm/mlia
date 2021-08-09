@@ -12,6 +12,7 @@ from mlia.metrics import MemoryUsage
 from mlia.metrics import NPUCycles
 from mlia.metrics import PerformanceMetrics
 from mlia.utils.general import save_keras_model
+from mlia.utils.proc import working_directory
 
 from tests.utils.generate_keras_model import generate_keras_model
 
@@ -35,6 +36,26 @@ def test_operators_command(test_models_path: Path) -> None:
 
     exit_code = main(["operators", str(model)])
     assert exit_code == 0
+
+
+@pytest.mark.parametrize(
+    "args",
+    [
+        ["operators", "--supported-ops-report"],
+        ["operators", "--supported-ops-report", "--mac", "32"],
+        ["operators", "--supported-ops-report", "--device", "ethos-u65"],
+    ],
+)
+def test_operators_command_gen_supported_report(
+    args: List[str], tmp_path: Path
+) -> None:
+    """Test supported operators report generation."""
+    with working_directory(tmp_path):
+        main(args)
+
+        md_file = tmp_path / "SUPPORTED_OPS.md"
+        assert md_file.is_file()
+        assert md_file.stat().st_size > 0
 
 
 @pytest.mark.parametrize(

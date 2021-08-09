@@ -12,6 +12,7 @@ from mlia.config import EthosU55
 from mlia.config import EthosU65
 from mlia.config import EthosUConfiguration
 from mlia.config import TFLiteModel
+from mlia.operators import generate_supported_operators_report
 from mlia.operators import supported_operators
 from mlia.optimizations.clustering import Clusterer
 from mlia.optimizations.clustering import ClusteringConfiguration
@@ -28,12 +29,21 @@ LOGGER = logging.getLogger("mlia.cli")
 
 
 def operators(
-    model: str,
+    model: Optional[str] = None,
     output_format: OutputFormat = "txt",
     output: PathOrFileLike = sys.stdout,
+    supported_ops_report: bool = False,
     **device_args: Any,
 ) -> None:
     """Print the model's operator list."""
+    if supported_ops_report:
+        generate_supported_operators_report()
+        LOGGER.info("Report saved into SUPPORTED_OPS.md")
+        return
+
+    if not model:
+        raise Exception("Model is not provided")
+
     tflite_model, device = TFLiteModel(model), _get_device(**device_args)
     report(device, fmt="txt", space="bottom")
 
