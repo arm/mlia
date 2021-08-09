@@ -11,12 +11,14 @@ from ethosu.vela.scheduler import OptimizationStrategy
 from mlia.config import EthosU55
 from mlia.config import TFLiteModel
 from mlia.tools.vela_wrapper import estimate_performance
+from mlia.tools.vela_wrapper import generate_supported_operators_report
 from mlia.tools.vela_wrapper import get_vela_compiler
 from mlia.tools.vela_wrapper import optimize_model
 from mlia.tools.vela_wrapper import OptimizedModel
 from mlia.tools.vela_wrapper import PerformanceMetrics
 from mlia.tools.vela_wrapper import supported_operators
 from mlia.tools.vela_wrapper import VelaCompiler
+from mlia.utils.proc import working_directory
 
 
 def test_default_vela_compiler() -> None:
@@ -192,3 +194,13 @@ def test_estimate_performance_already_optimized(
         Exception, match="Unable to estimate performance for the given optimized model"
     ):
         estimate_performance(TFLiteModel(optimized_model_path), device)
+
+
+def test_generate_supported_operators_report(tmp_path: Path) -> None:
+    """Test generating supported operators report."""
+    with working_directory(tmp_path):
+        generate_supported_operators_report()
+
+        md_file = tmp_path / "SUPPORTED_OPS.md"
+        assert md_file.is_file()
+        assert md_file.stat().st_size > 0

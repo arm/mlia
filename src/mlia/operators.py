@@ -29,3 +29,8 @@ def supported_operators(
     LOGGER.info("Done")
 
     return ops
+
+
+def generate_supported_operators_report() -> None:
+    """Generate supported operators report."""
+    vela_wrapper.generate_supported_operators_report()

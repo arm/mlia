@@ -31,6 +31,7 @@ from ethosu.vela.tensor import MemArea
 from ethosu.vela.tensor import Tensor
 from ethosu.vela.tflite_mapping import optype_to_builtintype
 from ethosu.vela.tflite_writer import write_tflite
+from ethosu.vela.vela import generate_supported_ops
 from mlia.config import EthosUConfiguration
 from mlia.config import TFLiteModel
 from mlia.metadata import NpuSupported
@@ -382,3 +383,9 @@ def run_on_npu(op: Op) -> NpuSupported:
             return NpuSupported(False, [(constraint.__doc__, op_reason)])
 
     return NpuSupported(True, [])
+
+
+def generate_supported_operators_report() -> None:
+    """Generate supported operators report in current working directory."""
+    with redirect_output():
+        generate_supported_ops()
