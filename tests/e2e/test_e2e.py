@@ -257,3 +257,37 @@ class TestEndToEnd:
         ]
 
         run_command(mlia_command)
+
+    @pytest.mark.parametrize("command", ["operators", "performance"])
+    @pytest.mark.parametrize(
+        "model",
+        [
+            "ds_cnn_large_fully_quantized_int8.tflite",
+            "mobilenet_v2_1.0_224_INT8.tflite",
+            "wav2letter_leakyrelu_fixed.tflite",
+            "inception_v3_quant.tflite",
+        ],
+    )
+    def test_commands_ethos_u65_real_model(self, command: str, model: str) -> None:
+        """Test 'operators' and 'performance' commands on real-world TFLite models."""
+        config_dir = get_config_dir()
+        if not config_dir:
+            raise Exception("E2E configuration directory is not provided")
+
+        mlia_command = [
+            "mlia",
+            command,
+            "--device",
+            "ethos-u65",
+            "--mac",
+            "512",
+            "--config",
+            "tests/test_resources/vela/sample_vela.ini",
+            "--system-config",
+            "Ethos_U65_High_End",
+            "--memory-mode",
+            "Shared_Sram",
+            str(config_dir / "tflite_models" / model),
+        ]
+
+        run_command(mlia_command)
