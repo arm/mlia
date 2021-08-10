@@ -16,6 +16,7 @@ from typing import List
 from typing import Optional
 from typing import Union
 
+import pandas as pd
 from mlia._typing import FileLike
 from mlia._typing import OutputFormat
 from mlia._typing import PathOrFileLike
@@ -34,7 +35,7 @@ class Report(ABC):
         """Convert to json serializible format."""
 
     @abstractmethod
-    def to_csv(self, **kwargs: Any) -> List:
+    def to_csv(self, **kwargs: Any) -> Any:
         """Convert to csv serializible format."""
 
     @abstractmethod
@@ -116,6 +117,54 @@ class Column:
     def supports_format(self, fmt: str) -> bool:
         """Return true if column should be shown."""
         return not self.only_for or fmt in self.only_for
+
+
+class ReportDataFrame(Report):
+    """Report wrapper for pandas dataframe."""
+
+    df: pd.DataFrame
+
+    def __init__(self, df: pd.DataFrame):
+        """Init ReportDataFrame."""
+        self.df = df
+
+    def to_json(self, **kwargs: Any) -> str:
+        """Convert to json serializible format."""
+        json_repr = self.df.to_json()
+        # to make mypy happy
+        assert isinstance(json_repr, str)
+        return json_repr
+
+    def to_csv(self, **kwargs: Any) -> str:
+        """Convert to csv serializible format."""
+        csv_repr = self.df.to_csv()
+        # to make mypy happy
+        assert isinstance(csv_repr, str)
+        return csv_repr
+
+    def to_text(
+        self,
+        title: Optional[str] = None,
+        columns_name: Optional[str] = None,
+        showindex: bool = True,
+        **kwargs: Any,
+    ) -> str:
+        """Convert to human readable format."""
+        final_table = ""
+        headers = "keys"
+        if columns_name:
+            headers = [columns_name] + self.df.columns.tolist()
+        if title:
+            final_table = final_table + title + ":\n"
+        final_table = final_table + tabulate(
+            self.df,
+            headers=headers,
+            tablefmt="fancy_grid",
+            numalign="left",
+            stralign="left",
+            showindex=showindex,
+        )
+        return final_table
 
 
 class Table(Report):
@@ -373,6 +422,11 @@ def report_device(device: EthosUConfiguration) -> Report:
     return Table(columns, rows, name="Device information", alias="device")
 
 
+def report_dataframe(df: pd.DataFrame) -> Report:
+    """Wrap pandas dataframe into Report type."""
+    return ReportDataFrame(df)
+
+
 def report_perf_metrics(perf_metrics: PerformanceMetrics) -> Report:
     """Return table representation for the perf metrics."""
     columns = [
@@ -413,9 +467,9 @@ def report_perf_metrics(perf_metrics: PerformanceMetrics) -> Report:
     memory_usage = [
         (metric, Cell(value / 1024.0, Format(str_fmt="12.2f")), "KiB")
         for (metric, value) in [
-            ("Unknown memory area used", memory_metrics.unknown_memory_area_size),
             ("SRAM used", memory_metrics.sram_memory_area_size),
             ("DRAM used", memory_metrics.dram_memory_area_size),
+            ("Unknown memory area used", memory_metrics.unknown_memory_area_size),
             ("On-chip flash used", memory_metrics.on_chip_flash_memory_area_size),
             ("Off-chip flash used", memory_metrics.off_chip_flash_memory_area_size),
         ]
@@ -429,11 +483,13 @@ def report_perf_metrics(perf_metrics: PerformanceMetrics) -> Report:
 class CompoundReport(Report):
     """Compound report.
 
-    This class could be used for producing multiply reports at once.
+    This class could be used for producing multiple reports at once.
     """
 
     def __init__(self, reports: List[Report]) -> None:
         """Init compound report instance."""
+        if any(isinstance(report, ReportDataFrame) for report in reports):
+            raise Exception("Dataframe reports cannot be compounded.")
         self.reports = reports
 
     def to_json(self, **kwargs: Any) -> Any:
@@ -567,6 +623,9 @@ def find_appropriate_formatter(data: Any) -> Callable:
 
     if isinstance(data, EthosUConfiguration):
         return report_device
+
+    if isinstance(data, pd.DataFrame):
+        return report_dataframe
 
     if isinstance(data, (list, tuple)):
         formatters = [find_appropriate_formatter(item) for item in data]

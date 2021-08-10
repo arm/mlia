@@ -7,10 +7,12 @@ from typing import Tuple
 import numpy as np
 import pytest
 import tensorflow as tf
+from mlia.config import TFLiteModel
 from mlia.optimizations.pruning import Pruner
 from mlia.optimizations.pruning import PruningConfiguration
-from mlia.utils import general as test_utils
+from mlia.utils import general as general_utils
 from mlia.utils import tflite_metrics
+from numpy.core.numeric import isclose
 
 from tests.utils.generate_keras_model import generate_keras_model
 
@@ -72,15 +74,18 @@ def test_prune_simple_model_fully(
     base_model = generate_keras_model()
     _train_model(base_model)
 
-    tflite_base_model = test_utils.convert_to_tflite(base_model)
-    tflite_base_path = test_utils.save_tflite_model(tflite_base_model)
-    base_compressed_size = tflite_metrics.get_gzipped_file_size(tflite_base_path)
-    base_tflite_metrics = tflite_metrics.TFLiteMetrics(tflite_base_path)
+    tflite_base_model = TFLiteModel(
+        general_utils.save_tflite_model(general_utils.convert_to_tflite(base_model))
+    )
+    base_compressed_size = tflite_metrics.get_gzipped_file_size(
+        tflite_base_model.model_path
+    )
+    base_tflite_metrics = tflite_metrics.TFLiteMetrics(tflite_base_model.model_path)
 
     # make sure sparsity is zero before pruning
     base_sparsity_dict = base_tflite_metrics.sparsity_per_layer()
     for layer_name in base_sparsity_dict:
-        assert base_sparsity_dict[layer_name] == 0
+        assert isclose(base_sparsity_dict[layer_name], 0, atol=1e-2)
 
     if mock_data:
         pruner = Pruner(
@@ -107,10 +112,13 @@ def test_prune_simple_model_fully(
     pruner.apply_optimization()
     pruned_model = pruner.get_model()
 
-    tflite_pruned_model = test_utils.convert_to_tflite(pruned_model)
-    tflite_pruned_path = test_utils.save_tflite_model(tflite_pruned_model)
-    pruned_compressed_size = tflite_metrics.get_gzipped_file_size(tflite_pruned_path)
-    pruned_tflite_metrics = tflite_metrics.TFLiteMetrics(tflite_pruned_path)
+    tflite_pruned_model = TFLiteModel(
+        general_utils.save_tflite_model(general_utils.convert_to_tflite(pruned_model))
+    )
+    pruned_compressed_size = tflite_metrics.get_gzipped_file_size(
+        tflite_pruned_model.model_path
+    )
+    pruned_tflite_metrics = tflite_metrics.TFLiteMetrics(tflite_pruned_model.model_path)
 
     _test_sparsity(pruned_tflite_metrics, target_sparsity, layers_to_prune)
 

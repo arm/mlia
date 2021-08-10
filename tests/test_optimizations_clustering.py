@@ -108,8 +108,8 @@ def _test_sparsity(
     assert num_sparse_layers == expected_num_sparse_layers
 
 
-@pytest.mark.parametrize("sparsity_aware", (False, True))
 @pytest.mark.parametrize("target_num_clusters", (32, 4))
+@pytest.mark.parametrize("sparsity_aware", (False, True))
 @pytest.mark.parametrize("layers_to_cluster", (["conv1"], ["conv1", "conv2"], None))
 def test_cluster_simple_model_fully(
     target_num_clusters: int,

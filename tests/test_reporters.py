@@ -7,6 +7,7 @@ from typing import Any
 from typing import Callable
 from typing import List
 
+import pandas as pd
 import pytest
 from mlia.config import EthosU55
 from mlia.metadata import NpuSupported
@@ -18,8 +19,10 @@ from mlia.reporters import Cell
 from mlia.reporters import Column
 from mlia.reporters import Format
 from mlia.reporters import report
+from mlia.reporters import report_dataframe
 from mlia.reporters import report_operators
 from mlia.reporters import report_perf_metrics
+from mlia.reporters import ReportDataFrame
 from mlia.reporters import Table
 from typing_extensions import Literal
 
@@ -36,6 +39,12 @@ from typing_extensions import Literal
                 EthosU55(), NPUCycles(0, 0, 0, 0, 0, 0), MemoryUsage(0, 0, 0, 0, 0)
             ),
             [report_perf_metrics, None],
+        ),
+        (
+            PerformanceMetrics(
+                EthosU55(), NPUCycles(0, 0, 0, 0, 0, 0), MemoryUsage(0, 0, 0, 0, 0)
+            ).to_df(),
+            [report_dataframe, None],
         ),
         (
             [
@@ -150,6 +159,65 @@ Sample table:
 ╘════════════╧════════════╧════════════╛
 """.strip()
     assert text_report == expected_text_report
+
+
+@pytest.mark.parametrize("with_index", [True, False])
+def test_reportdataframe_representation(with_index: bool) -> None:
+    """Test dataframe report representation."""
+
+    def sample_df() -> pd.DataFrame:
+        sample_dict = {
+            "Header 1": [1, 4],
+            "Header 2": [2, 5.55555],
+            "Header 3": [3, 123123],
+        }
+
+        df = pd.DataFrame.from_dict(sample_dict)
+
+        return df
+
+    df = sample_df()
+    csv_repr = ReportDataFrame(df).to_csv()
+    expected_csv_repr = ",Header 1,Header 2,Header 3\n0,1,2.0,3\n1,4,5.55555,123123\n"
+    assert csv_repr == expected_csv_repr
+
+    json_repr = ReportDataFrame(df).to_json()
+    expected_json_repr = """
+    {"Header 1":{"0":1,"1":4},"Header 2":{"0":2.0,"1":5.55555},"Header 3":{"0":3,"1":123123}}
+    """.strip()
+    assert json_repr == expected_json_repr
+
+    df.loc[:, "Header 2"] = df["Header 2"].map("{:.2f}".format)
+    df.loc[:, "Header 3"] = df["Header 3"].map("{:,d}".format)
+
+    if with_index:
+        text_report = ReportDataFrame(df).to_text(
+            title="Sample table", columns_name="Sample index column"
+        )
+        expected_text_report = """
+Sample table:
+╒═══════════════════════╤════════════╤════════════╤════════════╕
+│ Sample index column   │ Header 1   │ Header 2   │ Header 3   │
+╞═══════════════════════╪════════════╪════════════╪════════════╡
+│ 0                     │ 1          │ 2          │ 3          │
+├───────────────────────┼────────────┼────────────┼────────────┤
+│ 1                     │ 4          │ 5.56       │ 123,123    │
+╘═══════════════════════╧════════════╧════════════╧════════════╛
+    """.strip()
+        assert text_report == expected_text_report
+    else:
+        text_report = ReportDataFrame(df).to_text(title="Sample table", showindex=False)
+        expected_text_report = """
+Sample table:
+╒════════════╤════════════╤════════════╕
+│ Header 1   │ Header 2   │ Header 3   │
+╞════════════╪════════════╪════════════╡
+│ 1          │ 2          │ 3          │
+├────────────┼────────────┼────────────┤
+│ 4          │ 5.56       │ 123,123    │
+╘════════════╧════════════╧════════════╛
+    """.strip()
+        assert text_report == expected_text_report
 
 
 def test_csv_nested_table_representation() -> None:

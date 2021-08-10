@@ -2,16 +2,16 @@
 """Collection of useful functions for optimizations."""
 import logging
 import tempfile
-from typing import Any
 from typing import Callable
 from typing import Iterable
 from typing import Optional
 
 import numpy as np
 import tensorflow as tf
+from tensorflow.lite.python.interpreter import Interpreter
 
 
-def representative_dataset(model: Any) -> Callable:
+def representative_dataset(model: tf.keras.Model) -> Callable:
     """Sample dataset used for quantization."""
 
     def dataset() -> Iterable:
@@ -22,7 +22,7 @@ def representative_dataset(model: Any) -> Callable:
     return dataset
 
 
-def convert_to_tflite(model: tf.keras.Model, quantized: bool = False) -> Any:
+def convert_to_tflite(model: tf.keras.Model, quantized: bool = False) -> Interpreter:
     """Convert keras model to tflite."""
     converter = tf.lite.TFLiteConverter.from_keras_model(model)
 

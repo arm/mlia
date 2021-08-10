@@ -6,6 +6,7 @@ import subprocess
 from pathlib import Path
 from typing import List
 from typing import Optional
+from typing import Tuple
 
 import pytest
 from mlia.utils.proc import CommandExecutor
@@ -82,13 +83,22 @@ def discover_and_install_aiet_artifacts() -> None:
     install_aiet_artifacts(systems_dirs, software_dirs)
 
 
-def get_models() -> List[Path]:
-    """Get list of pathes to the models to test."""
+def get_tflite_models() -> List[Path]:
+    """Get list of paths to the tflite models to test."""
     config_dir_path = get_config_dir()
     if not config_dir_path:
         return []
 
     return [Path("tests/test_resources/models/simple_3_layers_model.tflite")]
+
+
+def get_keras_models() -> List[Path]:
+    """Get list of paths to the keras models to test."""
+    config_dir_path = get_config_dir()
+    if not config_dir_path:
+        return []
+
+    return [Path("tests/test_resources/models/simple_model.h5")]
 
 
 @pytest.mark.e2e
@@ -100,7 +110,7 @@ class TestEndToEnd:
         """Set up test class."""
         discover_and_install_aiet_artifacts()
 
-    @pytest.mark.parametrize("model", get_models())
+    @pytest.mark.parametrize("model", get_tflite_models())
     @pytest.mark.parametrize("device", ["ethos-u55", "ethos-u65"])
     @pytest.mark.parametrize("fmt", ["json", "txt", "csv"])
     def test_operators(self, model: Path, device: str, fmt: str) -> None:
@@ -117,7 +127,7 @@ class TestEndToEnd:
 
         run_command(command)
 
-    @pytest.mark.parametrize("model", get_models())
+    @pytest.mark.parametrize("model", get_tflite_models())
     @pytest.mark.parametrize("device", ["ethos-u55", "ethos-u65"])
     def test_performance(
         self,
@@ -125,7 +135,28 @@ class TestEndToEnd:
         device: str,
     ) -> None:
         """Test command 'performance'."""
-        command = ["mlia", "performance", "--verbose", "--device", device, str(model)]
+        command = ["mlia", "performance", "--device", device, str(model)]
+
+        run_command(command)
+
+    @pytest.mark.parametrize("model", get_keras_models())
+    @pytest.mark.parametrize("device", ["ethos-u55", "ethos-u65"])
+    @pytest.mark.parametrize("optimization", [("pruning", "0.5"), ("clustering", 32)])
+    def test_estimate_optimized_performance(
+        self, model: Path, device: str, optimization: Tuple[str, str]
+    ) -> None:
+        """Test command 'estimate_optimized_performance'."""
+        command = [
+            "mlia",
+            "estimate_optimized_performance",
+            str(model),
+            "--device",
+            device,
+            "--optimization-type",
+            optimization[0],
+            "--optimization-target",
+            optimization[1],
+        ]
 
         run_command(command)
 

@@ -44,9 +44,9 @@ def ethosu_performance_metrics(
 
     vela_perf_metrics = vela.estimate_performance(model, device)
     memory_usage = MemoryUsage(
-        vela_perf_metrics.unknown_memory_area_size,
         vela_perf_metrics.sram_memory_area_size,
         vela_perf_metrics.dram_memory_area_size,
+        vela_perf_metrics.unknown_memory_area_size,
         vela_perf_metrics.on_chip_flash_memory_area_size,
         vela_perf_metrics.off_chip_flash_memory_area_size,
     )
@@ -70,12 +70,12 @@ def ethosu_performance_metrics(
     LOGGER.info("Done")
 
     npu_cycles = NPUCycles(
-        perf_metrics.npu_axi0_rd_data_beat_received,
-        perf_metrics.npu_axi0_wr_data_beat_written,
-        perf_metrics.npu_axi1_rd_data_beat_received,
         perf_metrics.npu_active_cycles,
         perf_metrics.npu_idle_cycles,
         perf_metrics.npu_total_cycles,
+        perf_metrics.npu_axi0_rd_data_beat_received,
+        perf_metrics.npu_axi0_wr_data_beat_written,
+        perf_metrics.npu_axi1_rd_data_beat_received,
     )
 
     return PerformanceMetrics(device, npu_cycles, memory_usage)

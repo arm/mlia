@@ -10,6 +10,7 @@ from typing import List
 from typing import Optional
 
 from mlia import __version__
+from mlia.cli.commands import estimate_optimized_performance
 from mlia.cli.commands import keras_to_tflite
 from mlia.cli.commands import model_optimization
 from mlia.cli.commands import operators
@@ -261,12 +262,22 @@ def init_commands(parser: argparse.ArgumentParser) -> None:
         (
             model_optimization,
             ["mopt"],
-            [add_keras_model_options, add_optimization_options],
+            [add_keras_model_options, add_optimization_options, add_out_path],
         ),
         (
             keras_to_tflite,
             ["k2l"],
             [add_keras_model_options, add_out_path, add_quantize_option],
+        ),
+        (
+            estimate_optimized_performance,
+            ["eop"],
+            [
+                add_keras_model_options,
+                add_optimization_options,
+                add_device_options,
+                add_debug_options,
+            ],
         ),
     ]
 

@@ -36,20 +36,20 @@ class PerformanceMetrics:
 
     def __init__(
         self,
-        npu_axi0_rd_data_beat_received: int,
-        npu_axi0_wr_data_beat_written: int,
-        npu_axi1_rd_data_beat_received: int,
         npu_active_cycles: int,
         npu_idle_cycles: int,
         npu_total_cycles: int,
+        npu_axi0_rd_data_beat_received: int,
+        npu_axi0_wr_data_beat_written: int,
+        npu_axi1_rd_data_beat_received: int,
     ):
         """Init performance metrics instance."""
-        self.npu_axi0_rd_data_beat_received = npu_axi0_rd_data_beat_received
-        self.npu_axi0_wr_data_beat_written = npu_axi0_wr_data_beat_written
-        self.npu_axi1_rd_data_beat_received = npu_axi1_rd_data_beat_received
         self.npu_active_cycles = npu_active_cycles
         self.npu_idle_cycles = npu_idle_cycles
         self.npu_total_cycles = npu_total_cycles
+        self.npu_axi0_rd_data_beat_received = npu_axi0_rd_data_beat_received
+        self.npu_axi0_wr_data_beat_written = npu_axi0_wr_data_beat_written
+        self.npu_axi1_rd_data_beat_received = npu_axi1_rd_data_beat_received
 
 
 class ExecutionParams(NamedTuple):
@@ -76,6 +76,9 @@ class GenericInferenceOutputParser(OutputConsumer):
     PATTERNS = {
         name: re.compile(pattern, re.IGNORECASE)
         for name, pattern in {
+            ("npu_active_cycles", r"NPU ACTIVE cycles: (?P<value>\d+)"),
+            ("npu_idle_cycles", r"NPU IDLE cycles: (?P<value>\d+)"),
+            ("npu_total_cycles", r"NPU TOTAL cycles: (?P<value>\d+)"),
             (
                 "npu_axi0_rd_data_beat_received",
                 r"NPU AXI0_RD_DATA_BEAT_RECEIVED beats: (?P<value>\d+)",
@@ -88,9 +91,6 @@ class GenericInferenceOutputParser(OutputConsumer):
                 "npu_axi1_rd_data_beat_received",
                 r"NPU AXI1_RD_DATA_BEAT_RECEIVED beats: (?P<value>\d+)",
             ),
-            ("npu_active_cycles", r"NPU ACTIVE cycles: (?P<value>\d+)"),
-            ("npu_idle_cycles", r"NPU IDLE cycles: (?P<value>\d+)"),
-            ("npu_total_cycles", r"NPU TOTAL cycles: (?P<value>\d+)"),
         }
     }
 

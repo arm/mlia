@@ -162,3 +162,35 @@ def mock_performance_estimation(monkeypatch: Any) -> None:
         "mlia.performance.ethosu_performance_metrics",
         MagicMock(return_value=perf_metrics),
     )
+
+
+@pytest.mark.parametrize(
+    "device, optimization_type, optimization_target",
+    [
+        ["ethos-u55", "pruning", "0.5"],
+        ["ethos-u65", "clustering", "32"],
+    ],
+)
+def test_estimate_optimized_performance_command(
+    device: str, optimization_type: str, optimization_target: str, monkeypatch: Any
+) -> None:
+    """Test keras_to_flite command."""
+    model = generate_keras_model()
+    model_path = save_keras_model(model)
+
+    mock_performance_estimation(monkeypatch)
+
+    exit_code = main(
+        [
+            "estimate_optimized_performance",
+            model_path,
+            "--device",
+            device,
+            "--optimization-type",
+            optimization_type,
+            "--optimization-target",
+            optimization_target,
+        ]
+    )
+
+    assert exit_code == 0

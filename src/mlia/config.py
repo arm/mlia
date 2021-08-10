@@ -14,6 +14,20 @@ from typing_extensions import Literal
 class ModelConfiguration:
     """Base class for model configuration."""
 
+    model_path: str
+
+
+class KerasModel(ModelConfiguration):
+    """Keras model congiguration."""
+
+    def __init__(self, model_path: str):
+        """Init Keras model configuration."""
+        self.model_path = model_path
+
+    def get_keras_model(self) -> tf.keras.Model:
+        """Return associated keras model."""
+        return tf.keras.models.load_model(self.model_path)
+
 
 class TFLiteModel(ModelConfiguration):
     """TFLite model configuration."""
@@ -26,6 +40,10 @@ class TFLiteModel(ModelConfiguration):
         """Get model's input details."""
         interpreter = tf.lite.Interpreter(model_path=self.model_path)
         return cast(List[Dict], interpreter.get_input_details())
+
+    def get_tflite_model(self) -> tf.lite.Interpreter:
+        """Return associated tflite model."""
+        tf.lite.Interpreter(model_path=self.model_path)
 
 
 class CompilerOptions:

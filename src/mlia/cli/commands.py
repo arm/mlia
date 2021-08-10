@@ -3,14 +3,16 @@
 import logging
 import sys
 from typing import Any
+from typing import List
 from typing import Optional
+from typing import Union
 
-import tensorflow as tf
 from mlia._typing import OutputFormat
 from mlia._typing import PathOrFileLike
 from mlia.config import EthosU55
 from mlia.config import EthosU65
 from mlia.config import EthosUConfiguration
+from mlia.config import KerasModel
 from mlia.config import TFLiteModel
 from mlia.operators import generate_supported_operators_report
 from mlia.operators import supported_operators
@@ -21,8 +23,9 @@ from mlia.optimizations.pruning import Pruner
 from mlia.optimizations.pruning import PruningConfiguration
 from mlia.performance import collect_performance_metrics
 from mlia.reporters import report
+from mlia.use_cases import optimize_and_compare
+from mlia.use_cases import optimize_model
 from mlia.utils.general import convert_to_tflite
-from mlia.utils.general import save_keras_model
 from mlia.utils.general import save_tflite_model
 
 LOGGER = logging.getLogger("mlia.cli")
@@ -68,35 +71,48 @@ def performance(
 
 def model_optimization(
     model: str,
+    optimization_type: str,
+    optimization_target: Union[int, float],
+    layers_to_optimize: Optional[List[str]] = None,
     out_path: Optional[str] = None,
-    **optimizer_args: Any,
-) -> str:
+) -> None:
     """Apply specified optimization to the model and save resulting file."""
-    keras_model = tf.keras.models.load_model(model)
-    optimizer = _get_optimizer(keras_model, **optimizer_args)
+    optimizer = _get_optimizer(
+        model, optimization_type, optimization_target, layers_to_optimize
+    )
 
-    optimizer.apply_optimization()
-    optimized_model = optimizer.get_model()
-    optimized_model_path = save_keras_model(optimized_model, out_path)
+    optimized_model = optimize_model(optimizer)
+    optimized_model_path = save_tflite_model(optimized_model, out_path)
 
-    LOGGER.info(f"Model {model} saved to {optimized_model_path}")
-
-    return optimized_model_path
+    print(f"Model {model} saved to {optimized_model_path}")
 
 
 def keras_to_tflite(
-    model: str,
-    out_path: str,
-    quantized: bool,
-) -> str:
+    model: str, quantized: bool, out_path: Optional[str] = None
+) -> None:
     """Convert keras model to tflite format and save resulting file."""
-    keras_model = tf.keras.models.load_model(model)
-    tflite_model = convert_to_tflite(keras_model, quantized)
+    tflite_model = convert_to_tflite(KerasModel(model).get_keras_model(), quantized)
     tflite_model_path = save_tflite_model(tflite_model, out_path)
 
     LOGGER.info(f"Model {model} saved to {tflite_model_path}")
 
-    return tflite_model_path
+
+def estimate_optimized_performance(
+    model: str,
+    optimization_type: str,
+    optimization_target: Union[int, float],
+    layers_to_optimize: Optional[List[str]] = None,
+    **device_args: Any,
+) -> None:
+    """Show performance improvements after applying optimizations."""
+    optimizer = _get_optimizer(
+        model, optimization_type, optimization_target, layers_to_optimize
+    )
+    device = _get_device(**device_args)
+
+    results = optimize_and_compare(optimizer, device)
+
+    report(results, columns_name="Metrics")
 
 
 def _get_device(**kwargs: Any) -> EthosUConfiguration:
@@ -113,25 +129,28 @@ def _get_device(**kwargs: Any) -> EthosUConfiguration:
     raise Exception(f"Unsupported device: {device}")
 
 
-def _get_optimizer(model: tf.keras.Model, **kwargs: Any) -> Optimizer:
-    optimization_target = kwargs.pop("optimization_target", None)
+def _get_optimizer(
+    model: str,
+    optimization_type: str,
+    optimization_target: Union[int, float],
+    layers_to_optimize: Optional[List[str]] = None,
+) -> Optimizer:
     if not optimization_target:
         raise Exception("Optimization target is not provided.")
 
-    layers_to_optimize = kwargs.pop("layers_to_optimize", None)
-
-    optimization_type = kwargs.pop("optimization_type", None)
     if not optimization_type:
         raise Exception("Optimization type is not provided")
 
     if optimization_type.lower() == "pruning":
         return Pruner(
-            model, PruningConfiguration(optimization_target, layers_to_optimize)
+            KerasModel(model).get_keras_model(),
+            PruningConfiguration(optimization_target, layers_to_optimize),
         )
     elif optimization_type.lower() == "clustering":
+        # make sure an integer is given as clustering target
         if optimization_target == int(optimization_target):
             return Clusterer(
-                model,
+                KerasModel(model).get_keras_model(),
                 ClusteringConfiguration(int(optimization_target), layers_to_optimize),
             )
         raise Exception(
