@@ -11,7 +11,7 @@ import pandas as pd
 import pytest
 from mlia.config import EthosU55
 from mlia.metadata import NpuSupported
-from mlia.metadata import Operation
+from mlia.metadata import Operator
 from mlia.metrics import MemoryUsage
 from mlia.metrics import NPUCycles
 from mlia.metrics import PerformanceMetrics
@@ -31,7 +31,7 @@ from typing_extensions import Literal
     "data, formatters",
     [
         (
-            [Operation("test_operation", "test_type", NpuSupported(False, []))],
+            [Operator("test_operator", "test_type", NpuSupported(False, []))],
             [report_operators, None],
         ),
         (
@@ -49,7 +49,7 @@ from typing_extensions import Literal
         (
             [
                 (
-                    [Operation("test_operation", "test_type", NpuSupported(False, []))],
+                    [Operator("test_operator", "test_type", NpuSupported(False, []))],
                     PerformanceMetrics(
                         EthosU55(),
                         NPUCycles(0, 0, 0, 0, 0, 0),

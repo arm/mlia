@@ -6,14 +6,14 @@ from typing import Tuple
 
 
 class NpuSupported(NamedTuple):
-    """Operation's npu supported attribute."""
+    """Operator's npu supported attribute."""
 
     supported: bool
     reasons: List[Tuple[str, str]]
 
 
-class Operation:
-    """Model operation."""
+class Operator:
+    """Model operator."""
 
     def __init__(self, name: str, op_type: str, run_on_npu: NpuSupported) -> None:
         """Init operation instance."""
@@ -21,12 +21,18 @@ class Operation:
         self.op_type = op_type
         self.run_on_npu = run_on_npu
 
+    @property
+    def cpu_only(self) -> bool:
+        """Return true if operator is CPU only."""
+        npu_supported, reasons = self.run_on_npu
+        return not npu_supported and reasons == [("CPU only operator", "")]
 
-class Operations:
-    """Model's operations."""
 
-    def __init__(self, ops: List[Operation]) -> None:
-        """Init operations instance."""
+class Operators:
+    """Model's operators."""
+
+    def __init__(self, ops: List[Operator]) -> None:
+        """Init operators instance."""
         self.ops = ops
 
     @property

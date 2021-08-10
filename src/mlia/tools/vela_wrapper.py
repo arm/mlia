@@ -35,8 +35,8 @@ from ethosu.vela.vela import generate_supported_ops
 from mlia.config import EthosUConfiguration
 from mlia.config import TFLiteModel
 from mlia.metadata import NpuSupported
-from mlia.metadata import Operation
-from mlia.metadata import Operations
+from mlia.metadata import Operator
+from mlia.metadata import Operators
 from mlia.utils.general import LoggerWriter
 from typing_extensions import Literal
 
@@ -346,16 +346,16 @@ def _performance_metrics(optimized_model: OptimizedModel) -> PerformanceMetrics:
     )
 
 
-def supported_operators(model: TFLiteModel, device: EthosUConfiguration) -> Operations:
+def supported_operators(model: TFLiteModel, device: EthosUConfiguration) -> Operators:
     """Return list of model's operations."""
     LOGGER.debug(f"Check supported operators for the model {model.model_path}")
 
     vela_compiler = get_vela_compiler(device)
     initial_model = vela_compiler.read_model(model.model_path)
 
-    return Operations(
+    return Operators(
         [
-            Operation(op.name, optype_to_builtintype(op.type), run_on_npu(op))
+            Operator(op.name, optype_to_builtintype(op.type), run_on_npu(op))
             for sg in initial_model.nng.subgraphs
             for op in sg.get_all_ops()
             if op.type not in VELA_INTERNAL_OPS

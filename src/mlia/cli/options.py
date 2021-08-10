@@ -1,0 +1,207 @@
+# Copyright 2021, Arm Ltd.
+"""Module for the CLI options."""
+import argparse
+import sys
+from typing import Any
+from typing import Dict
+from typing import List
+from typing import Optional
+
+
+def add_device_options(parser: argparse.ArgumentParser) -> None:
+    """Add device specific options."""
+    device_group = parser.add_argument_group("device options")
+    device_group.add_argument(
+        "--device",
+        choices=("ethos-u55", "ethos-u65"),
+        default="ethos-u55",
+        help="Device type (default: %(default)s)",
+    )
+    device_group.add_argument(
+        "--mac",
+        choices=[32, 64, 128, 256, 512],
+        type=int,
+        default=256,
+        help="MAC value (default: %(default)s)",
+    )
+    device_group.add_argument(
+        "--config",
+        type=str,
+        action="append",
+        dest="config_files",
+        help="Vela configuration file(s) in Python ConfigParser .ini file format",
+    )
+    device_group.add_argument(
+        "--system-config",
+        default="internal-default",
+        help="System configuration (default: %(default)s)",
+    )
+    device_group.add_argument(
+        "--memory-mode",
+        default="internal-default",
+        help="Memory mode (default: %(default)s)",
+    )
+    device_group.add_argument(
+        "--max-block-dependency",
+        type=int,
+        default=3,
+        help="Max block dependency (default: %(default)s)",
+    )
+    device_group.add_argument("--arena-cache-size", type=int, help="Arena cache size")
+    device_group.add_argument(
+        "--tensor-allocator",
+        choices=("LinearAlloc", "Greedy", "HillClimb"),
+        default="HillClimb",
+        help="Tensor allocator algorithm",
+    )
+    device_group.add_argument(
+        "--cpu-tensor-alignment",
+        type=int,
+        default=16,
+        help="CPU tensor alignment (default: %(default)s)",
+    )
+    device_group.add_argument(
+        "--optimization-strategy",
+        choices=("Performance", "Size"),
+        default="Performance",
+        help="Optimization strategy (default: %(default)s)",
+    )
+
+
+def add_optimization_options(parser: argparse.ArgumentParser) -> None:
+    """Add optimization specific options."""
+    optimization_group = parser.add_argument_group("optimization options")
+
+    optimization_group.add_argument(
+        "--optimization-type",
+        required=True,
+        choices=("pruning", "clustering"),
+        help="Optimization type [required]",
+    )
+    optimization_group.add_argument(
+        "--optimization-target",
+        required=True,
+        type=float,
+        help="""Target for optimization
+            (for pruning this is sparsity between (0,1),
+            for clustering this is the number of clusters (positive integer))
+            [required]""",
+    )
+    optimization_group.add_argument(
+        "--layers-to-optimize",
+        nargs="+",
+        type=str,
+        help="""Name of the layers to optimize (separated by space)
+            example: conv1 conv2 conv3
+            [default: every layer]""",
+    )
+
+
+def add_tflite_model_options(parser: argparse.ArgumentParser) -> None:
+    """Add model specific options."""
+    model_group = parser.add_argument_group("TFLite model options")
+    model_group.add_argument("model", help="TFLite model")
+
+
+def add_output_options(parser: argparse.ArgumentParser) -> None:
+    """Add output specific options."""
+    output_group = parser.add_argument_group("output options")
+    output_group.add_argument(
+        "--output-format",
+        choices=["txt", "json", "csv"],
+        default="txt",
+        help="Output format (default: %(default)s)",
+    )
+    output_group.add_argument(
+        "--output",
+        default=sys.stdout,
+        help=(
+            "Name of the file where report will be saved. If no file "
+            "name is specified, the report will be displayed on the standard output"
+        ),
+    )
+
+
+def add_debug_options(parser: argparse.ArgumentParser) -> None:
+    """Add debug options."""
+    debug_group = parser.add_argument_group("debug options")
+    debug_group.add_argument(
+        "--verbose", default=False, action="store_true", help="Produce verbose output"
+    )
+
+
+def add_keras_model_options(parser: argparse.ArgumentParser) -> None:
+    """Add model specific options."""
+    model_group = parser.add_argument_group("Keras model options")
+    model_group.add_argument("model", help="Keras model")
+
+
+def add_quantize_option(parser: argparse.ArgumentParser) -> None:
+    """Add quantization if needed."""
+    quantization_group = parser.add_argument_group(
+        "quantization_opts", "Quantization options"
+    )
+    quantization_group.add_argument(
+        "--quantized",
+        default=False,
+        action="store_true",
+        help="""Quantizes model to int8 if provided.
+        Leaves it as fp32 if otherwise.""",
+    )
+
+
+def add_out_path(parser: argparse.ArgumentParser) -> None:
+    """Add option for output path instead of temporary directory."""
+    out_path_group = parser.add_argument_group("out_path", "Output path")
+    out_path_group.add_argument("--out_path", default=None)
+
+
+def add_custom_supported_operators_options(parser: argparse.ArgumentParser) -> None:
+    """Add custom options for the command 'operators'."""
+    parser.add_argument(
+        "--supported-ops-report",
+        action="store_true",
+        default=False,
+        help=(
+            "Generate the SUPPORTED_OPS.md file in the "
+            "current working directory and exit"
+        ),
+    )
+
+    model_group = parser.add_argument_group("TFLite model options")
+    # make model parameter optional
+    model_group.add_argument("model", nargs="?", help="TFLite model")
+
+
+def get_device_opts(device_args: Optional[Dict]) -> List[str]:
+    """Get non default values passed as parameters for the device."""
+    if not device_args:
+        return []
+
+    dummy_parser = argparse.ArgumentParser()
+    add_device_options(dummy_parser)
+    args = dummy_parser.parse_args([])
+
+    params_name = {
+        action.dest: param_name
+        for param_name, action in dummy_parser._option_string_actions.items()
+    }
+
+    non_default = [
+        arg_name
+        for arg_name, arg_value in device_args.items()
+        if arg_name in args and vars(args)[arg_name] != arg_value
+    ]
+
+    def construct_param(name: str, value: Any) -> List[str]:
+        """Construct parameter."""
+        if isinstance(value, list):
+            return [str(item) for v in value for item in [name, v]]
+
+        return [name, str(value)]
+
+    return [
+        item
+        for name in non_default
+        for item in construct_param(params_name[name], device_args[name])
+    ]

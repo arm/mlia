@@ -9,6 +9,9 @@ from typing import Union
 
 from mlia._typing import OutputFormat
 from mlia._typing import PathOrFileLike
+from mlia.cli.advice import AdviceGroup
+from mlia.cli.advice import AdvisorContext
+from mlia.cli.advice import show_advice
 from mlia.config import EthosU55
 from mlia.config import EthosU65
 from mlia.config import EthosUConfiguration
@@ -52,6 +55,11 @@ def operators(
 
     operators = supported_operators(tflite_model, device)
     report([operators.ops, operators], fmt=output_format, output=output, space="top")
+
+    show_advice(
+        AdvisorContext(operators=operators, device_args=device_args, model=model),
+        advice_group=AdviceGroup.OPERATORS_COMPATIBILITY,
+    )
 
 
 def performance(

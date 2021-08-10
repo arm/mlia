@@ -21,8 +21,8 @@ from mlia._typing import FileLike
 from mlia._typing import OutputFormat
 from mlia._typing import PathOrFileLike
 from mlia.config import EthosUConfiguration
-from mlia.metadata import Operation
-from mlia.metadata import Operations
+from mlia.metadata import Operator
+from mlia.metadata import Operators
 from mlia.metrics import PerformanceMetrics
 from tabulate import tabulate
 
@@ -320,7 +320,7 @@ class SingleRow(Table):
         return "\n".join([f"{self.name}:", indent(items, "  ")])
 
 
-def report_operators_stat(operations: Operations) -> Report:
+def report_operators_stat(operators: Operators) -> Report:
     """Return table representation for the ops stats."""
     columns = [
         Column("Number of operators", alias="num_of_operators"),
@@ -329,10 +329,10 @@ def report_operators_stat(operations: Operations) -> Report:
     ]
     rows = [
         (
-            operations.total_number,
-            operations.npu_supported_number,
+            operators.total_number,
+            operators.npu_supported_number,
             Cell(
-                operations.npu_unsupported_ratio * 100,
+                operators.npu_unsupported_ratio * 100,
                 fmt=Format(str_fmt=lambda x: "{0:.0f}%".format(x)),
             ),
         )
@@ -343,7 +343,7 @@ def report_operators_stat(operations: Operations) -> Report:
     )
 
 
-def report_operators(ops: List[Operation]) -> Report:
+def report_operators(ops: List[Operator]) -> Report:
     """Return table representation for the list of operators."""
     columns = [
         Column("#", only_for=["txt"]),
@@ -615,10 +615,10 @@ def find_appropriate_formatter(data: Any) -> Callable:
     if isinstance(data, PerformanceMetrics):
         return report_perf_metrics
 
-    if isinstance(data, list) and all(isinstance(item, Operation) for item in data):
+    if isinstance(data, list) and all(isinstance(item, Operator) for item in data):
         return report_operators
 
-    if isinstance(data, Operations):
+    if isinstance(data, Operators):
         return report_operators_stat
 
     if isinstance(data, EthosUConfiguration):

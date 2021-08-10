@@ -6,7 +6,7 @@ from mlia.config import EthosUConfiguration
 from mlia.config import IPConfiguration
 from mlia.config import ModelConfiguration
 from mlia.config import TFLiteModel
-from mlia.metadata import Operations
+from mlia.metadata import Operators
 from mlia.tools import vela_wrapper
 
 
@@ -15,7 +15,7 @@ LOGGER = logging.getLogger("mlia.operators")
 
 def supported_operators(
     model: ModelConfiguration, device: IPConfiguration
-) -> Operations:
+) -> Operators:
     """Return list of model's operations."""
     LOGGER.info("Checking operator compatibility ...")
 
