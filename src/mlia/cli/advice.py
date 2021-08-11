@@ -22,6 +22,7 @@ class AdviceGroup(Enum):
     """Advice group."""
 
     OPERATORS_COMPATIBILITY = 1
+    PERFORMANCE = 2
 
 
 class AdvisorContext(TypedDict, total=False):
@@ -84,8 +85,35 @@ def advice_all_operators_supported(ctx: AdvisorContext) -> List[str]:
     return [
         "You don't have any unsupported operators, your model will "
         "run completely on NPU.",
-        "Check the estimated performance by running " "the following command:",
+        "Check the estimated performance by running the following command:",
         f"mlia performance{device_opts} {model_opts}",
+    ]
+
+
+def advice_increase_operator_compatibility(ctx: AdvisorContext) -> List[str]:
+    """Advice to increase op compatibility for performance improvement."""
+    device_opts = " ".join(get_device_opts(ctx.get("device_args")))
+    if device_opts:
+        device_opts = " " + device_opts
+    model_opts = ctx.get("model")
+
+    return [
+        "You can improve the inference time by using only operators "
+        "that are supported by the NPU.",
+        "Try running the following command to verify that:",
+        f"mlia operators{device_opts} {model_opts}",
+    ]
+
+
+def advice_model_optimization(ctx: AdvisorContext) -> List[str]:
+    """Advice to try model optimization."""
+    return [
+        "Check if you can improve the performance by applying "
+        "tooling techniques to your model.",
+        "Note: you will need a Keras/TF.saved_model input for that.",
+        "For example:  mlia model_optimization --optimization-type "
+        "pruning --optimization-target 0.5 /path/to/keras_model",
+        "For more info: mlia model_optimization --help",
     ]
 
 
@@ -105,7 +133,11 @@ def show_advice(
             advice_non_npu_operators,
             advice_unsupported_operators,
             advice_all_operators_supported,
-        ]
+        ],
+        AdviceGroup.PERFORMANCE: [
+            advice_increase_operator_compatibility,
+            advice_model_optimization,
+        ],
     }
 
     if isinstance(advice_group, AdviceGroup):

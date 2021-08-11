@@ -76,6 +76,11 @@ def performance(
     perf_metrics = collect_performance_metrics(tflite_model, device, working_dir)
     report(perf_metrics, fmt=output_format, output=output, space="top")
 
+    show_advice(
+        AdvisorContext(perf_metrics=perf_metrics, device_args=device_args, model=model),
+        advice_group=AdviceGroup.PERFORMANCE,
+    )
+
 
 def model_optimization(
     model: str,

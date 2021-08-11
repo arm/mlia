@@ -5,6 +5,8 @@ from typing import List
 
 import pytest
 from mlia.cli.advice import advice_all_operators_supported
+from mlia.cli.advice import advice_increase_operator_compatibility
+from mlia.cli.advice import advice_model_optimization
 from mlia.cli.advice import advice_non_npu_operators
 from mlia.cli.advice import advice_unsupported_operators
 from mlia.cli.advice import AdvisorContext
@@ -159,5 +161,55 @@ def test_operators_advice(
     expected_result: List[str],
 ) -> None:
     """Test operators advice."""
+    result = advice_producer(ctx)
+    assert result == expected_result
+
+
+@pytest.mark.parametrize(
+    "ctx, advice_producer, expected_result",
+    [
+        (
+            AdvisorContext(model="model.tflite"),
+            advice_increase_operator_compatibility,
+            [
+                "You can improve the inference time by using only operators "
+                "that are supported by the NPU.",
+                "Try running the following command to verify that:",
+                "mlia operators model.tflite",
+            ],
+        ),
+        (
+            AdvisorContext(model="model.tflite"),
+            advice_model_optimization,
+            [
+                "Check if you can improve the performance by applying "
+                "tooling techniques to your model.",
+                "Note: you will need a Keras/TF.saved_model input for that.",
+                "For example:  mlia model_optimization --optimization-type "
+                "pruning --optimization-target 0.5 /path/to/keras_model",
+                "For more info: mlia model_optimization --help",
+            ],
+        ),
+        (
+            AdvisorContext(
+                model="model.tflite",
+                device_args={"mac": 32, "optimization_strategy": "Size"},
+            ),
+            advice_increase_operator_compatibility,
+            [
+                "You can improve the inference time by using only operators "
+                "that are supported by the NPU.",
+                "Try running the following command to verify that:",
+                "mlia operators --mac 32 --optimization-strategy Size model.tflite",
+            ],
+        ),
+    ],
+)
+def test_performance_advice(
+    ctx: AdvisorContext,
+    advice_producer: Callable[[AdvisorContext], List[str]],
+    expected_result: List[str],
+) -> None:
+    """Test performance advice."""
     result = advice_producer(ctx)
     assert result == expected_result
