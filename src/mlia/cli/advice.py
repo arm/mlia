@@ -122,12 +122,6 @@ def show_advice(
     advice_group: Optional[Union[AdviceGroup, List[AdviceGroup]]] = None,
 ) -> None:
     """Show advice based on provided data."""
-    LOGGER.info(
-        """
-=== Advice Generation =========================================================
-"""
-    )
-
     advice_producers = {
         AdviceGroup.OPERATORS_COMPATIBILITY: [
             advice_non_npu_operators,

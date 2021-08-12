@@ -51,10 +51,22 @@ def operators(
         raise Exception("Model is not provided")
 
     tflite_model, device = TFLiteModel(model), _get_device(**device_args)
-    report(device, fmt="txt", space="bottom")
+    report(device, fmt="txt")
+
+    LOGGER.info(
+        """
+=== Model Analysis =========================================================
+"""
+    )
 
     operators = supported_operators(tflite_model, device)
     report([operators.ops, operators], fmt=output_format, output=output, space="top")
+
+    LOGGER.info(
+        """
+=== Advice Generation ======================================================
+"""
+    )
 
     show_advice(
         AdvisorContext(operators=operators, device_args=device_args, model=model),
@@ -71,10 +83,22 @@ def performance(
 ) -> None:
     """Print model's performance stats."""
     tflite_model, device = TFLiteModel(model), _get_device(**device_args)
-    report(device, fmt="txt", space="bottom")
+    report(device, fmt="txt")
+
+    LOGGER.info(
+        """
+=== Model Analysis =========================================================
+"""
+    )
 
     perf_metrics = collect_performance_metrics(tflite_model, device, working_dir)
     report(perf_metrics, fmt=output_format, output=output, space="top")
+
+    LOGGER.info(
+        """
+=== Advice Generation ======================================================
+"""
+    )
 
     show_advice(
         AdvisorContext(perf_metrics=perf_metrics, device_args=device_args, model=model),
