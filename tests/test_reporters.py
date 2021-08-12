@@ -122,10 +122,11 @@ def test_report(
                 assert output.is_file()
 
 
-def test_table_representation() -> None:
+@pytest.mark.parametrize("with_notes", [True, False])
+def test_table_representation(with_notes: bool) -> None:
     """Test table report representation."""
 
-    def sample_table() -> Table:
+    def sample_table(with_notes: bool) -> Table:
         columns = [
             Column("Header 1", alias="header1", only_for=["txt"]),
             Column("Header 2", alias="header2", fmt=Format(wrap_width=5)),
@@ -133,9 +134,15 @@ def test_table_representation() -> None:
         ]
         rows = [(1, 2, 3), (4, 5, Cell(123123, fmt=Format(str_fmt="10,d")))]
 
-        return Table(columns, rows, name="Sample table", alias="sample_table")
+        return Table(
+            columns,
+            rows,
+            name="Sample table",
+            alias="sample_table",
+            notes="Sample notes" if with_notes else None,
+        )
 
-    table = sample_table()
+    table = sample_table(with_notes)
     csv_repr = table.to_csv()
     assert csv_repr == [["Header 2", "Header 3"], [2, 3], [5, 123123]]
 
@@ -148,7 +155,8 @@ def test_table_representation() -> None:
     }
 
     text_report = table.to_text()
-    expected_text_report = """
+    if with_notes:
+        expected_text_report = """
 Sample table:
 ╒════════════╤════════════╤════════════╕
 │ Header 1   │ Header 2   │ Header 3   │
@@ -157,7 +165,19 @@ Sample table:
 ├────────────┼────────────┼────────────┤
 │ 4          │ 5          │ 123,123    │
 ╘════════════╧════════════╧════════════╛
-""".strip()
+Sample notes
+    """.strip()
+    else:
+        expected_text_report = """
+Sample table:
+╒════════════╤════════════╤════════════╕
+│ Header 1   │ Header 2   │ Header 3   │
+╞════════════╪════════════╪════════════╡
+│ 1          │ 2          │ 3          │
+├────────────┼────────────┼────────────┤
+│ 4          │ 5          │ 123,123    │
+╘════════════╧════════════╧════════════╛
+    """.strip()
     assert text_report == expected_text_report
 
 

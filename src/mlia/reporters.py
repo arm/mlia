@@ -179,6 +179,7 @@ class Table(Report):
         rows: List[Any],
         name: str,
         alias: Optional[str] = None,
+        notes: Optional[str] = None,
     ) -> None:
         """Init table definition.
 
@@ -191,6 +192,7 @@ class Table(Report):
         self.rows = rows
         self.name = name
         self.alias = alias
+        self.notes = notes
 
     def to_json(self, **kwargs: Any) -> Union[Dict, List[Dict]]:
         """Convert table to dict object."""
@@ -252,6 +254,8 @@ class Table(Report):
         footer = ""
         if space in (True, "bottom"):
             footer = "\n"
+        if self.notes:
+            footer = "\n" + self.notes
 
         return (
             title
@@ -477,7 +481,13 @@ def report_perf_metrics(perf_metrics: PerformanceMetrics) -> Report:
     ]
 
     rows = memory_usage + cycles + data_beats
-    return Table(columns, rows, name="Performance metrics", alias="performance_metrics")
+    return Table(
+        columns,
+        rows,
+        name="Performance metrics",
+        alias="performance_metrics",
+        notes="IMPORTANT: The performance figures above refer to NPU only",
+    )
 
 
 class CompoundReport(Report):
@@ -630,5 +640,8 @@ def find_appropriate_formatter(data: Any) -> Callable:
     if isinstance(data, (list, tuple)):
         formatters = [find_appropriate_formatter(item) for item in data]
         return CompoundFormatter(formatters)
+
+    # if isinstance(data, str):
+    #    return report_plain_string
 
     raise Exception("Unable to find appropriate formatter")
