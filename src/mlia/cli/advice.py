@@ -111,7 +111,7 @@ def advice_model_optimization(ctx: AdvisorContext) -> List[str]:
         "Check if you can improve the performance by applying "
         "tooling techniques to your model.",
         "Note: you will need a Keras/TF.saved_model input for that.",
-        "For example:  mlia model_optimization --optimization-type "
+        "For example: mlia model_optimization --optimization-type "
         "pruning --optimization-target 0.5 /path/to/keras_model",
         "For more info: mlia model_optimization --help",
     ]
