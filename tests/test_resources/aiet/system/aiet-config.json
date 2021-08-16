@@ -1,0 +1,32 @@
+[
+    {
+        "name": "CS-300: Cortex-M55+Ethos-U55",
+        "description": "This is a fake system that emulates Corstone-300 output.",
+        "data_transfer": {
+            "protocol": "local"
+        },
+        "commands": {
+            "run": [
+                "echo This is Corstone-300 output emulation",
+                "echo Passed parameters: mac={user_params:mac}",
+                "python corstone300_emulation.py"
+            ]
+        },
+        "user_params": {
+            "shared": [
+                {
+                    "name": "ethosu.num_macs=",
+                    "description": "Arm Ethos-U55 configuration - the number represents MACs per cycle.",
+                    "values": [
+                        "32",
+                        "64",
+                        "128",
+                        "256"
+                    ],
+                    "default_value": "128",
+                    "alias": "mac"
+                }
+            ]
+        }
+    }
+]

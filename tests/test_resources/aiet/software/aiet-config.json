@@ -1,0 +1,38 @@
+[
+    {
+        "name": "generic_inference",
+        "description": "This is a fake software generic_inference.",
+        "build_dir": "build_dir",
+        "supported_systems": [
+            {
+                "name": "CS-300: Cortex-M55+Ethos-U55"
+            }
+        ],
+        "commands": {
+            "build": [
+                "echo Build generic_inference for the {system.name} in {software.build_dir}",
+                "echo Passed parameters: input_file={user_params:input_file} profile_enabled={user_params:profile_enabled}"
+            ]
+        },
+        "user_params": {
+            "build": [
+                {
+                    "name": "-Dinference_runner_MODEL_TFLITE_PATH=",
+                    "description": "Full file name for a custom model. Model must be in tflite format compiled with Vela.",
+                    "values": [],
+                    "alias": "input_file"
+                },
+                {
+                    "name": "-DCPU_PROFILE_ENABLED=",
+                    "description": "Selects whether CPU profiling (for ML workload) is enabled or not.",
+                    "values": [
+                        "ON",
+                        "OFF"
+                    ],
+                    "default_value": "ON",
+                    "alias": "profile_enabled"
+                }
+            ]
+        }
+    }
+]
