@@ -181,8 +181,67 @@ Sample table:
     assert text_report == expected_text_report
 
 
-@pytest.mark.parametrize("with_index", [True, False])
-def test_reportdataframe_representation(with_index: bool) -> None:
+@pytest.mark.parametrize(
+    "with_index, title, columns_name, notes, expected_text_report",
+    [
+        (
+            True,
+            "Sample table",
+            "Sample index column",
+            "",
+            """
+Sample table:
+╒═══════════════════════╤════════════╤════════════╤════════════╕
+│ Sample index column   │ Header 1   │ Header 2   │ Header 3   │
+╞═══════════════════════╪════════════╪════════════╪════════════╡
+│ 0                     │ 1          │ 2          │ 3          │
+├───────────────────────┼────────────┼────────────┼────────────┤
+│ 1                     │ 4          │ 5.56       │ 123,123    │
+╘═══════════════════════╧════════════╧════════════╧════════════╛
+    """.strip(),
+        ),
+        (
+            False,
+            "Sample table",
+            "",
+            "",
+            """
+Sample table:
+╒════════════╤════════════╤════════════╕
+│ Header 1   │ Header 2   │ Header 3   │
+╞════════════╪════════════╪════════════╡
+│ 1          │ 2          │ 3          │
+├────────────┼────────────┼────────────┤
+│ 4          │ 5.56       │ 123,123    │
+╘════════════╧════════════╧════════════╛
+    """.strip(),
+        ),
+        (
+            False,
+            "Sample table",
+            "",
+            "Sample note",
+            """
+Sample table:
+╒════════════╤════════════╤════════════╕
+│ Header 1   │ Header 2   │ Header 3   │
+╞════════════╪════════════╪════════════╡
+│ 1          │ 2          │ 3          │
+├────────────┼────────────┼────────────┤
+│ 4          │ 5.56       │ 123,123    │
+╘════════════╧════════════╧════════════╛
+Sample note
+    """.strip(),
+        ),
+    ],
+)
+def test_reportdataframe_representation(
+    with_index: bool,
+    title: str,
+    columns_name: str,
+    notes: str,
+    expected_text_report: str,
+) -> None:
     """Test dataframe report representation."""
 
     def sample_df() -> pd.DataFrame:
@@ -210,34 +269,11 @@ def test_reportdataframe_representation(with_index: bool) -> None:
     df.loc[:, "Header 2"] = df["Header 2"].map("{:.2f}".format)
     df.loc[:, "Header 3"] = df["Header 3"].map("{:,d}".format)
 
-    if with_index:
-        text_report = ReportDataFrame(df).to_text(
-            title="Sample table", columns_name="Sample index column"
-        )
-        expected_text_report = """
-Sample table:
-╒═══════════════════════╤════════════╤════════════╤════════════╕
-│ Sample index column   │ Header 1   │ Header 2   │ Header 3   │
-╞═══════════════════════╪════════════╪════════════╪════════════╡
-│ 0                     │ 1          │ 2          │ 3          │
-├───────────────────────┼────────────┼────────────┼────────────┤
-│ 1                     │ 4          │ 5.56       │ 123,123    │
-╘═══════════════════════╧════════════╧════════════╧════════════╛
-    """.strip()
-        assert text_report == expected_text_report
-    else:
-        text_report = ReportDataFrame(df).to_text(title="Sample table", showindex=False)
-        expected_text_report = """
-Sample table:
-╒════════════╤════════════╤════════════╕
-│ Header 1   │ Header 2   │ Header 3   │
-╞════════════╪════════════╪════════════╡
-│ 1          │ 2          │ 3          │
-├────────────┼────────────┼────────────┤
-│ 4          │ 5.56       │ 123,123    │
-╘════════════╧════════════╧════════════╛
-    """.strip()
-        assert text_report == expected_text_report
+    text_report = ReportDataFrame(df).to_text(
+        title=title, columns_name=columns_name, notes=notes, showindex=with_index
+    )
+
+    assert expected_text_report == text_report
 
 
 def test_csv_nested_table_representation() -> None:

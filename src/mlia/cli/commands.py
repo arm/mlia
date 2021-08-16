@@ -133,10 +133,28 @@ def model_optimization(
         model, optimization_type, optimization_target, layers_to_optimize
     )
     device = _get_device(**device_args)
+    report(device, fmt="txt")
+
+    LOGGER.info(
+        """
+=== Model Analysis =========================================================
+"""
+    )
 
     results = optimize_and_compare(optimizer, device, out_path_final)
 
-    report(results, columns_name="Metrics")
+    optmization_warning = (
+        "IMPORTANT: The applied tooling techniques have an impact "
+        "on accuracy. Additional hyperparameter tuning may be required "
+        "after any optimization."
+    )
+    report(
+        results,
+        columns_name="Metrics",
+        title="Performance metrics",
+        space=True,
+        notes=optmization_warning,
+    )
 
 
 def _get_device(**kwargs: Any) -> EthosUConfiguration:

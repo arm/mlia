@@ -52,7 +52,7 @@ def ethosu_performance_metrics(
     )
     LOGGER.info("Done")
 
-    LOGGER.info("Optimizing the model ...")
+    LOGGER.info("Compiling the model ...")
     model_filename = f"{Path(model.model_path).stem}_vela.tflite"
 
     optimized_model_path = str(

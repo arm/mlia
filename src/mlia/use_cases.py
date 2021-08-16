@@ -1,5 +1,6 @@
 # Copyright 2021, Arm Ltd.
 """Frequent use cases."""
+import logging
 from pathlib import Path
 from typing import Optional
 
@@ -14,6 +15,8 @@ from mlia.utils.general import convert_to_tflite
 from mlia.utils.general import save_keras_model
 from mlia.utils.general import save_tflite_model
 from mlia.utils.tflite_metrics import get_gzipped_file_size
+
+LOGGER = logging.getLogger("mlia.performance")
 
 
 def get_metrics_and_size(model: TFLiteModel, device: IPConfiguration) -> pd.DataFrame:
@@ -35,6 +38,10 @@ def optimize_and_compare(
     if not out_path:
         out_path = Path().cwd()
 
+    LOGGER.info(
+        """Original model:
+"""
+    )
     tflite_model = convert_to_tflite(optimizer.get_model(), True)
 
     temp_base_tflite_model_path = out_path / "original_model.tflite"
@@ -44,6 +51,11 @@ def optimize_and_compare(
 
     original = get_metrics_and_size(TFLiteModel(temp_base_tflite_model_path), device)
 
+    LOGGER.info(
+        """
+Optimized model:
+"""
+    )
     keras_optimized_model = optimize_model(optimizer)
     save_keras_model(keras_optimized_model, temp_opt_keras_model_path)
     tflite_optimized_model = convert_to_tflite(keras_optimized_model, True)

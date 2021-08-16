@@ -2,13 +2,8 @@
 """Vela wrapper module."""
 import itertools
 import logging
-from contextlib import contextmanager
-from contextlib import ExitStack
-from contextlib import redirect_stderr
-from contextlib import redirect_stdout
 from pathlib import Path
 from typing import Dict
-from typing import Generator
 from typing import List
 from typing import Optional
 from typing import Union
@@ -37,7 +32,7 @@ from mlia.config import TFLiteModel
 from mlia.metadata import NpuSupported
 from mlia.metadata import Operator
 from mlia.metadata import Operators
-from mlia.utils.general import LoggerWriter
+from mlia.utils.general import redirect_output
 from typing_extensions import Literal
 
 
@@ -189,7 +184,7 @@ class VelaCompiler:
         compiler_options = self._compiler_options()
         scheduler_options = self._scheduler_options()
 
-        with redirect_output():
+        with redirect_output(LOGGER):
             compiler_driver(nng, arch, compiler_options, scheduler_options)
 
         return OptimizedModel(nng, arch, compiler_options, scheduler_options)
@@ -199,7 +194,7 @@ class VelaCompiler:
         """Read tflite model."""
         model_path = str(model) if isinstance(model, Path) else model
 
-        with redirect_output():
+        with redirect_output(LOGGER):
             return read_model(model_path, ModelReaderOptions())
 
     def _architecture_features(self) -> ArchitectureFeatures:
@@ -243,19 +238,6 @@ class VelaCompiler:
             output_dir=self.output_dir,
             cpu_tensor_alignment=self.cpu_tensor_alignment,
         )
-
-
-@contextmanager
-def redirect_output() -> Generator[None, None, None]:
-    """Redirect Vela's output to the logger."""
-    stdout_to_log = LoggerWriter(LOGGER, logging.INFO)
-    stderr_to_log = LoggerWriter(LOGGER, logging.ERROR)
-
-    with ExitStack() as exit_stack:
-        exit_stack.enter_context(redirect_stdout(stdout_to_log))  # type: ignore
-        exit_stack.enter_context(redirect_stderr(stderr_to_log))  # type: ignore
-
-        yield
 
 
 def get_vela_compiler(device: EthosUConfiguration) -> VelaCompiler:
@@ -387,5 +369,5 @@ def run_on_npu(op: Op) -> NpuSupported:
 
 def generate_supported_operators_report() -> None:
     """Generate supported operators report in current working directory."""
-    with redirect_output():
+    with redirect_output(LOGGER):
         generate_supported_ops()

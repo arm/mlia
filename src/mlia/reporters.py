@@ -147,6 +147,8 @@ class ReportDataFrame(Report):
         title: Optional[str] = None,
         columns_name: Optional[str] = None,
         showindex: bool = True,
+        space: Union[bool, str] = False,
+        notes: Optional[str] = None,
         **kwargs: Any,
     ) -> str:
         """Convert to human readable format."""
@@ -164,6 +166,15 @@ class ReportDataFrame(Report):
             stralign="left",
             showindex=showindex,
         )
+        if space in (True, "top"):
+            final_table = "\n" + final_table
+
+        if space in (True, "bottom"):
+            final_table = final_table + "\n"
+
+        if notes:
+            final_table = final_table + "\n" + notes
+
         return final_table
 
 

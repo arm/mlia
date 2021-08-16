@@ -1,8 +1,13 @@
 # Copyright 2021, Arm Ltd.
 """Collection of useful functions for optimizations."""
 import logging
+from contextlib import contextmanager
+from contextlib import ExitStack
+from contextlib import redirect_stderr
+from contextlib import redirect_stdout
 from pathlib import Path
 from typing import Callable
+from typing import Generator
 from typing import Iterable
 from typing import Union
 
@@ -36,7 +41,8 @@ def convert_to_tflite(model: tf.keras.Model, quantized: bool = False) -> Interpr
         converter.inference_input_type = tf.int8
         converter.inference_output_type = tf.int8
 
-    tflite_model = converter.convert()
+    with redirect_output(logging.getLogger("tensorflow")):
+        tflite_model = converter.convert()
 
     return tflite_model
 
@@ -77,3 +83,16 @@ class LoggerWriter:
 
     def flush(self) -> None:
         """Flush buffers."""
+
+
+@contextmanager
+def redirect_output(logger: logging.Logger) -> Generator[None, None, None]:
+    """Redirect standard output to the logger."""
+    stdout_to_log = LoggerWriter(logger, logging.INFO)
+    stderr_to_log = LoggerWriter(logger, logging.ERROR)
+
+    with ExitStack() as exit_stack:
+        exit_stack.enter_context(redirect_stdout(stdout_to_log))  # type: ignore
+        exit_stack.enter_context(redirect_stderr(stderr_to_log))  # type: ignore
+
+        yield

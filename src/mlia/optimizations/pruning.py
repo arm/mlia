@@ -136,6 +136,7 @@ class Pruner(Optimizer):
             batch_size=self.optimizer_configuration.batch_size,
             epochs=self.optimizer_configuration.num_epochs,
             callbacks=callbacks,
+            verbose=0,
         )
 
     def _assert_sparsity_reached(self) -> None:

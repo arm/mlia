@@ -53,7 +53,12 @@ def setup_logging(logs_dir: str, verbose: bool = False) -> None:
     now = datetime.datetime.now()
     timestamp = f"{now:%Y%m%d_%H%M%S}"
 
-    for logger_name in ["mlia.tools.aiet", "mlia.tools.vela"]:
+    for logger_name in [
+        "mlia.tools.aiet",
+        "mlia.tools.vela",
+        "tensorflow",
+        "py.warnings",
+    ]:
         module_name = logger_name.split(".")[-1]
 
         handler = logging.FileHandler(
