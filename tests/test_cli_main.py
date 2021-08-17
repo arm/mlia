@@ -1,5 +1,6 @@
 # Copyright 2021, Arm Ltd.
 """Tests for main module."""
+import pathlib
 from pathlib import Path
 from typing import Any
 from typing import List
@@ -102,52 +103,29 @@ def test_performance_custom_vela_init(
 
 
 @pytest.mark.parametrize(
-    "args",
-    [
-        ["--optimization-type", "pruning", "--optimization-target", "0.5"],
-        ["--optimization-type", "clustering", "--optimization-target", "32"],
-        [
-            "--optimization-type",
-            "pruning",
-            "--optimization-target",
-            "0.5",
-            "--layers-to-optimize",
-            "conv1",
-            "conv2",
-        ],
-        [
-            "--optimization-type",
-            "clustering",
-            "--optimization-target",
-            "32",
-            "--layers-to-optimize",
-            "conv1",
-            "conv2",
-        ],
-    ],
-)
-def test_model_optimization_command(args: List[str]) -> None:
-    """Test operators command."""
-    model = generate_keras_model()
-    model_path = save_keras_model(model)
-
-    exit_code = main(["model_optimization", model_path] + args)
-    assert exit_code == 0
-
-
-@pytest.mark.parametrize(
     "quantize",
     [True, False],
 )
-def test_keras_to_tflite_command(quantize: bool) -> None:
+def test_keras_to_tflite_command(quantize: bool, tmp_path: pathlib.Path) -> None:
     """Test keras_to_flite command."""
     model = generate_keras_model()
-    model_path = save_keras_model(model)
+    temp_file = tmp_path / "test_keras_to_tflite_command.h5"
+    save_keras_model(model, temp_file)
 
     if quantize:
-        exit_code = main(["keras_to_tflite", model_path, "--quantize"])
+        exit_code = main(
+            [
+                "keras_to_tflite",
+                str(temp_file),
+                "--quantize",
+                "--out-path",
+                str(tmp_path),
+            ]
+        )
     else:
-        exit_code = main(["keras_to_tflite", model_path])
+        exit_code = main(
+            ["keras_to_tflite", str(temp_file), "--out-path", str(tmp_path)]
+        )
 
     assert exit_code == 0
 
@@ -171,25 +149,32 @@ def mock_performance_estimation(monkeypatch: Any) -> None:
         ["ethos-u65", "clustering", "32"],
     ],
 )
-def test_estimate_optimized_performance_command(
-    device: str, optimization_type: str, optimization_target: str, monkeypatch: Any
+def test_model_optimization_command(
+    device: str,
+    optimization_type: str,
+    optimization_target: str,
+    monkeypatch: Any,
+    tmp_path: pathlib.Path,
 ) -> None:
     """Test keras_to_flite command."""
     model = generate_keras_model()
-    model_path = save_keras_model(model)
+    temp_file = tmp_path / "test_model_optimization_command.h5"
+    save_keras_model(model, temp_file)
 
     mock_performance_estimation(monkeypatch)
 
     exit_code = main(
         [
-            "estimate_optimized_performance",
-            model_path,
+            "model_optimization",
+            str(temp_file),
             "--device",
             device,
             "--optimization-type",
             optimization_type,
             "--optimization-target",
             optimization_target,
+            "--out-path",
+            str(tmp_path),
         ]
     )
 

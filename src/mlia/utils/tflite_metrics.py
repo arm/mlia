@@ -8,7 +8,6 @@ These metrics include:
 * gzip compression ratio
 """
 import os
-import tempfile
 import zipfile
 from enum import Enum
 from pprint import pprint
@@ -19,6 +18,7 @@ from typing import Tuple
 
 import numpy as np
 import tensorflow as tf
+from mlia.utils.filesystem import temp_file
 from tabulate import tabulate
 
 DEFAULT_IGNORE_LIST = [
@@ -39,10 +39,11 @@ def get_file_size(file: str) -> int:
 
 def get_gzipped_file_size(file: str) -> int:
     """Gzip-compress the file and get the size of the compressed file in bytes."""
-    _, zipped_file = tempfile.mkstemp(".zip")
-    with zipfile.ZipFile(zipped_file, "w", compression=zipfile.ZIP_DEFLATED) as f:
-        f.write(file)
-    return get_file_size(zipped_file)
+    with temp_file(".zip") as zipped_file:
+        with zipfile.ZipFile(zipped_file, "w", compression=zipfile.ZIP_DEFLATED) as f:
+            f.write(file)
+        zipped_size = get_file_size(zipped_file)
+    return zipped_size
 
 
 def calculate_num_unique_weights(weights: np.array) -> int:

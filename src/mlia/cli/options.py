@@ -152,8 +152,13 @@ def add_quantize_option(parser: argparse.ArgumentParser) -> None:
 
 def add_out_path(parser: argparse.ArgumentParser) -> None:
     """Add option for output path instead of temporary directory."""
-    out_path_group = parser.add_argument_group("out_path", "Output path")
-    out_path_group.add_argument("--out_path", default=None)
+    out_path_group = parser.add_argument_group("out path")
+    out_path_group.add_argument(
+        "--out-path",
+        help="""Add the folder where you want to save the files created
+        (if none specified, they will be saved in the current directory)""",
+        default=None,
+    )
 
 
 def add_custom_supported_operators_options(parser: argparse.ArgumentParser) -> None:

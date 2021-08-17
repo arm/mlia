@@ -1,5 +1,6 @@
 # Copyright 2021, Arm Ltd.
 """Test for module optimizations/clustering."""
+import pathlib
 from typing import List
 from typing import Optional
 from typing import Tuple
@@ -115,6 +116,7 @@ def test_cluster_simple_model_fully(
     target_num_clusters: int,
     sparsity_aware: bool,
     layers_to_cluster: Optional[List[str]],
+    tmp_path: pathlib.Path,
 ) -> None:
     """Simple mnist test to see if clustering works correctly."""
     target_sparsity = 0.5
@@ -125,9 +127,10 @@ def test_cluster_simple_model_fully(
     if sparsity_aware:
         base_model = _prune_model(base_model, target_sparsity, layers_to_cluster)
 
+    temp_file = tmp_path / "test_cluster_simple_model_fully_before.tflite"
     tflite_base_model = test_utils.convert_to_tflite(base_model)
-    tflite_base_path = test_utils.save_tflite_model(tflite_base_model)
-    base_compressed_size = tflite_metrics.get_gzipped_file_size(tflite_base_path)
+    test_utils.save_tflite_model(tflite_base_model, temp_file)
+    base_compressed_size = tflite_metrics.get_gzipped_file_size(str(temp_file))
 
     clusterer = Clusterer(
         base_model,
@@ -139,12 +142,11 @@ def test_cluster_simple_model_fully(
     clusterer.apply_optimization()
     clustered_model = clusterer.get_model()
 
+    temp_file = tmp_path / "test_cluster_simple_model_fully_after.tflite"
     tflite_clustered_model = test_utils.convert_to_tflite(clustered_model)
-    tflite_clustered_path = test_utils.save_tflite_model(tflite_clustered_model)
-    clustered_compressed_size = tflite_metrics.get_gzipped_file_size(
-        tflite_clustered_path
-    )
-    clustered_tflite_metrics = tflite_metrics.TFLiteMetrics(tflite_clustered_path)
+    test_utils.save_tflite_model(tflite_clustered_model, temp_file)
+    clustered_compressed_size = tflite_metrics.get_gzipped_file_size(str(temp_file))
+    clustered_tflite_metrics = tflite_metrics.TFLiteMetrics(str(temp_file))
 
     _test_num_unique_weights(
         clustered_tflite_metrics, target_num_clusters, layers_to_cluster

@@ -1,10 +1,10 @@
 # Copyright 2021, Arm Ltd.
 """Collection of useful functions for optimizations."""
 import logging
-import tempfile
+from pathlib import Path
 from typing import Callable
 from typing import Iterable
-from typing import Optional
+from typing import Union
 
 import numpy as np
 import tensorflow as tf
@@ -38,26 +38,16 @@ def convert_to_tflite(model: tf.keras.Model, quantized: bool = False) -> Interpr
     return tflite_model
 
 
-def save_keras_model(model: tf.keras.Model, save_path: Optional[str] = None) -> str:
-    """Save keras model in temporary file and return the name of that file."""
-    if not save_path:
-        _, save_path = tempfile.mkstemp(".h5")
-
+def save_keras_model(model: tf.keras.Model, save_path: Union[str, Path]) -> None:
+    """Save keras model at provided path."""
     # Checkpoint: saving the optimizer is necessary.
     model.save(save_path, include_optimizer=True)
 
-    return save_path
 
-
-def save_tflite_model(model: tf.keras.Model, save_path: Optional[str] = None) -> str:
-    """Save tflite model in temporary file and return the name of that file."""
-    if not save_path:
-        _, save_path = tempfile.mkstemp(".tflite")
-
+def save_tflite_model(model: tf.keras.Model, save_path: Union[str, Path]) -> None:
+    """Save tflite model at provided path."""
     with open(save_path, "wb") as file:
         file.write(model)
-
-    return save_path
 
 
 def deep_clone_model(model: tf.keras.Model) -> tf.keras.Model:

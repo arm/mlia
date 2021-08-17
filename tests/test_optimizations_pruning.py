@@ -1,5 +1,6 @@
 # Copyright 2021, Arm Ltd.
 """Test for module optimizations/pruning."""
+import pathlib
 from typing import List
 from typing import Optional
 from typing import Tuple
@@ -64,7 +65,10 @@ def _test_sparsity(
 @pytest.mark.parametrize("mock_data", (False, True))
 @pytest.mark.parametrize("layers_to_prune", (["conv1"], ["conv1", "conv2"], None))
 def test_prune_simple_model_fully(
-    target_sparsity: float, mock_data: bool, layers_to_prune: Optional[List[str]]
+    target_sparsity: float,
+    mock_data: bool,
+    layers_to_prune: Optional[List[str]],
+    tmp_path: pathlib.Path,
 ) -> None:
     """Simple mnist test to see if pruning works correctly."""
     x_train, y_train = _get_dataset()
@@ -74,9 +78,11 @@ def test_prune_simple_model_fully(
     base_model = generate_keras_model()
     _train_model(base_model)
 
-    tflite_base_model = TFLiteModel(
-        general_utils.save_tflite_model(general_utils.convert_to_tflite(base_model))
+    temp_file = tmp_path / "test_prune_simple_model_fully_before.tflite"
+    general_utils.save_tflite_model(
+        general_utils.convert_to_tflite(base_model), temp_file
     )
+    tflite_base_model = TFLiteModel(temp_file)
     base_compressed_size = tflite_metrics.get_gzipped_file_size(
         tflite_base_model.model_path
     )
@@ -112,9 +118,11 @@ def test_prune_simple_model_fully(
     pruner.apply_optimization()
     pruned_model = pruner.get_model()
 
-    tflite_pruned_model = TFLiteModel(
-        general_utils.save_tflite_model(general_utils.convert_to_tflite(pruned_model))
+    temp_file = tmp_path / "test_prune_simple_model_fully_after.tflite"
+    general_utils.save_tflite_model(
+        general_utils.convert_to_tflite(pruned_model), temp_file
     )
+    tflite_pruned_model = TFLiteModel(temp_file)
     pruned_compressed_size = tflite_metrics.get_gzipped_file_size(
         tflite_pruned_model.model_path
     )

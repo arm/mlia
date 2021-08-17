@@ -142,13 +142,13 @@ class TestEndToEnd:
     @pytest.mark.parametrize("model", get_keras_models())
     @pytest.mark.parametrize("device", ["ethos-u55", "ethos-u65"])
     @pytest.mark.parametrize("optimization", [("pruning", "0.5"), ("clustering", "32")])
-    def test_estimate_optimized_performance(
+    def test_model_optimization(
         self, model: Path, device: str, optimization: Tuple[str, str]
     ) -> None:
-        """Test command 'estimate_optimized_performance'."""
+        """Test command 'model_optimization'."""
         command = [
             "mlia",
-            "estimate_optimized_performance",
+            "model_optimization",
             str(model),
             "--device",
             device,

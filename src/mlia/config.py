@@ -1,5 +1,6 @@
 # Copyright 2021, Arm Ltd.
 """Model and IP configuration."""
+from pathlib import Path
 from typing import Any
 from typing import cast
 from typing import Dict
@@ -32,9 +33,9 @@ class KerasModel(ModelConfiguration):
 class TFLiteModel(ModelConfiguration):
     """TFLite model configuration."""
 
-    def __init__(self, model_path: str):
+    def __init__(self, model_path: Union[Path, str]):
         """Init TFLite model configuration."""
-        self.model_path = model_path
+        self.model_path: str = str(model_path)
 
     def input_details(self) -> List[Dict]:
         """Get model's input details."""

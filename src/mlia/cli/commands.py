@@ -2,6 +2,7 @@
 """CLI commands module."""
 import logging
 import sys
+from pathlib import Path
 from typing import Any
 from typing import List
 from typing import Optional
@@ -27,7 +28,6 @@ from mlia.optimizations.pruning import PruningConfiguration
 from mlia.performance import collect_performance_metrics
 from mlia.reporters import report
 from mlia.use_cases import optimize_and_compare
-from mlia.use_cases import optimize_model
 from mlia.utils.general import convert_to_tflite
 from mlia.utils.general import save_tflite_model
 
@@ -106,48 +106,35 @@ def performance(
     )
 
 
+def keras_to_tflite(
+    model: str, quantized: bool, out_path: Optional[str] = None
+) -> None:
+    """Convert keras model to tflite format and save resulting file."""
+    out_path_final = Path(out_path) if out_path else Path().cwd()
+
+    tflite_model = convert_to_tflite(KerasModel(model).get_keras_model(), quantized)
+    save_tflite_model(tflite_model, out_path_final / "converted_model.tflite")
+
+    LOGGER.info(f"Model {model} saved to {out_path_final}")
+
+
 def model_optimization(
     model: str,
     optimization_type: str,
     optimization_target: Union[int, float],
     layers_to_optimize: Optional[List[str]] = None,
     out_path: Optional[str] = None,
-) -> None:
-    """Apply specified optimization to the model and save resulting file."""
-    optimizer = _get_optimizer(
-        model, optimization_type, optimization_target, layers_to_optimize
-    )
-
-    optimized_model = optimize_model(optimizer)
-    optimized_model_path = save_tflite_model(optimized_model, out_path)
-
-    print(f"Model {model} saved to {optimized_model_path}")
-
-
-def keras_to_tflite(
-    model: str, quantized: bool, out_path: Optional[str] = None
-) -> None:
-    """Convert keras model to tflite format and save resulting file."""
-    tflite_model = convert_to_tflite(KerasModel(model).get_keras_model(), quantized)
-    tflite_model_path = save_tflite_model(tflite_model, out_path)
-
-    LOGGER.info(f"Model {model} saved to {tflite_model_path}")
-
-
-def estimate_optimized_performance(
-    model: str,
-    optimization_type: str,
-    optimization_target: Union[int, float],
-    layers_to_optimize: Optional[List[str]] = None,
     **device_args: Any,
 ) -> None:
     """Show performance improvements after applying optimizations."""
+    out_path_final = Path(out_path) if out_path else Path.cwd()
+
     optimizer = _get_optimizer(
         model, optimization_type, optimization_target, layers_to_optimize
     )
     device = _get_device(**device_args)
 
-    results = optimize_and_compare(optimizer, device)
+    results = optimize_and_compare(optimizer, device, out_path_final)
 
     report(results, columns_name="Metrics")
 

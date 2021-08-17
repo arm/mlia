@@ -4,12 +4,13 @@ import os
 from contextlib import contextmanager
 from tempfile import mkstemp
 from typing import Generator
+from typing import Optional
 
 
 @contextmanager
-def temp_file() -> Generator[str, None, None]:
+def temp_file(suffix: Optional[str] = None) -> Generator[str, None, None]:
     """Create temp file and remove it after."""
-    _, tmp_file = mkstemp()
+    _, tmp_file = mkstemp(suffix=suffix)
 
     yield tmp_file
 
