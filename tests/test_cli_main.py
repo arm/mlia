@@ -165,6 +165,8 @@ def test_model_optimization_command(
 
     exit_code = main(
         [
+            "--working-dir",
+            str(tmp_path),
             "model_optimization",
             str(temp_file),
             "--device",
@@ -173,9 +175,10 @@ def test_model_optimization_command(
             optimization_type,
             "--optimization-target",
             optimization_target,
-            "--out-path",
-            str(tmp_path),
         ]
     )
 
     assert exit_code == 0
+
+    assert (tmp_path / "original_model.tflite").is_file()
+    assert (tmp_path / "optimized_model.tflite").is_file()

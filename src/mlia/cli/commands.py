@@ -123,12 +123,10 @@ def model_optimization(
     optimization_type: str,
     optimization_target: Union[int, float],
     layers_to_optimize: Optional[List[str]] = None,
-    out_path: Optional[str] = None,
+    working_dir: Optional[str] = None,
     **device_args: Any,
 ) -> None:
     """Show performance improvements after applying optimizations."""
-    out_path_final = Path(out_path) if out_path else Path.cwd()
-
     optimizer = _get_optimizer(
         model, optimization_type, optimization_target, layers_to_optimize
     )
@@ -141,7 +139,7 @@ def model_optimization(
 """
     )
 
-    results = optimize_and_compare(optimizer, device, out_path_final)
+    results = optimize_and_compare(optimizer, device, working_dir)
 
     optmization_warning = (
         "IMPORTANT: The applied tooling techniques have an impact "

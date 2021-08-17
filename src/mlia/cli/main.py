@@ -120,7 +120,6 @@ def init_commands(parser: argparse.ArgumentParser) -> None:
                 add_optimization_options,
                 add_device_options,
                 add_debug_options,
-                add_out_path,
             ],
         ),
     ]

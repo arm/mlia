@@ -19,9 +19,13 @@ from mlia.utils.tflite_metrics import get_gzipped_file_size
 LOGGER = logging.getLogger("mlia.performance")
 
 
-def get_metrics_and_size(model: TFLiteModel, device: IPConfiguration) -> pd.DataFrame:
+def get_metrics_and_size(
+    model: TFLiteModel,
+    device: IPConfiguration,
+    working_dir: Optional[str] = None,
+) -> pd.DataFrame:
     """Return a dataframe filled with performance metrics and model size."""
-    metrics = collect_performance_metrics(model, device)
+    metrics = collect_performance_metrics(model, device, working_dir)
     size = get_gzipped_file_size(model.model_path)
 
     df = metrics.to_df()
@@ -32,11 +36,10 @@ def get_metrics_and_size(model: TFLiteModel, device: IPConfiguration) -> pd.Data
 
 
 def optimize_and_compare(
-    optimizer: Optimizer, device: IPConfiguration, out_path: Optional[Path] = None
+    optimizer: Optimizer, device: IPConfiguration, working_dir: Optional[str] = None
 ) -> pd.DataFrame:
     """Optimize model, return table that compares the original and optimized version."""
-    if not out_path:
-        out_path = Path().cwd()
+    models_path = Path(working_dir) if working_dir else Path.cwd()
 
     LOGGER.info(
         """Original model:
@@ -44,9 +47,9 @@ def optimize_and_compare(
     )
     tflite_model = convert_to_tflite(optimizer.get_model(), True)
 
-    temp_base_tflite_model_path = out_path / "original_model.tflite"
-    temp_opt_keras_model_path = out_path / "optimized_model.h5"
-    temp_opt_tflite_model_path = out_path / "optimized_model.tflite"
+    temp_base_tflite_model_path = models_path / "original_model.tflite"
+    temp_opt_keras_model_path = models_path / "optimized_model.h5"
+    temp_opt_tflite_model_path = models_path / "optimized_model.tflite"
     save_tflite_model(tflite_model, temp_base_tflite_model_path)
 
     original = get_metrics_and_size(TFLiteModel(temp_base_tflite_model_path), device)

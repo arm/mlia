@@ -112,4 +112,8 @@ def test_opt_valid_optimization_target(
         device=device,
         optimization_type=optimization_type,
         optimization_target=optimization_target,
+        working_dir=str(tmp_path),
     )
+
+    assert (tmp_path / "original_model.tflite").is_file()
+    assert (tmp_path / "optimized_model.tflite").is_file()
