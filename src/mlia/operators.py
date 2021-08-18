@@ -16,7 +16,7 @@ LOGGER = logging.getLogger("mlia.operators")
 def supported_operators(
     model: ModelConfiguration, device: IPConfiguration
 ) -> Operators:
-    """Return list of model's operations."""
+    """Return list of model's operators."""
     LOGGER.info("Checking operator compatibility ...")
 
     if not isinstance(model, TFLiteModel):

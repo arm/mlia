@@ -329,7 +329,7 @@ def _performance_metrics(optimized_model: OptimizedModel) -> PerformanceMetrics:
 
 
 def supported_operators(model: TFLiteModel, device: EthosUConfiguration) -> Operators:
-    """Return list of model's operations."""
+    """Return list of model's operators."""
     LOGGER.debug(f"Check supported operators for the model {model.model_path}")
 
     vela_compiler = get_vela_compiler(device)

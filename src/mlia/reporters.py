@@ -126,7 +126,7 @@ class ReportDataFrame(Report):
 
     def __init__(self, df: pd.DataFrame):
         """Init ReportDataFrame."""
-        self.df = df
+        self.df = df.copy()
 
     def to_json(self, **kwargs: Any) -> str:
         """Convert to json serializible format."""
@@ -149,6 +149,7 @@ class ReportDataFrame(Report):
         showindex: bool = True,
         space: Union[bool, str] = False,
         notes: Optional[str] = None,
+        format_mapping: Optional[Dict[str, str]] = None,
         **kwargs: Any,
     ) -> str:
         """Convert to human readable format."""
@@ -156,8 +157,14 @@ class ReportDataFrame(Report):
         headers = "keys"
         if columns_name:
             headers = [columns_name] + self.df.columns.tolist()
+
         if title:
             final_table = final_table + title + ":\n"
+
+        if format_mapping:
+            for field, format_value in format_mapping.items():
+                self.df[field] = self.df[field].apply(format_value.format)
+
         final_table = final_table + tabulate(
             self.df,
             headers=headers,

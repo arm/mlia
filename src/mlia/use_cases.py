@@ -71,11 +71,7 @@ Optimized model:
     results = original.append(optimized).append(difference)
     results = results.T
     results.columns = ["Original", "Optimized", "Improvement (%)"]
-
-    results["Original"] = results["Original"].map("{:,.0f}".format)
-    results["Optimized"] = results["Optimized"].map("{:,.0f}".format)
     results["Improvement (%)"] = results["Improvement (%)"].fillna(0)
-    results["Improvement (%)"] = results["Improvement (%)"].map("{:.2f}".format)
 
     return results
 

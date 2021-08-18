@@ -12,6 +12,7 @@ from mlia._typing import OutputFormat
 from mlia._typing import PathOrFileLike
 from mlia.cli.advice import AdviceGroup
 from mlia.cli.advice import AdvisorContext
+from mlia.cli.advice import OptimizationResults
 from mlia.cli.advice import show_advice
 from mlia.config import EthosU55
 from mlia.config import EthosU65
@@ -152,6 +153,30 @@ def model_optimization(
         title="Performance metrics",
         space=True,
         notes=optmization_warning,
+        format_mapping={
+            "Improvement (%)": "{:.2f}",
+            "Original": "{:,.0f}",
+            "Optimized": "{:,.0f}",
+        },
+    )
+
+    LOGGER.info(
+        """
+=== Advice Generation ======================================================
+"""
+    )
+
+    show_advice(
+        AdvisorContext(
+            optimization_results=OptimizationResults(
+                perf_metrics=results,
+                optimization_target=optimization_target,
+                optimization_type=optimization_type,
+            ),
+            device_args=device_args,
+            model=model,
+        ),
+        advice_group=AdviceGroup.OPTIMIZATION,
     )
 
 

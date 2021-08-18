@@ -64,12 +64,12 @@ class PerformanceMetrics:
         "Unknown memory used (KiB)",
         "On chip flash used (KiB)",
         "Off chip flash used (KiB)",
-        "NPU active cycles (cycles)",
-        "NPU idle cycles (cycles)",
-        "NPU total cycles (cycles)",
-        "NPU AXI0 RD data beat received (beats)",
-        "NPU AXI0 WR data beat written (beats)",
-        "NPU AXI1 RD data beat received (beats)",
+        "NPU active cycles",
+        "NPU idle cycles",
+        "NPU total cycles",
+        "NPU AXI0 RD data beat received",
+        "NPU AXI0 WR data beat written",
+        "NPU AXI1 RD data beat received",
     ]
 
     def __init__(

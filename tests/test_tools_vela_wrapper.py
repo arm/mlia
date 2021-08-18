@@ -147,21 +147,21 @@ def test_get_compiler_for_device() -> None:
         )
     ],
 )
-def test_operations(
+def test_operators(
     test_models_path: Path, model: str, expected_ops: List[Tuple]
 ) -> None:
-    """Test operations function."""
+    """Test operators function."""
     tflite_model = TFLiteModel(str(test_models_path / model))
     device = EthosU55()
 
-    operations = supported_operators(tflite_model, device)
+    operators = supported_operators(tflite_model, device)
 
-    assert operations.total_number == len(expected_ops)
-    assert operations.npu_supported_number == operations.total_number
-    assert operations.npu_supported_ratio == 1.0
-    assert operations.npu_unsupported_ratio == 0.0
+    assert operators.total_number == len(expected_ops)
+    assert operators.npu_supported_number == operators.total_number
+    assert operators.npu_supported_ratio == 1.0
+    assert operators.npu_unsupported_ratio == 0.0
 
-    for i, op in enumerate(operations.ops):
+    for i, op in enumerate(operators.ops):
         (
             expected_name,
             expected_type,
