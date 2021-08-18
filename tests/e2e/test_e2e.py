@@ -300,9 +300,22 @@ class TestEndToEnd:
         "optimization_type, optimization_target",
         [("pruning", "0.5"), ("clustering", "32")],
     )
+    @pytest.mark.parametrize(
+        "device, mac, system_config",
+        [
+            ("ethos-u55", "256", "Ethos_U55_High_End_Embedded"),
+            ("ethos-u65", "512", "Ethos_U65_High_End"),
+        ],
+    )
     @pytest.mark.parametrize("model", ["ds_cnn_l_0.9.h5"])
-    def test_commands_ethos_u55_real_keras_model(
-        self, optimization_type: str, optimization_target: str, model: str
+    def test_commands_ethos_real_keras_model(
+        self,
+        device: str,
+        mac: str,
+        system_config: str,
+        optimization_type: str,
+        optimization_target: str,
+        model: str,
     ) -> None:
         """Test 'estimate_optimized_performance' command on real-world Keras models."""
         config_dir = get_config_dir()
@@ -317,13 +330,13 @@ class TestEndToEnd:
             "--optimization-target",
             optimization_target,
             "--device",
-            "ethos-u55",
+            device,
             "--mac",
-            "256",
+            mac,
             "--config",
             "tests/test_resources/vela/sample_vela.ini",
             "--system-config",
-            "Ethos_U55_High_End_Embedded",
+            system_config,
             "--memory-mode",
             "Shared_Sram",
             str(config_dir / "keras_models" / model),
