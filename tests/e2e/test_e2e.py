@@ -234,7 +234,9 @@ class TestEndToEnd:
             "inception_v3_quant.tflite",
         ],
     )
-    def test_commands_ethos_u55_real_model(self, command: str, model: str) -> None:
+    def test_commands_ethos_u55_real_tflite_model(
+        self, command: str, model: str
+    ) -> None:
         """Test 'operators' and 'performance' commands on real-world TFLite models."""
         config_dir = get_config_dir()
         if not config_dir:
@@ -268,7 +270,9 @@ class TestEndToEnd:
             "inception_v3_quant.tflite",
         ],
     )
-    def test_commands_ethos_u65_real_model(self, command: str, model: str) -> None:
+    def test_commands_ethos_u65_real_tflite_model(
+        self, command: str, model: str
+    ) -> None:
         """Test 'operators' and 'performance' commands on real-world TFLite models."""
         config_dir = get_config_dir()
         if not config_dir:
@@ -288,6 +292,41 @@ class TestEndToEnd:
             "--memory-mode",
             "Shared_Sram",
             str(config_dir / "tflite_models" / model),
+        ]
+
+        run_command(mlia_command)
+
+    @pytest.mark.parametrize(
+        "optimization_type, optimization_target",
+        [("pruning", "0.5"), ("clustering", "32")],
+    )
+    @pytest.mark.parametrize("model", ["ds_cnn_l_0.9.h5"])
+    def test_commands_ethos_u55_real_keras_model(
+        self, optimization_type: str, optimization_target: str, model: str
+    ) -> None:
+        """Test 'estimate_optimized_performance' command on real-world Keras models."""
+        config_dir = get_config_dir()
+        if not config_dir:
+            raise Exception("E2E configuration directory is not provided")
+
+        mlia_command = [
+            "mlia",
+            "estimate_optimized_performance",
+            "--optimization-type",
+            optimization_type,
+            "--optimization-target",
+            optimization_target,
+            "--device",
+            "ethos-u55",
+            "--mac",
+            "256",
+            "--config",
+            "tests/test_resources/vela/sample_vela.ini",
+            "--system-config",
+            "Ethos_U55_High_End_Embedded",
+            "--memory-mode",
+            "Shared_Sram",
+            str(config_dir / "keras_models" / model),
         ]
 
         run_command(mlia_command)
