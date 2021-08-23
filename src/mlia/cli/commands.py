@@ -155,8 +155,6 @@ def model_optimization(
         notes=optmization_warning,
         format_mapping={
             "Improvement (%)": "{:.2f}",
-            "Original": "{:,.0f}",
-            "Optimized": "{:,.0f}",
         },
     )
 

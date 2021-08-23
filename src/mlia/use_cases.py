@@ -71,6 +71,12 @@ Optimized model:
     results = original.append(optimized).append(difference)
     results = results.T
     results.columns = ["Original", "Optimized", "Improvement (%)"]
+    results["Original"].iloc[:5] /= 1024.0
+    results["Original"].iloc[:5] = results["Original"].iloc[:5].map("{:,.2f}".format)
+    results["Original"].iloc[5:] = results["Original"].iloc[5:].map("{:,.0f}".format)
+    results["Optimized"].iloc[:5] /= 1024.0
+    results["Optimized"].iloc[:5] = results["Optimized"].iloc[:5].map("{:,.2f}".format)
+    results["Optimized"].iloc[5:] = results["Optimized"].iloc[5:].map("{:,.0f}".format)
     results["Improvement (%)"] = results["Improvement (%)"].fillna(0)
 
     return results
