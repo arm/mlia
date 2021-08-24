@@ -26,7 +26,7 @@ setup(
         "typing_extensions==3.7.4",
         "numpy==1.19.5",
         "tabulate==0.8.9",
-        "tensorflow==2.5.0",
+        "tensorflow==2.6.0",
         "tensorflow-model-optimization==0.6.0",
         "pandas==1.1.5",
     ],
