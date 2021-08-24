@@ -317,14 +317,14 @@ class TestEndToEnd:
         optimization_target: str,
         model: str,
     ) -> None:
-        """Test 'estimate_optimized_performance' command on real-world Keras models."""
+        """Test 'model_optimization' command on real-world Keras models."""
         config_dir = get_config_dir()
         if not config_dir:
             raise Exception("E2E configuration directory is not provided")
 
         mlia_command = [
             "mlia",
-            "estimate_optimized_performance",
+            "model_optimization",
             "--optimization-type",
             optimization_type,
             "--optimization-target",
