@@ -181,8 +181,9 @@ def main(argv: Optional[List[str]] = None) -> int:
     )
     parser.add_argument(
         "--working-dir",
-        default="mlia_output",
-        help="Path to the directory where MLIA will store logs, models, etc",
+        default=f"{Path.cwd() / 'mlia_output'}",
+        help="Path to the directory where MLIA will store logs, "
+        "models, etc. (default: %(default)s)",
     )
     init_commands(parser)
 
