@@ -13,10 +13,13 @@ from tensorflow.lite.python.interpreter import Interpreter
 
 def representative_dataset(model: tf.keras.Model) -> Callable:
     """Sample dataset used for quantization."""
+    input_shape = model.input_shape
+    # get rid of the batch_size dimension
+    input_shape = tuple([x for x in input_shape if x is not None])
 
     def dataset() -> Iterable:
         for _ in range(100):
-            data = np.random.rand(1, *model.input_shape[1:])
+            data = np.random.rand(1, *input_shape)
             yield [data.astype(np.float32)]
 
     return dataset

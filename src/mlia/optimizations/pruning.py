@@ -68,9 +68,15 @@ class Pruner(Optimizer):
             ) = self._mock_train_data(1)
 
     def _mock_train_data(self, num_imgs: int) -> Tuple[np.array, np.array]:
+        input_shape = self.model.input_shape
+        # get rid of the batch_size dimension
+        input_shape = tuple([x for x in input_shape if x is not None])
+        output_shape = self.model.output_shape
+        # get rid of the batch_size dimension
+        output_shape = tuple([x for x in output_shape if x is not None])
         return (
-            np.random.rand(num_imgs, *self.model.input_shape[1:]),
-            np.random.randint(1, self.model.output_shape[-1], (num_imgs)),
+            np.random.rand(num_imgs, *input_shape),
+            np.random.randint(1, output_shape[-1], (num_imgs)),
         )
 
     def _setup_pruning_params(self) -> dict:
