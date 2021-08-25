@@ -130,10 +130,3 @@ class TestTFLiteMetrics:
                 max_num_clusters=max_num_clusters,
                 verbose=verbose,
             )
-
-    def test_file_compression(self, metrics: TFLiteMetrics) -> None:
-        """Test file compression."""
-        uncompressed, compressed = metrics.file_compression()
-        assert compressed <= uncompressed, "compressed {} >= uncompressed {}".format(
-            compressed, uncompressed
-        )

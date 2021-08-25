@@ -83,9 +83,6 @@ def test_prune_simple_model_fully(
         general_utils.convert_to_tflite(base_model), temp_file
     )
     tflite_base_model = TFLiteModel(temp_file)
-    base_compressed_size = tflite_metrics.get_gzipped_file_size(
-        tflite_base_model.model_path
-    )
     base_tflite_metrics = tflite_metrics.TFLiteMetrics(tflite_base_model.model_path)
 
     # make sure sparsity is zero before pruning
@@ -123,11 +120,6 @@ def test_prune_simple_model_fully(
         general_utils.convert_to_tflite(pruned_model), temp_file
     )
     tflite_pruned_model = TFLiteModel(temp_file)
-    pruned_compressed_size = tflite_metrics.get_gzipped_file_size(
-        tflite_pruned_model.model_path
-    )
     pruned_tflite_metrics = tflite_metrics.TFLiteMetrics(tflite_pruned_model.model_path)
 
     _test_sparsity(pruned_tflite_metrics, target_sparsity, layers_to_prune)
-
-    assert base_compressed_size >= pruned_compressed_size

@@ -8,17 +8,14 @@ These metrics include:
 * gzip compression ratio
 """
 import os
-import zipfile
 from enum import Enum
 from pprint import pprint
 from typing import Any
 from typing import List
 from typing import Optional
-from typing import Tuple
 
 import numpy as np
 import tensorflow as tf
-from mlia.utils.filesystem import temp_file
 from tabulate import tabulate
 
 DEFAULT_IGNORE_LIST = [
@@ -30,20 +27,6 @@ DEFAULT_IGNORE_LIST = [
     "add",
     "flatten",
 ]
-
-
-def get_file_size(file: str) -> int:
-    """Get the size of the file in bytes."""
-    return os.path.getsize(file)
-
-
-def get_gzipped_file_size(file: str) -> int:
-    """Gzip-compress the file and get the size of the compressed file in bytes."""
-    with temp_file(".zip") as zipped_file:
-        with zipfile.ZipFile(zipped_file, "w", compression=zipfile.ZIP_DEFLATED) as f:
-            f.write(file)
-        zipped_size = get_file_size(zipped_file)
-    return zipped_size
 
 
 def calculate_num_unique_weights(weights: np.array) -> int:
@@ -213,13 +196,6 @@ class TFLiteMetrics:
         }
         return uniques
 
-    def file_compression(self) -> Tuple[int, int]:
-        """Return a tuple of uncompressed and gzip-compressed file size."""
-        return (
-            get_file_size(self.tflite_file),
-            get_gzipped_file_size(self.tflite_file),
-        )
-
     @staticmethod
     def _prettify_name(name: str) -> str:
         if name.startswith("model"):
@@ -254,14 +230,6 @@ class TFLiteMetrics:
         print_in_outs(self.interpreter.get_input_details(), verbose)
         print("Output(s):")
         print_in_outs(self.interpreter.get_output_details(), verbose)
-        # Print compression ratio
-        size_orig, size_compressed = self.file_compression()
-        compression_ratio = size_orig / size_compressed
-        print(
-            "File compression: {} -> {} bytes ({:.2f} compression ratio)".format(
-                size_orig, size_compressed, compression_ratio
-            )
-        )
         print()
         header = ["Layer", "Index", "Type", "Num weights"]
         if report_sparsity:

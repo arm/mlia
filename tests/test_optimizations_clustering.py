@@ -127,11 +127,6 @@ def test_cluster_simple_model_fully(
     if sparsity_aware:
         base_model = _prune_model(base_model, target_sparsity, layers_to_cluster)
 
-    temp_file = tmp_path / "test_cluster_simple_model_fully_before.tflite"
-    tflite_base_model = test_utils.convert_to_tflite(base_model)
-    test_utils.save_tflite_model(tflite_base_model, temp_file)
-    base_compressed_size = tflite_metrics.get_gzipped_file_size(str(temp_file))
-
     clusterer = Clusterer(
         base_model,
         ClusteringConfiguration(
@@ -145,7 +140,6 @@ def test_cluster_simple_model_fully(
     temp_file = tmp_path / "test_cluster_simple_model_fully_after.tflite"
     tflite_clustered_model = test_utils.convert_to_tflite(clustered_model)
     test_utils.save_tflite_model(tflite_clustered_model, temp_file)
-    clustered_compressed_size = tflite_metrics.get_gzipped_file_size(str(temp_file))
     clustered_tflite_metrics = tflite_metrics.TFLiteMetrics(str(temp_file))
 
     _test_num_unique_weights(
@@ -154,5 +148,3 @@ def test_cluster_simple_model_fully(
 
     if sparsity_aware:
         _test_sparsity(clustered_tflite_metrics, target_sparsity, layers_to_cluster)
-
-    assert base_compressed_size > clustered_compressed_size
