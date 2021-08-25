@@ -24,6 +24,7 @@ from mlia.operators import supported_operators
 from mlia.optimizations.clustering import Clusterer
 from mlia.optimizations.clustering import ClusteringConfiguration
 from mlia.optimizations.common import Optimizer
+from mlia.optimizations.multistage import MultiStageOptimizer
 from mlia.optimizations.pruning import Pruner
 from mlia.optimizations.pruning import PruningConfiguration
 from mlia.performance import collect_performance_metrics
@@ -33,6 +34,79 @@ from mlia.utils.general import convert_to_tflite
 from mlia.utils.general import save_tflite_model
 
 LOGGER = logging.getLogger("mlia.cli")
+
+
+def value_format(val: Any) -> Union[str, Any]:
+    """Format cell value."""
+    if isinstance(val, int) or isinstance(val, float) and val.is_integer():
+        return f"{val:,.0f}"
+    elif isinstance(val, float):
+        return f"{val:,.2f}"
+
+    return val
+
+
+def all_tests(
+    model: str,
+    working_dir: Optional[str] = None,
+    **device_args: Any,
+) -> None:
+    """Generate full report."""
+    models_path = Path(working_dir) if working_dir else Path.cwd()
+    keras_model, device = KerasModel(model), _get_device(**device_args)
+
+    report(device)
+
+    LOGGER.info(
+        """
+=== Model Analysis =========================================================
+"""
+    )
+
+    converted_model = convert_to_tflite(keras_model.get_keras_model(), True)
+    converted_model_path = models_path / "converted_model.tflite"
+    save_tflite_model(converted_model, converted_model_path)
+
+    tflite_model = TFLiteModel(converted_model_path)
+    operators = supported_operators(tflite_model, device)
+
+    LOGGER.info("Evaluating performance ...\n")
+
+    optimizer = MultiStageOptimizer(
+        KerasModel(model).get_keras_model(),
+        [PruningConfiguration(0.5), ClusteringConfiguration(32)],
+    )
+    results = optimize_and_compare(optimizer, device, working_dir)
+
+    report([operators.ops, operators], space="top")
+
+    report(
+        results,
+        columns_name="Metrics",
+        title="Performance metrics",
+        space=True,
+        notes="IMPORTANT: The performance figures above refer to NPU only",
+        format_mapping=value_format,
+    )
+
+    LOGGER.info(
+        """
+=== Advice Generation ======================================================
+"""
+    )
+
+    show_advice(
+        AdvisorContext(
+            operators=operators,
+            optimization_results=OptimizationResults(
+                perf_metrics=results,
+                optimizations=[("pruning", 0.5), ("clustering", 32)],
+            ),
+            device_args=device_args,
+            model=model,
+        ),
+        AdviceGroup.COMMON,
+    )
 
 
 def operators(
@@ -52,7 +126,7 @@ def operators(
         raise Exception("Model is not provided")
 
     tflite_model, device = TFLiteModel(model), _get_device(**device_args)
-    report(device, fmt="txt")
+    report(device)
 
     LOGGER.info(
         """
@@ -84,7 +158,7 @@ def performance(
 ) -> None:
     """Print model's performance stats."""
     tflite_model, device = TFLiteModel(model), _get_device(**device_args)
-    report(device, fmt="txt")
+    report(device)
 
     LOGGER.info(
         """
@@ -132,7 +206,7 @@ def optimization(
         model, optimization_type, optimization_target, layers_to_optimize
     )
     device = _get_device(**device_args)
-    report(device, fmt="txt")
+    report(device)
 
     LOGGER.info(
         """
@@ -153,9 +227,7 @@ def optimization(
         title="Performance metrics",
         space=True,
         notes=optmization_warning,
-        format_mapping={
-            "Improvement (%)": "{:.2f}",
-        },
+        format_mapping=value_format,
     )
 
     LOGGER.info(
@@ -168,8 +240,7 @@ def optimization(
         AdvisorContext(
             optimization_results=OptimizationResults(
                 perf_metrics=results,
-                optimization_target=optimization_target,
-                optimization_type=optimization_type,
+                optimizations=[(optimization_type, optimization_target)],
             ),
             device_args=device_args,
             model=model,

@@ -6,14 +6,16 @@ from typing import List
 import pandas as pd
 import pytest
 from mlia.cli.advice import advice_all_operators_supported
+from mlia.cli.advice import advice_all_operators_supported_no_commands
 from mlia.cli.advice import advice_increase_operator_compatibility
 from mlia.cli.advice import advice_non_npu_operators
 from mlia.cli.advice import advice_npu_support
 from mlia.cli.advice import advice_optimization
 from mlia.cli.advice import advice_optimization_improvement
+from mlia.cli.advice import advice_optimization_improvement_extended
 from mlia.cli.advice import advice_unsupported_operators
 from mlia.cli.advice import AdvisorContext
-from mlia.cli.advice import OptimizationResults  #
+from mlia.cli.advice import OptimizationResults
 from mlia.metadata import NpuSupported
 from mlia.metadata import Operator
 from mlia.metadata import Operators
@@ -52,6 +54,20 @@ from mlia.metadata import Operators
                 "your model will run completely on NPU.",
                 "Check the estimated performance by running the following command:",
                 "mlia performance --device ethos-u65 --mac 512 model.tflite",
+            ],
+        ),
+        (
+            AdvisorContext(
+                model="model.tflite",
+                device_args={"device": "ethos-u65", "mac": 512},
+                operators=Operators(
+                    [Operator("operator", "magic operator", NpuSupported(True, []))]
+                ),
+            ),
+            advice_all_operators_supported_no_commands,
+            [
+                "You don't have any unsupported operators, "
+                "your model will run completely on NPU."
             ],
         ),
         (
@@ -234,8 +250,7 @@ def test_performance_advice(
         (
             AdvisorContext(
                 optimization_results=OptimizationResults(
-                    optimization_type="clustering",
-                    optimization_target=11,
+                    optimizations=[("clustering", 11)],
                     perf_metrics=pd.DataFrame.from_dict(
                         {
                             "Improvement (%)": {
@@ -247,17 +262,17 @@ def test_performance_advice(
             ),
             advice_optimization_improvement,
             [
-                "With the selected optimization (type: clustering - target: 11)",
+                "With the selected optimization (clustering: 11)",
                 "- You have achieved 1.00% performance improvement in SRAM used (KiB)",
-                "You can try to push higher the optimization target (e.g. 16) to "
-                "check if that can be further improved.",
+                "You can try to push the optimization target higher "
+                "(e.g. clustering 8) to check if those results can be further "
+                "improved.",
             ],
         ),
         (
             AdvisorContext(
                 optimization_results=OptimizationResults(
-                    optimization_type="pruning",
-                    optimization_target=0.5,
+                    optimizations=[("pruning", 0.5)],
                     perf_metrics=pd.DataFrame.from_dict(
                         {
                             "Improvement (%)": {
@@ -273,7 +288,7 @@ def test_performance_advice(
             ),
             advice_optimization_improvement,
             [
-                "With the selected optimization (type: pruning - target: 0.5)",
+                "With the selected optimization (pruning: 0.5)",
                 "- You have achieved 1.00% performance improvement in SRAM used (KiB)",
                 "- You have achieved 2.00% performance improvement in DRAM used (KiB)",
                 "- You have achieved 3.00% performance improvement in On chip flash "
@@ -281,15 +296,14 @@ def test_performance_advice(
                 "- You have achieved 4.00% performance improvement in Off chip flash "
                 "used (KiB)",
                 "- You have achieved 5.00% performance improvement in NPU total cycles",
-                "You can try to push higher the optimization target (e.g. 0.55) to "
-                "check if that can be further improved.",
+                "You can try to push the optimization target higher "
+                "(e.g. pruning 0.6) to check if those results can be further improved.",
             ],
         ),
         (
             AdvisorContext(
                 optimization_results=OptimizationResults(
-                    optimization_type="pruning",
-                    optimization_target=0.5,
+                    optimizations=[("pruning", 0.5)],
                     perf_metrics=pd.DataFrame.from_dict(
                         {
                             "Improvement (%)": {
@@ -305,7 +319,7 @@ def test_performance_advice(
             ),
             advice_optimization_improvement,
             [
-                "With the selected optimization (type: pruning - target: 0.5)",
+                "With the selected optimization (pruning: 0.5)",
                 "- SRAM used (KiB) have degraded by 1.00%",
                 "- DRAM used (KiB) have degraded by 2.00%",
                 "- On chip flash used (KiB) have degraded by 3.00%",
@@ -314,6 +328,34 @@ def test_performance_advice(
                 "The performance seems to have degraded after "
                 "applying the selected optimizations, "
                 "try exploring different optimization types/targets.",
+            ],
+        ),
+        (
+            AdvisorContext(
+                model="sample.h5",
+                optimization_results=OptimizationResults(
+                    optimizations=[("pruning", 0.1), ("clustering", 11)],
+                    perf_metrics=pd.DataFrame.from_dict(
+                        {
+                            "Improvement (%)": {
+                                "SRAM used (KiB)": 1,
+                            }
+                        }
+                    ),
+                ),
+            ),
+            advice_optimization_improvement_extended,
+            [
+                "With the selected optimization (pruning: 0.1 + clustering: 11)",
+                "- You have achieved 1.00% performance improvement in SRAM used (KiB)",
+                "You can try to push the optimization target higher (e.g. pruning 0.2 "
+                "and/or clustering 8) to "
+                "check if those results can be further improved.",
+                "For more info, see: mlia optimization --help",
+                "Pruning command: mlia optimization --optimization-type pruning "
+                "--optimization-target 0.2 sample.h5",
+                "Clustering command: mlia optimization --optimization-type "
+                "clustering --optimization-target 8 sample.h5",
             ],
         ),
     ],

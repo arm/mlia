@@ -1,7 +1,7 @@
 # Copyright 2021, Arm Ltd.
 """Metrics module."""
-from typing import Any
-from typing import Iterator
+from enum import Enum
+from typing import Union
 
 import pandas as pd
 from mlia.config import EthosUConfiguration
@@ -27,21 +27,57 @@ class NPUCycles:
         self.npu_axi0_wr_data_beat_written = npu_axi0_wr_data_beat_written
         self.npu_axi1_rd_data_beat_received = npu_axi1_rd_data_beat_received
 
-    def __iter__(self) -> Iterator[Any]:
-        """Class iterator to convert to/from dictionary."""
-        return ((field, [value]) for field, value in vars(self).items())
+    def to_df(self) -> pd.DataFrame:
+        """Convert object instance to the Pandas dataframe."""
+        return pd.DataFrame.from_records(
+            [
+                [
+                    self.npu_active_cycles,
+                    self.npu_idle_cycles,
+                    self.npu_total_cycles,
+                    self.npu_axi0_rd_data_beat_received,
+                    self.npu_axi0_wr_data_beat_written,
+                    self.npu_axi1_rd_data_beat_received,
+                ]
+            ],
+            columns=[
+                "NPU active cycles",
+                "NPU idle cycles",
+                "NPU total cycles",
+                "NPU AXI0 RD data beat received",
+                "NPU AXI0 WR data beat written",
+                "NPU AXI1 RD data beat received",
+            ],
+        )
+
+
+class MemorySizeType(Enum):
+    """Memory size type enumeration."""
+
+    BYTES = 0
+    KILOBYTES = 1
 
 
 class MemoryUsage:
     """Memory usage metrics."""
 
+    _default_columns = [
+        "SRAM used",
+        "DRAM used",
+        "Unknown memory used",
+        "On chip flash used",
+        "Off chip flash used",
+    ]
+
     def __init__(
         self,
-        sram_memory_area_size: int,
-        dram_memory_area_size: int,
-        unknown_memory_area_size: int,
-        on_chip_flash_memory_area_size: int,
-        off_chip_flash_memory_area_size: int,
+        sram_memory_area_size: Union[int, float],
+        dram_memory_area_size: Union[int, float],
+        unknown_memory_area_size: Union[int, float],
+        on_chip_flash_memory_area_size: Union[int, float],
+        off_chip_flash_memory_area_size: Union[int, float],
+        *,
+        memory_size_type: MemorySizeType = MemorySizeType.BYTES,
     ):
         """Init memory usage metrics instance."""
         self.sram_memory_area_size = sram_memory_area_size
@@ -49,28 +85,52 @@ class MemoryUsage:
         self.unknown_memory_area_size = unknown_memory_area_size
         self.on_chip_flash_memory_area_size = on_chip_flash_memory_area_size
         self.off_chip_flash_memory_area_size = off_chip_flash_memory_area_size
+        self.memory_size_type = memory_size_type
 
-    def __iter__(self) -> Iterator[Any]:
-        """Class iterator to convert to/from dictionary."""
-        return ((field, [value]) for field, value in vars(self).items())
+    def in_kilobytes(self) -> "MemoryUsage":
+        """Return memory usage with values in kilobytes."""
+        if self.memory_size_type == MemorySizeType.KILOBYTES:
+            return self
+
+        kilobytes = [
+            value / 1024
+            for value in [
+                self.sram_memory_area_size,
+                self.dram_memory_area_size,
+                self.unknown_memory_area_size,
+                self.on_chip_flash_memory_area_size,
+                self.off_chip_flash_memory_area_size,
+            ]
+        ]
+
+        return MemoryUsage(*kilobytes, memory_size_type=MemorySizeType.KILOBYTES)
+
+    def to_df(self) -> pd.DataFrame:
+        """Convert object instance to the Pandas dataframe."""
+        suffixes = {
+            MemorySizeType.BYTES: "(bytes)",
+            MemorySizeType.KILOBYTES: "(KiB)",
+        }
+
+        suffix = suffixes[self.memory_size_type]
+        columns = [f"{c} {suffix}" for c in self._default_columns]
+
+        return pd.DataFrame.from_records(
+            [
+                [
+                    self.sram_memory_area_size,
+                    self.dram_memory_area_size,
+                    self.unknown_memory_area_size,
+                    self.on_chip_flash_memory_area_size,
+                    self.off_chip_flash_memory_area_size,
+                ]
+            ],
+            columns=columns,
+        )
 
 
 class PerformanceMetrics:
     """Performance metrics."""
-
-    row_names = [
-        "SRAM used (KiB)",
-        "DRAM used (KiB)",
-        "Unknown memory used (KiB)",
-        "On chip flash used (KiB)",
-        "Off chip flash used (KiB)",
-        "NPU active cycles",
-        "NPU idle cycles",
-        "NPU total cycles",
-        "NPU AXI0 RD data beat received",
-        "NPU AXI0 WR data beat written",
-        "NPU AXI1 RD data beat received",
-    ]
 
     def __init__(
         self,
@@ -83,10 +143,12 @@ class PerformanceMetrics:
         self.npu_cycles = npu_cycles
         self.memory_usage = memory_usage
 
-    def __iter__(self) -> Iterator[Any]:
-        """Class iterator to convert to/from dictionary."""
-        return iter([*self.memory_usage, *self.npu_cycles])
-
     def to_df(self) -> pd.DataFrame:
         """Convert object instance to Pandas dataframe."""
-        return pd.DataFrame.from_dict(dict(self))
+        return self.memory_usage.to_df().join(self.npu_cycles.to_df())
+
+    def in_kilobytes(self) -> "PerformanceMetrics":
+        """Return metrics with memory usage in KiB."""
+        return PerformanceMetrics(
+            self.device, self.npu_cycles, self.memory_usage.in_kilobytes()
+        )

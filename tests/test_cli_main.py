@@ -182,3 +182,25 @@ def test_optimization_command(
 
     assert (tmp_path / "original_model.tflite").is_file()
     assert (tmp_path / "optimized_model.tflite").is_file()
+
+
+def test_all_tests_command(tmp_path: pathlib.Path, monkeypatch: Any) -> None:
+    """Test all_tests command."""
+    model = generate_keras_model()
+    temp_file = tmp_path / "test_model_optimization_command.h5"
+    save_keras_model(model, temp_file)
+
+    mock_performance_estimation(monkeypatch)
+
+    exit_code = main(
+        [
+            "--working-dir",
+            str(tmp_path),
+            "all_tests",
+            "--device",
+            "ethos-u55",
+            str(temp_file),
+        ]
+    )
+
+    assert exit_code == 0

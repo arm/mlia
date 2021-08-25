@@ -3,6 +3,8 @@
 import logging
 import math
 from enum import Enum
+from functools import partial
+from typing import Callable
 from typing import Dict
 from typing import List
 from typing import Optional
@@ -26,14 +28,14 @@ class AdviceGroup(Enum):
     OPERATORS_COMPATIBILITY = 1
     PERFORMANCE = 2
     OPTIMIZATION = 3
+    COMMON = 4
 
 
 class OptimizationResults(TypedDict):
     """Class represents results of the optimization."""
 
     perf_metrics: pd.DataFrame
-    optimization_type: str
-    optimization_target: Union[int, float]
+    optimizations: List[Tuple[str, Union[int, float]]]
 
 
 class AdvisorContext(TypedDict, total=False):
@@ -83,7 +85,9 @@ def advice_unsupported_operators(ctx: AdvisorContext) -> List[str]:
     return []
 
 
-def advice_all_operators_supported(ctx: AdvisorContext) -> List[str]:
+def advice_all_operators_supported(
+    ctx: AdvisorContext, recommend_estimate_performance: bool = True
+) -> List[str]:
     """Advice if all operators supported."""
     operators = ctx.get("operators")
     if not operators or operators.npu_unsupported_ratio != 0:
@@ -94,12 +98,16 @@ def advice_all_operators_supported(ctx: AdvisorContext) -> List[str]:
         device_opts = " " + device_opts
     model_opts = ctx.get("model")
 
-    return [
+    result = [
         "You don't have any unsupported operators, your model will "
-        "run completely on NPU.",
-        "Check the estimated performance by running the following command:",
-        f"mlia performance{device_opts} {model_opts}",
+        "run completely on NPU."
     ]
+    if recommend_estimate_performance:
+        result += [
+            "Check the estimated performance by running the following command:",
+            f"mlia performance{device_opts} {model_opts}",
+        ]
+    return result
 
 
 def advice_increase_operator_compatibility(ctx: AdvisorContext) -> List[str]:
@@ -143,10 +151,17 @@ def next_optimization_target(
 ) -> Union[float, int]:
     """Calculate next optimization target value."""
     if opt_type == "pruning":
-        return min(opt_target + 0.05, 0.95)
+        return round(min(opt_target + 0.1, 0.9), 2)
 
-    # return next nearest power of two for clustering
-    return min(int(2 ** int(math.log(opt_target, 2) + 1)), 128)
+    if opt_type == "clustering":
+        # return next lowest power of two for clustering
+        p = math.log(opt_target, 2)
+        if p.is_integer():
+            p = p - 1
+
+        return max(int(2 ** int(p)), 4)
+
+    raise Exception(f"Unknown optimization type {opt_type}")
 
 
 def get_metrics(
@@ -171,22 +186,33 @@ def get_metrics(
     )
 
 
-def advice_optimization_improvement(ctx: AdvisorContext) -> List[str]:
+def advice_optimization_improvement(
+    ctx: AdvisorContext, recommend_run_optimizations: bool = False
+) -> List[str]:
     """Advice on results of optimization."""
     optimization_results = ctx.get("optimization_results")
     if not optimization_results:
         return []
 
     perf_metrics: pd.DataFrame = optimization_results.get("perf_metrics")
-
-    opt_type = optimization_results["optimization_type"]
-    opt_target = optimization_results["optimization_target"]
-    if isinstance(opt_target, float) and opt_target.is_integer():
-        opt_target = int(opt_target)
-
-    result = [
-        f"With the selected optimization (type: {opt_type} - target: {opt_target})"
+    optimizations = [
+        (
+            opt_type,
+            int(opt_target)
+            if isinstance(opt_target, float) and opt_target.is_integer()
+            else opt_target,
+        )
+        for opt_type, opt_target in optimization_results.get("optimizations", [])
     ]
+
+    if not optimizations:
+        return []
+
+    opt_text = " + ".join(
+        f"{opt_type}: {opt_target}" for opt_type, opt_target in optimizations
+    )
+
+    result = [f"With the selected optimization ({opt_text})"]
 
     metrics = [
         "SRAM used (KiB)",
@@ -210,14 +236,43 @@ def advice_optimization_improvement(ctx: AdvisorContext) -> List[str]:
     ]
 
     result = result + impr_text + degr_text
+
     if impr_text:
-        next_opt_target = next_optimization_target(opt_target, opt_type)
-        if opt_target <= next_opt_target:
-            result.append(
-                "You can try to push higher the optimization target "
-                f"(e.g. {next_opt_target}) "
-                "to check if that can be further improved."
+        next_opt_targets = {
+            opt_type: new_target
+            for opt_type, opt_target, new_target in (
+                (opt_type, opt_target, next_optimization_target(opt_target, opt_type))
+                for opt_type, opt_target in optimizations
             )
+            if (
+                (opt_type == "pruning" and opt_target < new_target)
+                or (opt_type == "clustering" and opt_target > new_target)
+            )
+        }
+
+        if next_opt_targets:
+            next_opt_targets_text = " and/or ".join(
+                f"{opt_type} {opt_target}"
+                for opt_type, opt_target in next_opt_targets.items()
+            )
+            result.append(
+                "You can try to push the optimization target higher "
+                f"(e.g. {next_opt_targets_text}) "
+                "to check if those results can be further improved."
+            )
+            if recommend_run_optimizations:
+                device_opts = " ".join(get_device_opts(ctx.get("device_args")))
+                if device_opts:
+                    device_opts = " " + device_opts
+                model_opts = ctx.get("model")
+
+                result.append("For more info, see: mlia optimization --help")
+                for opt_type, opt_target in next_opt_targets.items():
+                    result.append(
+                        f"{opt_type.capitalize()} command: "
+                        f"mlia optimization --optimization-type {opt_type} "
+                        f"--optimization-target {opt_target}{device_opts} {model_opts}"
+                    )
     elif degr_text:
         result.append(
             "The performance seems to have degraded after "
@@ -228,12 +283,30 @@ def advice_optimization_improvement(ctx: AdvisorContext) -> List[str]:
     return result
 
 
+def advice_hyperparameter_tuning(ctx: AdvisorContext) -> List[str]:
+    """Advice on hyperparameter tuning."""
+    return [
+        "The applied tooling techniques have an impact "
+        "on accuracy. Additional hyperparameter tuning may be required "
+        "after any optimization."
+    ]
+
+
+advice_all_operators_supported_no_commands = partial(
+    advice_all_operators_supported, recommend_estimate_performance=False
+)
+
+advice_optimization_improvement_extended = partial(
+    advice_optimization_improvement, recommend_run_optimizations=True
+)
+
+
 def show_advice(
     ctx: AdvisorContext,
     advice_group: Optional[Union[AdviceGroup, List[AdviceGroup]]] = None,
 ) -> None:
     """Show advice based on provided data."""
-    advice_producers = {
+    advice_producers: Dict[AdviceGroup, List[Callable]] = {
         AdviceGroup.OPERATORS_COMPATIBILITY: [
             advice_non_npu_operators,
             advice_unsupported_operators,
@@ -244,6 +317,13 @@ def show_advice(
             advice_optimization,
         ],
         AdviceGroup.OPTIMIZATION: [advice_optimization_improvement, advice_npu_support],
+        AdviceGroup.COMMON: [
+            advice_non_npu_operators,
+            advice_unsupported_operators,
+            advice_all_operators_supported_no_commands,
+            advice_optimization_improvement_extended,
+            advice_hyperparameter_tuning,
+        ],
     }
 
     if isinstance(advice_group, AdviceGroup):

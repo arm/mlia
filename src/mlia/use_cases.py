@@ -18,62 +18,56 @@ from mlia.utils.general import save_tflite_model
 LOGGER = logging.getLogger("mlia.performance")
 
 
-def get_metrics(
-    model: TFLiteModel,
-    device: IPConfiguration,
-    working_dir: Optional[str] = None,
-) -> pd.DataFrame:
-    """Return a dataframe filled with performance metrics and model size."""
-    metrics = collect_performance_metrics(model, device, working_dir)
-    df = metrics.to_df()
-    df.columns = PerformanceMetrics.row_names
-
-    return df
-
-
 def optimize_and_compare(
     optimizer: Optimizer, device: IPConfiguration, working_dir: Optional[str] = None
 ) -> pd.DataFrame:
-    """Optimize model, return table that compares the original and optimized version."""
+    """Optimize model, return perf metrics for the original and optimized version."""
+    LOGGER.info("Original model:\n")
+    original_model = optimizer.get_model()
+    original = _process_model(original_model, device, "original", False, working_dir)
+
+    LOGGER.info("\nOptimized model:\n")
+    optimized_model = optimize_model(optimizer)
+    optimized = _process_model(optimized_model, device, "optimized", True, working_dir)
+
+    return compare_metrics(original, optimized)
+
+
+def _process_model(
+    keras_model: tf.keras.Model,
+    device: IPConfiguration,
+    prefix: str,
+    save_model: bool,
+    working_dir: Optional[str],
+) -> PerformanceMetrics:
+    """Convert and estimate performance for the model."""
     models_path = Path(working_dir) if working_dir else Path.cwd()
 
-    LOGGER.info(
-        """Original model:
-"""
+    if save_model:
+        keras_model_path = models_path / f"{prefix}_model.h5"
+        save_keras_model(keras_model, keras_model_path)
+
+    tflite_model = convert_to_tflite(keras_model, True)
+    tflite_model_path = models_path / f"{prefix}_model.tflite"
+    save_tflite_model(tflite_model, tflite_model_path)
+
+    return collect_performance_metrics(
+        TFLiteModel(tflite_model_path), device, working_dir
     )
-    tflite_model = convert_to_tflite(optimizer.get_model(), True)
 
-    temp_base_tflite_model_path = models_path / "original_model.tflite"
-    temp_opt_keras_model_path = models_path / "optimized_model.h5"
-    temp_opt_tflite_model_path = models_path / "optimized_model.tflite"
-    save_tflite_model(tflite_model, temp_base_tflite_model_path)
 
-    original = get_metrics(TFLiteModel(temp_base_tflite_model_path), device)
-
-    LOGGER.info(
-        """
-Optimized model:
-"""
-    )
-    keras_optimized_model = optimize_model(optimizer)
-    save_keras_model(keras_optimized_model, temp_opt_keras_model_path)
-    tflite_optimized_model = convert_to_tflite(keras_optimized_model, True)
-    save_tflite_model(tflite_optimized_model, temp_opt_tflite_model_path)
-    optimized = get_metrics(TFLiteModel(temp_opt_tflite_model_path), device)
+def compare_metrics(
+    original: PerformanceMetrics, optimized: PerformanceMetrics
+) -> pd.DataFrame:
+    """Compare performance metrics."""
+    original_df = original.in_kilobytes().to_df()
+    optimized_df = optimized.in_kilobytes().to_df()
 
     # calculate percentage differences
-    difference = 100 - (optimized / original * 100)
+    difference_df = (100 - (optimized_df / original_df * 100)).fillna(0)
 
-    results = original.append(optimized).append(difference)
-    results = results.T
+    results = original_df.append(optimized_df).append(difference_df).T
     results.columns = ["Original", "Optimized", "Improvement (%)"]
-    results["Original"].iloc[:5] /= 1024.0
-    results["Original"].iloc[:5] = results["Original"].iloc[:5].map("{:,.2f}".format)
-    results["Original"].iloc[5:] = results["Original"].iloc[5:].map("{:,.0f}".format)
-    results["Optimized"].iloc[:5] /= 1024.0
-    results["Optimized"].iloc[:5] = results["Optimized"].iloc[:5].map("{:,.2f}".format)
-    results["Optimized"].iloc[5:] = results["Optimized"].iloc[5:].map("{:,.0f}".format)
-    results["Improvement (%)"] = results["Improvement (%)"].fillna(0)
 
     return results
 

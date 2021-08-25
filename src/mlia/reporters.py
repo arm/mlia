@@ -162,8 +162,12 @@ class ReportDataFrame(Report):
             final_table = final_table + title + ":\n"
 
         if format_mapping:
-            for field, format_value in format_mapping.items():
-                self.df[field] = self.df[field].apply(format_value.format)
+            if isinstance(format_mapping, dict):
+                for field, format_value in format_mapping.items():
+                    self.df[field] = self.df[field].apply(format_value.format)
+
+            if callable(format_mapping):
+                self.df = self.df.applymap(format_mapping)
 
         final_table = final_table + tabulate(
             self.df,
@@ -485,9 +489,9 @@ def report_perf_metrics(perf_metrics: PerformanceMetrics) -> Report:
         ]
     ]
 
-    memory_metrics = perf_metrics.memory_usage
+    memory_metrics = perf_metrics.memory_usage.in_kilobytes()
     memory_usage = [
-        (metric, Cell(value / 1024.0, Format(str_fmt="12.2f")), "KiB")
+        (metric, Cell(value, Format(str_fmt="12.2f")), "KiB")
         for (metric, value) in [
             ("SRAM used", memory_metrics.sram_memory_area_size),
             ("DRAM used", memory_metrics.dram_memory_area_size),

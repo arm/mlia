@@ -10,6 +10,7 @@ from typing import List
 from typing import Optional
 
 from mlia import __version__
+from mlia.cli.commands import all_tests
 from mlia.cli.commands import keras_to_tflite
 from mlia.cli.commands import operators
 from mlia.cli.commands import optimization
@@ -89,6 +90,11 @@ def init_commands(parser: argparse.ArgumentParser) -> None:
     subparsers.required = True
 
     commands = [
+        (
+            all_tests,
+            ["all"],
+            [add_device_options, add_keras_model_options, add_debug_options],
+        ),
         (
             operators,
             ["ops"],
