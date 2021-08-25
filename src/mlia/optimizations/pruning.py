@@ -76,7 +76,7 @@ class Pruner(Optimizer):
         output_shape = tuple([x for x in output_shape if x is not None])
         return (
             np.random.rand(num_imgs, *input_shape),
-            np.random.randint(1, output_shape[-1], (num_imgs)),
+            np.random.randint(0, output_shape[-1], (num_imgs)),
         )
 
     def _setup_pruning_params(self) -> dict:
