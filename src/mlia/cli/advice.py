@@ -117,15 +117,15 @@ def advice_increase_operator_compatibility(ctx: AdvisorContext) -> List[str]:
     ]
 
 
-def advice_model_optimization(ctx: AdvisorContext) -> List[str]:
+def advice_optimization(ctx: AdvisorContext) -> List[str]:
     """Advice to try model optimization."""
     return [
         "Check if you can improve the performance by applying "
         "tooling techniques to your model.",
         "Note: you will need a Keras/TF.saved_model input for that.",
-        "For example: mlia model_optimization --optimization-type "
+        "For example: mlia optimization --optimization-type "
         "pruning --optimization-target 0.5 /path/to/keras_model",
-        "For more info: mlia model_optimization --help",
+        "For more info: mlia optimization --help",
     ]
 
 
@@ -241,7 +241,7 @@ def show_advice(
         ],
         AdviceGroup.PERFORMANCE: [
             advice_increase_operator_compatibility,
-            advice_model_optimization,
+            advice_optimization,
         ],
         AdviceGroup.OPTIMIZATION: [advice_optimization_improvement, advice_npu_support],
     }

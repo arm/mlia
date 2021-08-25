@@ -18,7 +18,7 @@ def test_convert_to_tflite() -> None:
 def test_save_keras_model(tmp_path: pathlib.Path) -> None:
     """Test saving keras model."""
     model = generate_keras_model()
-    temp_file = tmp_path / "test_model_optimization_command.h5"
+    temp_file = tmp_path / "test_optimization_command.h5"
     test_utils.save_keras_model(model, temp_file)
     loaded_model = tf.keras.models.load_model(temp_file)
 
@@ -27,7 +27,7 @@ def test_save_keras_model(tmp_path: pathlib.Path) -> None:
 
 def test_save_tflite_model(tmp_path: pathlib.Path) -> None:
     """Test saving tflite model."""
-    temp_file = tmp_path / "test_model_optimization_command.tflite"
+    temp_file = tmp_path / "test_optimization_command.tflite"
     tflite_model = test_utils.convert_to_tflite(generate_keras_model())
     test_utils.save_tflite_model(tflite_model, temp_file)
     interpreter = tf.lite.Interpreter(model_path=str(temp_file))

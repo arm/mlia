@@ -11,8 +11,8 @@ from typing import Optional
 
 from mlia import __version__
 from mlia.cli.commands import keras_to_tflite
-from mlia.cli.commands import model_optimization
 from mlia.cli.commands import operators
+from mlia.cli.commands import optimization
 from mlia.cli.commands import performance
 from mlia.cli.options import add_custom_supported_operators_options
 from mlia.cli.options import add_debug_options
@@ -113,7 +113,7 @@ def init_commands(parser: argparse.ArgumentParser) -> None:
             [add_keras_model_options, add_quantize_option, add_out_path],
         ),
         (
-            model_optimization,
+            optimization,
             ["opt"],
             [
                 add_keras_model_options,

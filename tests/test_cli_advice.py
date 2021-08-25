@@ -7,9 +7,9 @@ import pandas as pd
 import pytest
 from mlia.cli.advice import advice_all_operators_supported
 from mlia.cli.advice import advice_increase_operator_compatibility
-from mlia.cli.advice import advice_model_optimization
 from mlia.cli.advice import advice_non_npu_operators
 from mlia.cli.advice import advice_npu_support
+from mlia.cli.advice import advice_optimization
 from mlia.cli.advice import advice_optimization_improvement
 from mlia.cli.advice import advice_unsupported_operators
 from mlia.cli.advice import AdvisorContext
@@ -184,14 +184,14 @@ def test_operators_advice(
         ),
         (
             AdvisorContext(model="model.tflite"),
-            advice_model_optimization,
+            advice_optimization,
             [
                 "Check if you can improve the performance by applying "
                 "tooling techniques to your model.",
                 "Note: you will need a Keras/TF.saved_model input for that.",
-                "For example: mlia model_optimization --optimization-type "
+                "For example: mlia optimization --optimization-type "
                 "pruning --optimization-target 0.5 /path/to/keras_model",
-                "For more info: mlia model_optimization --help",
+                "For more info: mlia optimization --help",
             ],
         ),
         (

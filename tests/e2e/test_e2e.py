@@ -142,13 +142,13 @@ class TestEndToEnd:
     @pytest.mark.parametrize("model", get_keras_models())
     @pytest.mark.parametrize("device", ["ethos-u55", "ethos-u65"])
     @pytest.mark.parametrize("optimization", [("pruning", "0.5"), ("clustering", "32")])
-    def test_model_optimization(
+    def test_optimization(
         self, model: Path, device: str, optimization: Tuple[str, str]
     ) -> None:
-        """Test command 'model_optimization'."""
+        """Test command 'optimization'."""
         command = [
             "mlia",
-            "model_optimization",
+            "optimization",
             str(model),
             "--device",
             device,
@@ -317,14 +317,14 @@ class TestEndToEnd:
         optimization_target: str,
         model: str,
     ) -> None:
-        """Test 'model_optimization' command on real-world Keras models."""
+        """Test 'optimization' command on real-world Keras models."""
         config_dir = get_config_dir()
         if not config_dir:
             raise Exception("E2E configuration directory is not provided")
 
         mlia_command = [
             "mlia",
-            "model_optimization",
+            "optimization",
             "--optimization-type",
             optimization_type,
             "--optimization-target",

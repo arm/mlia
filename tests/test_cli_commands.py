@@ -5,7 +5,7 @@ from typing import Any
 from typing import Union
 
 import pytest
-from mlia.cli.commands import model_optimization
+from mlia.cli.commands import optimization
 from mlia.cli.commands import performance
 from mlia.utils.general import save_keras_model
 
@@ -78,7 +78,7 @@ def test_opt_expected_parameters(
     temp_file = tmp_path / "test_opt_expected_parameters.h5"
     save_keras_model(model, temp_file)
     with expected_error:
-        model_optimization(
+        optimization(
             str(temp_file),
             device=device,
             optimization_type=optimization_type,
@@ -107,7 +107,7 @@ def test_opt_valid_optimization_target(
 
     mock_performance_estimation(monkeypatch)
 
-    model_optimization(
+    optimization(
         str(temp_file),
         device=device,
         optimization_type=optimization_type,

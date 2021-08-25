@@ -149,7 +149,7 @@ def mock_performance_estimation(monkeypatch: Any) -> None:
         ["ethos-u65", "clustering", "32"],
     ],
 )
-def test_model_optimization_command(
+def test_optimization_command(
     device: str,
     optimization_type: str,
     optimization_target: str,
@@ -158,7 +158,7 @@ def test_model_optimization_command(
 ) -> None:
     """Test keras_to_flite command."""
     model = generate_keras_model()
-    temp_file = tmp_path / "test_model_optimization_command.h5"
+    temp_file = tmp_path / "test_optimization_command.h5"
     save_keras_model(model, temp_file)
 
     mock_performance_estimation(monkeypatch)
@@ -167,7 +167,7 @@ def test_model_optimization_command(
         [
             "--working-dir",
             str(tmp_path),
-            "model_optimization",
+            "optimization",
             str(temp_file),
             "--device",
             device,

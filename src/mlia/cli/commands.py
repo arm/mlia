@@ -119,7 +119,7 @@ def keras_to_tflite(
     LOGGER.info(f"Model {model} saved to {out_path_final}")
 
 
-def model_optimization(
+def optimization(
     model: str,
     optimization_type: str,
     optimization_target: Union[int, float],
