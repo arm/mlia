@@ -97,6 +97,13 @@ def add_optimization_options(parser: argparse.ArgumentParser) -> None:
     )
 
 
+def add_optional_tflite_model_options(parser: argparse.ArgumentParser) -> None:
+    """Add optional model specific options."""
+    model_group = parser.add_argument_group("TFLite model options")
+    # make model parameter optional
+    model_group.add_argument("model", nargs="?", help="TFLite model (optional)")
+
+
 def add_tflite_model_options(parser: argparse.ArgumentParser) -> None:
     """Add model specific options."""
     model_group = parser.add_argument_group("TFLite model options")
@@ -172,10 +179,6 @@ def add_custom_supported_operators_options(parser: argparse.ArgumentParser) -> N
             "current working directory and exit"
         ),
     )
-
-    model_group = parser.add_argument_group("TFLite model options")
-    # make model parameter optional
-    model_group.add_argument("model", nargs="?", help="TFLite model")
 
 
 def get_device_opts(device_args: Optional[Dict]) -> List[str]:

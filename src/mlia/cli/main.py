@@ -19,6 +19,7 @@ from mlia.cli.options import add_debug_options
 from mlia.cli.options import add_device_options
 from mlia.cli.options import add_keras_model_options
 from mlia.cli.options import add_optimization_options
+from mlia.cli.options import add_optional_tflite_model_options
 from mlia.cli.options import add_out_path
 from mlia.cli.options import add_output_options
 from mlia.cli.options import add_quantize_option
@@ -93,6 +94,7 @@ def init_commands(parser: argparse.ArgumentParser) -> None:
             ["ops"],
             [
                 add_device_options,
+                add_optional_tflite_model_options,
                 add_output_options,
                 add_custom_supported_operators_options,
             ],
@@ -116,9 +118,9 @@ def init_commands(parser: argparse.ArgumentParser) -> None:
             optimization,
             ["opt"],
             [
+                add_device_options,
                 add_keras_model_options,
                 add_optimization_options,
-                add_device_options,
                 add_debug_options,
             ],
         ),
