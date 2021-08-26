@@ -8,6 +8,7 @@ import pandas as pd
 import tensorflow as tf
 from mlia.config import IPConfiguration
 from mlia.config import TFLiteModel
+from mlia.metrics import PerformanceMetrics
 from mlia.optimizations.common import Optimizer
 from mlia.performance import collect_performance_metrics
 from mlia.utils.general import convert_to_tflite
@@ -25,6 +26,7 @@ def get_metrics(
     """Return a dataframe filled with performance metrics and model size."""
     metrics = collect_performance_metrics(model, device, working_dir)
     df = metrics.to_df()
+    df.columns = PerformanceMetrics.row_names
 
     return df
 
