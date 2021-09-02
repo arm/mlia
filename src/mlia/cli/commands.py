@@ -28,7 +28,8 @@ from mlia.optimizations.multistage import MultiStageOptimizer
 from mlia.optimizations.pruning import Pruner
 from mlia.optimizations.pruning import PruningConfiguration
 from mlia.performance import collect_performance_metrics
-from mlia.reporters import report
+from mlia.reporters import get_reporter
+from mlia.use_cases import compare_metrics
 from mlia.use_cases import optimize_and_compare
 from mlia.utils.general import convert_to_tflite
 from mlia.utils.general import save_tflite_model
@@ -36,18 +37,19 @@ from mlia.utils.general import save_tflite_model
 LOGGER = logging.getLogger("mlia.cli")
 
 
-def value_format(val: Any) -> Union[str, Any]:
-    """Format cell value."""
-    if isinstance(val, int) or isinstance(val, float) and val.is_integer():
-        return f"{val:,.0f}"
-    elif isinstance(val, float):
-        return f"{val:,.2f}"
+MODEL_ANALYSIS_MSG = """
+=== Model Analysis =========================================================
+"""
 
-    return val
+ADV_GENERATION_MSG = """
+=== Advice Generation ======================================================
+"""
 
 
 def all_tests(
     model: str,
+    output_format: OutputFormat = "plain_text",
+    output: PathOrFileLike = sys.stdout,
     working_dir: Optional[str] = None,
     **device_args: Any,
 ) -> None:
@@ -55,63 +57,55 @@ def all_tests(
     models_path = Path(working_dir) if working_dir else Path.cwd()
     keras_model, device = KerasModel(model), _get_device(**device_args)
 
-    report(device)
+    with get_reporter(output_format, output) as reporter:
+        reporter.submit(device)
 
-    LOGGER.info(
-        """
-=== Model Analysis =========================================================
-"""
-    )
+        LOGGER.info(MODEL_ANALYSIS_MSG)
 
-    converted_model = convert_to_tflite(keras_model.get_keras_model(), True)
-    converted_model_path = models_path / "converted_model.tflite"
-    save_tflite_model(converted_model, converted_model_path)
+        converted_model = convert_to_tflite(keras_model.get_keras_model(), True)
+        converted_model_path = models_path / "converted_model.tflite"
+        save_tflite_model(converted_model, converted_model_path)
 
-    tflite_model = TFLiteModel(converted_model_path)
-    operators = supported_operators(tflite_model, device)
+        tflite_model = TFLiteModel(converted_model_path)
+        operators = supported_operators(tflite_model, device)
 
-    LOGGER.info("Evaluating performance ...\n")
+        LOGGER.info("Evaluating performance ...\n")
 
-    optimizer = MultiStageOptimizer(
-        KerasModel(model).get_keras_model(),
-        [PruningConfiguration(0.5), ClusteringConfiguration(32)],
-    )
-    results = optimize_and_compare(optimizer, device, working_dir)
+        optimizer = MultiStageOptimizer(
+            KerasModel(model).get_keras_model(),
+            [PruningConfiguration(0.5), ClusteringConfiguration(32)],
+        )
+        original, optimized = optimize_and_compare(optimizer, device, working_dir)
 
-    report([operators.ops, operators], space="top")
+        reporter.submit([operators.ops, operators], space="top")
 
-    report(
-        results,
-        columns_name="Metrics",
-        title="Performance metrics",
-        space=True,
-        notes="IMPORTANT: The performance figures above refer to NPU only",
-        format_mapping=value_format,
-    )
+        reporter.submit(
+            [original, optimized],
+            columns_name="Metrics",
+            title="Performance metrics",
+            space=True,
+            notes="IMPORTANT: The performance figures above refer to NPU only",
+        )
 
-    LOGGER.info(
-        """
-=== Advice Generation ======================================================
-"""
-    )
+        LOGGER.info(ADV_GENERATION_MSG)
 
-    show_advice(
-        AdvisorContext(
-            operators=operators,
-            optimization_results=OptimizationResults(
-                perf_metrics=results,
-                optimizations=[("pruning", 0.5), ("clustering", 32)],
+        show_advice(
+            AdvisorContext(
+                operators=operators,
+                optimization_results=OptimizationResults(
+                    perf_metrics=compare_metrics(original, optimized),
+                    optimizations=[("pruning", 0.5), ("clustering", 32)],
+                ),
+                device_args=device_args,
+                model=model,
             ),
-            device_args=device_args,
-            model=model,
-        ),
-        AdviceGroup.COMMON,
-    )
+            AdviceGroup.COMMON,
+        )
 
 
 def operators(
     model: Optional[str] = None,
-    output_format: OutputFormat = "txt",
+    output_format: OutputFormat = "plain_text",
     output: PathOrFileLike = sys.stdout,
     supported_ops_report: bool = False,
     **device_args: Any,
@@ -126,59 +120,48 @@ def operators(
         raise Exception("Model is not provided")
 
     tflite_model, device = TFLiteModel(model), _get_device(**device_args)
-    report(device)
+    with get_reporter(output_format, output) as reporter:
+        reporter.submit(device)
 
-    LOGGER.info(
-        """
-=== Model Analysis =========================================================
-"""
-    )
+        LOGGER.info(MODEL_ANALYSIS_MSG)
 
-    operators = supported_operators(tflite_model, device)
-    report([operators.ops, operators], fmt=output_format, output=output, space="top")
+        operators = supported_operators(tflite_model, device)
+        reporter.submit([operators.ops, operators], space="top")
 
-    LOGGER.info(
-        """
-=== Advice Generation ======================================================
-"""
-    )
+        LOGGER.info(ADV_GENERATION_MSG)
 
-    show_advice(
-        AdvisorContext(operators=operators, device_args=device_args, model=model),
-        advice_group=AdviceGroup.OPERATORS_COMPATIBILITY,
-    )
+        show_advice(
+            AdvisorContext(operators=operators, device_args=device_args, model=model),
+            advice_group=AdviceGroup.OPERATORS_COMPATIBILITY,
+        )
 
 
 def performance(
     model: str,
-    output_format: OutputFormat = "txt",
+    output_format: OutputFormat = "plain_text",
     output: PathOrFileLike = sys.stdout,
     working_dir: Optional[str] = None,
     **device_args: Any,
 ) -> None:
     """Print model's performance stats."""
     tflite_model, device = TFLiteModel(model), _get_device(**device_args)
-    report(device)
 
-    LOGGER.info(
-        """
-=== Model Analysis =========================================================
-"""
-    )
+    with get_reporter(output_format, output) as reporter:
+        reporter.submit(device)
 
-    perf_metrics = collect_performance_metrics(tflite_model, device, working_dir)
-    report(perf_metrics, fmt=output_format, output=output, space="top")
+        LOGGER.info(MODEL_ANALYSIS_MSG)
 
-    LOGGER.info(
-        """
-=== Advice Generation ======================================================
-"""
-    )
+        perf_metrics = collect_performance_metrics(tflite_model, device, working_dir)
+        reporter.submit(perf_metrics, space="top")
 
-    show_advice(
-        AdvisorContext(perf_metrics=perf_metrics, device_args=device_args, model=model),
-        advice_group=AdviceGroup.PERFORMANCE,
-    )
+        LOGGER.info(ADV_GENERATION_MSG)
+
+        show_advice(
+            AdvisorContext(
+                perf_metrics=perf_metrics, device_args=device_args, model=model
+            ),
+            advice_group=AdviceGroup.PERFORMANCE,
+        )
 
 
 def keras_to_tflite(
@@ -198,6 +181,8 @@ def optimization(
     optimization_type: str,
     optimization_target: Union[int, float],
     layers_to_optimize: Optional[List[str]] = None,
+    output_format: OutputFormat = "plain_text",
+    output: PathOrFileLike = sys.stdout,
     working_dir: Optional[str] = None,
     **device_args: Any,
 ) -> None:
@@ -206,47 +191,39 @@ def optimization(
         model, optimization_type, optimization_target, layers_to_optimize
     )
     device = _get_device(**device_args)
-    report(device)
 
-    LOGGER.info(
-        """
-=== Model Analysis =========================================================
-"""
-    )
+    with get_reporter(output_format, output) as reporter:
+        reporter.submit(device)
 
-    results = optimize_and_compare(optimizer, device, working_dir)
+        LOGGER.info(MODEL_ANALYSIS_MSG)
 
-    optmization_warning = (
-        "IMPORTANT: The applied tooling techniques have an impact "
-        "on accuracy. Additional hyperparameter tuning may be required "
-        "after any optimization."
-    )
-    report(
-        results,
-        columns_name="Metrics",
-        title="Performance metrics",
-        space=True,
-        notes=optmization_warning,
-        format_mapping=value_format,
-    )
+        original, optimized = optimize_and_compare(optimizer, device, working_dir)
 
-    LOGGER.info(
-        """
-=== Advice Generation ======================================================
-"""
-    )
-
-    show_advice(
-        AdvisorContext(
-            optimization_results=OptimizationResults(
-                perf_metrics=results,
-                optimizations=[(optimization_type, optimization_target)],
+        reporter.submit(
+            [original, optimized],
+            columns_name="Metrics",
+            title="Performance metrics",
+            space=True,
+            notes=(
+                "IMPORTANT: The applied tooling techniques have an impact "
+                "on accuracy. Additional hyperparameter tuning may be required "
+                "after any optimization."
             ),
-            device_args=device_args,
-            model=model,
-        ),
-        advice_group=AdviceGroup.OPTIMIZATION,
-    )
+        )
+
+        LOGGER.info(ADV_GENERATION_MSG)
+
+        show_advice(
+            AdvisorContext(
+                optimization_results=OptimizationResults(
+                    perf_metrics=compare_metrics(original, optimized),
+                    optimizations=[(optimization_type, optimization_target)],
+                ),
+                device_args=device_args,
+                model=model,
+            ),
+            advice_group=AdviceGroup.OPTIMIZATION,
+        )
 
 
 def _get_device(**kwargs: Any) -> EthosUConfiguration:

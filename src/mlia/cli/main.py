@@ -126,6 +126,7 @@ def init_commands(parser: argparse.ArgumentParser) -> None:
                 add_device_options,
                 add_keras_model_options,
                 add_optimization_options,
+                add_output_options,
                 add_debug_options,
             ],
         ),

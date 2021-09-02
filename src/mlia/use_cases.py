@@ -3,6 +3,7 @@
 import logging
 from pathlib import Path
 from typing import Optional
+from typing import Tuple
 
 import pandas as pd
 import tensorflow as tf
@@ -20,7 +21,7 @@ LOGGER = logging.getLogger("mlia.performance")
 
 def optimize_and_compare(
     optimizer: Optimizer, device: IPConfiguration, working_dir: Optional[str] = None
-) -> pd.DataFrame:
+) -> Tuple[PerformanceMetrics, PerformanceMetrics]:
     """Optimize model, return perf metrics for the original and optimized version."""
     LOGGER.info("Original model:\n")
     original_model = optimizer.get_model()
@@ -30,7 +31,7 @@ def optimize_and_compare(
     optimized_model = optimize_model(optimizer)
     optimized = _process_model(optimized_model, device, "optimized", True, working_dir)
 
-    return compare_metrics(original, optimized)
+    return (original, optimized)
 
 
 def _process_model(

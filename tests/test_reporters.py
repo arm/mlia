@@ -70,7 +70,7 @@ from typing_extensions import Literal
             pytest.raises(Exception, match="Unknown format unknown_format"),
         ],
         [
-            "txt",
+            "plain_text",
             sys.stdout,
             doesnt_raise(),
         ],
@@ -85,7 +85,7 @@ from typing_extensions import Literal
             doesnt_raise(),
         ],
         [
-            "txt",
+            "plain_text",
             "report.txt",
             doesnt_raise(),
         ],
@@ -104,7 +104,7 @@ from typing_extensions import Literal
 def test_report(
     data: Any,
     formatters: List[Callable],
-    fmt: Literal["txt", "json", "csv"],
+    fmt: Literal["plain_text", "json", "csv"],
     output: Any,
     expected_error: Any,
     tmpdir: Any,
@@ -128,7 +128,7 @@ def test_table_representation(with_notes: bool) -> None:
 
     def sample_table(with_notes: bool) -> Table:
         columns = [
-            Column("Header 1", alias="header1", only_for=["txt"]),
+            Column("Header 1", alias="header1", only_for=["plain_text"]),
             Column("Header 2", alias="header2", fmt=Format(wrap_width=5)),
             Column("Header 3", alias="header3"),
         ]
@@ -154,7 +154,7 @@ def test_table_representation(with_notes: bool) -> None:
         ]
     }
 
-    text_report = table.to_text()
+    text_report = table.to_plain_text()
     if with_notes:
         expected_text_report = """
 Sample table:
@@ -257,19 +257,25 @@ def test_reportdataframe_representation(
 
     df = sample_df()
     csv_repr = ReportDataFrame(df).to_csv()
-    expected_csv_repr = ",Header 1,Header 2,Header 3\n0,1,2.0,3\n1,4,5.55555,123123\n"
+    expected_csv_repr = [
+        ["Header 1", "Header 2", "Header 3"],
+        [1, 2, 3],
+        [4, 5.55555, 123123],
+    ]
     assert csv_repr == expected_csv_repr
 
     json_repr = ReportDataFrame(df).to_json()
-    expected_json_repr = """
-    {"Header 1":{"0":1,"1":4},"Header 2":{"0":2.0,"1":5.55555},"Header 3":{"0":3,"1":123123}}
-    """.strip()
+    expected_json_repr = {
+        "Header 1": {0: 1, 1: 4},
+        "Header 2": {0: 2.0, 1: 5.55555},
+        "Header 3": {0: 3, 1: 123123},
+    }
     assert json_repr == expected_json_repr
 
     df.loc[:, "Header 2"] = df["Header 2"].map("{:.2f}".format)
     df.loc[:, "Header 3"] = df["Header 3"].map("{:,d}".format)
 
-    text_report = ReportDataFrame(df).to_text(
+    text_report = ReportDataFrame(df).to_plain_text(
         title=title, columns_name=columns_name, notes=notes, showindex=with_index
     )
 

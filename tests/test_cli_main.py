@@ -296,13 +296,13 @@ args_opt_all = [
 @pytest.mark.parametrize("args", args_opt_all)
 def test_opt_all_command_verbose(
     args: List[str],
-    test_models_path: Path,
+    tmp_path: Path,
     capfd: Any,
     monkeypatch: Any,
 ) -> None:
     """Test opt and all commands in verbose mode."""
     model = generate_keras_model()
-    temp_file = test_models_path / "test_model_optimization_command.h5"
+    temp_file = tmp_path / "test_model_optimization_command.h5"
     save_keras_model(model, temp_file)
 
     mock_performance_estimation(monkeypatch)

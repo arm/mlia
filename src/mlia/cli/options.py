@@ -115,8 +115,8 @@ def add_output_options(parser: argparse.ArgumentParser) -> None:
     output_group = parser.add_argument_group("output options")
     output_group.add_argument(
         "--output-format",
-        choices=["txt", "json", "csv"],
-        default="txt",
+        choices=["plain_text", "json", "csv"],
+        default="plain_text",
         help="Output format (default: %(default)s)",
     )
     output_group.add_argument(

@@ -112,7 +112,7 @@ class TestEndToEnd:
 
     @pytest.mark.parametrize("model", get_tflite_models())
     @pytest.mark.parametrize("device", ["ethos-u55", "ethos-u65"])
-    @pytest.mark.parametrize("fmt", ["json", "txt", "csv"])
+    @pytest.mark.parametrize("fmt", ["json", "plain_text", "csv"])
     def test_operators(self, model: Path, device: str, fmt: str) -> None:
         """Test command 'operators'."""
         command = [
