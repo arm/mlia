@@ -26,7 +26,6 @@ from mlia.cli.options import add_output_options
 from mlia.cli.options import add_quantize_option
 from mlia.cli.options import add_tflite_model_options
 
-
 LOGGER = logging.getLogger("mlia.cli")
 
 INFO_MESSAGE = f"""
@@ -104,7 +103,6 @@ def init_commands(parser: argparse.ArgumentParser) -> None:
                 add_optional_tflite_model_options,
                 add_output_options,
                 add_custom_supported_operators_options,
-                add_debug_options,
             ],
         ),
         (
