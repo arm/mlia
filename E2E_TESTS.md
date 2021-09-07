@@ -19,7 +19,7 @@ Directory which MLIA_E2E_CONFIG points to should have two subfolders:
 
 ## Example layout for the E2E configuration directory
 
-```
+```shell
 e2e_config/
     systems/
         fvp_corstone_sse-300_ethos-u55-21.08.0-SNAPSHOT.tar.gz
