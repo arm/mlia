@@ -1,5 +1,6 @@
 # Copyright 2021, Arm Ltd.
 """Tests for main module."""
+import logging
 import pathlib
 from pathlib import Path
 from typing import Any
@@ -16,6 +17,20 @@ from mlia.utils.general import save_keras_model
 from mlia.utils.proc import working_directory
 
 from tests.utils.generate_keras_model import generate_keras_model
+
+
+def clear_loggers() -> None:
+    """Close the log handlers."""
+    for _, logger in logging.Logger.manager.loggerDict.items():  # type: ignore
+        if not isinstance(logger, logging.PlaceHolder):
+            for handler in logger.handlers:
+                handler.close()
+                logger.removeHandler(handler)
+
+
+def teardown_function() -> None:
+    """Call the function to close log handlers for pytest."""
+    clear_loggers()
 
 
 def test_option_version(capfd: Any) -> None:
@@ -204,3 +219,75 @@ def test_all_tests_command(tmp_path: pathlib.Path, monkeypatch: Any) -> None:
     )
 
     assert exit_code == 0
+
+
+args_ops = [
+    [
+        "operators",
+        "--device",
+        "ethos-u55",
+        "--mac",
+        "256",
+        "--verbose",
+        "--system-config",
+        "Ethos_U55_High_End_Embedded",
+        "--memory-mode",
+        "Shared_Sram",
+    ],
+]
+
+
+@pytest.mark.parametrize("args", args_ops)
+def test_ops_command_verbose(
+    args: List[str],
+    test_models_path: Path,
+    monkeypatch: Any,
+    capfd: Any,
+) -> None:
+    """Test ops commands in verbose mode."""
+    model = test_models_path / "simple_3_layers_model.tflite"
+    mock_performance_estimation(monkeypatch)
+
+    exit_code = main(args + [str(model)])
+    assert exit_code == 0
+    out, _ = capfd.readouterr()
+    assert "mlia.tools.vela" in out
+    teardown_function()
+
+
+args_opt_all = [
+    [
+        "optimization",
+        "--device",
+        "ethos-u55",
+        "--optimization-type",
+        "pruning",
+        "--optimization-target",
+        "0.5",
+        "--mac",
+        "256",
+        "--verbose",
+    ],
+    ["all", "--device", "ethos-u55", "--mac", "256", "--verbose"],
+]
+
+
+@pytest.mark.parametrize("args", args_opt_all)
+def test_opt_all_command_verbose(
+    args: List[str],
+    test_models_path: Path,
+    capfd: Any,
+    monkeypatch: Any,
+) -> None:
+    """Test opt and all commands in verbose mode."""
+    model = generate_keras_model()
+    temp_file = test_models_path / "test_model_optimization_command.h5"
+    save_keras_model(model, temp_file)
+
+    mock_performance_estimation(monkeypatch)
+
+    exit_code = main(args + [str(temp_file)])
+    assert exit_code == 0
+    out, _ = capfd.readouterr()
+    assert "tensorflow - Compiled the loaded model" in out
+    teardown_function()
