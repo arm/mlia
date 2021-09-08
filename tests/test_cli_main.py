@@ -2,6 +2,7 @@
 """Tests for main module."""
 import logging
 import pathlib
+import sys
 from pathlib import Path
 from typing import Any
 from typing import List
@@ -145,8 +146,13 @@ def test_keras_to_tflite_command(quantize: bool, tmp_path: pathlib.Path) -> None
     assert exit_code == 0
 
 
-def mock_performance_estimation(monkeypatch: Any) -> None:
+def mock_performance_estimation(monkeypatch: Any, verbose: bool = False) -> None:
     """Mock performance estimation."""
+    if verbose:
+        logger = logging.getLogger("mlia.mock.perf")
+        logger.setLevel(logging.INFO)
+        logger.addHandler(logging.StreamHandler(sys.stdout))
+        logger.info("Mocking performance estimation")
     perf_metrics = PerformanceMetrics(
         EthosU55(), NPUCycles(0, 0, 0, 0, 0, 0), MemoryUsage(0, 0, 0, 0, 0)
     )
@@ -221,37 +227,52 @@ def test_all_tests_command(tmp_path: pathlib.Path, monkeypatch: Any) -> None:
     assert exit_code == 0
 
 
-args_ops = [
+@pytest.mark.parametrize(
+    "args_main, mock_perf_verbose, expected_output",
     [
-        "operators",
-        "--device",
-        "ethos-u55",
-        "--mac",
-        "256",
-        "--verbose",
-        "--system-config",
-        "Ethos_U55_High_End_Embedded",
-        "--memory-mode",
-        "Shared_Sram",
+        [
+            [
+                "performance",
+                "--device",
+                "ethos-u55",
+                "--mac",
+                "256",
+                "--verbose",
+            ],
+            True,
+            "Mocking performance estimation",
+        ],
+        [
+            [
+                "operators",
+                "--device",
+                "ethos-u55",
+                "--mac",
+                "256",
+                "--verbose",
+            ],
+            False,
+            "mlia.tools.vela",
+        ],
     ],
-]
-
-
-@pytest.mark.parametrize("args", args_ops)
-def test_ops_command_verbose(
-    args: List[str],
+)
+def test_ops_perf_command_verbose(
+    args_main: List[str],
+    mock_perf_verbose: bool,
+    expected_output: str,
     test_models_path: Path,
     monkeypatch: Any,
     capfd: Any,
 ) -> None:
     """Test ops commands in verbose mode."""
     model = test_models_path / "simple_3_layers_model.tflite"
-    mock_performance_estimation(monkeypatch)
+    mock_performance_estimation(monkeypatch, mock_perf_verbose)
 
-    exit_code = main(args + [str(model)])
+    exit_code = main(args_main + [str(model)])
     assert exit_code == 0
     out, _ = capfd.readouterr()
-    assert "mlia.tools.vela" in out
+
+    assert expected_output in out
     teardown_function()
 
 
