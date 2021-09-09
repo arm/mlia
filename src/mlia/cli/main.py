@@ -96,7 +96,12 @@ def init_commands(parser: argparse.ArgumentParser) -> None:
         (
             all_tests,
             ["all"],
-            [add_device_options, add_keras_model_options, add_debug_options],
+            [
+                add_device_options,
+                add_keras_model_options,
+                add_output_options,
+                add_debug_options,
+            ],
         ),
         (
             operators,

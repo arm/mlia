@@ -1,5 +1,6 @@
 # Copyright 2021, Arm Ltd.
 """Tests for main module."""
+import json
 import logging
 import pathlib
 import sys
@@ -227,35 +228,80 @@ def test_all_tests_command(tmp_path: pathlib.Path, monkeypatch: Any) -> None:
     assert exit_code == 0
 
 
-@pytest.mark.parametrize(
-    "args_main, mock_perf_verbose, expected_output",
+@pytest.mark.parametrize("output_format", ["plain_text", "csv", "json"])
+def test_all_tests_command_output(
+    tmp_path: pathlib.Path, monkeypatch: Any, output_format: str
+) -> None:
+    """Test all_tests command can produce correct output file."""
+    model = generate_keras_model()
+    temp_file = tmp_path / "test_model_optimization_command.h5"
+    output = tmp_path / "report.all_command"
+    save_keras_model(model, temp_file)
+
+    mock_performance_estimation(monkeypatch)
+
+    exit_code = main(
+        [
+            "--working-dir",
+            str(tmp_path),
+            "all_tests",
+            "--device",
+            "ethos-u55",
+            str(temp_file),
+            "--output-format",
+            "json",
+            "--output",
+            str(output),
+        ]
+    )
+
+    assert exit_code == 0
+    assert output.is_file()
+    assert output.stat().st_size > 0
+
+    if output_format == "json":
+        with open(output) as file:
+            parsed_json = json.load(file)
+            assert all(
+                metric in parsed_json
+                for metric in [
+                    "device",
+                    "operators_stats",
+                    "operators",
+                    "performance_metrics",
+                ]
+            )
+
+
+args_ops = [
     [
         [
-            [
-                "performance",
-                "--device",
-                "ethos-u55",
-                "--mac",
-                "256",
-                "--verbose",
-            ],
-            True,
-            "Mocking performance estimation",
+            "performance",
+            "--device",
+            "ethos-u55",
+            "--mac",
+            "256",
+            "--verbose",
         ],
-        [
-            [
-                "operators",
-                "--device",
-                "ethos-u55",
-                "--mac",
-                "256",
-                "--verbose",
-            ],
-            False,
-            "mlia.tools.vela",
-        ],
+        True,
+        "Mocking performance estimation",
     ],
-)
+    [
+        [
+            "operators",
+            "--device",
+            "ethos-u55",
+            "--mac",
+            "256",
+            "--verbose",
+        ],
+        False,
+        "mlia.tools.vela",
+    ],
+]
+
+
+@pytest.mark.parametrize("args_main, mock_perf_verbose, expected_output", args_ops)
 def test_ops_perf_command_verbose(
     args_main: List[str],
     mock_perf_verbose: bool,

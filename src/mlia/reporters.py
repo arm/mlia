@@ -634,7 +634,8 @@ class CompoundReport(Report):
                 for i, item in enumerate(main_obj)
             ]
 
-        raise Exception("Unable to export data in csv format")
+        # write tables one after another if there is no other options
+        return [row for item in csv_data for row in item]
 
     def to_plain_text(self, **kwargs: Any) -> str:
         """Convert to human readable format."""
