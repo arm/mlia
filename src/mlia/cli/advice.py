@@ -15,11 +15,18 @@ import pandas as pd
 from mlia.cli.options import get_device_opts
 from mlia.metadata import Operators
 from mlia.metrics import PerformanceMetrics
-from tabulate import tabulate
 from typing_extensions import TypedDict
 
 
 LOGGER = logging.getLogger("mlia.cli")
+
+
+class Advice:
+    """IA advice."""
+
+    def __init__(self, advice_msgs: List[str]) -> None:
+        """Init advice instance."""
+        self.advice_msgs = advice_msgs
 
 
 class AdviceGroup(Enum):
@@ -301,12 +308,9 @@ advice_optimization_improvement_extended = partial(
 )
 
 
-def show_advice(
-    ctx: AdvisorContext,
-    advice_group: Optional[Union[AdviceGroup, List[AdviceGroup]]] = None,
-) -> None:
-    """Show advice based on provided data."""
-    advice_producers: Dict[AdviceGroup, List[Callable]] = {
+def get_advice_producers() -> Dict[AdviceGroup, List[Callable]]:
+    """Return advice producers grouped by category."""
+    return {
         AdviceGroup.OPERATORS_COMPATIBILITY: [
             advice_non_npu_operators,
             advice_unsupported_operators,
@@ -326,22 +330,33 @@ def show_advice(
         ],
     }
 
+
+def filter_advice_producers(
+    advice_group: Optional[Union[AdviceGroup, List[AdviceGroup]]] = None
+) -> List[Callable]:
+    """Filter advice producers based on provided parameters."""
     if isinstance(advice_group, AdviceGroup):
         advice_group = [advice_group]
 
-    selected_advice_producers = [
+    return [
         advice_producer
-        for adv_group, adv_group_producers in advice_producers.items()
+        for adv_group, adv_group_producers in get_advice_producers().items()
         for advice_producer in adv_group_producers
         if advice_group is None or adv_group in advice_group
     ]
 
-    responses = (advice_producer(ctx) for advice_producer in selected_advice_producers)
-    valuable_advices = ("\n".join(item) for item in responses if len(item) > 0)
 
-    for i, advice in enumerate(valuable_advices, start=1):
-        if i != 1:
-            LOGGER.info("")
-        LOGGER.info(tabulate([(i, advice)], tablefmt="plain"))
+def produce_advice(
+    ctx: AdvisorContext,
+    advice_group: Optional[Union[AdviceGroup, List[AdviceGroup]]],
+) -> List[Advice]:
+    """Produce advice based on provided data."""
+    selected_advice_producers = filter_advice_producers(advice_group)
 
-    LOGGER.info("")
+    return [
+        Advice(advice)
+        for advice in (
+            advice_producer(ctx) for advice_producer in selected_advice_producers
+        )
+        if advice
+    ]

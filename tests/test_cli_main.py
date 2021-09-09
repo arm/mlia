@@ -269,6 +269,7 @@ def test_all_tests_command_output(
                     "operators_stats",
                     "operators",
                     "performance_metrics",
+                    "advice",
                 ]
             )
 

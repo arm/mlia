@@ -13,7 +13,7 @@ from mlia._typing import PathOrFileLike
 from mlia.cli.advice import AdviceGroup
 from mlia.cli.advice import AdvisorContext
 from mlia.cli.advice import OptimizationResults
-from mlia.cli.advice import show_advice
+from mlia.cli.advice import produce_advice
 from mlia.config import EthosU55
 from mlia.config import EthosU65
 from mlia.config import EthosUConfiguration
@@ -89,7 +89,7 @@ def all_tests(
 
         LOGGER.info(ADV_GENERATION_MSG)
 
-        show_advice(
+        advice = produce_advice(
             AdvisorContext(
                 operators=operators,
                 optimization_results=OptimizationResults(
@@ -100,6 +100,14 @@ def all_tests(
                 model=model,
             ),
             AdviceGroup.COMMON,
+        )
+
+        reporter.submit(
+            advice,
+            show_title=False,
+            show_headers=False,
+            space="between",
+            tablefmt="plain",
         )
 
 
@@ -130,9 +138,17 @@ def operators(
 
         LOGGER.info(ADV_GENERATION_MSG)
 
-        show_advice(
+        advice = produce_advice(
             AdvisorContext(operators=operators, device_args=device_args, model=model),
             advice_group=AdviceGroup.OPERATORS_COMPATIBILITY,
+        )
+
+        reporter.submit(
+            advice,
+            show_title=False,
+            show_headers=False,
+            space="between",
+            tablefmt="plain",
         )
 
 
@@ -156,11 +172,19 @@ def performance(
 
         LOGGER.info(ADV_GENERATION_MSG)
 
-        show_advice(
+        advice = produce_advice(
             AdvisorContext(
                 perf_metrics=perf_metrics, device_args=device_args, model=model
             ),
             advice_group=AdviceGroup.PERFORMANCE,
+        )
+
+        reporter.submit(
+            advice,
+            show_title=False,
+            show_headers=False,
+            space="between",
+            tablefmt="plain",
         )
 
 
@@ -213,7 +237,7 @@ def optimization(
 
         LOGGER.info(ADV_GENERATION_MSG)
 
-        show_advice(
+        advice = produce_advice(
             AdvisorContext(
                 optimization_results=OptimizationResults(
                     perf_metrics=compare_metrics(original, optimized),
@@ -223,6 +247,14 @@ def optimization(
                 model=model,
             ),
             advice_group=AdviceGroup.OPTIMIZATION,
+        )
+
+        reporter.submit(
+            advice,
+            show_title=False,
+            show_headers=False,
+            space="between",
+            tablefmt="plain",
         )
 
 

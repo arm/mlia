@@ -27,6 +27,7 @@ import pandas as pd
 from mlia._typing import FileLike
 from mlia._typing import OutputFormat
 from mlia._typing import PathOrFileLike
+from mlia.cli.advice import Advice
 from mlia.config import EthosUConfiguration
 from mlia.metadata import Operator
 from mlia.metadata import Operators
@@ -251,18 +252,24 @@ class Table(Report):
         self,
         nested: bool = False,
         show_title: bool = True,
+        show_headers: bool = True,
+        tablefmt: str = "fancy_grid",
         space: Union[bool, str] = False,
         **kwargs: Any,
     ) -> str:
         """Produce report in human readable format."""
-        headers = [] if nested else [c.header for c in self.columns]
+        headers = (
+            [] if (nested or not show_headers) else [c.header for c in self.columns]
+        )
 
         def item_to_plain_text(item: Any, col: Column) -> str:
             """Convert item to text."""
             if isinstance(item, Table):
                 return item.to_plain_text(True, **kwargs)
-
-            as_text = str(item)
+            elif is_list_of(item, str):
+                as_text = "\n".join(item)
+            else:
+                as_text = str(item)
 
             if col.fmt:
                 if col.fmt.wrap_width:
@@ -283,23 +290,29 @@ class Table(Report):
         if self.notes:
             footer = "\n" + self.notes
 
-        return (
-            title
-            + tabulate(
-                (
-                    (
-                        item_to_plain_text(item, col)
-                        for item, col in zip(row, self.columns)
-                        if col.supports_format("plain_text")
-                    )
-                    for row in self.rows
-                ),
+        formatted_rows = (
+            (
+                item_to_plain_text(item, col)
+                for item, col in zip(row, self.columns)
+                if col.supports_format("plain_text")
+            )
+            for row in self.rows
+        )
+
+        if space == "between":
+            formatted_table = "\n\n".join(
+                tabulate([row], tablefmt=tablefmt, disable_numparse=True)
+                for row in formatted_rows
+            )
+        else:
+            formatted_table = tabulate(
+                formatted_rows,
                 headers=headers,
-                tablefmt="plain" if nested else "fancy_grid",
+                tablefmt="plain" if nested else tablefmt,
                 disable_numparse=True,
             )
-            + footer
-        )
+
+        return title + formatted_table + footer
 
     def to_csv(self, **kwargs: Any) -> List[Any]:
         """Convert table to csv format."""
@@ -333,6 +346,8 @@ class SingleRow(Table):
         self,
         nested: bool = False,
         show_title: bool = True,
+        show_headers: bool = True,
+        tablefmt: str = "fancy_grid",
         space: Union[bool, str] = False,
         **kwargs: Any,
     ) -> str:
@@ -575,6 +590,19 @@ def report_perf_metrics(
     )
 
 
+def report_advice(advice: List[Advice]) -> Report:
+    """Generate report for the advice."""
+    return Table(
+        columns=[
+            Column("#", only_for=["plain_text"]),
+            Column("Advice", alias="advice_message"),
+        ],
+        rows=[(i + 1, a.advice_msgs) for i, a in enumerate(advice)],
+        name="Advice",
+        alias="advice",
+    )
+
+
 class CompoundReport(Report):
     """Compound report.
 
@@ -706,15 +734,13 @@ def report(
 
 def find_appropriate_formatter(data: Any) -> Callable[[Any], Report]:
     """Find appropriate formatter for the provided data."""
-    if (
-        isinstance(data, PerformanceMetrics)
-        or isinstance(data, (tuple, list))
-        and len(data) == 2
-        and all(isinstance(item, PerformanceMetrics) for item in data)
-    ):
+    if isinstance(data, PerformanceMetrics) or is_list_of(data, PerformanceMetrics, 2):
         return report_perf_metrics
 
-    if isinstance(data, list) and all(isinstance(item, Operator) for item in data):
+    if is_list_of(data, Advice):
+        return report_advice
+
+    if is_list_of(data, Operator):
         return report_operators
 
     if isinstance(data, Operators):
@@ -731,6 +757,15 @@ def find_appropriate_formatter(data: Any) -> Callable[[Any], Report]:
         return CompoundFormatter(formatters)
 
     raise Exception("Unable to find appropriate formatter")
+
+
+def is_list_of(data: Any, cls: type, elem_num: Optional[int] = None) -> bool:
+    """Check if data is a list of object of the same class."""
+    return (
+        isinstance(data, (tuple, list))
+        and all(isinstance(item, cls) for item in data)
+        and (elem_num is None or len(data) == elem_num)
+    )
 
 
 class Reporter:
