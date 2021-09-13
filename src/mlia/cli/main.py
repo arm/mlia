@@ -87,7 +87,9 @@ def setup_logging(logs_dir: str, verbose: bool = False) -> None:
 
 def init_commands(parser: argparse.ArgumentParser) -> None:
     """Init cli subcommands."""
-    subparsers = parser.add_subparsers(title="Commands", dest="command")
+    subparsers = parser.add_subparsers(
+        title="Commands", dest="command", metavar="<command>"
+    )
     subparsers.required = True
 
     commands = [
@@ -118,11 +120,6 @@ def init_commands(parser: argparse.ArgumentParser) -> None:
             ],
         ),
         (
-            keras_to_tflite,
-            ["k2l"],
-            [add_keras_model_options, add_quantize_option, add_out_path],
-        ),
-        (
             optimization,
             ["opt"],
             [
@@ -131,6 +128,11 @@ def init_commands(parser: argparse.ArgumentParser) -> None:
                 add_optimization_options,
                 add_debug_options,
             ],
+        ),
+        (
+            keras_to_tflite,
+            ["k2l"],
+            [add_keras_model_options, add_quantize_option, add_out_path],
         ),
     ]
 
@@ -184,10 +186,22 @@ def run_command(args: argparse.Namespace) -> int:
 def main(argv: Optional[List[str]] = None) -> int:
     """Entry point of the application."""
     parser = argparse.ArgumentParser(
-        description=INFO_MESSAGE, formatter_class=argparse.RawDescriptionHelpFormatter
+        description=INFO_MESSAGE,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        add_help=False,
     )
     parser.add_argument(
-        "--version", action="version", version=f"%(prog)s { __version__}"
+        "-h",
+        "--help",
+        action="help",
+        default=argparse.SUPPRESS,
+        help="Show this help message and exit",
+    )
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=f"%(prog)s { __version__}",
+        help="Show program's version number and exit",
     )
     parser.add_argument(
         "--working-dir",
