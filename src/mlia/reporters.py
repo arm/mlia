@@ -32,6 +32,7 @@ from mlia.config import EthosUConfiguration
 from mlia.metadata import Operator
 from mlia.metadata import Operators
 from mlia.metrics import PerformanceMetrics
+from mlia.utils.general import is_list_of
 from tabulate import tabulate
 
 
@@ -758,15 +759,6 @@ def find_appropriate_formatter(data: Any) -> Callable[[Any], Report]:
         return CompoundFormatter(formatters)
 
     raise Exception("Unable to find appropriate formatter")
-
-
-def is_list_of(data: Any, cls: type, elem_num: Optional[int] = None) -> bool:
-    """Check if data is a list of object of the same class."""
-    return (
-        isinstance(data, (tuple, list))
-        and all(isinstance(item, cls) for item in data)
-        and (elem_num is None or len(data) == elem_num)
-    )
 
 
 class Reporter:

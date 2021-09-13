@@ -15,19 +15,14 @@ from mlia.cli.advice import AdviceGroup
 from mlia.cli.advice import AdvisorContext
 from mlia.cli.advice import OptimizationResults
 from mlia.cli.advice import produce_advice
-from mlia.config import EthosU55
-from mlia.config import EthosU65
-from mlia.config import EthosUConfiguration
+from mlia.cli.options import parse_optimizer_params
+from mlia.config import get_device
 from mlia.config import KerasModel
 from mlia.config import TFLiteModel
 from mlia.operators import generate_supported_operators_report
 from mlia.operators import supported_operators
-from mlia.optimizations.clustering import Clusterer
-from mlia.optimizations.clustering import ClusteringConfiguration
-from mlia.optimizations.common import Optimizer
-from mlia.optimizations.multistage import MultiStageOptimizer
-from mlia.optimizations.pruning import Pruner
-from mlia.optimizations.pruning import PruningConfiguration
+from mlia.optimizations.select import get_optimizer
+from mlia.optimizations.select import OptimizationSettings
 from mlia.performance import collect_performance_metrics
 from mlia.reporters import get_reporter
 from mlia.use_cases import compare_metrics
@@ -49,6 +44,8 @@ ADV_GENERATION_MSG = """
 
 def all_tests(
     model: str,
+    optimization_type: str,
+    optimization_target: str,
     output_format: OutputFormat = "plain_text",
     output: PathOrFileLike = sys.stdout,
     working_dir: Optional[str] = None,
@@ -56,7 +53,7 @@ def all_tests(
 ) -> None:
     """Generate full report."""
     models_path = Path(working_dir) if working_dir else Path.cwd()
-    keras_model, device = KerasModel(model), _get_device(**device_args)
+    keras_model, device = KerasModel(model), get_device(**device_args)
 
     with get_reporter(output_format, output) as reporter:
         reporter.submit(device)
@@ -72,10 +69,21 @@ def all_tests(
 
         LOGGER.info("Evaluating performance ...\n")
 
-        optimizer = MultiStageOptimizer(
-            KerasModel(model).get_keras_model(),
-            [PruningConfiguration(0.5), ClusteringConfiguration(32)],
+        optimizer_params = parse_optimizer_params(
+            optimization_type, optimization_target
         )
+
+        optimizer_settings = [
+            OptimizationSettings(
+                optimization_type=opt_type,
+                optimization_target=opt_target,
+                layers_to_optimize=None,
+            )
+            for opt_type, opt_target in optimizer_params
+        ]
+
+        keras_model = KerasModel(model).get_keras_model()
+        optimizer = get_optimizer(keras_model, optimizer_settings)
         original, optimized = optimize_and_compare(optimizer, device, working_dir)
 
         reporter.submit([operators.ops, operators], space="top")
@@ -95,7 +103,7 @@ def all_tests(
                 operators=operators,
                 optimization_results=OptimizationResults(
                     perf_metrics=compare_metrics(original, optimized),
-                    optimizations=[("pruning", 0.5), ("clustering", 32)],
+                    optimizations=optimizer_params,
                 ),
                 device_args=device_args,
                 model=model,
@@ -128,7 +136,7 @@ def operators(
     if not model:
         raise Exception("Model is not provided")
 
-    tflite_model, device = TFLiteModel(model), _get_device(**device_args)
+    tflite_model, device = TFLiteModel(model), get_device(**device_args)
     with get_reporter(output_format, output) as reporter:
         reporter.submit(device)
 
@@ -165,7 +173,7 @@ def performance(
         raise ValueError(
             "The input model format for the performance estimation must be tflite!"
         )
-    tflite_model, device = TFLiteModel(model), _get_device(**device_args)
+    tflite_model, device = TFLiteModel(model), get_device(**device_args)
 
     with get_reporter(output_format, output) as reporter:
         reporter.submit(device)
@@ -216,10 +224,14 @@ def optimization(
     **device_args: Any,
 ) -> None:
     """Show performance improvements after applying optimizations."""
-    optimizer = _get_optimizer(
-        model, optimization_type, optimization_target, layers_to_optimize
+    keras_model = KerasModel(model).get_keras_model()
+    optimizer = get_optimizer(
+        keras_model,
+        OptimizationSettings(
+            optimization_type, optimization_target, layers_to_optimize
+        ),
     )
-    device = _get_device(**device_args)
+    device = get_device(**device_args)
 
     with get_reporter(output_format, output) as reporter:
         reporter.submit(device)
@@ -261,49 +273,3 @@ def optimization(
             space="between",
             tablefmt="plain",
         )
-
-
-def _get_device(**kwargs: Any) -> EthosUConfiguration:
-    device = kwargs.pop("device", None)
-    if not device:
-        raise Exception("Device is not provided")
-
-    if device.lower() == "ethos-u55":
-        return EthosU55(**kwargs)
-
-    if device.lower() == "ethos-u65":
-        return EthosU65(**kwargs)
-
-    raise Exception(f"Unsupported device: {device}")
-
-
-def _get_optimizer(
-    model: str,
-    optimization_type: str,
-    optimization_target: Union[int, float],
-    layers_to_optimize: Optional[List[str]] = None,
-) -> Optimizer:
-    if not optimization_target:
-        raise Exception("Optimization target is not provided.")
-
-    if not optimization_type:
-        raise Exception("Optimization type is not provided")
-
-    if optimization_type.lower() == "pruning":
-        return Pruner(
-            KerasModel(model).get_keras_model(),
-            PruningConfiguration(optimization_target, layers_to_optimize),
-        )
-    elif optimization_type.lower() == "clustering":
-        # make sure an integer is given as clustering target
-        if optimization_target == int(optimization_target):
-            return Clusterer(
-                KerasModel(model).get_keras_model(),
-                ClusteringConfiguration(int(optimization_target), layers_to_optimize),
-            )
-        raise Exception(
-            f"""Optimization target should be a positive integer.
-            Optimization target provided: {optimization_target}"""
-        )
-
-    raise Exception(f"Unsupported optimization type: {optimization_type}")

@@ -1,0 +1,126 @@
+# Copyright 2021, Arm Ltd.
+"""Module for optimization selection."""
+from typing import List
+from typing import NamedTuple
+from typing import Optional
+from typing import Union
+
+import tensorflow as tf
+from mlia.optimizations.clustering import Clusterer
+from mlia.optimizations.clustering import ClusteringConfiguration
+from mlia.optimizations.common import Optimizer
+from mlia.optimizations.common import OptimizerConfiguration
+from mlia.optimizations.pruning import Pruner
+from mlia.optimizations.pruning import PruningConfiguration
+from mlia.utils.general import is_list_of
+
+
+class OptimizationSettings(NamedTuple):
+    """Optimization settings."""
+
+    optimization_type: str
+    optimization_target: Union[int, float]
+    layers_to_optimize: Optional[List[str]]
+
+
+class MultiStageOptimizer(Optimizer):
+    """Optimizer with multiply stages."""
+
+    def __init__(
+        self,
+        model: tf.keras.Model,
+        optimizations: List[OptimizerConfiguration],
+    ) -> None:
+        """Init MultiStageOptimizer instance."""
+        self.model = model
+        self.optimizations = optimizations
+
+    def get_model(self) -> tf.keras.Model:
+        """Return optimized model."""
+        return self.model
+
+    def apply_optimization(self) -> None:
+        """Apply optimization to the model."""
+        for config in self.optimizations:
+            optimizer = get_optimizer(self.model, config)
+            optimizer.apply_optimization()
+            self.model = optimizer.get_model()
+
+
+def get_optimizer(
+    model: tf.keras.Model,
+    config: Union[
+        OptimizerConfiguration, OptimizationSettings, List[OptimizationSettings]
+    ],
+) -> Optimizer:
+    """Get optimizer for provided configuration."""
+    if isinstance(config, PruningConfiguration):
+        return Pruner(model, config)
+
+    if isinstance(config, ClusteringConfiguration):
+        return Clusterer(model, config)
+
+    if isinstance(config, OptimizationSettings) or is_list_of(
+        config, OptimizationSettings
+    ):
+        return _get_optimizer(model, config)  # type: ignore
+
+    raise Exception(f"Unknown optimization configuration {config}")
+
+
+def _get_optimizer(
+    model: tf.keras.Model,
+    optimization_settings: Union[OptimizationSettings, List[OptimizationSettings]],
+) -> Optimizer:
+    if isinstance(optimization_settings, OptimizationSettings):
+        optimization_settings = [optimization_settings]
+
+    optimizer_configs = []
+    for opt_type, opt_target, layers_to_optimize in optimization_settings:
+        _check_optimizer_params(opt_type, opt_target)
+
+        opt_config = _get_optimizer_configuration(
+            opt_type, opt_target, layers_to_optimize
+        )
+        optimizer_configs.append(opt_config)
+
+    if len(optimizer_configs) == 1:
+        return get_optimizer(model, optimizer_configs[0])
+
+    return MultiStageOptimizer(model, optimizer_configs)
+
+
+def _get_optimizer_configuration(
+    optimization_type: str,
+    optimization_target: Union[int, float],
+    layers_to_optimize: Optional[List[str]] = None,
+) -> OptimizerConfiguration:
+    """Get optimizer configuration for provided parameters."""
+    _check_optimizer_params(optimization_type, optimization_target)
+
+    opt_type = optimization_type.lower()
+    if opt_type == "pruning":
+        return PruningConfiguration(optimization_target, layers_to_optimize)
+
+    if opt_type == "clustering":
+        # make sure an integer is given as clustering target
+        if optimization_target == int(optimization_target):
+            return ClusteringConfiguration(int(optimization_target), layers_to_optimize)
+
+        raise Exception(
+            "Optimization target should be a positive integer. "
+            f"Optimization target provided: {optimization_target}"
+        )
+
+    raise Exception(f"Unsupported optimization type: {optimization_type}")
+
+
+def _check_optimizer_params(
+    optimization_type: str, optimization_target: Union[int, float]
+) -> None:
+    """Check optimizer params."""
+    if not optimization_target:
+        raise Exception("Optimization target is not provided")
+
+    if not optimization_type:
+        raise Exception("Optimization type is not provided")

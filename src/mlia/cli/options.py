@@ -6,6 +6,7 @@ from typing import Any
 from typing import Dict
 from typing import List
 from typing import Optional
+from typing import Tuple
 
 
 def add_device_options(parser: argparse.ArgumentParser) -> None:
@@ -94,6 +95,25 @@ def add_optimization_options(parser: argparse.ArgumentParser) -> None:
         help="""Name of the layers to optimize (separated by space)
             example: conv1 conv2 conv3
             [default: every layer]""",
+    )
+
+
+def add_multi_optimization_options(parser: argparse.ArgumentParser) -> None:
+    """Add optimization specific options."""
+    multi_optimization_group = parser.add_argument_group("optimization options")
+
+    multi_optimization_group.add_argument(
+        "--optimization-type",
+        default="pruning,clustering",
+        help="List of the optimization types separated by comma (default: %(default)s)",
+    )
+    multi_optimization_group.add_argument(
+        "--optimization-target",
+        default="0.5,32",
+        help="""List of the optimization targets separated by comma,
+             (for pruning this is sparsity between (0,1),
+             for clustering this is the number of clusters (positive integer))
+             (default: %(default)s)""",
     )
 
 
@@ -213,3 +233,27 @@ def get_device_opts(device_args: Optional[Dict]) -> List[str]:
         for name in non_default
         for item in construct_param(params_name[name], device_args[name])
     ]
+
+
+def parse_optimizer_params(
+    optimization_type: str, optimization_target: str, sep: str = ","
+) -> List[Tuple[str, float]]:
+    """Parse provided optimization parameters."""
+    if not optimization_type:
+        raise Exception("Optimization type is not provided")
+
+    if not optimization_target:
+        raise Exception("Optimization target is not provided")
+
+    opt_types = optimization_type.split(sep)
+    opt_targets = optimization_target.split(sep)
+
+    if len(opt_types) != len(opt_targets):
+        raise Exception("Wrong number of optimization targets and types")
+
+    optimizer_params = [
+        (opt_type.strip(), float(opt_target))
+        for opt_type, opt_target in zip(opt_types, opt_targets)
+    ]
+
+    return optimizer_params

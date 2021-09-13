@@ -2,19 +2,22 @@
 """Tests for main module."""
 import json
 import logging
-import pathlib
 import sys
 from pathlib import Path
 from typing import Any
 from typing import List
+from unittest.mock import ANY
+from unittest.mock import call
 from unittest.mock import MagicMock
 
 import pytest
 from mlia.cli.main import main
 from mlia.config import EthosU55
+from mlia.metadata import Operators
 from mlia.metrics import MemoryUsage
 from mlia.metrics import NPUCycles
 from mlia.metrics import PerformanceMetrics
+from mlia.optimizations.select import OptimizationSettings
 from mlia.utils.general import save_keras_model
 from mlia.utils.proc import working_directory
 
@@ -123,7 +126,7 @@ def test_performance_custom_vela_init(
     "quantize",
     [True, False],
 )
-def test_keras_to_tflite_command(quantize: bool, tmp_path: pathlib.Path) -> None:
+def test_keras_to_tflite_command(quantize: bool, tmp_path: Path) -> None:
     """Test keras_to_flite command."""
     model = generate_keras_model()
     temp_file = tmp_path / "test_keras_to_tflite_command.h5"
@@ -145,6 +148,33 @@ def test_keras_to_tflite_command(quantize: bool, tmp_path: pathlib.Path) -> None
         )
 
     assert exit_code == 0
+
+
+def mock_optimize_and_compare(monkeypatch: Any) -> None:
+    """Mock optimize_and_compare function."""
+    perf_metrics = PerformanceMetrics(
+        EthosU55(), NPUCycles(0, 0, 0, 0, 0, 0), MemoryUsage(0, 0, 0, 0, 0)
+    )
+
+    monkeypatch.setattr(
+        "mlia.cli.commands.optimize_and_compare",
+        MagicMock(return_value=(perf_metrics, perf_metrics)),
+    )
+
+
+def mock_operators_compatibility(monkeypatch: Any) -> None:
+    """Mock supported operators check."""
+    monkeypatch.setattr(
+        "mlia.cli.commands.supported_operators", MagicMock(return_value=Operators([]))
+    )
+
+
+def mock_get_optimizer(monkeypatch: Any) -> MagicMock:
+    """Mock get_optimizer function."""
+    mock = MagicMock()
+    monkeypatch.setattr("mlia.cli.commands.get_optimizer", mock)
+
+    return mock
 
 
 def mock_performance_estimation(monkeypatch: Any, verbose: bool = False) -> None:
@@ -176,7 +206,7 @@ def test_optimization_command(
     optimization_type: str,
     optimization_target: str,
     monkeypatch: Any,
-    tmp_path: pathlib.Path,
+    tmp_path: Path,
 ) -> None:
     """Test keras_to_flite command."""
     model = generate_keras_model()
@@ -206,37 +236,109 @@ def test_optimization_command(
     assert (tmp_path / "optimized_model.tflite").is_file()
 
 
-def test_all_tests_command(tmp_path: pathlib.Path, monkeypatch: Any) -> None:
+@pytest.mark.parametrize(
+    "extra_params, expected_exit_code, expected_opt_settings",
+    [
+        (
+            ["--optimization-type", "pruning", "--optimization-target", "0.5"],
+            0,
+            [
+                OptimizationSettings(
+                    optimization_type="pruning",
+                    optimization_target=0.5,
+                    layers_to_optimize=None,
+                )
+            ],
+        ),
+        (
+            [
+                "--optimization-type",
+                "pruning,clustering",
+                "--optimization-target",
+                "0.5,32",
+            ],
+            0,
+            [
+                OptimizationSettings(
+                    optimization_type="pruning",
+                    optimization_target=0.5,
+                    layers_to_optimize=None,
+                ),
+                OptimizationSettings(
+                    optimization_type="clustering",
+                    optimization_target=32,
+                    layers_to_optimize=None,
+                ),
+            ],
+        ),
+        (
+            [
+                "--optimization-type",
+                " pruning, clustering",
+                "--optimization-target",
+                "0.5, 32 ",
+            ],
+            0,
+            [
+                OptimizationSettings(
+                    optimization_type="pruning",
+                    optimization_target=0.5,
+                    layers_to_optimize=None,
+                ),
+                OptimizationSettings(
+                    optimization_type="clustering",
+                    optimization_target=32,
+                    layers_to_optimize=None,
+                ),
+            ],
+        ),
+        (
+            [
+                "--optimization-type",
+                "pruning,clustering",
+                "--optimization-target",
+                "0.5",
+            ],
+            1,
+            None,
+        ),
+    ],
+)
+def test_all_tests_command(
+    tmp_path: Path,
+    test_models_path: Path,
+    monkeypatch: Any,
+    extra_params: List[str],
+    expected_exit_code: int,
+    expected_opt_settings: List[OptimizationSettings],
+) -> None:
     """Test all_tests command."""
-    model = generate_keras_model()
-    temp_file = tmp_path / "test_model_optimization_command.h5"
-    save_keras_model(model, temp_file)
+    model = test_models_path / "simple_model.h5"
 
-    mock_performance_estimation(monkeypatch)
+    mock_optimize_and_compare(monkeypatch)
+    mock_operators_compatibility(monkeypatch)
+    get_optimizer_mock = mock_get_optimizer(monkeypatch)
 
-    exit_code = main(
-        [
-            "--working-dir",
-            str(tmp_path),
-            "all_tests",
-            "--device",
-            "ethos-u55",
-            str(temp_file),
-        ]
-    )
+    args = ["--working-dir", str(tmp_path), "all_tests", *extra_params, str(model)]
 
-    assert exit_code == 0
+    exit_code = main(args)
+    assert exit_code == expected_exit_code
+
+    if expected_exit_code == 0:
+        get_optimizer_mock.assert_called_once()
+        get_optimizer_mock.assert_has_calls([call(ANY, expected_opt_settings)])
 
 
 @pytest.mark.parametrize("output_format", ["plain_text", "csv", "json"])
 def test_all_tests_command_output(
-    tmp_path: pathlib.Path, monkeypatch: Any, output_format: str
+    tmp_path: Path,
+    monkeypatch: Any,
+    output_format: str,
+    test_models_path: Path,
 ) -> None:
     """Test all_tests command can produce correct output file."""
-    model = generate_keras_model()
-    temp_file = tmp_path / "test_model_optimization_command.h5"
+    model = test_models_path / "simple_model.h5"
     output = tmp_path / "report.all_command"
-    save_keras_model(model, temp_file)
 
     mock_performance_estimation(monkeypatch)
 
@@ -247,9 +349,9 @@ def test_all_tests_command_output(
             "all_tests",
             "--device",
             "ethos-u55",
-            str(temp_file),
+            str(model),
             "--output-format",
-            "json",
+            output_format,
             "--output",
             str(output),
         ]

@@ -6,9 +6,11 @@ from contextlib import ExitStack
 from contextlib import redirect_stderr
 from contextlib import redirect_stdout
 from pathlib import Path
+from typing import Any
 from typing import Callable
 from typing import Generator
 from typing import Iterable
+from typing import Optional
 from typing import Union
 
 import numpy as np
@@ -96,3 +98,12 @@ def redirect_output(logger: logging.Logger) -> Generator[None, None, None]:
         exit_stack.enter_context(redirect_stderr(stderr_to_log))  # type: ignore
 
         yield
+
+
+def is_list_of(data: Any, cls: type, elem_num: Optional[int] = None) -> bool:
+    """Check if data is a list of object of the same class."""
+    return (
+        isinstance(data, (tuple, list))
+        and all(isinstance(item, cls) for item in data)
+        and (elem_num is None or len(data) == elem_num)
+    )

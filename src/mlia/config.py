@@ -149,3 +149,19 @@ class EthosU65(EthosUConfiguration):
                 accelerator_config=f"ethos-u65-{mac}", **kwargs  # type: ignore
             ),
         )
+
+
+def get_device(**kwargs: Any) -> IPConfiguration:
+    """Get device instance based on provided params."""
+    device = kwargs.pop("device", None)
+
+    if not device:
+        raise Exception("Device is not provided")
+
+    if device.lower() == "ethos-u55":
+        return EthosU55(**kwargs)
+
+    if device.lower() == "ethos-u65":
+        return EthosU65(**kwargs)
+
+    raise Exception(f"Unsupported device: {device}")
