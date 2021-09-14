@@ -29,6 +29,10 @@ class ClusteringConfiguration(OptimizerConfiguration):
         self.optimization_target = optimization_target
         self.layers_to_optimize = layers_to_optimize
 
+    def __str__(self) -> str:
+        """Return string representation of the configuration."""
+        return f"clustering: {self.optimization_target}"
+
 
 class Clusterer(Optimizer):
     """
@@ -51,6 +55,10 @@ class Clusterer(Optimizer):
         """Init Clusterer instance."""
         self.model = model
         self.optimizer_configuration = optimizer_configuration
+
+    def optimization_config(self) -> str:
+        """Return string representation of the optimization config."""
+        return str(self.optimizer_configuration)
 
     def _setup_clustering_params(self) -> dict:
         CentroidInitialization = tfmot.clustering.keras.CentroidInitialization

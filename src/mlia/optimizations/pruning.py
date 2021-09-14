@@ -37,6 +37,10 @@ class PruningConfiguration(OptimizerConfiguration):
         self.batch_size = batch_size
         self.num_epochs = num_epochs
 
+    def __str__(self) -> str:
+        """Return string representation of the configuration."""
+        return f"pruning: {self.optimization_target}"
+
 
 class Pruner(Optimizer):
     """
@@ -66,6 +70,10 @@ class Pruner(Optimizer):
                 self.optimizer_configuration.x_train,
                 self.optimizer_configuration.y_train,
             ) = self._mock_train_data(1)
+
+    def optimization_config(self) -> str:
+        """Return string representation of the optimization config."""
+        return str(self.optimizer_configuration)
 
     def _mock_train_data(self, num_imgs: int) -> Tuple[np.array, np.array]:
         input_shape = self.model.input_shape

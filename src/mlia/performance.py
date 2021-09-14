@@ -25,8 +25,6 @@ def collect_performance_metrics(
     working_dir: Optional[str] = None,
 ) -> PerformanceMetrics:
     """Collect performance metrics."""
-    LOGGER.info("Evaluating performance ...")
-
     if not isinstance(model, TFLiteModel):
         raise ConfigurationError("Unsupported model configuration")
 

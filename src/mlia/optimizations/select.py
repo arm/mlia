@@ -6,6 +6,7 @@ from typing import Optional
 from typing import Union
 
 import tensorflow as tf
+from mlia.exceptions import ConfigurationError
 from mlia.optimizations.clustering import Clusterer
 from mlia.optimizations.clustering import ClusteringConfiguration
 from mlia.optimizations.common import Optimizer
@@ -34,6 +35,10 @@ class MultiStageOptimizer(Optimizer):
         """Init MultiStageOptimizer instance."""
         self.model = model
         self.optimizations = optimizations
+
+    def optimization_config(self) -> str:
+        """Return string representation of the optimization config."""
+        return " - ".join(str(opt) for opt in self.optimizations)
 
     def get_model(self) -> tf.keras.Model:
         """Return optimized model."""
@@ -65,7 +70,7 @@ def get_optimizer(
     ):
         return _get_optimizer(model, config)  # type: ignore
 
-    raise Exception(f"Unknown optimization configuration {config}")
+    raise ConfigurationError(f"Unknown optimization configuration {config}")
 
 
 def _get_optimizer(
@@ -107,12 +112,12 @@ def _get_optimizer_configuration(
         if optimization_target == int(optimization_target):
             return ClusteringConfiguration(int(optimization_target), layers_to_optimize)
 
-        raise Exception(
+        raise ConfigurationError(
             "Optimization target should be a positive integer. "
             f"Optimization target provided: {optimization_target}"
         )
 
-    raise Exception(f"Unsupported optimization type: {optimization_type}")
+    raise ConfigurationError(f"Unsupported optimization type: {optimization_type}")
 
 
 def _check_optimizer_params(
@@ -120,7 +125,7 @@ def _check_optimizer_params(
 ) -> None:
     """Check optimizer params."""
     if not optimization_target:
-        raise Exception("Optimization target is not provided")
+        raise ConfigurationError("Optimization target is not provided")
 
     if not optimization_type:
-        raise Exception("Optimization type is not provided")
+        raise ConfigurationError("Optimization type is not provided")

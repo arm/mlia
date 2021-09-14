@@ -75,7 +75,11 @@ def compare_metrics(
 
 def optimize_model(optimizer: Optimizer) -> tf.keras.Model:
     """Optimize model and return the result."""
+    LOGGER.info(f"Applying optimizations ({optimizer.optimization_config()}) ...")
+
     optimizer.apply_optimization()
     optimized_keras_model = optimizer.get_model()
+
+    LOGGER.info("Done")
 
     return optimized_keras_model

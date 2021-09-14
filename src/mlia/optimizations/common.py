@@ -1,6 +1,7 @@
 # Copyright 2021, Arm Ltd.
 """Common items for the optimizations module."""
 from abc import ABC
+from abc import abstractmethod
 from enum import Enum
 
 import tensorflow as tf
@@ -13,11 +14,17 @@ class OptimizerConfiguration(ABC):
 class Optimizer(ABC):
     """Abstract class for the optimizer."""
 
+    @abstractmethod
     def get_model(self) -> tf.keras.Model:
-        """Abstract method to return the model instance from the clusterer."""
+        """Abstract method to return the model instance from the optimizer."""
 
+    @abstractmethod
     def apply_optimization(self) -> None:
         """Abstract method to apply optimization to the model."""
+
+    @abstractmethod
+    def optimization_config(self) -> str:
+        """Return string representation of the optimization config."""
 
 
 class OptimizationType(Enum):
