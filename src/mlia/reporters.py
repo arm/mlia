@@ -407,7 +407,11 @@ def report_operators(ops: List[Operator]) -> Report:
             alias="supported_on_npu",
             fmt=Format(wrap_width=20),
         ),
-        Column("Reason", alias="reason"),
+        Column(
+            "Reasons",
+            alias="reasons",
+            fmt=Format(wrap_width=40),
+        ),
     ]
 
     rows = [
@@ -423,17 +427,14 @@ def report_operators(ops: List[Operator]) -> Report:
                     Column(
                         "Reason",
                         alias="reason",
-                        fmt=Format(wrap_width=30),
-                    ),
-                    Column(
-                        "Description",
-                        alias="description",
-                        fmt=Format(wrap_width=40),
-                    ),
+                        fmt=Format(wrap_width=50),
+                    )
                 ],
                 rows=[
-                    (reason, description)
-                    for reason, description in op.run_on_npu.reasons
+                    ("* " + item,)
+                    for reason in op.run_on_npu.reasons
+                    for item in reason
+                    if item
                 ],
                 name="Reasons",
             ),
