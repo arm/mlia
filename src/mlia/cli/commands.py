@@ -1,6 +1,7 @@
 # Copyright 2021, Arm Ltd.
 """CLI commands module."""
 import logging
+import os
 import sys
 from pathlib import Path
 from typing import Any
@@ -160,6 +161,10 @@ def performance(
     **device_args: Any,
 ) -> None:
     """Print model's performance stats."""
+    if os.path.splitext(model)[1] != ".tflite":
+        raise ValueError(
+            "The input model format for the performance estimation must be tflite!"
+        )
     tflite_model, device = TFLiteModel(model), _get_device(**device_args)
 
     with get_reporter(output_format, output) as reporter:

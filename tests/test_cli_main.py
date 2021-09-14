@@ -286,6 +286,22 @@ args_ops = [
         ],
         True,
         "Mocking performance estimation",
+        0,
+        "simple_3_layers_model.tflite",
+    ],
+    [
+        [
+            "performance",
+            "--device",
+            "ethos-u55",
+            "--mac",
+            "256",
+            "--verbose",
+        ],
+        True,
+        "Traceback",
+        1,
+        "xyz",
     ],
     [
         [
@@ -298,64 +314,65 @@ args_ops = [
         ],
         False,
         "mlia.tools.vela",
+        0,
+        "simple_3_layers_model.tflite",
+    ],
+    [
+        [
+            "optimization",
+            "--device",
+            "ethos-u55",
+            "--optimization-type",
+            "pruning",
+            "--optimization-target",
+            "0.5",
+            "--mac",
+            "256",
+            "--verbose",
+        ],
+        False,
+        "tensorflow - Compiled the loaded model",
+        0,
+        "simple_model.h5",
+    ],
+    [
+        [
+            "all",
+            "--device",
+            "ethos-u55",
+            "--mac",
+            "256",
+            "--verbose",
+        ],
+        False,
+        "tensorflow - Compiled the loaded model",
+        0,
+        "simple_model.h5",
     ],
 ]
 
 
-@pytest.mark.parametrize("args_main, mock_perf_verbose, expected_output", args_ops)
-def test_ops_perf_command_verbose(
+@pytest.mark.parametrize(
+    "args_main, mock_perf_verbose, expected_output, expected_exit_code, model_name",
+    args_ops,
+)
+def test_perf_ops_opt_all_command_verbose(
     args_main: List[str],
     mock_perf_verbose: bool,
     expected_output: str,
+    expected_exit_code: int,
     test_models_path: Path,
+    model_name: str,
     monkeypatch: Any,
     capfd: Any,
 ) -> None:
-    """Test ops commands in verbose mode."""
-    model = test_models_path / "simple_3_layers_model.tflite"
+    """Test all four commands in verbose mode."""
+    model = test_models_path / model_name
     mock_performance_estimation(monkeypatch, mock_perf_verbose)
 
     exit_code = main(args_main + [str(model)])
-    assert exit_code == 0
-    out, _ = capfd.readouterr()
+    assert exit_code == expected_exit_code
 
+    out, _ = capfd.readouterr()
     assert expected_output in out
-    teardown_function()
-
-
-args_opt_all = [
-    [
-        "optimization",
-        "--device",
-        "ethos-u55",
-        "--optimization-type",
-        "pruning",
-        "--optimization-target",
-        "0.5",
-        "--mac",
-        "256",
-        "--verbose",
-    ],
-    ["all", "--device", "ethos-u55", "--mac", "256", "--verbose"],
-]
-
-
-@pytest.mark.parametrize("args", args_opt_all)
-def test_opt_all_command_verbose(
-    args: List[str],
-    tmp_path: Path,
-    capfd: Any,
-    monkeypatch: Any,
-) -> None:
-    """Test opt and all commands in verbose mode."""
-    model = generate_keras_model()
-    temp_file = tmp_path / "test_model_optimization_command.h5"
-    save_keras_model(model, temp_file)
-
-    mock_performance_estimation(monkeypatch)
-
-    exit_code = main(args + [str(temp_file)])
-    assert exit_code == 0
-    out, _ = capfd.readouterr()
-    assert "tensorflow - Compiled the loaded model" in out
     teardown_function()
