@@ -1,7 +1,6 @@
 # Copyright 2021, Arm Ltd.
 """Module for the CLI options."""
 import argparse
-import sys
 from typing import Any
 from typing import Dict
 from typing import List
@@ -141,7 +140,6 @@ def add_output_options(parser: argparse.ArgumentParser) -> None:
     )
     output_group.add_argument(
         "--output",
-        default=sys.stdout,
         help=(
             "Name of the file where report will be saved. If no file "
             "name is specified, the report will be displayed on the standard output"

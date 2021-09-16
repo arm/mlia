@@ -80,7 +80,12 @@ def setup_logging(logs_dir: str, verbose: bool = False) -> None:
             stdout_handler.setFormatter(logging.Formatter("%(name)s - %(message)s"))
             logger.addHandler(stdout_handler)
 
-    for logger_name in ["mlia.cli", "mlia.performance", "mlia.operators"]:
+    for logger_name in [
+        "mlia.cli",
+        "mlia.performance",
+        "mlia.operators",
+        "mlia.reporters",
+    ]:
         logger = logging.getLogger(logger_name)
         logger.setLevel(logging.INFO)
         logger.addHandler(logging.StreamHandler(sys.stdout))

@@ -18,10 +18,7 @@ from mlia.metrics import MemoryUsage
 from mlia.metrics import NPUCycles
 from mlia.metrics import PerformanceMetrics
 from mlia.optimizations.select import OptimizationSettings
-from mlia.utils.general import save_keras_model
 from mlia.utils.proc import working_directory
-
-from tests.utils.generate_keras_model import generate_keras_model
 
 
 def clear_loggers() -> None:
@@ -34,7 +31,11 @@ def clear_loggers() -> None:
 
 
 def teardown_function() -> None:
-    """Call the function to close log handlers for pytest."""
+    """Perform action after test completition.
+
+    This function launched automatically by pytest after each test
+    in this module.
+    """
     clear_loggers()
 
 
@@ -122,31 +123,16 @@ def test_performance_custom_vela_init(
     assert exit_code == 0
 
 
-@pytest.mark.parametrize(
-    "quantize",
-    [True, False],
-)
-def test_keras_to_tflite_command(quantize: bool, tmp_path: Path) -> None:
+@pytest.mark.parametrize("extra_params", [[], ["--quantize"]])
+def test_keras_to_tflite_command(
+    test_models_path: Path, extra_params: List[str], tmp_path: Path
+) -> None:
     """Test keras_to_flite command."""
-    model = generate_keras_model()
-    temp_file = tmp_path / "test_keras_to_tflite_command.h5"
-    save_keras_model(model, temp_file)
+    model = test_models_path / "simple_model.h5"
 
-    if quantize:
-        exit_code = main(
-            [
-                "keras_to_tflite",
-                str(temp_file),
-                "--quantize",
-                "--out-path",
-                str(tmp_path),
-            ]
-        )
-    else:
-        exit_code = main(
-            ["keras_to_tflite", str(temp_file), "--out-path", str(tmp_path)]
-        )
-
+    exit_code = main(
+        ["keras_to_tflite", str(model), *extra_params, "--out-path", str(tmp_path)]
+    )
     assert exit_code == 0
 
 
@@ -202,6 +188,7 @@ def mock_performance_estimation(monkeypatch: Any, verbose: bool = False) -> None
     ],
 )
 def test_optimization_command(
+    test_models_path: Path,
     device: str,
     optimization_type: str,
     optimization_target: str,
@@ -209,10 +196,7 @@ def test_optimization_command(
     tmp_path: Path,
 ) -> None:
     """Test keras_to_flite command."""
-    model = generate_keras_model()
-    temp_file = tmp_path / "test_optimization_command.h5"
-    save_keras_model(model, temp_file)
-
+    model = test_models_path / "simple_model.h5"
     mock_performance_estimation(monkeypatch)
 
     exit_code = main(
@@ -220,7 +204,7 @@ def test_optimization_command(
             "--working-dir",
             str(tmp_path),
             "optimization",
-            str(temp_file),
+            str(model),
             "--device",
             device,
             "--optimization-type",
@@ -477,4 +461,3 @@ def test_perf_ops_opt_all_command_verbose(
 
     out, _ = capfd.readouterr()
     assert expected_output in out
-    teardown_function()

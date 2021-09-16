@@ -3,7 +3,7 @@
 import csv
 import itertools
 import json
-import sys
+import logging
 from abc import ABC
 from abc import abstractmethod
 from contextlib import contextmanager
@@ -14,12 +14,14 @@ from textwrap import fill
 from textwrap import indent
 from typing import Any
 from typing import Callable
+from typing import cast
 from typing import Collection
 from typing import Dict
 from typing import Generator
 from typing import Iterable
 from typing import List
 from typing import Optional
+from typing import TextIO
 from typing import Tuple
 from typing import Union
 
@@ -33,7 +35,11 @@ from mlia.metadata import Operator
 from mlia.metadata import Operators
 from mlia.metrics import PerformanceMetrics
 from mlia.utils.general import is_list_of
+from mlia.utils.general import LoggerWriter
 from tabulate import tabulate
+
+
+LOGGER = logging.getLogger("mlia.reporters")
 
 
 class Report(ABC):
@@ -687,7 +693,8 @@ class CompoundFormatter:
 
 def json_reporter(report: Report, output: FileLike, **kwargs: Any) -> None:
     """Produce report in json format."""
-    json.dump(report.to_json(**kwargs), output, indent=4)
+    json_str = json.dumps(report.to_json(**kwargs), indent=4)
+    print(json_str, file=output)
 
 
 def text_reporter(report: Report, output: FileLike, **kwargs: Any) -> None:
@@ -705,7 +712,7 @@ def report(
     data: Any,
     formatter: Optional[Callable[[Any], Report]] = None,
     fmt: OutputFormat = "plain_text",
-    output: PathOrFileLike = sys.stdout,
+    output: Optional[PathOrFileLike] = None,
     **kwargs: Any,
 ) -> None:
     """Produce report based on provided data."""
@@ -717,6 +724,9 @@ def report(
     if not formatter:
         # if no formatter provided try to find one based on the type of data
         formatter = find_appropriate_formatter(data)
+
+    if output is None:
+        output = cast(TextIO, LoggerWriter(LOGGER, logging.INFO))
 
     with ExitStack() as exit_stack:
         if isinstance(output, (str, Path)):
@@ -784,12 +794,12 @@ class Reporter:
         )
         self.data.append((data_item, formatter))
 
-    def generate_report(self, output: PathOrFileLike = sys.stdout) -> None:
+    def generate_report(self, output: Optional[PathOrFileLike]) -> None:
         """Generate report."""
         already_printed = (
             self.print_as_submitted
             and self.output_format == "plain_text"
-            and output == sys.stdout
+            and output is None
         )
         if not self.data or already_printed:
             return
@@ -805,7 +815,7 @@ class Reporter:
 
 @contextmanager
 def get_reporter(
-    output_format: OutputFormat, output: PathOrFileLike
+    output_format: OutputFormat, output: Optional[PathOrFileLike]
 ) -> Generator[Reporter, None, None]:
     """Get reporter and generate report."""
     reporter = Reporter(output_format)

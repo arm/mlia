@@ -2,7 +2,6 @@
 """CLI commands module."""
 import logging
 import os
-import sys
 from pathlib import Path
 from typing import Any
 from typing import List
@@ -47,7 +46,7 @@ def all_tests(
     optimization_type: str,
     optimization_target: str,
     output_format: OutputFormat = "plain_text",
-    output: PathOrFileLike = sys.stdout,
+    output: Optional[PathOrFileLike] = None,
     working_dir: Optional[str] = None,
     **device_args: Any,
 ) -> None:
@@ -123,7 +122,7 @@ def all_tests(
 def operators(
     model: Optional[str] = None,
     output_format: OutputFormat = "plain_text",
-    output: PathOrFileLike = sys.stdout,
+    output: Optional[PathOrFileLike] = None,
     supported_ops_report: bool = False,
     **device_args: Any,
 ) -> None:
@@ -164,7 +163,7 @@ def operators(
 def performance(
     model: str,
     output_format: OutputFormat = "plain_text",
-    output: PathOrFileLike = sys.stdout,
+    output: Optional[PathOrFileLike] = None,
     working_dir: Optional[str] = None,
     **device_args: Any,
 ) -> None:
@@ -219,7 +218,7 @@ def optimization(
     optimization_target: Union[int, float],
     layers_to_optimize: Optional[List[str]] = None,
     output_format: OutputFormat = "plain_text",
-    output: PathOrFileLike = sys.stdout,
+    output: Optional[PathOrFileLike] = None,
     working_dir: Optional[str] = None,
     **device_args: Any,
 ) -> None:
