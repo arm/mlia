@@ -9,6 +9,8 @@ from typing import Optional
 from typing import Union
 
 import tensorflow as tf
+from mlia.utils.general import convert_to_tflite
+from mlia.utils.general import save_tflite_model
 from typing_extensions import Literal
 
 
@@ -28,6 +30,15 @@ class KerasModel(ModelConfiguration):
     def get_keras_model(self) -> tf.keras.Model:
         """Return associated keras model."""
         return tf.keras.models.load_model(self.model_path)
+
+    def convert_to_tflite(
+        self, tflite_model_path: Union[str, Path], quantized: bool = False
+    ) -> "TFLiteModel":
+        """Convert model to TFLite format."""
+        converted_model = convert_to_tflite(self.get_keras_model(), quantized)
+        save_tflite_model(converted_model, tflite_model_path)
+
+        return TFLiteModel(tflite_model_path)
 
 
 class TFLiteModel(ModelConfiguration):

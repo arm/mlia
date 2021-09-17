@@ -233,7 +233,7 @@ def get_device_opts(device_args: Optional[Dict]) -> List[str]:
     ]
 
 
-def parse_optimizer_params(
+def parse_optimization_parameters(
     optimization_type: str, optimization_target: str, sep: str = ","
 ) -> List[Tuple[str, float]]:
     """Parse provided optimization parameters."""

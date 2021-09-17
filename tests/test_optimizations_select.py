@@ -2,6 +2,8 @@
 """Tests for module select."""
 from contextlib import ExitStack as does_not_raise
 from typing import Any
+from typing import List
+from typing import Tuple
 
 import pytest
 from mlia.optimizations.clustering import Clusterer
@@ -124,3 +126,44 @@ def test_get_optimizer(config: Any, expected_error: Any, expected_type: type) ->
     with expected_error:
         optimizer = get_optimizer(model, config)
         assert isinstance(optimizer, expected_type)
+
+
+@pytest.mark.parametrize(
+    "params, expected_result",
+    [
+        (
+            [],
+            [],
+        ),
+        (
+            [("pruning", 0.5)],
+            [
+                OptimizationSettings(
+                    optimization_type="pruning",
+                    optimization_target=0.5,
+                    layers_to_optimize=None,
+                )
+            ],
+        ),
+        (
+            [("pruning", 0.5), ("clustering", 32)],
+            [
+                OptimizationSettings(
+                    optimization_type="pruning",
+                    optimization_target=0.5,
+                    layers_to_optimize=None,
+                ),
+                OptimizationSettings(
+                    optimization_type="clustering",
+                    optimization_target=32,
+                    layers_to_optimize=None,
+                ),
+            ],
+        ),
+    ],
+)
+def test_optimization_settings_create_from(
+    params: List[Tuple[str, float]], expected_result: List[OptimizationSettings]
+) -> None:
+    """Test creating settings from parsed params."""
+    assert OptimizationSettings.create_from(params) == expected_result

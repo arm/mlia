@@ -1,9 +1,12 @@
 # Copyright 2021, Arm Ltd.
 """Tests for config module."""
+from pathlib import Path
+
 import pytest
 from mlia.config import CompilerOptions
 from mlia.config import EthosU55
 from mlia.config import EthosU65
+from mlia.config import KerasModel
 
 
 def test_compiler_options_default_init() -> None:
@@ -71,3 +74,15 @@ def test_ethosu65_init_configuration() -> None:
         "tensor_allocator: HillClimb, cpu_tensor_alignment: 16, "
         "optimization_strategy: Performance, output_dir: None"
     )
+
+
+def test_convert_keras_to_tflite(test_models_path: Path, tmp_path: Path) -> None:
+    """Test Keras to TFLite conversion."""
+    model = test_models_path / "simple_model.h5"
+    keras_model = KerasModel(str(model))
+
+    tflite_model_path = tmp_path / "test.tflite"
+    keras_model.convert_to_tflite(tflite_model_path)
+
+    assert tflite_model_path.is_file()
+    assert tflite_model_path.stat().st_size > 0

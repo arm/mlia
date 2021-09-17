@@ -125,7 +125,7 @@ class RunningCommand:
         close(self.process.stderr)
 
     def wait(self, redirect_output: bool = False) -> None:
-        """Redirect process output to stdout and wait for completition."""
+        """Redirect process output to stdout and wait for completion."""
         if redirect_output:
             for line in self.stdout():
                 print(line, end="")

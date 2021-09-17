@@ -3,9 +3,11 @@
 from typing import List
 from typing import NamedTuple
 from typing import Optional
+from typing import Tuple
 from typing import Union
 
 import tensorflow as tf
+from mlia.config import KerasModel
 from mlia.exceptions import ConfigurationError
 from mlia.optimizations.clustering import Clusterer
 from mlia.optimizations.clustering import ClusteringConfiguration
@@ -22,6 +24,20 @@ class OptimizationSettings(NamedTuple):
     optimization_type: str
     optimization_target: Union[int, float]
     layers_to_optimize: Optional[List[str]]
+
+    @staticmethod
+    def create_from(
+        optimizer_params: List[Tuple[str, float]]
+    ) -> List["OptimizationSettings"]:
+        """Create optimization settings from the provided parameters."""
+        return [
+            OptimizationSettings(
+                optimization_type=opt_type,
+                optimization_target=opt_target,
+                layers_to_optimize=None,
+            )
+            for opt_type, opt_target in optimizer_params
+        ]
 
 
 class MultiStageOptimizer(Optimizer):
@@ -53,12 +69,15 @@ class MultiStageOptimizer(Optimizer):
 
 
 def get_optimizer(
-    model: tf.keras.Model,
+    model: Union[tf.keras.Model, KerasModel],
     config: Union[
         OptimizerConfiguration, OptimizationSettings, List[OptimizationSettings]
     ],
 ) -> Optimizer:
     """Get optimizer for provided configuration."""
+    if isinstance(model, KerasModel):
+        model = model.get_keras_model()
+
     if isinstance(config, PruningConfiguration):
         return Pruner(model, config)
 

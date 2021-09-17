@@ -20,20 +20,13 @@ from mlia.metrics import PerformanceMetrics
 from mlia.optimizations.select import OptimizationSettings
 from mlia.utils.proc import working_directory
 
-
-def clear_loggers() -> None:
-    """Close the log handlers."""
-    for _, logger in logging.Logger.manager.loggerDict.items():  # type: ignore
-        if not isinstance(logger, logging.PlaceHolder):
-            for handler in logger.handlers:
-                handler.close()
-                logger.removeHandler(handler)
+from tests.utils.logging import clear_loggers
 
 
 def teardown_function() -> None:
-    """Perform action after test completition.
+    """Perform action after test completion.
 
-    This function launched automatically by pytest after each test
+    This function is launched automatically by pytest after each test
     in this module.
     """
     clear_loggers()
@@ -73,7 +66,9 @@ def test_operators_command_gen_supported_report(
 ) -> None:
     """Test supported operators report generation."""
     with working_directory(tmp_path):
-        main(args)
+        exit_code = main(args)
+
+        assert exit_code == 0
 
         md_file = tmp_path / "SUPPORTED_OPS.md"
         assert md_file.is_file()

@@ -15,6 +15,7 @@ from mlia.cli.commands import keras_to_tflite
 from mlia.cli.commands import operators
 from mlia.cli.commands import optimization
 from mlia.cli.commands import performance
+from mlia.cli.logging import setup_logging
 from mlia.cli.options import add_custom_supported_operators_options
 from mlia.cli.options import add_debug_options
 from mlia.cli.options import add_device_options
@@ -42,53 +43,6 @@ Supported targets:
 
 ARM {datetime.datetime.now():%Y} Copyright Reserved
 """
-
-
-def setup_logging(logs_dir: str, verbose: bool = False) -> None:
-    """Set up loggers."""
-    logs_dir_path = Path(logs_dir)
-    if not logs_dir_path.exists():
-        logs_dir_path.mkdir()
-
-    default_formatter = logging.Formatter(
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    )
-
-    now = datetime.datetime.now()
-    timestamp = f"{now:%Y%m%d_%H%M%S}"
-
-    for logger_name in [
-        "mlia.tools.aiet",
-        "mlia.tools.vela",
-        "tensorflow",
-        "py.warnings",
-    ]:
-        module_name = logger_name.split(".")[-1]
-
-        handler = logging.FileHandler(
-            logs_dir_path / f"{timestamp}_{module_name}.log", delay=True
-        )
-        handler.setLevel(logging.DEBUG)
-        handler.setFormatter(default_formatter)
-
-        logger = logging.getLogger(logger_name)
-        logger.setLevel(logging.DEBUG)
-        logger.addHandler(handler)
-
-        if verbose:
-            stdout_handler = logging.StreamHandler(sys.stdout)
-            stdout_handler.setFormatter(logging.Formatter("%(name)s - %(message)s"))
-            logger.addHandler(stdout_handler)
-
-    for logger_name in [
-        "mlia.cli",
-        "mlia.performance",
-        "mlia.operators",
-        "mlia.reporters",
-    ]:
-        logger = logging.getLogger(logger_name)
-        logger.setLevel(logging.INFO)
-        logger.addHandler(logging.StreamHandler(sys.stdout))
 
 
 def init_commands(parser: argparse.ArgumentParser) -> None:
@@ -151,8 +105,11 @@ def init_commands(parser: argparse.ArgumentParser) -> None:
 
     for command in commands:
         func, aliases, opt_groups = command
+        assert func.__doc__, "Command function does not have a docstring"
+        first_doc_line = func.__doc__.splitlines()[0]
+
         command_parser = subparsers.add_parser(
-            func.__name__, aliases=aliases, help=func.__doc__
+            func.__name__, aliases=aliases, help=first_doc_line
         )
         command_parser.set_defaults(func=func)
         for opt_group in opt_groups:

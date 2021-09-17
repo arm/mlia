@@ -183,12 +183,12 @@ class AIETRunner:
         return ["aiet", subcommand] + [p for p in params]
 
     def _execute(self, command: List[str]) -> Tuple[int, bytes, bytes]:
-        LOGGER.debug(f"Execute command {' '.join(command)}")
+        LOGGER.debug("Execute command %s", " ".join(command))
         return self.executor.execute(command)
 
     def _submit(self, command: List[str]) -> RunningCommand:
         """Submit command for the execution."""
-        LOGGER.debug(f"Submit command {' '.join(command)}")
+        LOGGER.debug("Submit command %s", " ".join(command))
         return self.executor.submit(command)
 
     def _execute_and_parse(self, command: List[str]) -> Any:
@@ -300,7 +300,7 @@ class GenericInferenceRunnerU65(GenericInferenceRunner):
             )
 
         random_input_file_path: str = self.context_stack.enter_context(temp_file())
-        LOGGER.debug(f"Save random input into {random_input_file_path}")
+        LOGGER.debug("Save random input into %s", random_input_file_path)
         save_random_input(input[0]["shape"], input[0]["dtype"], random_input_file_path)
 
         deploy_params = [

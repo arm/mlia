@@ -165,7 +165,7 @@ class VelaCompiler:
 
     def read_model(self, model: Union[str, Path]) -> Model:
         """Read model."""
-        LOGGER.debug(f"Read model {model}")
+        LOGGER.debug("Read model %s", model)
 
         nng = self._read_model(model)
         return Model(nng)
@@ -266,8 +266,9 @@ def estimate_performance(
     Logic for this function comes from vela module stats_writer.py
     """
     LOGGER.debug(
-        f"Estimate performance for the model {model.model_path} "
-        f"on device {device.ip_class}"
+        "Estimate performance for the model %s on device %s",
+        model.model_path,
+        device.ip_class,
     )
 
     vela_compiler = get_vela_compiler(device)
@@ -285,12 +286,12 @@ def optimize_model(
     model: TFLiteModel, device: EthosUConfiguration, output_filename: str
 ) -> None:
     """Optimize model and return it's path after optimization."""
-    LOGGER.debug(f"Optimize model {model.model_path} for device {device.ip_class}")
+    LOGGER.debug("Optimize model %s for device %s", model.model_path, device.ip_class)
 
     vela_compiler = get_vela_compiler(device)
     optimized_model = vela_compiler.compile_model(model.model_path)
 
-    LOGGER.debug(f"Save optimized model into {output_filename}")
+    LOGGER.debug("Save optimized model into %s", output_filename)
     optimized_model.save(output_filename)
 
 
@@ -330,7 +331,7 @@ def _performance_metrics(optimized_model: OptimizedModel) -> PerformanceMetrics:
 
 def supported_operators(model: TFLiteModel, device: EthosUConfiguration) -> Operators:
     """Return list of model's operators."""
-    LOGGER.debug(f"Check supported operators for the model {model.model_path}")
+    LOGGER.debug("Check supported operators for the model %s", model.model_path)
 
     vela_compiler = get_vela_compiler(device)
     initial_model = vela_compiler.read_model(model.model_path)

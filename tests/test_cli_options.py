@@ -4,7 +4,7 @@ from contextlib import ExitStack as does_not_raise
 from typing import Any
 
 import pytest
-from mlia.cli.options import parse_optimizer_params
+from mlia.cli.options import parse_optimization_parameters
 
 
 @pytest.mark.parametrize(
@@ -56,13 +56,13 @@ from mlia.cli.options import parse_optimizer_params
         ),
     ],
 )
-def test_parse_optimizer_params(
+def test_parse_optimization_parameters(
     optimization_type: str,
     optimization_target: str,
     expected_error: Any,
     expected_result: Any,
 ) -> None:
-    """Test function parse_optimizer_params."""
+    """Test function parse_optimization_parameters."""
     with expected_error:
-        result = parse_optimizer_params(optimization_type, optimization_target)
+        result = parse_optimization_parameters(optimization_type, optimization_target)
         assert result == expected_result
