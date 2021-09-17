@@ -47,9 +47,7 @@ ARM {datetime.datetime.now():%Y} Copyright Reserved
 
 def init_commands(parser: argparse.ArgumentParser) -> None:
     """Init cli subcommands."""
-    subparsers = parser.add_subparsers(
-        title="Commands", dest="command", metavar="<command>"
-    )
+    subparsers = parser.add_subparsers(title="Commands", dest="command")
     subparsers.required = True
 
     commands = [
@@ -168,6 +166,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         help="Show this help message and exit",
     )
     parser.add_argument(
+        "-v",
         "--version",
         action="version",
         version=f"%(prog)s { __version__}",
