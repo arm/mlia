@@ -6,7 +6,9 @@ import logging
 import sys
 from inspect import signature
 from pathlib import Path
+from typing import Callable
 from typing import List
+from typing import NamedTuple
 from typing import Optional
 
 from mlia import __version__
@@ -45,13 +47,40 @@ ARM {datetime.datetime.now():%Y} Copyright Reserved
 """
 
 
-def init_commands(parser: argparse.ArgumentParser) -> None:
-    """Init cli subcommands."""
-    subparsers = parser.add_subparsers(title="Commands", dest="command")
-    subparsers.required = True
+class CommandInfo(NamedTuple):
+    """Command description."""
 
-    commands = [
-        (
+    func: Callable
+    aliases: List[str]
+    opt_groups: List[Callable[[argparse.ArgumentParser], None]]
+    is_default: bool
+
+    @property
+    def command_name(self) -> str:
+        """Return command name."""
+        return self.func.__name__
+
+    @property
+    def command_name_and_aliases(self) -> List[str]:
+        """Return list of command name and aliases."""
+        return [self.command_name, *self.aliases]
+
+    @property
+    def command_help(self) -> str:
+        """Return help message for the command."""
+        assert self.func.__doc__, "Command function does not have a docstring"
+        func_help = self.func.__doc__.splitlines()[0].rstrip(".")
+
+        if self.is_default:
+            func_help = f"{func_help} [default]"
+
+        return func_help
+
+
+def get_commands() -> List[CommandInfo]:
+    """Return commands configuration."""
+    return [
+        CommandInfo(
             all_tests,
             ["all"],
             [
@@ -61,8 +90,9 @@ def init_commands(parser: argparse.ArgumentParser) -> None:
                 add_output_options,
                 add_debug_options,
             ],
+            True,
         ),
-        (
+        CommandInfo(
             operators,
             ["ops"],
             [
@@ -72,8 +102,9 @@ def init_commands(parser: argparse.ArgumentParser) -> None:
                 add_custom_supported_operators_options,
                 add_debug_options,
             ],
+            False,
         ),
-        (
+        CommandInfo(
             performance,
             ["perf"],
             [
@@ -82,8 +113,9 @@ def init_commands(parser: argparse.ArgumentParser) -> None:
                 add_output_options,
                 add_debug_options,
             ],
+            False,
         ),
-        (
+        CommandInfo(
             optimization,
             ["opt"],
             [
@@ -93,25 +125,52 @@ def init_commands(parser: argparse.ArgumentParser) -> None:
                 add_output_options,
                 add_debug_options,
             ],
+            False,
         ),
-        (
+        CommandInfo(
             keras_to_tflite,
             ["k2l"],
             [add_keras_model_options, add_quantize_option, add_out_path],
+            False,
         ),
     ]
 
-    for command in commands:
-        func, aliases, opt_groups = command
-        assert func.__doc__, "Command function does not have a docstring"
-        first_doc_line = func.__doc__.splitlines()[0]
 
+def get_default_command() -> Optional[str]:
+    """Get name of the default command."""
+    commands = get_commands()
+
+    marked_as_default = [cmd.command_name for cmd in commands if cmd.is_default]
+    assert len(marked_as_default) <= 1, "Only one command could be marked as default"
+
+    return next(iter(marked_as_default), None)
+
+
+def get_possible_command_names() -> List[str]:
+    """Get all possible command names including aliases."""
+    return [
+        name_or_alias
+        for cmd in get_commands()
+        for name_or_alias in cmd.command_name_and_aliases
+    ]
+
+
+def init_commands(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
+    """Init cli subcommands."""
+    subparsers = parser.add_subparsers(title="Commands", dest="command")
+    subparsers.required = True
+
+    for command in get_commands():
         command_parser = subparsers.add_parser(
-            func.__name__, aliases=aliases, help=first_doc_line
+            command.command_name,
+            aliases=command.aliases,
+            help=command.command_help,
         )
-        command_parser.set_defaults(func=func)
-        for opt_group in opt_groups:
+        command_parser.set_defaults(func=command.func)
+        for opt_group in command.opt_groups:
             opt_group(command_parser)
+
+    return parser
 
 
 def run_command(args: argparse.Namespace) -> int:
@@ -151,11 +210,25 @@ def run_command(args: argparse.Namespace) -> int:
     return result
 
 
-def main(argv: Optional[List[str]] = None) -> int:
-    """Entry point of the application."""
+def init_common_parser() -> argparse.ArgumentParser:
+    """Init common parser."""
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument(
+        "--working-dir",
+        default=f"{Path.cwd() / 'mlia_output'}",
+        help="Path to the directory where MLIA will store logs, "
+        "models, etc. (default: %(default)s)",
+    )
+
+    return parser
+
+
+def init_subcommand_parser(parent: argparse.ArgumentParser) -> argparse.ArgumentParser:
+    """Init subcommand parser."""
     parser = argparse.ArgumentParser(
         description=INFO_MESSAGE,
         formatter_class=argparse.RawDescriptionHelpFormatter,
+        parents=[parent],
         add_help=False,
     )
     parser.add_argument(
@@ -172,15 +245,33 @@ def main(argv: Optional[List[str]] = None) -> int:
         version=f"%(prog)s { __version__}",
         help="Show program's version number and exit",
     )
-    parser.add_argument(
-        "--working-dir",
-        default=f"{Path.cwd() / 'mlia_output'}",
-        help="Path to the directory where MLIA will store logs, "
-        "models, etc. (default: %(default)s)",
-    )
-    init_commands(parser)
 
-    args = parser.parse_args(argv)
+    return parser
+
+
+def add_default_command_if_needed(args: List[str]) -> None:
+    """Add default command to the list of the arguments if needed."""
+    default_command = get_default_command()
+
+    if default_command and len(args) > 0:
+        commands = get_possible_command_names()
+        help_or_version = ["-h", "--help", "-v", "--version"]
+
+        command_is_missing = args[0] not in [*commands, *help_or_version]
+        if command_is_missing:
+            args.insert(0, default_command)
+
+
+def main(argv: Optional[List[str]] = None) -> int:
+    """Entry point of the application."""
+    common_parser = init_common_parser()
+    subcommand_parser = init_subcommand_parser(common_parser)
+    init_commands(subcommand_parser)
+
+    common_args, subcommand_args = common_parser.parse_known_args(argv)
+    add_default_command_if_needed(subcommand_args)
+
+    args = subcommand_parser.parse_args(subcommand_args, common_args)
     return run_command(args)
 
 

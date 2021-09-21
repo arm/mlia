@@ -1,16 +1,19 @@
 # Copyright 2021, Arm Ltd.
 """Tests for main module."""
+import argparse
 import json
 import logging
 import sys
 from pathlib import Path
 from typing import Any
+from typing import Callable
 from typing import List
 from unittest.mock import ANY
 from unittest.mock import call
 from unittest.mock import MagicMock
 
 import pytest
+from mlia.cli.main import CommandInfo
 from mlia.cli.main import main
 from mlia.config import EthosU55
 from mlia.metadata import Operators
@@ -51,6 +54,89 @@ def test_operators_command(test_models_path: Path) -> None:
 
     exit_code = main(["operators", str(model)])
     assert exit_code == 0
+
+
+def test_command_info() -> None:
+    """Test properties of CommandInfo object."""
+
+    def super_command() -> None:
+        """Activate super power."""
+
+    ci_default = CommandInfo(super_command, ["super"], [], True)
+    assert ci_default.command_name == "super_command"
+    assert ci_default.command_name_and_aliases == ["super_command", "super"]
+    assert ci_default.command_help == "Activate super power [default]"
+
+    ci_non_default = CommandInfo(super_command, ["super"], [], False)
+    assert ci_default.command_name == ci_non_default.command_name
+    assert (
+        ci_default.command_name_and_aliases == ci_non_default.command_name_and_aliases
+    )
+    assert ci_non_default.command_help == "Activate super power"
+
+
+def test_default_command(monkeypatch: Any) -> None:
+    """Test adding default command."""
+
+    def mock_command(
+        func_mock: MagicMock, name: str, with_working_dir: bool
+    ) -> Callable[..., None]:
+        """Mock cli command."""
+
+        def f(*args: Any, **kwargs: Any) -> None:
+            """Sample command."""
+            func_mock(*args, **kwargs)
+
+        def g(working_dir: str, **kwargs: Any) -> None:
+            """Another sample command."""
+            func_mock(working_dir=working_dir, **kwargs)
+
+        ret_func = g if with_working_dir else f
+        ret_func.__name__ = name
+
+        return ret_func  # type: ignore
+
+    default_command = MagicMock()
+    non_default_command = MagicMock()
+
+    def default_command_params(parser: argparse.ArgumentParser) -> None:
+        """Add parameters for default command."""
+        parser.add_argument("--sample")
+        parser.add_argument("--default_arg", default="123")
+
+    def non_default_command_params(parser: argparse.ArgumentParser) -> None:
+        """Add parameters for non default command."""
+        parser.add_argument("--param")
+
+    monkeypatch.setattr(
+        "mlia.cli.main.get_commands",
+        MagicMock(
+            return_value=[
+                CommandInfo(
+                    func=mock_command(default_command, "default_command", True),
+                    aliases=["command1"],
+                    opt_groups=[default_command_params],
+                    is_default=True,
+                ),
+                CommandInfo(
+                    func=mock_command(
+                        non_default_command, "non_default_command", False
+                    ),
+                    aliases=["command2"],
+                    opt_groups=[non_default_command_params],
+                    is_default=False,
+                ),
+            ]
+        ),
+    )
+
+    main(["--working-dir", "test_work_dir", "--sample", "1"])
+    main(["command2", "--param", "test"])
+
+    default_command.assert_called_once_with(
+        working_dir="test_work_dir", sample="1", default_arg="123"
+    )
+    non_default_command.assert_called_once_with(param="test")
 
 
 @pytest.mark.parametrize(
