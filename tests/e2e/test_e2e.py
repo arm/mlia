@@ -266,8 +266,6 @@ class TestEndToEnd:
         [
             "ds_cnn_large_fully_quantized_int8.tflite",
             "mobilenet_v2_1.0_224_INT8.tflite",
-            "wav2letter_leakyrelu_fixed.tflite",
-            "inception_v3_quant.tflite",
         ],
     )
     def test_commands_ethos_u65_real_tflite_model(
