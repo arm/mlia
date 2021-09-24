@@ -17,7 +17,7 @@ init_packages() {
 
 check_package() {
     if [ -z "$1" ]; then
-        echo "Configuration error"
+        echo -e "Configuration error\n"
         usage
     fi
 
@@ -120,22 +120,22 @@ done
 shift $((OPTIND-1))
 
 if [ -z "$PACKAGE_DIR" ]; then
-    echo "Error: No package directory provided"
+    echo -e "Error: No package directory provided\n"
     usage
 fi
 
 if [ ! -d "$PACKAGE_DIR" ]; then
-    echo "Error: $PACKAGE_DIR is not a directory"
+    echo -e "Error: $PACKAGE_DIR is not a directory\n"
     usage
 fi
 
 if [ -z "$VENV_PATH" ]; then
-    echo "Error: No directory name for the virtual environment provided"
+    echo -e "Error: No directory name for the virtual environment provided\n"
     usage
 fi
 
 if [ -d "$VENV_PATH" ]; then
-    echo "Error: Directory $VENV_PATH already exist"
+    echo -e "Error: Directory $VENV_PATH already exists\n"
     usage
 fi
 
