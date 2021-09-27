@@ -417,7 +417,7 @@ def report_operators(ops: List[Operator]) -> Report:
         Column(
             "Reasons",
             alias="reasons",
-            fmt=Format(wrap_width=40),
+            fmt=Format(wrap_width=35),
         ),
     ]
 
@@ -434,7 +434,7 @@ def report_operators(ops: List[Operator]) -> Report:
                     Column(
                         "Reason",
                         alias="reason",
-                        fmt=Format(wrap_width=50),
+                        fmt=Format(wrap_width=35),
                     )
                 ],
                 rows=[

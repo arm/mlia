@@ -75,7 +75,7 @@ def test_command_info() -> None:
     assert ci_non_default.command_help == "Activate super power"
 
 
-def test_default_command(monkeypatch: Any) -> None:
+def test_default_command(monkeypatch: Any, tmp_path: Path) -> None:
     """Test adding default command."""
 
     def mock_command(
@@ -130,11 +130,12 @@ def test_default_command(monkeypatch: Any) -> None:
         ),
     )
 
-    main(["--working-dir", "test_work_dir", "--sample", "1"])
+    tmp_working_dir = str(tmp_path)
+    main(["--working-dir", tmp_working_dir, "--sample", "1"])
     main(["command2", "--param", "test"])
 
     default_command.assert_called_once_with(
-        working_dir="test_work_dir", sample="1", default_arg="123"
+        working_dir=tmp_working_dir, sample="1", default_arg="123"
     )
     non_default_command.assert_called_once_with(param="test")
 

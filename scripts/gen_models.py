@@ -1,6 +1,7 @@
 # Copyright 2021, Arm Ltd.
 """Script for generating sample TFLite models."""
 import argparse
+from functools import wraps
 from pathlib import Path
 from typing import Any
 from typing import Callable
@@ -9,22 +10,47 @@ from typing import Optional
 
 import numpy as np
 import tensorflow as tf
+from typing_extensions import TypedDict
 
 tf.keras.backend.set_image_data_format("channels_last")
 
 models = {}
 
 
-def test_model(model_creator: Callable) -> Any:
+class ModelCreatorAttrs(TypedDict):
+    """Model creator attributes."""
+
+    model_creator: Callable
+    quantize: bool
+
+
+def test_model(compile_model: bool = True, quantize: bool = True) -> Callable:
     """Mark function as model creator."""
-    models[model_creator.__name__] = model_creator
-    return model_creator
+
+    def wrapper(model_creator: Callable) -> Callable:
+        """Wrap model creator function."""
+
+        @wraps(model_creator)
+        def model_creator_wrapper(*args: Any, **kwargs: Any) -> tf.keras.Model:
+            model = model_creator(*args, **kwargs)
+
+            if compile_model:
+                model.compile(optimizer="sgd", loss="mean_squared_error")
+
+            return model
+
+        models[model_creator.__name__] = ModelCreatorAttrs(
+            model_creator=model_creator_wrapper, quantize=quantize
+        )
+        return model_creator_wrapper
+
+    return wrapper
 
 
-@test_model
-def simple_3_layers_model() -> Any:
+@test_model()
+def simple_3_layers_model() -> tf.keras.Model:
     """Generate simple model with 3 layers."""
-    model = tf.keras.models.Sequential(
+    return tf.keras.models.Sequential(
         [
             tf.keras.layers.Dense(units=1, input_shape=[1]),
             tf.keras.layers.Dense(units=16, activation="relu"),
@@ -32,14 +58,11 @@ def simple_3_layers_model() -> Any:
         ]
     )
 
-    model.compile(optimizer="sgd", loss="mean_squared_error")
-    return model
 
-
-@test_model
-def simple_conv_model() -> Any:
+@test_model()
+def simple_conv_model() -> tf.keras.Model:
     """Generate simple model with Conv2d operator."""
-    model = tf.keras.Sequential(
+    return tf.keras.Sequential(
         [
             tf.keras.layers.InputLayer(input_shape=(28, 28, 1)),
             tf.keras.layers.Conv2D(
@@ -53,8 +76,25 @@ def simple_conv_model() -> Any:
         ]
     )
 
-    model.compile(optimizer="sgd", loss="mean_squared_error")
-    return model
+
+@test_model(quantize=False)
+def simple_mnist_convnet_non_quantized() -> tf.keras.Model:
+    """Generate simple MNIST model.
+
+    This example is taken from https://keras.io/examples/vision/mnist_convnet.
+    """
+    return tf.keras.Sequential(
+        [
+            tf.keras.Input(shape=(28, 28, 1)),
+            tf.keras.layers.Conv2D(32, kernel_size=(3, 3), activation="relu"),
+            tf.keras.layers.MaxPooling2D(pool_size=(2, 2)),
+            tf.keras.layers.Conv2D(64, kernel_size=(3, 3), activation="relu"),
+            tf.keras.layers.MaxPooling2D(pool_size=(2, 2)),
+            tf.keras.layers.Flatten(),
+            tf.keras.layers.Dropout(0.5),
+            tf.keras.layers.Dense(10, activation="softmax"),
+        ]
+    )
 
 
 def get_model_path(
@@ -66,8 +106,7 @@ def get_model_path(
         return model_path
 
     output_dir_path = Path(output_dir)
-    if not output_dir_path.exists():
-        output_dir_path.mkdir()
+    output_dir_path.mkdir(exist_ok=True)
 
     return output_dir_path / model_path
 
@@ -105,9 +144,12 @@ def gen_models(
     output_dir: Optional[str], specific_model: Optional[str], save_keras: bool
 ) -> None:
     """Generate test models."""
-    for model_name, model_creator in models.items():
+    for model_name, model_creator_attrs in models.items():
         if specific_model and model_name != specific_model:
             continue
+
+        model_creator = model_creator_attrs["model_creator"]
+        quantize = model_creator_attrs["quantize"]
 
         print(f"==> Generate {model_name} ...")
         model = model_creator()
@@ -115,12 +157,12 @@ def gen_models(
             save_keras_model(model, model_name, output_dir)
 
         converter = tf.lite.TFLiteConverter.from_keras_model(model)
-
-        converter.optimizations = [tf.lite.Optimize.DEFAULT]
-        converter.representative_dataset = representative_dataset(model)
-        converter.target_spec.supported_ops = [tf.lite.OpsSet.TFLITE_BUILTINS_INT8]
-        converter.inference_input_type = tf.int8
-        converter.inference_output_type = tf.int8
+        if quantize:
+            converter.optimizations = [tf.lite.Optimize.DEFAULT]
+            converter.representative_dataset = representative_dataset(model)
+            converter.target_spec.supported_ops = [tf.lite.OpsSet.TFLITE_BUILTINS_INT8]
+            converter.inference_input_type = tf.int8
+            converter.inference_output_type = tf.int8
 
         tflite_model = converter.convert()
         save_tflite_model(tflite_model, model_name, output_dir)
