@@ -65,6 +65,7 @@ def all_tests(
 
     This command runs a series of tests in order to generate a
     comprehensive report/advice:
+
         - converts the input Keras model into TFLite format
         - checks the model for operator compatibility on the specified device
         - applies optimizations to the model and estimates the resulting performance

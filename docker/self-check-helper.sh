@@ -70,3 +70,8 @@ pre-commit run --all-files --hook-stage=push
 
 python3 setup.py -q check
 python3 setup.py -q sdist bdist_wheel
+
+# For generating api docs
+cd "$(pwd)/docs"
+sphinx-apidoc -f -o "$(pwd)/source" "../src/mlia"
+make html

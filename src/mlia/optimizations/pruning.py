@@ -47,10 +47,10 @@ class Pruner(Optimizer):
     Pruner class. Used to prune a model to a specified sparsity.
 
     Sample usage:
-    pruner = Pruner(
-        base_model,
-        optimizer_configuration,
-    )
+        pruner = Pruner(
+            base_model,
+            optimizer_configuration)
+
     pruner.apply_pruning()
     pruned_model = pruner.get_model()
     """

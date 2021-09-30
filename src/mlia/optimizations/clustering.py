@@ -41,10 +41,10 @@ class Clusterer(Optimizer):
     Used to cluster a model to a specified number of unique weights per layer.
 
     Sample usage:
-    clusterer = Clusterer(
-        base_model,
-        optimizer_configuration
-    )
+        clusterer = Clusterer(
+            base_model,
+            optimizer_configuration)
+
     clusterer.apply_clustering()
     clustered_model = clusterer.get_model()
     """
