@@ -1,0 +1,6 @@
+tensorflow~=2.6.0
+tensorflow-model-optimization==0.6
+ethos-u-vela~=3.0.0
+pandas
+tabulate
+typing_extensions

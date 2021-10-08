@@ -1,5 +1,8 @@
 # Copyright 2021, Arm Ltd.
 """Module to setup the python package."""
+from pathlib import Path
+from typing import List
+
 from setuptools import find_packages
 from setuptools import setup
 
@@ -7,6 +10,16 @@ from setuptools import setup
 def _readme() -> str:
     with open("README.md") as f:
         return f.read()
+
+
+def _install_requirements(requirements_filename: str = "requirements.txt") -> List[str]:
+    requirements_file = Path(requirements_filename)
+    if not requirements_file.exists():
+        return []
+
+    with open(requirements_file) as f:
+        all_lines = (line.strip() for line in f.readlines())
+        return [line for line in all_lines if line and not line.startswith("#")]
 
 
 setup(
@@ -20,16 +33,7 @@ setup(
         #        "scripts/foo.sh",
     ],
     setup_requires=["setuptools_scm"],
-    install_requires=[
-        "six==1.15",
-        "ethos-u-vela==3.0.0",
-        "typing_extensions==3.7.4",
-        "numpy==1.19.5",
-        "tabulate==0.8.9",
-        "tensorflow==2.6.0",
-        "tensorflow-model-optimization==0.6.0",
-        "pandas==1.1.5",
-    ],
+    install_requires=_install_requirements(),
     maintainer="ML Inference Advisor",
     maintainer_email="matteo.martincigh@arm.com",
 )

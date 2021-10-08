@@ -43,6 +43,9 @@ RUN /home/foo/v/bin/pip install --upgrade pip setuptools
 COPY requirements-dev.txt /home/foo/
 RUN /home/foo/v/bin/pip install -r /home/foo/requirements-dev.txt
 
+COPY requirements.txt /home/foo/
+RUN /home/foo/v/bin/pip install -r /home/foo/requirements.txt
+
 RUN mkdir /home/foo/.pip
 COPY pip.conf /home/foo/.pip/pip.conf
 COPY pydistutils.cfg /home/foo/.pydistutils.cfg
