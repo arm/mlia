@@ -9,7 +9,7 @@ actionable advice early in the model development cycle.
 ## Prerequisites
 
 * Ubuntu 18.04.05 LTS (other OSs may work, this has been tested on that one specifically)
-* Python >= 3.6.9
+* Python >= 3.8
 * CMake >= 3.20.5
 * armclang 6.15 (later versions don't work)
 * IPSS-ML (see below)
@@ -660,11 +660,11 @@ apt install virtualenv
 ```
 
 Change current working directory and create the virtual environment with Python
-3.6.9 inside:
+3.8 inside:
 
 ```shell
 cd mlia
-virtualenv -p python3 venv
+virtualenv -p python3.8 venv
 ```
 
 Activate the virtual environment:

@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Dict
 from typing import List
 from typing import Optional
+from typing import Tuple
 from typing import Union
 
 import numpy as np
@@ -16,15 +17,16 @@ from ethosu.vela.compiler_driver import TensorAllocator
 from ethosu.vela.model_reader import ModelReaderOptions
 from ethosu.vela.model_reader import read_model
 from ethosu.vela.nn_graph import Graph
+from ethosu.vela.nn_graph import NetworkType
 from ethosu.vela.npu_performance import PassCycles
 from ethosu.vela.operation import CustomType
 from ethosu.vela.operation import Op
 from ethosu.vela.scheduler import OptimizationStrategy
 from ethosu.vela.scheduler import SchedulerOptions
-from ethosu.vela.supported_operators import SupportedOperators
 from ethosu.vela.tensor import MemArea
 from ethosu.vela.tensor import Tensor
 from ethosu.vela.tflite_mapping import optype_to_builtintype
+from ethosu.vela.tflite_supported_operators import TFLiteSupportedOperators
 from ethosu.vela.tflite_writer import write_tflite
 from ethosu.vela.vela import generate_supported_ops
 from mlia.config import EthosUConfiguration
@@ -86,9 +88,10 @@ class PerformanceMetrics:
 class Model:
     """Model metadata."""
 
-    def __init__(self, nng: Graph) -> None:
+    def __init__(self, nng: Graph, network_type: NetworkType) -> None:
         """Instance of the model metadata."""
         self.nng = nng
+        self.network_type = network_type
 
     @property
     def optimized(self) -> bool:
@@ -167,13 +170,13 @@ class VelaCompiler:
         """Read model."""
         LOGGER.debug("Read model %s", model)
 
-        nng = self._read_model(model)
-        return Model(nng)
+        nng, network_type = self._read_model(model)
+        return Model(nng, network_type)
 
     def compile_model(self, model: Union[str, Path, Model]) -> OptimizedModel:
         """Compile the model."""
         if isinstance(model, (str, Path)):
-            nng = self._read_model(model)
+            nng, network_type = self._read_model(model)
         else:
             nng = model.nng
 
@@ -185,17 +188,19 @@ class VelaCompiler:
         scheduler_options = self._scheduler_options()
 
         with redirect_output(LOGGER):
-            compiler_driver(nng, arch, compiler_options, scheduler_options)
+            compiler_driver(
+                nng, arch, compiler_options, scheduler_options, NetworkType.TFLite
+            )
 
         return OptimizedModel(nng, arch, compiler_options, scheduler_options)
 
     @staticmethod
-    def _read_model(model: Union[str, Path]) -> Graph:
+    def _read_model(model: Union[str, Path]) -> Tuple[Graph, NetworkType]:
         """Read tflite model."""
         model_path = str(model) if isinstance(model, Path) else model
 
         with redirect_output(LOGGER):
-            return read_model(model_path, ModelReaderOptions())
+            return read_model(model_path, ModelReaderOptions())  # type: ignore
 
     def _architecture_features(self) -> ArchitectureFeatures:
         """Return ArchitectureFeatures instance."""
@@ -348,8 +353,8 @@ def supported_operators(model: TFLiteModel, device: EthosUConfiguration) -> Oper
 
 def run_on_npu(op: Op) -> NpuSupported:
     """Return true if operation can run on NPU."""
-    supported_operators = SupportedOperators()
-    if op.type not in SupportedOperators.supported_operators:
+    supported_operators = TFLiteSupportedOperators()
+    if op.type not in TFLiteSupportedOperators.supported_operators:
         reasons = (
             [("CPU only operator", "")] if op.type not in VELA_INTERNAL_OPS else []
         )

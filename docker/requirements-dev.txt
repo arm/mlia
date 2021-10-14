@@ -1,9 +1,8 @@
 # Copyright 2021, Arm Ltd.
 
-pytest==6.2.4
-pytest-cov==2.12.1
-mypy==0.812
-pylint==2.8.3
-pre-commit==2.13.0
+pytest==6.2.5
+pytest-cov==3.0.0
+mypy==0.910
+pre-commit==2.15.0
 Sphinx==4.2.0
 sphinx-rtd-theme==1.0.0

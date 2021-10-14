@@ -36,7 +36,7 @@ from mlia.metadata import Operators
 from mlia.metrics import PerformanceMetrics
 from mlia.utils.general import is_list_of
 from mlia.utils.general import LoggerWriter
-from tabulate import tabulate
+from tabulate import tabulate  # type: ignore
 
 
 LOGGER = logging.getLogger("mlia.reporters")

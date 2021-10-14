@@ -3,7 +3,7 @@
 import logging
 import os
 
-import pkg_resources
+import pkg_resources  # type: ignore
 
 # redirect warnings to logging
 logging.captureWarnings(True)

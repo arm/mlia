@@ -5,7 +5,7 @@ import logging
 
 def clear_loggers() -> None:
     """Close the log handlers."""
-    for _, logger in logging.Logger.manager.loggerDict.items():  # type: ignore
+    for _, logger in logging.Logger.manager.loggerDict.items():
         if not isinstance(logger, logging.PlaceHolder):
             for handler in logger.handlers:
                 handler.close()

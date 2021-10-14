@@ -1,5 +1,5 @@
 # Copyright 2021, Arm Ltd.
-from ubuntu:18.04
+from ubuntu:20.04
 
 # libsndfile1 is needed for app "automatic_speech_recognition" build for Corstone-300
 # python3-venv, make are needed for the Corstone-300 apps build scripts
@@ -45,7 +45,7 @@ RUN bash cmake-3.17.0-Linux-x86_64.sh --prefix=/home/foo/.local --skip-license
 RUN rm cmake-3.17.0-Linux-x86_64.sh
 
 RUN pip3 install virtualenv
-RUN virtualenv --quiet --clear --python python3.6 "/home/foo/v"
+RUN virtualenv --quiet --clear --python python3.8 "/home/foo/v"
 RUN /home/foo/v/bin/pip install --upgrade pip setuptools wheel
 
 COPY requirements-dev.txt /home/foo/

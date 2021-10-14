@@ -4,7 +4,7 @@
 # The self check and test entry point is check-me.sh in the top level
 # directory.
 
-FROM ubuntu:18.04
+FROM ubuntu:20.04
 
 RUN apt-get update && apt-get install -y \
     git \
@@ -37,7 +37,7 @@ RUN pip3 install virtualenv
 # virtualenv on every test run.  The downside of this decision is that
 # we fix package versions at image creation, the upside of this
 # decision is.. we fix package versions at image creation ;-)
-RUN virtualenv --quiet --clear --python python3.6 "/home/foo/v"
+RUN virtualenv --quiet --clear --python python3.8 "/home/foo/v"
 RUN /home/foo/v/bin/pip install --upgrade pip setuptools
 
 COPY requirements-dev.txt /home/foo/
