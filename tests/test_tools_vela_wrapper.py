@@ -119,7 +119,7 @@ def test_get_compiler_for_device() -> None:
             "simple_3_layers_model.tflite",
             [
                 (
-                    "sequential/dense/MatMul;sequential/dense/BiasAdd",
+                    "sequential/dense/MatMul1",
                     "FULLY_CONNECTED",
                     (
                         True,
@@ -127,8 +127,8 @@ def test_get_compiler_for_device() -> None:
                     ),
                 ),
                 (
-                    "sequential/dense_1/MatMul;sequential/dense_1/BiasAdd;sequential/"
-                    "dense_1/Relu",
+                    "sequential/dense/BiasAdd;sequential/dense_1/MatMul;"
+                    "sequential/dense_1/Relu;sequential/dense_1/BiasAdd",
                     "FULLY_CONNECTED",
                     (
                         True,

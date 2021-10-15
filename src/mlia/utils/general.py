@@ -21,12 +21,12 @@ from tensorflow.lite.python.interpreter import Interpreter
 def representative_dataset(model: tf.keras.Model) -> Callable:
     """Sample dataset used for quantization."""
     input_shape = model.input_shape
-    # get rid of the batch_size dimension
-    input_shape = tuple([x for x in input_shape if x is not None])
 
     def dataset() -> Iterable:
         for _ in range(100):
-            data = np.random.rand(1, *input_shape)
+            if input_shape[0] != 1:
+                raise Exception("Only the input batch_size=1 is supported!")
+            data = np.random.rand(*input_shape)
             yield [data.astype(np.float32)]
 
     return dataset

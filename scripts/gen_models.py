@@ -10,6 +10,7 @@ from typing import Optional
 
 import numpy as np
 import tensorflow as tf
+from mlia.tests.utils.generate_keras_model import generate_keras_model
 from typing_extensions import TypedDict
 
 tf.keras.backend.set_image_data_format("channels_last")
@@ -52,7 +53,7 @@ def simple_3_layers_model() -> tf.keras.Model:
     """Generate simple model with 3 layers."""
     return tf.keras.models.Sequential(
         [
-            tf.keras.layers.Dense(units=1, input_shape=[1]),
+            tf.keras.layers.Dense(units=1, input_shape=[1], batch_size=1),
             tf.keras.layers.Dense(units=16, activation="relu"),
             tf.keras.layers.Dense(units=1),
         ]
@@ -60,11 +61,17 @@ def simple_3_layers_model() -> tf.keras.Model:
 
 
 @test_model()
+def simple_model() -> tf.keras.Model:
+    """Generate simple model with conv2d and dense layers."""
+    return generate_keras_model()
+
+
+@test_model()
 def simple_conv_model() -> tf.keras.Model:
     """Generate simple model with Conv2d operator."""
     return tf.keras.Sequential(
         [
-            tf.keras.layers.InputLayer(input_shape=(28, 28, 1)),
+            tf.keras.layers.InputLayer(input_shape=(28, 28, 1), batch_size=1),
             tf.keras.layers.Conv2D(
                 filters=12,
                 kernel_size=(3, 3),
@@ -85,7 +92,7 @@ def simple_mnist_convnet_non_quantized() -> tf.keras.Model:
     """
     return tf.keras.Sequential(
         [
-            tf.keras.Input(shape=(28, 28, 1)),
+            tf.keras.Input(shape=(28, 28, 1), batch_size=1),
             tf.keras.layers.Conv2D(32, kernel_size=(3, 3), activation="relu"),
             tf.keras.layers.MaxPooling2D(pool_size=(2, 2)),
             tf.keras.layers.Conv2D(64, kernel_size=(3, 3), activation="relu"),
