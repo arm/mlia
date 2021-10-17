@@ -158,6 +158,7 @@ def operators(
     output_format: OutputFormat = "plain_text",
     output: Optional[PathOrFileLike] = None,
     supported_ops_report: bool = False,
+    working_dir: Optional[str] = None,
     **device_args: Any,
 ) -> None:
     """Print the model's operator list.
@@ -166,7 +167,7 @@ def operators(
     the specific device. Generates a report of the operator placement
     (NPU or CPU fallback) and advice on how to improve it (if necessary).
 
-    :param model: path to the TFLite model
+    :param model: path to the model, which can be TFLite or Keras
     :param output_format: format of the report produced during the command
            execution
     :param output: path to the file where the report will be saved
@@ -193,7 +194,10 @@ def operators(
     if not model:
         raise Exception("Model is not provided")
 
+    model = get_model_in_cmd_supported_format(model, working_dir)
+
     tflite_model, device = TFLiteModel(model), get_device(**device_args)
+
     with get_reporter(output_format, output) as reporter:
         reporter.submit(device)
 
@@ -229,7 +233,7 @@ def performance(
     on the specified device, and generates a report with advice on how
     to improve it.
 
-    :param model: path to the TFLite model
+    :param model: path to the model, which can be TFLite or Keras
     :param output_format: format of the report produced during the command
            execution
     :param output: path to the file where the report will be saved
@@ -248,10 +252,8 @@ def performance(
         >>> from mlia.cli.commands import performance
         >>> performance("model.tflite", device="ethos-u65")
     """
-    if os.path.splitext(model)[1] != ".tflite":
-        raise ValueError(
-            "The input model format for the performance estimation must be tflite!"
-        )
+    model = get_model_in_cmd_supported_format(model, working_dir)
+
     tflite_model, device = TFLiteModel(model), get_device(**device_args)
 
     with get_reporter(output_format, output) as reporter:
@@ -350,6 +352,7 @@ def optimization(
             perf_metrics=compare_metrics(original, optimized),
             optimizations=[(optimization_type, optimization_target)],
         )
+
         ctx = AdvisorContext(
             optimization_results=optimization_results,
             device_args=device_args,
@@ -384,13 +387,41 @@ def keras_to_tflite(
         >>> from mlia.cli.commands import keras_to_tflite
         >>> keras_to_tflite("model.h5", True, "output_dir")
     """
-    out_path_final = Path(out_path) if out_path else Path.cwd()
+    convert_from_keras_to_tflite(model, quantized, out_path)
+
+
+def get_model_in_cmd_supported_format(
+    model: str,
+    working_dir: Optional[str] = None,
+) -> str:
+    """Convert keras model to tflite if needed and return model."""
+    if os.path.splitext(model)[1] == ".tflite":
+        return model
+    elif os.path.splitext(model)[1] == ".h5":
+        model = convert_from_keras_to_tflite(model)
+        return model
+    else:
+        raise ValueError(
+            "The input model format for the performance or operator commands"
+            "must be .tflite or keras(.h5)!"
+        )
+
+
+def convert_from_keras_to_tflite(
+    model: str,
+    quantized: bool = True,
+    working_dir: Optional[str] = None,
+) -> str:
+    """Convert and save a Keras model into TFLite format."""
+    models_path = Path(working_dir) if working_dir else Path.cwd()
 
     keras_model = KerasModel(model)
-    tflite_model_path = out_path_final / "converted_model.tflite"
+    tflite_model_path = str(models_path / "converted_model.tflite")
 
     LOGGER.info("Converting Keras to TFLite ...")
     keras_model.convert_to_tflite(tflite_model_path, quantized)
     LOGGER.info("Done")
 
-    LOGGER.info("Model %s saved to %s", model, out_path_final)
+    LOGGER.info("Model %s converted and saved to %s", model, tflite_model_path)
+
+    return tflite_model_path

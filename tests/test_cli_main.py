@@ -48,11 +48,11 @@ def test_option_version(capfd: Any) -> None:
     assert stderr == ""
 
 
-def test_operators_command(test_models_path: Path) -> None:
+@pytest.mark.parametrize("model", ("simple_3_layers_model.tflite", "simple_model.h5"))
+def test_operators_command(test_models_path: Path, model: str) -> None:
     """Test operators command."""
-    model = test_models_path / "simple_3_layers_model.tflite"
-
-    exit_code = main(["operators", str(model)])
+    model_path = test_models_path / model
+    exit_code = main(["operators", str(model_path)])
     assert exit_code == 0
 
 
@@ -467,6 +467,20 @@ args_ops = [
             "--verbose",
         ],
         True,
+        "Mocking performance estimation",
+        0,
+        "simple_model.h5",
+    ],
+    [
+        [
+            "performance",
+            "--device",
+            "ethos-u55",
+            "--mac",
+            "256",
+            "--verbose",
+        ],
+        True,
         "Traceback",
         1,
         "xyz",
@@ -484,6 +498,20 @@ args_ops = [
         "mlia.tools.vela",
         0,
         "simple_3_layers_model.tflite",
+    ],
+    [
+        [
+            "operators",
+            "--device",
+            "ethos-u55",
+            "--mac",
+            "256",
+            "--verbose",
+        ],
+        False,
+        "mlia.tools.vela",
+        0,
+        "simple_model.h5",
     ],
     [
         [
