@@ -789,10 +789,12 @@ noise_reduction
 person_detection
 ```
 
-Note: the install script that comes with the source code (mlia/scritps/install.sh)
+Note: the install script that comes with the source code (mlia/scripts/install.sh)
 is a good reference for installing the AIET.
 Keep in mind that the script is also designed to install a pre-packaged build of
-the MLIA, you want to skip that not to conflict with your current master.
+the MLIA.
+If you want to skip that, in order not to conflict with your current master,
+use mlia/scripts/install_dev.sh.
 
 In case you want to use the install script for setting everything up, at the end
 redo:

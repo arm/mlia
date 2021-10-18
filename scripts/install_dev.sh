@@ -37,7 +37,10 @@ check_packages() {
     check_package "$SGM_PACKAGE_OSS"
     check_package "$SGM_PACKAGE_APPS"
 
-    check_package "$MLIA_PACKAGE"
+    if [ "$INSTALL_MLIA" == "true" ];
+    then
+        check_package "$MLIA_PACKAGE"
+    fi
 }
 
 create_and_init_virtual_env() {
@@ -66,23 +69,25 @@ install_mlia() {
 }
 
 usage() {
-    USAGE_NOTE="ML Inference Advisor installation script
+    USAGE_NOTE="ML Inference Advisor environment installation script
 
 This script creates virtual environment and installs the required packages:
-  - ML Inference Advisor
   - AI Evaluation Toolkit
   - FVP Corstone-300 Ecosystem
   - Ethos-U55 Eval Platform
   - SGM-775
   - Ethos-U65 Eval Platform
+  Optional:
+  - ML Inference Advisor
 
-Usage: $0 [-v] -d package_dir -e venv_dir
+Usage: $0 [-v] [-m] -d package_dir -e venv_dir
 
 Options:
   -h print this help message and exit
   -v enable verbose output
   -d path to the directory containing the install packages
-  -e virtual environment directory name"
+  -e virtual environment directory name
+  -m install mlia package (like install.sh)"
 
     echo "$USAGE_NOTE"
     exit 1
@@ -96,8 +101,10 @@ PIP_OPTIONS=-qq
 PACKAGE_DIR=
 # name of the virt env directory
 VENV_PATH=
+# Install MLIA (default: false)
+INSTALL_MLIA=
 
-while getopts "hvd:e:" o; do
+while getopts "hmvd:e:" o; do
     case "${o}" in
         d)
             PACKAGE_DIR=${OPTARG}
@@ -111,6 +118,9 @@ while getopts "hvd:e:" o; do
             ;;
         h)
             usage
+            ;;
+        m)
+            INSTALL_MLIA=true
             ;;
         *)
             usage
@@ -149,8 +159,11 @@ create_and_init_virtual_env "$VENV_PATH"
 echo "Installing AI Evaluation Toolkit ..."
 install_aiet
 
-echo "Installing ML Inference Advisor ..."
-install_mlia
+if [ "$INSTALL_MLIA" == "true" ];
+then
+    echo "Installing ML Inference Advisor ..."
+    install_mlia
+fi
 
 echo "Installation complete."
 echo "Please activate the virtual environment $VENV_PATH to start working with the ML Inference Advisor."

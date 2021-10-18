@@ -160,13 +160,20 @@ class TestEndToEnd:
 
         run_command(command)
 
-    def test_installation_script(self, tmp_path: Path) -> None:
-        """Test MLIA installation script."""
+    def run_install_script_test(
+        self,
+        install_script: str,
+        tmp_path: Path,
+        test_dir: str,
+        commands: List,
+        extra_flags: str = "",
+    ) -> None:
+        """Run an install script use case."""
         config_dir = get_config_dir()
         if not config_dir:
             raise Exception("E2E configuration directory is not provided")
 
-        install_dir_path = tmp_path / "dist"
+        install_dir_path = tmp_path / test_dir
         install_dir_path.mkdir()
 
         def copy_archives(subfolder_path: Path, pattern: str = "*.tar.gz") -> None:
@@ -192,13 +199,19 @@ class TestEndToEnd:
         for item in ["AIET_ARTIFACT_PATH", "MLIA_ARTIFACT_PATH"]:
             copy_env_path(item)
 
-        shutil.copy2("scripts/install.sh", tmp_path)
+        shutil.copy2(f"scripts/{install_script}", tmp_path)
 
         with working_directory(tmp_path):
             run_command(["ls", "-R", str(tmp_path)])
 
-            venv = "e2e_venv"
-            command = ["./install.sh", "-d", str(install_dir_path), "-e", venv]
+            venv = f"e2e_venv_{test_dir}"
+            command = [
+                f"./{install_script}",
+                "-d",
+                str(install_dir_path),
+                "-e",
+                venv,
+            ]
             run_command(command)
 
             assert Path(venv).is_dir()
@@ -212,17 +225,39 @@ class TestEndToEnd:
                     cmds, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE
                 )
 
-            for cmd in [
-                "mlia --help",
-                "mlia ops --help",
-                "mlia perf --help",
-                "aiet --help",
-                "aiet system list",
-                "aiet software list",
-            ]:
+            for cmd in commands:
                 result = run_in_env(cmd)
                 assert result.returncode == 0
                 print(result.stdout.decode())
+
+    full_commands_list = [
+        "mlia --help",
+        "mlia ops --help",
+        "mlia perf --help",
+        "aiet --help",
+        "aiet system list",
+        "aiet software list",
+    ]
+    partial_commands_list = [
+        "aiet --help",
+        "aiet system list",
+        "aiet software list",
+    ]
+
+    def test_install_script(self, tmp_path: Path) -> None:
+        """Test MLIA installation script."""
+        self.run_install_script_test(
+            "install.sh", tmp_path, "dist1", self.full_commands_list
+        )
+
+    def test_install_dev_script(self, tmp_path: Path) -> None:
+        """Test MLIA install_dev.sh script."""
+        self.run_install_script_test(
+            "install_dev.sh", tmp_path, "dist2", self.partial_commands_list
+        )
+        self.run_install_script_test(
+            "install_dev.sh", tmp_path, "dist3", self.full_commands_list, "-m"
+        )
 
     @pytest.mark.parametrize("command", ["operators", "performance"])
     @pytest.mark.parametrize(
