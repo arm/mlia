@@ -26,6 +26,7 @@ from ethosu.vela.scheduler import SchedulerOptions
 from ethosu.vela.tensor import MemArea
 from ethosu.vela.tensor import Tensor
 from ethosu.vela.tflite_mapping import optype_to_builtintype
+from ethosu.vela.tflite_model_semantic import TFLiteSemantic
 from ethosu.vela.tflite_supported_operators import TFLiteSupportedOperators
 from ethosu.vela.tflite_writer import write_tflite
 from ethosu.vela.vela import generate_supported_ops
@@ -206,9 +207,9 @@ class VelaCompiler:
         """Return ArchitectureFeatures instance."""
         return ArchitectureFeatures(
             vela_config_files=self.config_files,
+            accelerator_config=self.accelerator_config,
             system_config=self.system_config,
             memory_mode=self.memory_mode,
-            accelerator_config=self.accelerator_config,
             max_blockdep=self.max_block_dependency,
             verbose_config=False,
             arena_cache_size=self.arena_cache_size,
@@ -352,7 +353,18 @@ def supported_operators(model: TFLiteModel, device: EthosUConfiguration) -> Oper
 
 
 def run_on_npu(op: Op) -> NpuSupported:
-    """Return true if operation can run on NPU."""
+    """Return true if operator can run on NPU."""
+    semantic_checker = TFLiteSemantic()
+    semantic_constraints = itertools.chain(
+        semantic_checker.generic_constraints,
+        semantic_checker.specific_constraints[op.type],
+    )
+
+    for constraint in semantic_constraints:
+        op_valid, op_reason = constraint(op)
+        if not op_valid:
+            return NpuSupported(False, [(constraint.__doc__, op_reason)])
+
     supported_operators = TFLiteSupportedOperators()
     if op.type not in TFLiteSupportedOperators.supported_operators:
         reasons = (
