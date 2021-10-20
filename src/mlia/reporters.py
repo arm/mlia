@@ -410,13 +410,13 @@ def report_operators(ops: List[Operator]) -> Report:
             fmt=Format(wrap_width=25),
         ),
         Column(
-            "Supported on NPU",
-            alias="supported_on_npu",
+            "Placement",
+            alias="placement",
             fmt=Format(wrap_width=20),
         ),
         Column(
-            "Reasons",
-            alias="reasons",
+            "Notes",
+            alias="notes",
             fmt=Format(wrap_width=35),
         ),
     ]
@@ -427,13 +427,13 @@ def report_operators(ops: List[Operator]) -> Report:
             op.name,
             op.op_type,
             Cell(
-                op.run_on_npu.supported, Format(str_fmt=lambda x: "Yes" if x else "No")
+                op.run_on_npu.supported, Format(str_fmt=lambda x: "NPU" if x else "CPU")
             ),
             Table(
                 columns=[
                     Column(
-                        "Reason",
-                        alias="reason",
+                        "Note",
+                        alias="note",
                         fmt=Format(wrap_width=35),
                     )
                 ],
@@ -443,7 +443,7 @@ def report_operators(ops: List[Operator]) -> Report:
                     for item in reason
                     if item
                 ],
-                name="Reasons",
+                name="Notes",
             ),
         )
         for i, op in enumerate(ops)
