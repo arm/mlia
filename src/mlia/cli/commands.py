@@ -51,6 +51,10 @@ ADV_GENERATION_MSG = """
 === Advice Generation ======================================================
 """
 
+REPORT_GENERATION_MSG = """
+=== Report Generation ======================================================
+"""
+
 
 def all_tests(
     model: str,
@@ -151,6 +155,9 @@ def all_tests(
             space="between",
             tablefmt="plain",
         )
+        if output is not None:
+            LOGGER.info(REPORT_GENERATION_MSG)
+            LOGGER.info("Report(s) and advice list saved to: %s", output)
 
 
 def operators(
@@ -218,6 +225,9 @@ def operators(
             space="between",
             tablefmt="plain",
         )
+        if output is not None:
+            LOGGER.info(REPORT_GENERATION_MSG)
+            LOGGER.info("Report(s) and advice list saved to: %s", output)
 
 
 def performance(
@@ -278,6 +288,10 @@ def performance(
             space="between",
             tablefmt="plain",
         )
+
+        if output is not None:
+            LOGGER.info(REPORT_GENERATION_MSG)
+            LOGGER.info("Report(s) and advice list saved to: %s", output)
 
 
 def optimization(
@@ -368,6 +382,10 @@ def optimization(
             tablefmt="plain",
         )
 
+        if output is not None:
+            LOGGER.info(REPORT_GENERATION_MSG)
+            LOGGER.info("Report(s) and advice list saved to: %s", output)
+
 
 def keras_to_tflite(
     model: str, quantized: bool, out_path: Optional[str] = None
@@ -394,7 +412,7 @@ def get_model_in_cmd_supported_format(
     model: str,
     working_dir: Optional[str] = None,
 ) -> str:
-    """Convert keras model to tflite if needed and return model."""
+    """Convert keras model to tflite if needed, and return the path to the model."""
     if os.path.splitext(model)[1] == ".tflite":
         return model
     elif os.path.splitext(model)[1] == ".h5":
@@ -418,10 +436,6 @@ def convert_from_keras_to_tflite(
     keras_model = KerasModel(model)
     tflite_model_path = str(models_path / "converted_model.tflite")
 
-    LOGGER.info("Converting Keras to TFLite ...")
     keras_model.convert_to_tflite(tflite_model_path, quantized)
-    LOGGER.info("Done")
-
-    LOGGER.info("Model %s converted and saved to %s", model, tflite_model_path)
 
     return tflite_model_path

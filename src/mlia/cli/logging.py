@@ -20,6 +20,7 @@ _MLIA_LOGGERS = [
     "mlia.performance",
     "mlia.operators",
     "mlia.reporters",
+    "mlia.config",
 ]
 
 

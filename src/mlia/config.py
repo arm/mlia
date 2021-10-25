@@ -1,5 +1,6 @@
 # Copyright 2021, Arm Ltd.
 """Model and IP configuration."""
+import logging
 from pathlib import Path
 from typing import Any
 from typing import cast
@@ -12,6 +13,8 @@ import tensorflow as tf
 from mlia.utils.general import convert_to_tflite
 from mlia.utils.general import save_tflite_model
 from typing_extensions import Literal
+
+LOGGER = logging.getLogger("mlia.config")
 
 
 class ModelConfiguration:
@@ -35,8 +38,15 @@ class KerasModel(ModelConfiguration):
         self, tflite_model_path: Union[str, Path], quantized: bool = False
     ) -> "TFLiteModel":
         """Convert model to TFLite format."""
+        LOGGER.info("Converting Keras to TFLite...")
+
         converted_model = convert_to_tflite(self.get_keras_model(), quantized)
+        LOGGER.info("Done")
+
         save_tflite_model(converted_model, tflite_model_path)
+        LOGGER.info(
+            "Model %s converted and saved to %s", self.model_path, tflite_model_path
+        )
 
         return TFLiteModel(tflite_model_path)
 
