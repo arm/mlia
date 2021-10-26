@@ -3,6 +3,7 @@
 import itertools
 import logging
 from pathlib import Path
+from typing import Any
 from typing import Dict
 from typing import List
 from typing import Optional
@@ -23,6 +24,7 @@ from ethosu.vela.operation import CustomType
 from ethosu.vela.operation import Op
 from ethosu.vela.scheduler import OptimizationStrategy
 from ethosu.vela.scheduler import SchedulerOptions
+from ethosu.vela.tensor import BandwidthDirection
 from ethosu.vela.tensor import MemArea
 from ethosu.vela.tensor import Tensor
 from ethosu.vela.tflite_mapping import optype_to_builtintype
@@ -194,6 +196,42 @@ class VelaCompiler:
             )
 
         return OptimizedModel(nng, arch, compiler_options, scheduler_options)
+
+    def get_config(self) -> Dict[str, Any]:
+        """Get compiler configuration."""
+        arch = self._architecture_features()
+
+        memory_area = {
+            mem.name: {
+                "clock_scales": arch.memory_clock_scales[mem],
+                "burst_length": arch.memory_burst_length[mem],
+                "read_latency": arch.memory_latency[mem][BandwidthDirection.Read],
+                "write_latency": arch.memory_latency[mem][BandwidthDirection.Write],
+            }
+            for mem in (
+                MemArea.Sram,
+                MemArea.Dram,
+                MemArea.OnChipFlash,
+                MemArea.OffChipFlash,
+            )
+        }
+
+        return {
+            "accelerator_config": arch.accelerator_config.value,
+            "system_config": arch.system_config,
+            "core_clock": arch.core_clock,
+            "axi0_port": arch.axi0_port.name,
+            "axi1_port": arch.axi1_port.name,
+            "memory_mode": arch.memory_mode,
+            "const_mem_area": arch.const_mem_area.name,
+            "arena_mem_area": arch.arena_mem_area.name,
+            "cache_mem_area": arch.cache_mem_area.name,
+            "arena_cache_size": arch.arena_cache_size,
+            "permanent_storage_mem_area": arch.permanent_storage_mem_area.name,
+            "feature_map_storage_mem_area": arch.feature_map_storage_mem_area.name,
+            "fast_storage_mem_area": arch.fast_storage_mem_area.name,
+            "memory_area": memory_area,
+        }
 
     @staticmethod
     def _read_model(model: Union[str, Path]) -> Tuple[Graph, NetworkType]:

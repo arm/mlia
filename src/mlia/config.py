@@ -63,10 +63,6 @@ class TFLiteModel(ModelConfiguration):
         interpreter = tf.lite.Interpreter(model_path=self.model_path)
         return cast(List[Dict], interpreter.get_input_details())
 
-    def get_tflite_model(self) -> tf.lite.Interpreter:
-        """Return associated tflite model."""
-        tf.lite.Interpreter(model_path=self.model_path)
-
 
 class CompilerOptions:
     """Compiler options."""
@@ -106,7 +102,7 @@ class CompilerOptions:
     def __str__(self) -> str:
         """Return string representation."""
         params = ", ".join(
-            f"{param}: {param_value}" for param, param_value in self.__dict__.items()
+            f"{param}: {param_value}" for param, param_value in vars(self).items()
         )
         return f"Compiler options {params}"
 

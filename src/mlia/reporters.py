@@ -6,6 +6,7 @@ import json
 import logging
 from abc import ABC
 from abc import abstractmethod
+from collections import defaultdict
 from contextlib import contextmanager
 from contextlib import ExitStack
 from functools import partial
@@ -25,6 +26,7 @@ from typing import TextIO
 from typing import Tuple
 from typing import Union
 
+import numpy as np
 import pandas as pd
 from mlia._typing import FileLike
 from mlia._typing import OutputFormat
@@ -34,6 +36,7 @@ from mlia.config import EthosUConfiguration
 from mlia.metadata import Operator
 from mlia.metadata import Operators
 from mlia.metrics import PerformanceMetrics
+from mlia.tools.vela_wrapper import get_vela_compiler
 from mlia.utils.general import is_list_of
 from mlia.utils.general import LoggerWriter
 from tabulate import tabulate  # type: ignore
@@ -56,6 +59,37 @@ class Report(ABC):
     @abstractmethod
     def to_plain_text(self, **kwargs: Any) -> str:
         """Convert to human readable format."""
+
+
+class ReportItem:
+    """Item of the report."""
+
+    def __init__(
+        self,
+        name: str,
+        alias: Optional[str] = None,
+        value: Optional[Union[str, int, "Cell"]] = None,
+        nested_items: Optional[List["ReportItem"]] = None,
+    ) -> None:
+        """Init the report item."""
+        self.name = name
+        self.alias = alias
+        self.value = value
+        self.nested_items = nested_items or []
+
+    @property
+    def compound(self) -> bool:
+        """Return true if item has nested items."""
+        return self.nested_items is not None and len(self.nested_items) > 0
+
+    @property
+    def raw_value(self) -> Any:
+        """Get actual item value."""
+        v = self.value
+        if isinstance(v, Cell):
+            return v.value
+
+        return v
 
 
 class Format:
@@ -105,6 +139,55 @@ class Cell:
         return str(self.value)
 
 
+class CountAwareCell(Cell):
+    """Count aware cell."""
+
+    def __init__(
+        self,
+        value: Optional[Union[int, float]],
+        singular: str,
+        plural: str,
+        format_string: str = ",d",
+    ):
+        """Init cell instance."""
+
+        def format_value(v: Optional[Union[int, float]]) -> str:
+            """Provide string representation for the value."""
+            if v is None:
+                return ""
+
+            if v == 1:
+                return f"1 {singular}"
+
+            return f"{v:{format_string}} {plural}"
+
+        super().__init__(value, Format(str_fmt=format_value))
+
+
+class BytesCell(CountAwareCell):
+    """Cell that represents memory size."""
+
+    def __init__(self, value: Optional[int]) -> None:
+        """Init cell instance."""
+        super().__init__(value, "byte", "bytes")
+
+
+class CyclesCell(CountAwareCell):
+    """Cell that represents cycles."""
+
+    def __init__(self, value: Optional[Union[int, float]]) -> None:
+        """Init cell instance."""
+        super().__init__(value, "cycle", "cycles", ",.0f")
+
+
+class ClockCell(CountAwareCell):
+    """Cell that represents clock value."""
+
+    def __init__(self, value: Optional[Union[int, float]]) -> None:
+        """Init cell instance."""
+        super().__init__(value, "Hz", "Hz", ",.0f")
+
+
 class Column:
     """Column definition."""
 
@@ -132,6 +215,115 @@ class Column:
     def supports_format(self, fmt: str) -> bool:
         """Return true if column should be shown."""
         return not self.only_for or fmt in self.only_for
+
+
+class NestedReport(Report):
+    """Report with nested items."""
+
+    def __init__(self, name: str, alias: str, items: List[ReportItem]) -> None:
+        """Init nested report."""
+        self.name = name
+        self.alias = alias
+        self.items = items
+
+    def to_csv(self, **kwargs: Any) -> List[Any]:
+        """Convert to csv serializible format."""
+        result = {}
+
+        def collect_item_values(
+            item: ReportItem,
+            parent: Optional[ReportItem],
+            prev: Optional[ReportItem],
+            level: int,
+        ) -> None:
+            """Collect item values into a dictionary.."""
+            if item.value is not None:
+                result[item.alias] = item.raw_value
+
+        self._traverse(self.items, collect_item_values)
+
+        # make list out of the result dictionary
+        # first element - keys of the dictionary as headers
+        # second element - list of the dictionary values
+        return list(zip(*result.items()))  # type: ignore
+
+    def to_json(self, **kwargs: Any) -> Any:
+        """Convert to json serializible format."""
+        per_parent: Dict[Optional[ReportItem], Dict] = defaultdict(dict)
+        result = per_parent[None]
+
+        def collect_as_dicts(
+            item: ReportItem,
+            parent: Optional[ReportItem],
+            prev: Optional[ReportItem],
+            level: int,
+        ) -> None:
+            """Collect item values as nested dictionaries."""
+            parent_dict = per_parent[parent]
+
+            if item.compound:
+                item_dict = per_parent[item]
+                parent_dict[item.alias] = item_dict
+            else:
+                parent_dict[item.alias] = item.raw_value
+
+        self._traverse(self.items, collect_as_dicts)
+
+        return {self.alias: result}
+
+    def to_plain_text(self, **kwargs: Any) -> str:
+        """Convert to human readable format."""
+        header = f"{self.name}:\n"
+        processed_items = []
+
+        def convert_to_text(
+            item: ReportItem,
+            parent: Optional[ReportItem],
+            prev: Optional[ReportItem],
+            level: int,
+        ) -> None:
+            """Convert item to text representation."""
+            if level >= 1 and prev is not None and (item.compound or prev.compound):
+                processed_items.append("")
+
+            v = self._item_value(item, level)
+            processed_items.append(v)
+
+        self._traverse(self.items, convert_to_text)
+        body = "\n".join(processed_items)
+
+        return header + body
+
+    @staticmethod
+    def _item_value(
+        item: ReportItem, level: int, tab_size: int = 2, column_width: int = 35
+    ) -> str:
+        """Get report item value."""
+        shift = " " * tab_size * level
+        if item.value is None:
+            return f"{shift}{item.name}:"
+
+        col1 = f"{shift}{item.name}".ljust(column_width)
+        col2 = f"{item.value}".rjust(column_width)
+
+        return col1 + col2
+
+    def _traverse(
+        self,
+        items: List[ReportItem],
+        visit_item: Callable[
+            [ReportItem, Optional[ReportItem], Optional[ReportItem], int], None
+        ],
+        level: int = 1,
+        parent: Optional[ReportItem] = None,
+    ) -> None:
+        """Traverse through items."""
+        prev = None
+        for item in items:
+            visit_item(item, parent, prev, level)
+
+            self._traverse(item.nested_items, visit_item, level + 1, item)
+            prev = item
 
 
 class ReportDataFrame(Report):
@@ -475,6 +667,131 @@ def report_device(device: EthosUConfiguration) -> Report:
     return Table(columns, rows, name="Device information", alias="device")
 
 
+def report_device_details(device: EthosUConfiguration) -> Report:
+    """Return table representation for the device."""
+    compiler_config = get_vela_compiler(device).get_config()
+
+    memory_settings = [
+        ReportItem(
+            "Const mem area",
+            "const_mem_area",
+            compiler_config["const_mem_area"],
+        ),
+        ReportItem(
+            "Arena mem area",
+            "arena_mem_area",
+            compiler_config["arena_mem_area"],
+        ),
+        ReportItem(
+            "Cache mem area",
+            "cache_mem_area",
+            compiler_config["cache_mem_area"],
+        ),
+        ReportItem(
+            "Arena cache size",
+            "arena_cache_size",
+            BytesCell(compiler_config["arena_cache_size"]),
+        ),
+    ]
+
+    mem_areas_settings = [
+        ReportItem(
+            f"{mem_area_name}",
+            mem_area_name,
+            None,
+            nested_items=[
+                ReportItem(
+                    "Clock scales",
+                    "clock_scales",
+                    mem_area_settings["clock_scales"],
+                ),
+                ReportItem(
+                    "Burst length",
+                    "burst_length",
+                    BytesCell(mem_area_settings["burst_length"]),
+                ),
+                ReportItem(
+                    "Read latency",
+                    "read_latency",
+                    CyclesCell(mem_area_settings["read_latency"]),
+                ),
+                ReportItem(
+                    "Write latency",
+                    "write_latency",
+                    CyclesCell(mem_area_settings["write_latency"]),
+                ),
+            ],
+        )
+        for mem_area_name, mem_area_settings in compiler_config["memory_area"].items()
+    ]
+
+    system_settings = [
+        ReportItem(
+            "Accelerator clock",
+            "accelerator_clock",
+            ClockCell(compiler_config["core_clock"]),
+        ),
+        ReportItem(
+            "AXI0 port",
+            "axi0_port",
+            compiler_config["axi0_port"],
+        ),
+        ReportItem(
+            "AXI1 port",
+            "axi1_port",
+            compiler_config["axi1_port"],
+        ),
+        ReportItem(
+            "Memory area settings", "memory_area", None, nested_items=mem_areas_settings
+        ),
+    ]
+
+    arch_settings = [
+        ReportItem(
+            "Permanent storage mem area",
+            "permanent_storage_mem_area",
+            compiler_config["permanent_storage_mem_area"],
+        ),
+        ReportItem(
+            "Feature map storage mem area",
+            "feature_map_storage_mem_area",
+            compiler_config["feature_map_storage_mem_area"],
+        ),
+        ReportItem(
+            "Fast storage mem area",
+            "fast_storage_mem_area",
+            compiler_config["fast_storage_mem_area"],
+        ),
+    ]
+
+    return NestedReport(
+        "Device information",
+        "device",
+        [
+            ReportItem("IP class", alias="ip_class", value=device.ip_class),
+            ReportItem("MAC", alias="mac", value=device.mac),
+            ReportItem(
+                "Memory mode",
+                alias="memory_mode",
+                value=compiler_config["memory_mode"],
+                nested_items=memory_settings,
+            ),
+            ReportItem(
+                "System config",
+                alias="system_config",
+                value=compiler_config["system_config"],
+                nested_items=system_settings,
+            ),
+            ReportItem(
+                "Architecture settings",
+                "arch_settings",
+                None,
+                nested_items=arch_settings,
+            ),
+        ],
+    )
+
+
 def report_dataframe(df: pd.DataFrame) -> Report:
     """Wrap pandas dataframe into Report type."""
     return ReportDataFrame(df)
@@ -691,9 +1008,23 @@ class CompoundFormatter:
         return CompoundReport(reports)
 
 
+class CustomJSONEncoder(json.JSONEncoder):
+    """Custom JSON encoder."""
+
+    def default(self, obj: Any) -> Any:
+        """Support numpy types."""
+        if isinstance(obj, np.integer):
+            return int(obj)
+
+        if isinstance(obj, np.floating):
+            return float(obj)
+
+        return json.JSONEncoder.default(self, obj)
+
+
 def json_reporter(report: Report, output: FileLike, **kwargs: Any) -> None:
     """Produce report in json format."""
-    json_str = json.dumps(report.to_json(**kwargs), indent=4)
+    json_str = json.dumps(report.to_json(**kwargs), indent=4, cls=CustomJSONEncoder)
     print(json_str, file=output)
 
 
@@ -759,7 +1090,7 @@ def find_appropriate_formatter(data: Any) -> Callable[[Any], Report]:
         return report_operators_stat
 
     if isinstance(data, EthosUConfiguration):
-        return report_device
+        return report_device_details
 
     if isinstance(data, pd.DataFrame):
         return report_dataframe

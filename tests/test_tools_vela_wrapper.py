@@ -36,13 +36,57 @@ def test_default_vela_compiler() -> None:
     assert default_compiler.optimization_strategy == OptimizationStrategy.Performance
     assert default_compiler.output_dir is None
 
+    assert default_compiler.get_config() == {
+        "accelerator_config": "ethos-u55-256",
+        "system_config": "internal-default",
+        "core_clock": 500000000.0,
+        "axi0_port": "Sram",
+        "axi1_port": "OffChipFlash",
+        "memory_mode": "internal-default",
+        "const_mem_area": "Axi1",
+        "arena_mem_area": "Axi0",
+        "cache_mem_area": "Axi0",
+        "arena_cache_size": 4294967296,
+        "permanent_storage_mem_area": "OffChipFlash",
+        "feature_map_storage_mem_area": "Sram",
+        "fast_storage_mem_area": "Sram",
+        "memory_area": {
+            "Sram": {
+                "clock_scales": 1.0,
+                "burst_length": 32,
+                "read_latency": 32,
+                "write_latency": 32,
+            },
+            "Dram": {
+                "clock_scales": 1.0,
+                "burst_length": 1,
+                "read_latency": 0,
+                "write_latency": 0,
+            },
+            "OnChipFlash": {
+                "clock_scales": 1.0,
+                "burst_length": 1,
+                "read_latency": 0,
+                "write_latency": 0,
+            },
+            "OffChipFlash": {
+                "clock_scales": 0.125,
+                "burst_length": 128,
+                "read_latency": 64,
+                "write_latency": 64,
+            },
+        },
+    }
 
-def test_vela_compiler_with_parameters() -> None:
+
+def test_vela_compiler_with_parameters(test_resources_path: Path) -> None:
     """Test creation of Vela compiler instance with non-default params."""
+    vela_ini_path = str(test_resources_path / "vela/sample_vela.ini")
+
     compiler = VelaCompiler(
-        config_files=["vela.ini"],
-        system_config="test_system_config",
-        memory_mode="test_memory_mode",
+        config_files=[vela_ini_path],
+        system_config="Ethos_U65_High_End",
+        memory_mode="Shared_Sram",
         accelerator_config="ethos-u65-256",
         max_block_dependency=1,
         arena_cache_size=10,
@@ -52,9 +96,9 @@ def test_vela_compiler_with_parameters() -> None:
         output_dir="output",
     )
 
-    assert compiler.config_files == ["vela.ini"]
-    assert compiler.system_config == "test_system_config"
-    assert compiler.memory_mode == "test_memory_mode"
+    assert compiler.config_files == [vela_ini_path]
+    assert compiler.system_config == "Ethos_U65_High_End"
+    assert compiler.memory_mode == "Shared_Sram"
     assert compiler.accelerator_config == "ethos-u65-256"
     assert compiler.max_block_dependency == 1
     assert compiler.arena_cache_size == 10
@@ -62,6 +106,48 @@ def test_vela_compiler_with_parameters() -> None:
     assert compiler.cpu_tensor_alignment == 4
     assert compiler.optimization_strategy == OptimizationStrategy.Size
     assert compiler.output_dir == "output"
+
+    assert compiler.get_config() == {
+        "accelerator_config": "ethos-u65-256",
+        "system_config": "Ethos_U65_High_End",
+        "core_clock": 1000000000.0,
+        "axi0_port": "Sram",
+        "axi1_port": "Dram",
+        "memory_mode": "Shared_Sram",
+        "const_mem_area": "Axi1",
+        "arena_mem_area": "Axi0",
+        "cache_mem_area": "Axi0",
+        "arena_cache_size": 10,
+        "permanent_storage_mem_area": "Dram",
+        "feature_map_storage_mem_area": "Sram",
+        "fast_storage_mem_area": "Sram",
+        "memory_area": {
+            "Sram": {
+                "clock_scales": 1.0,
+                "burst_length": 32,
+                "read_latency": 32,
+                "write_latency": 32,
+            },
+            "Dram": {
+                "clock_scales": 0.234375,
+                "burst_length": 128,
+                "read_latency": 500,
+                "write_latency": 250,
+            },
+            "OnChipFlash": {
+                "clock_scales": 1.0,
+                "burst_length": 1,
+                "read_latency": 0,
+                "write_latency": 0,
+            },
+            "OffChipFlash": {
+                "clock_scales": 1.0,
+                "burst_length": 1,
+                "read_latency": 0,
+                "write_latency": 0,
+            },
+        },
+    }
 
 
 def test_compile_model(test_models_path: Path) -> None:

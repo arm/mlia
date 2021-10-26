@@ -15,14 +15,19 @@ from mlia.metadata import Operator
 from mlia.metrics import MemoryUsage
 from mlia.metrics import NPUCycles
 from mlia.metrics import PerformanceMetrics
+from mlia.reporters import BytesCell
 from mlia.reporters import Cell
+from mlia.reporters import ClockCell
 from mlia.reporters import Column
+from mlia.reporters import CyclesCell
 from mlia.reporters import Format
+from mlia.reporters import NestedReport
 from mlia.reporters import report
 from mlia.reporters import report_dataframe
 from mlia.reporters import report_operators
 from mlia.reporters import report_perf_metrics
 from mlia.reporters import ReportDataFrame
+from mlia.reporters import ReportItem
 from mlia.reporters import Table
 from typing_extensions import Literal
 
@@ -320,3 +325,95 @@ def test_csv_nested_table_representation() -> None:
         ["Header 1", "Header 2"],
         [1, ""],
     ]
+
+
+@pytest.mark.parametrize(
+    "report, expected_plain_text, expected_json_data, expected_csv_data",
+    [
+        (
+            NestedReport(
+                "Sample report",
+                "sample_report",
+                [
+                    ReportItem("Item", "item", "item_value"),
+                ],
+            ),
+            """
+Sample report:
+  Item                                                      item_value
+""".strip(),
+            {
+                "sample_report": {"item": "item_value"},
+            },
+            [
+                ("item",),
+                ("item_value",),
+            ],
+        ),
+        (
+            NestedReport(
+                "Sample report",
+                "sample_report",
+                [
+                    ReportItem(
+                        "Item",
+                        "item",
+                        "item_value",
+                        [ReportItem("Nested item", "nested_item", "nested_item_value")],
+                    ),
+                ],
+            ),
+            """
+Sample report:
+  Item                                                      item_value
+    Nested item                                      nested_item_value
+""".strip(),
+            {
+                "sample_report": {
+                    "item": {"nested_item": "nested_item_value"},
+                },
+            },
+            [
+                ("item", "nested_item"),
+                ("item_value", "nested_item_value"),
+            ],
+        ),
+    ],
+)
+def test_nested_report_representation(
+    report: NestedReport,
+    expected_plain_text: str,
+    expected_json_data: dict,
+    expected_csv_data: List,
+) -> None:
+    """Test representation of the NestedReport."""
+    plain_text = report.to_plain_text()
+    assert plain_text == expected_plain_text
+
+    json_data = report.to_json()
+    assert json_data == expected_json_data
+
+    csv_data = report.to_csv()
+    assert csv_data == expected_csv_data
+
+
+@pytest.mark.parametrize(
+    "cell, expected_repr",
+    [
+        (BytesCell(None), ""),
+        (BytesCell(0), "0 bytes"),
+        (BytesCell(1), "1 byte"),
+        (BytesCell(100000), "100,000 bytes"),
+        (ClockCell(None), ""),
+        (ClockCell(0), "0 Hz"),
+        (ClockCell(1), "1 Hz"),
+        (ClockCell(100000), "100,000 Hz"),
+        (CyclesCell(None), ""),
+        (CyclesCell(0), "0 cycles"),
+        (CyclesCell(1), "1 cycle"),
+        (CyclesCell(100000), "100,000 cycles"),
+    ],
+)
+def test_predefined_cell_types(cell: Cell, expected_repr: str) -> None:
+    """Test predefined cell types."""
+    assert str(cell) == expected_repr
