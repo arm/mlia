@@ -866,9 +866,19 @@ commit* and *git push*.
     pre-commit install -t pre-push
     ```
 
-    There are situations where it is convenient to disable pre-commit
-when running a git command, this can be achieved by specify the
---no-verify option on the git command.  e.g.
+1. Fix the git hook for pre-commit using tricks in Dockerfile.
+
+    ```shell
+    make fake-repo
+    cp .pre-commit-config.yaml fake-repo/foo.yaml
+    cd fake-repo && git init
+    pre-commit install-hooks -c foo.yaml
+    rm -rf fake-repo
+    ```
+
+1. There are situations where it is convenient to disable pre-commit
+   when running a git command, this can be achieved by specify the --no-verify
+   option on the git command.
 
     ```shell
     git commit --no-verify
