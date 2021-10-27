@@ -45,7 +45,7 @@ check_packages() {
 
 create_and_init_virtual_env() {
     # shellcheck disable=SC2086
-    virtualenv -p python3 $VIRT_ENV_OPTIONS "$1"
+    virtualenv -p python3.8 $VIRT_ENV_OPTIONS "$1"
     # shellcheck disable=SC1091
     source "$1/bin/activate"
 }

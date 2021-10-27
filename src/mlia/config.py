@@ -10,7 +10,11 @@ from typing import Optional
 from typing import Union
 
 import tensorflow as tf
+from mlia.utils.general import convert_tf_to_tflite
 from mlia.utils.general import convert_to_tflite
+from mlia.utils.general import is_keras_model
+from mlia.utils.general import is_tf_model
+from mlia.utils.general import is_tflite_model
 from mlia.utils.general import save_tflite_model
 from typing_extensions import Literal
 
@@ -22,13 +26,26 @@ class ModelConfiguration:
 
     model_path: str
 
+    def convert_to_tflite(
+        self, tflite_model_path: Union[str, Path], quantized: bool = False
+    ) -> "TFLiteModel":
+        """Convert model to TFLite format."""
+        raise NotImplementedError()
+
+    def convert_to_keras(self, keras_model_path: Union[str, Path]) -> "KerasModel":
+        """Convert model to Keras format."""
+        raise NotImplementedError()
+
 
 class KerasModel(ModelConfiguration):
-    """Keras model congiguration."""
+    """Keras model congiguration.
 
-    def __init__(self, model_path: str):
+    Supports all models supported by keras API: saved model, H5, HDF5
+    """
+
+    def __init__(self, model_path: Union[str, Path]):
         """Init Keras model configuration."""
-        self.model_path = model_path
+        self.model_path = str(model_path)
 
     def get_keras_model(self) -> tf.keras.Model:
         """Return associated keras model."""
@@ -39,7 +56,6 @@ class KerasModel(ModelConfiguration):
     ) -> "TFLiteModel":
         """Convert model to TFLite format."""
         LOGGER.info("Converting Keras to TFLite...")
-
         converted_model = convert_to_tflite(self.get_keras_model(), quantized)
         LOGGER.info("Done")
 
@@ -49,6 +65,10 @@ class KerasModel(ModelConfiguration):
         )
 
         return TFLiteModel(tflite_model_path)
+
+    def convert_to_keras(self, keras_model_path: Union[str, Path]) -> "KerasModel":
+        """Do nothing."""
+        return self
 
 
 class TFLiteModel(ModelConfiguration):
@@ -62,6 +82,74 @@ class TFLiteModel(ModelConfiguration):
         """Get model's input details."""
         interpreter = tf.lite.Interpreter(model_path=self.model_path)
         return cast(List[Dict], interpreter.get_input_details())
+
+    def get_tflite_model(self) -> tf.lite.Interpreter:
+        """Return associated tflite model."""
+        tf.lite.Interpreter(model_path=self.model_path)
+
+    def convert_to_tflite(
+        self, tflite_model_path: Union[str, Path], quantized: bool = False
+    ) -> "TFLiteModel":
+        """Do nothing."""
+        return self
+
+
+class TfModel(ModelConfiguration):
+    """Tensor Flow model configuration.
+
+    Supports models supported by TF API (not Keras)
+    """
+
+    def __init__(self, model_path: Union[str, Path]):
+        """Init TensorFlow model configuration."""
+        self.model_path = str(model_path)
+
+    def convert_to_tflite(
+        self, tflite_model_path: Union[str, Path], quantized: bool = False
+    ) -> "TFLiteModel":
+        """Convert model to TFLite format."""
+        converted_model = convert_tf_to_tflite(self.model_path, quantized)
+        save_tflite_model(converted_model, tflite_model_path)
+
+        return TFLiteModel(tflite_model_path)
+
+
+def get_model(
+    model: str,
+) -> "ModelConfiguration":
+    """Return the model object."""
+    if is_tflite_model(model):
+        return TFLiteModel(model)
+    if is_keras_model(model):
+        return KerasModel(model)
+    if is_tf_model(model):
+        return TfModel(model)
+    raise Exception(
+        "The input model format is not supported"
+        "(supported formats: tflite, Keras, TF saved model)!"
+    )
+
+
+def get_tflite_model(
+    model: str,
+    working_dir: Optional[str] = None,
+) -> "TFLiteModel":
+    """Convert input model to tflite and returns TFLiteModel object."""
+    models_path = Path(working_dir) if working_dir else Path.cwd()
+    tflite_model_path = str(models_path / "converted_model.tflite")
+    convered_model = get_model(model)
+    return convered_model.convert_to_tflite(tflite_model_path, True)
+
+
+def get_keras_model(
+    model: str,
+    working_dir: Optional[str] = None,
+) -> "KerasModel":
+    """Convert input model to Keras and returns KerasModel object."""
+    models_path = Path(working_dir) if working_dir else Path.cwd()
+    keras_model_path = str(models_path / "converted_model.h5")
+    convered_model = get_model(model)
+    return convered_model.convert_to_keras(keras_model_path)
 
 
 class CompilerOptions:

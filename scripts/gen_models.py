@@ -10,7 +10,6 @@ from typing import Optional
 
 import numpy as np
 import tensorflow as tf
-from mlia.tests.utils.generate_keras_model import generate_keras_model
 from typing_extensions import TypedDict
 
 tf.keras.backend.set_image_data_format("channels_last")
@@ -61,12 +60,6 @@ def simple_3_layers_model() -> tf.keras.Model:
 
 
 @test_model()
-def simple_model() -> tf.keras.Model:
-    """Generate simple model with conv2d and dense layers."""
-    return generate_keras_model()
-
-
-@test_model()
 def simple_conv_model() -> tf.keras.Model:
     """Generate simple model with Conv2d operator."""
     return tf.keras.Sequential(
@@ -104,23 +97,14 @@ def simple_mnist_convnet_non_quantized() -> tf.keras.Model:
     )
 
 
-def get_model_path(
-    model_name: str, output_dir: Optional[str], ext: str = "tflite"
-) -> Path:
+def get_model_path(model_name: str, output_dir: Path, ext: str = "tflite") -> Path:
     """Get model path."""
-    model_path = Path(f"{model_name}.{ext}")
-    if not output_dir:
-        return model_path
+    model_file_name = Path(f"{model_name}.{ext}")
 
-    output_dir_path = Path(output_dir)
-    output_dir_path.mkdir(exist_ok=True)
-
-    return output_dir_path / model_path
+    return output_dir / model_file_name
 
 
-def save_tflite_model(
-    tflite_model: Any, model_name: str, output_dir: Optional[str]
-) -> None:
+def save_tflite_model(tflite_model: Any, model_name: str, output_dir: Path) -> None:
     """Save TFLite model."""
     tflite_file_path = get_model_path(model_name, output_dir)
     with open(tflite_file_path, "wb") as tflite_file:
@@ -128,12 +112,17 @@ def save_tflite_model(
         tflite_file.write(tflite_model)
 
 
-def save_keras_model(
-    model: tf.keras.Model, model_name: str, output_dir: Optional[str]
-) -> None:
+def save_keras_model(model: tf.keras.Model, model_name: str, output_dir: Path) -> None:
     """Save Keras model."""
     keras_file_path = get_model_path(model_name, output_dir, "h5")
     model.save(keras_file_path, include_optimizer=True)
+
+
+def save_tf_model(
+    model: tf.keras.Model, keras_model_name: str, output_dir: Path
+) -> None:
+    """Convert Keras model to TF saved model, and save it."""
+    tf.saved_model.save(model, str(output_dir / f"tf_model_{keras_model_name}"))
 
 
 def representative_dataset(model: Any) -> Callable:
@@ -148,9 +137,18 @@ def representative_dataset(model: Any) -> Callable:
 
 
 def gen_models(
-    output_dir: Optional[str], specific_model: Optional[str], save_keras: bool
+    output_dir: Optional[str],
+    specific_model: Optional[str],
+    save_keras: bool,
+    tf_saved_model: bool,
 ) -> None:
     """Generate test models."""
+    if not output_dir:
+        output_dir_path = Path.cwd()
+    else:
+        output_dir_path = Path(output_dir)
+        output_dir_path.mkdir(exist_ok=True)
+
     for model_name, model_creator_attrs in models.items():
         if specific_model and model_name != specific_model:
             continue
@@ -161,7 +159,10 @@ def gen_models(
         print(f"==> Generate {model_name} ...")
         model = model_creator()
         if save_keras:
-            save_keras_model(model, model_name, output_dir)
+            save_keras_model(model, model_name, output_dir_path)
+
+        if tf_saved_model:
+            save_tf_model(model, model_name, output_dir_path)
 
         converter = tf.lite.TFLiteConverter.from_keras_model(model)
         if quantize:
@@ -172,7 +173,7 @@ def gen_models(
             converter.inference_output_type = tf.int8
 
         tflite_model = converter.convert()
-        save_tflite_model(tflite_model, model_name, output_dir)
+        save_tflite_model(tflite_model, model_name, output_dir_path)
 
 
 if __name__ == "__main__":
@@ -191,6 +192,12 @@ if __name__ == "__main__":
         default=False,
         help="Save Keras model in addition to the TFLite model",
     )
+    parser.add_argument(
+        "--tf-saved-model",
+        action="store_true",
+        default=False,
+        help="Save TF saved-model in addition to the TFLite model",
+    )
     args = parser.parse_args()
 
-    gen_models(args.output_dir, args.model_name, args.save_keras)
+    gen_models(args.output_dir, args.model_name, args.save_keras, args.tf_saved_model)

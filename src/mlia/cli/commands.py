@@ -28,8 +28,9 @@ from mlia.cli.advice import OptimizationResults
 from mlia.cli.advice import produce_advice
 from mlia.cli.options import parse_optimization_parameters
 from mlia.config import get_device
+from mlia.config import get_keras_model
+from mlia.config import get_tflite_model
 from mlia.config import KerasModel
-from mlia.config import TFLiteModel
 from mlia.operators import generate_supported_operators_report
 from mlia.operators import supported_operators
 from mlia.optimizations.select import get_optimizer
@@ -38,8 +39,6 @@ from mlia.performance import collect_performance_metrics
 from mlia.reporters import get_reporter
 from mlia.use_cases import compare_metrics
 from mlia.use_cases import optimize_and_compare
-from mlia.utils.general import is_keras_model
-from mlia.utils.general import is_tflite_model
 
 LOGGER = logging.getLogger("mlia.cli")
 
@@ -103,17 +102,19 @@ def all_tests(
                        output_format="json", output="report.json",
                        working_dir="mlia_output", device="ethos-u55", mac=128)
     """
-    models_path = Path(working_dir) if working_dir else Path.cwd()
-    keras_model, device = KerasModel(model), get_device(**device_args)
+    keras_model = get_keras_model(model, working_dir)
+    device = get_device(**device_args)
 
     with get_reporter(output_format, output) as reporter:
         reporter.submit(device)
 
         LOGGER.info(MODEL_ANALYSIS_MSG)
 
+        models_path = Path(working_dir) if working_dir else Path.cwd()
         tflite_model = keras_model.convert_to_tflite(
             models_path / "converted_model.tflite", quantized=True
         )
+
         operators = supported_operators(tflite_model, device)
 
         LOGGER.info("Evaluating performance ...\n")
@@ -202,9 +203,8 @@ def operators(
     if not model:
         raise Exception("Model is not provided")
 
-    supported_model = get_model_in_cmd_supported_format(model, working_dir)
-
-    tflite_model, device = TFLiteModel(supported_model), get_device(**device_args)
+    tflite_model = get_tflite_model(model, working_dir)
+    device = get_device(**device_args)
 
     with get_reporter(output_format, output) as reporter:
         reporter.submit(device)
@@ -263,9 +263,8 @@ def performance(
         >>> from mlia.cli.commands import performance
         >>> performance("model.tflite", device="ethos-u65")
     """
-    supported_model = get_model_in_cmd_supported_format(model, working_dir)
-
-    tflite_model, device = TFLiteModel(supported_model), get_device(**device_args)
+    tflite_model = get_tflite_model(model, working_dir)
+    device = get_device(**device_args)
 
     with get_reporter(output_format, output) as reporter:
         reporter.submit(device)
@@ -336,7 +335,8 @@ def optimization(
         >>> from mlia.cli.commands import optimization
         >>> optimization("model.tflite", device="ethos-u65")
     """
-    keras_model, device = KerasModel(model), get_device(**device_args)
+    keras_model = get_keras_model(model, working_dir)
+    device = get_device(**device_args)
 
     with get_reporter(output_format, output) as reporter:
         reporter.submit(device)
@@ -388,36 +388,29 @@ def optimization(
             LOGGER.info("Report(s) and advice list saved to: %s", output)
 
 
-def get_model_in_cmd_supported_format(
-    model: str,
-    working_dir: Optional[str] = None,
-) -> str:
-    """Convert keras model to tflite if needed, and return the path to the model."""
-    model_path = Path(model)
+def keras_to_tflite(
+    model: str, quantized: bool, out_path: Optional[str] = None
+) -> None:
+    """Convert and save a Keras model into TFLite format.
 
-    if is_tflite_model(model_path):
-        return model
+    :param model: path to the Keras model
+    :param quantized: If true the output model will be quantized
+    :param out_path: path to the directory where the TFLite model
+           will be saved
 
-    if is_keras_model(model_path):
-        return convert_from_keras_to_tflite(model, working_dir=working_dir)
+    Example:
+        Run command to convert the Keras model into a TFLite model
 
-    raise ValueError(
-        "The input model format for the performance or operator commands"
-        "must be .tflite or keras(.h5)!"
-    )
-
-
-def convert_from_keras_to_tflite(
-    model: str,
-    quantized: bool = True,
-    working_dir: Optional[str] = None,
-) -> str:
-    """Convert and save a Keras model into TFLite format."""
-    models_path = Path(working_dir) if working_dir else Path.cwd()
-
-    keras_model = KerasModel(model)
+        >>> from mlia.cli.logging import setup_logging
+        >>> setup_logging()
+        >>> from mlia.cli.commands import keras_to_tflite
+        >>> keras_to_tflite("model.h5", True, "output_dir")
+    """
+    models_path = Path(out_path) if out_path else Path.cwd()
     tflite_model_path = str(models_path / "converted_model.tflite")
-
+    keras_model = KerasModel(model)
+    LOGGER.info("Converting Keras to TFLite ...")
     keras_model.convert_to_tflite(tflite_model_path, quantized)
+    LOGGER.info("Done")
 
-    return tflite_model_path
+    LOGGER.info("Model %s saved to %s", model, models_path)

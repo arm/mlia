@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 import tensorflow as tf
 from mlia.utils.general import convert_to_tflite
+from mlia.utils.general import get_tf_tensor_shape
 from mlia.utils.general import is_keras_model
 from mlia.utils.general import is_tflite_model
 from mlia.utils.general import save_keras_model
@@ -68,3 +69,9 @@ def test_is_keras_model(model_path: Path, expected_result: bool) -> None:
     """Test function is_keras_model."""
     result = is_keras_model(model_path)
     assert result == expected_result
+
+
+def test_get_tf_tensor_shape(test_models_path: Path) -> None:
+    """Test get_tf_tensor_shape with tf_model_simple_3_layers_model."""
+    model_path = test_models_path / "tf_model_simple_3_layers_model"
+    assert get_tf_tensor_shape(str(model_path)) == [1, 1]
