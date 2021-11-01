@@ -56,13 +56,16 @@ while [ $# -gt 0 ]; do
   shift 1
 done
 
-if [ $# -ne 0 ]; then
-  cd "$1"
-  shift
-fi
+# shellcheck disable=SC1091
+source utils.sh
+
+WORKSPACE="$1"
+utils::check_workspace_path "$WORKSPACE"
 
 # shellcheck disable=SC1091
-source "/home/foo/v/bin/activate"
+cd "$WORKSPACE" || exit 1
+
+utils::activate_virtual_env
 
 pip install .
 
@@ -71,7 +74,4 @@ pre-commit run --all-files --hook-stage=push
 python3 setup.py -q check
 python3 setup.py -q sdist bdist_wheel
 
-# For generating api docs
-cd "$(pwd)/docs"
-sphinx-apidoc -f -o "$(pwd)/source" "../src/mlia"
-make html
+utils::generate_docs "$WORKSPACE"
