@@ -1,16 +1,109 @@
 # Copyright 2021, Arm Ltd.
 """End to end tests for MLIA CLI."""
+import argparse
+import itertools
+import json
 import os
 import shutil
 import subprocess
 from pathlib import Path
+from typing import Any
+from typing import Dict
+from typing import Generator
+from typing import Iterable
 from typing import List
+from typing import NamedTuple
 from typing import Optional
-from typing import Tuple
 
 import pytest
+from mlia.cli.main import get_possible_command_names
+from mlia.cli.main import init_commands
+from mlia.cli.main import init_common_parser
+from mlia.cli.main import init_subcommand_parser
+from mlia.utils.general import is_list_of
 from mlia.utils.proc import CommandExecutor
 from mlia.utils.proc import working_directory
+
+
+VALID_COMMANDS = get_possible_command_names()
+
+
+class CommandExecution(NamedTuple):
+    """Command execution."""
+
+    parsed_args: argparse.Namespace
+    parameters: List[str]
+
+    def __str__(self) -> str:
+        """Return string representation."""
+        command = self._get_param("command")
+        device = self._get_param("device")
+        mac = self._get_param("mac")
+
+        model_path = Path(self._get_param("model"))
+        model = model_path.name
+
+        opt_type = self._get_param("optimization_type", None)
+        opt_target = self._get_param("optimization_target", None)
+        opts = f" optimization={v}" if (v := self._merge(opt_type, opt_target)) else ""
+
+        return f"command {command}: device={device} mac={mac} model={model}{opts}"
+
+    def _get_param(self, param: str, default: Optional[str] = "unknown") -> Any:
+        return getattr(self.parsed_args, param, default)
+
+    @staticmethod
+    def _merge(value1: str, value2: str, sep: str = ",") -> str:
+        """Split and merge values into a string."""
+        if not value1 or not value2:
+            return ""
+
+        values = [
+            f"{v1} {v2}"
+            for v1, v2 in zip(str(value1).split(sep), str(value2).split(sep))
+        ]
+
+        return ",".join(values)
+
+
+class ExecutionConfiguration(NamedTuple):
+    """Execution configuration."""
+
+    command: str
+    parameters: Dict[str, List[List[str]]]
+
+    @classmethod
+    def from_dict(cls, exec_info: Dict) -> "ExecutionConfiguration":
+        """Create instance from the dictionary."""
+        if not (command := exec_info.get("command")):
+            raise Exception("Command is not defined")
+
+        if command not in VALID_COMMANDS:
+            raise Exception(f"Unknown command {command}")
+
+        if not (params := exec_info.get("parameters")):
+            raise Exception(f"Command {command} should have parameters")
+
+        assert isinstance(params, dict), "Parameters should be a dictionary"
+        assert all(
+            isinstance(param_group_name, str)
+            and is_list_of(param_group_values, list)
+            and all(is_list_of(param_list, str) for param_list in param_group_values)
+            for param_group_name, param_group_values in params.items()
+        ), "Execution configuration should be a dictionary of list of list of strings"
+
+        return cls(command, params)
+
+    @property
+    def all_combinations(self) -> Iterable[List[str]]:
+        """Generate all command combinations."""
+        parameter_groups = self.parameters.values()
+        parameter_combinations = itertools.product(*parameter_groups)
+
+        return (
+            [self.command, *itertools.chain.from_iterable(param_combination)]
+            for param_combination in parameter_combinations
+        )
 
 
 def run_command(cmd: List[str]) -> None:
@@ -51,15 +144,65 @@ def install_aiet_artifacts(system_dirs: List[Path], software_dirs: List[Path]) -
 
 def get_config_dir() -> Optional[Path]:
     """Get configuration directory path."""
-    config_dir = os.environ.get("MLIA_E2E_CONFIG")
-    if not config_dir:
+    if not (config_dir := os.environ.get("MLIA_E2E_CONFIG")):
         return None
 
-    config_dir_path = Path(config_dir)
-    if not config_dir_path.is_dir():
+    if not (config_dir_path := Path(config_dir)).is_dir():
         raise Exception(f"Wrong config directory {config_dir}")
 
     return config_dir_path
+
+
+def get_config_file(config_filename: str = "e2e_tests_config.json") -> Optional[Path]:
+    """Get path to the configuration file."""
+    if not (config_dir := get_config_dir()):
+        return None
+
+    if not (config_file := config_dir / config_filename).is_file():
+        raise Exception(
+            f"Unable to find configuration file {config_filename} in {config_dir}"
+        )
+    return config_file
+
+
+def get_execution_definitions() -> Generator[CommandExecution, None, None]:
+    """Collect all execution definitions from configuration file."""
+    if (config_file := get_config_file()) is None:
+        # if no configuration file provided then just return from this function
+        # test will be skipped in this case
+        return
+
+    with open(config_file) as f:
+        json_data = json.load(f)
+    assert isinstance(json_data, dict), "JSON configuration expected to be a dictionary"
+
+    executions = json_data.get("executions", [])
+    assert is_list_of(executions, dict), "List of the dictionaries expected"
+
+    exec_configs = (
+        ExecutionConfiguration.from_dict(exec_info) for exec_info in executions
+    )
+
+    combinations = (
+        command_combination
+        for exec_config in exec_configs
+        for command_combination in exec_config.all_combinations
+    )
+
+    common_parser = init_common_parser()
+    subcommand_parser = init_subcommand_parser(common_parser)
+    init_commands(subcommand_parser)
+
+    for combination in combinations:
+        try:
+            # parse parameters to generate meaningful test description
+            args = subcommand_parser.parse_args(combination)
+        except SystemExit as e:
+            raise Exception(
+                f"Configuration contains invalid parameters: {combination}"
+            ) from e
+
+        yield CommandExecution(args, combination)
 
 
 def get_directories(parent_dir: Path) -> List[Path]:
@@ -83,24 +226,6 @@ def discover_and_install_aiet_artifacts() -> None:
     install_aiet_artifacts(systems_dirs, software_dirs)
 
 
-def get_tflite_models() -> List[Path]:
-    """Get list of paths to the tflite models to test."""
-    config_dir_path = get_config_dir()
-    if not config_dir_path:
-        return []
-
-    return [Path("tests/test_resources/models/simple_3_layers_model.tflite")]
-
-
-def get_keras_models() -> List[Path]:
-    """Get list of paths to the keras models to test."""
-    config_dir_path = get_config_dir()
-    if not config_dir_path:
-        return []
-
-    return [Path("tests/test_resources/models/simple_model.h5")]
-
-
 @pytest.mark.e2e
 class TestEndToEnd:
     """End to end tests."""
@@ -109,56 +234,6 @@ class TestEndToEnd:
     def setup_class(cls) -> None:
         """Set up test class."""
         discover_and_install_aiet_artifacts()
-
-    @pytest.mark.parametrize("model", get_tflite_models())
-    @pytest.mark.parametrize("device", ["ethos-u55", "ethos-u65"])
-    @pytest.mark.parametrize("fmt", ["json", "plain_text", "csv"])
-    def test_operators(self, model: Path, device: str, fmt: str) -> None:
-        """Test command 'operators'."""
-        command = [
-            "mlia",
-            "operators",
-            "--device",
-            device,
-            "--output-format",
-            fmt,
-            str(model),
-        ]
-
-        run_command(command)
-
-    @pytest.mark.parametrize("model", get_tflite_models())
-    @pytest.mark.parametrize("device", ["ethos-u55", "ethos-u65"])
-    def test_performance(
-        self,
-        model: Path,
-        device: str,
-    ) -> None:
-        """Test command 'performance'."""
-        command = ["mlia", "performance", "--device", device, str(model)]
-
-        run_command(command)
-
-    @pytest.mark.parametrize("model", get_keras_models())
-    @pytest.mark.parametrize("device", ["ethos-u55", "ethos-u65"])
-    @pytest.mark.parametrize("optimization", [("pruning", "0.5"), ("clustering", "32")])
-    def test_optimization(
-        self, model: Path, device: str, optimization: Tuple[str, str]
-    ) -> None:
-        """Test command 'optimization'."""
-        command = [
-            "mlia",
-            "optimization",
-            str(model),
-            "--device",
-            device,
-            "--optimization-type",
-            optimization[0],
-            "--optimization-target",
-            optimization[1],
-        ]
-
-        run_command(command)
 
     def run_install_script_test(
         self,
@@ -250,129 +325,21 @@ class TestEndToEnd:
             "install.sh", tmp_path, "dist1", self.full_commands_list
         )
 
-    def test_install_dev_script(self, tmp_path: Path) -> None:
-        """Test MLIA install_dev.sh script."""
+    def test_install_dev_script_without_mlia(self, tmp_path: Path) -> None:
+        """Test MLIA install_dev.sh script without installing MLIA flag."""
         self.run_install_script_test(
             "install_dev.sh", tmp_path, "dist2", self.partial_commands_list
         )
+
+    def test_install_dev_script_with_mlia(self, tmp_path: Path) -> None:
+        """Test MLIA install_dev.sh script with installing MLIA flag."""
         self.run_install_script_test(
             "install_dev.sh", tmp_path, "dist3", self.full_commands_list, "-m"
         )
 
-    @pytest.mark.parametrize("command", ["operators", "performance"])
-    @pytest.mark.parametrize(
-        "model",
-        [
-            "ds_cnn_large_fully_quantized_int8.tflite",
-            "mobilenet_v2_1.0_224_INT8.tflite",
-            "wav2letter_leakyrelu_fixed.tflite",
-            "inception_v3_quant.tflite",
-        ],
-    )
-    def test_commands_ethos_u55_real_tflite_model(
-        self, command: str, model: str
-    ) -> None:
-        """Test 'operators' and 'performance' commands on real-world TFLite models."""
-        config_dir = get_config_dir()
-        if not config_dir:
-            raise Exception("E2E configuration directory is not provided")
-
-        mlia_command = [
-            "mlia",
-            command,
-            "--device",
-            "ethos-u55",
-            "--mac",
-            "256",
-            "--config",
-            "tests/test_resources/vela/sample_vela.ini",
-            "--system-config",
-            "Ethos_U55_High_End_Embedded",
-            "--memory-mode",
-            "Shared_Sram",
-            str(config_dir / "tflite_models" / model),
-        ]
-
-        run_command(mlia_command)
-
-    @pytest.mark.parametrize("command", ["operators", "performance"])
-    @pytest.mark.parametrize(
-        "model",
-        [
-            "ds_cnn_large_fully_quantized_int8.tflite",
-            "mobilenet_v2_1.0_224_INT8.tflite",
-        ],
-    )
-    def test_commands_ethos_u65_real_tflite_model(
-        self, command: str, model: str
-    ) -> None:
-        """Test 'operators' and 'performance' commands on real-world TFLite models."""
-        config_dir = get_config_dir()
-        if not config_dir:
-            raise Exception("E2E configuration directory is not provided")
-
-        mlia_command = [
-            "mlia",
-            command,
-            "--device",
-            "ethos-u65",
-            "--mac",
-            "512",
-            "--config",
-            "tests/test_resources/vela/sample_vela.ini",
-            "--system-config",
-            "Ethos_U65_High_End",
-            "--memory-mode",
-            "Shared_Sram",
-            str(config_dir / "tflite_models" / model),
-        ]
-
-        run_command(mlia_command)
-
-    @pytest.mark.parametrize(
-        "optimization_type, optimization_target",
-        [("pruning", "0.5"), ("clustering", "32")],
-    )
-    @pytest.mark.parametrize(
-        "device, mac, system_config",
-        [
-            ("ethos-u55", "256", "Ethos_U55_High_End_Embedded"),
-            ("ethos-u65", "512", "Ethos_U65_High_End"),
-        ],
-    )
-    @pytest.mark.parametrize("model", ["ds_cnn_l_0.9.h5"])
-    def test_commands_ethos_real_keras_model(
-        self,
-        device: str,
-        mac: str,
-        system_config: str,
-        optimization_type: str,
-        optimization_target: str,
-        model: str,
-    ) -> None:
-        """Test 'optimization' command on real-world Keras models."""
-        config_dir = get_config_dir()
-        if not config_dir:
-            raise Exception("E2E configuration directory is not provided")
-
-        mlia_command = [
-            "mlia",
-            "optimization",
-            "--optimization-type",
-            optimization_type,
-            "--optimization-target",
-            optimization_target,
-            "--device",
-            device,
-            "--mac",
-            mac,
-            "--config",
-            "tests/test_resources/vela/sample_vela.ini",
-            "--system-config",
-            system_config,
-            "--memory-mode",
-            "Shared_Sram",
-            str(config_dir / "keras_models" / model),
-        ]
+    @pytest.mark.parametrize("command_execution", get_execution_definitions(), ids=str)
+    def test_command(self, command_execution: CommandExecution) -> None:
+        """Test MLIA command with the provided parameters."""
+        mlia_command = ["mlia", *command_execution.parameters]
 
         run_command(mlia_command)

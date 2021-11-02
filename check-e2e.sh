@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# Copyright 2021, Arm Ltd.
+
 set -e
 set -u
 set -o pipefail

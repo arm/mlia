@@ -6,22 +6,16 @@ set -e
 set -u
 set -o pipefail
 
-if [ "$#" -ne 1 ]; then
-  echo "Please, provide workspace path"
-  exit 1
-fi
+# shellcheck disable=SC1091
+source utils.sh
 
-WORKSPACE=$1
-if [ ! -d "$WORKSPACE" ]; then
-  echo "$WORKSPACE is not valid directory path"
-  exit 1
-fi
+WORKSPACE="$1"
+utils::check_workspace_path "$WORKSPACE"
 
 # shellcheck disable=SC1091
 cd "$WORKSPACE" || exit 1
 
-# shellcheck disable=SC1091
-source "/home/foo/v/bin/activate"
+utils::activate_virtual_env
 
 if [[ -n "$AIET_ARTIFACT_PATH" ]]; then
   echo "Install AIET from $AIET_ARTIFACT_PATH"
@@ -37,7 +31,7 @@ SETUPTOOLS_SCM_PRETEND_VERSION="$FIXED_WHEEL_VERSION" python setup.py -q bdist_w
 WHEEL_PATH="dist/mlia-$FIXED_WHEEL_VERSION-py3-none-any.whl"
 pip install "$WHEEL_PATH"
 
-echo "Unzipping artifacts"
+echo "Extracting artifacts"
 cat "$MLIA_E2E_CONFIG"/systems/*.tar.gz | tar -xzf - -i -C "$MLIA_E2E_CONFIG"/systems
 cat "$MLIA_E2E_CONFIG"/software/*.tar.gz | tar -xzf - -i -C "$MLIA_E2E_CONFIG"/software
 
