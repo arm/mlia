@@ -1,35 +1,70 @@
 # Copyright 2021, Arm Ltd.
 """Test for module utils/test_utils."""
-import pathlib
+from pathlib import Path
 
+import pytest
 import tensorflow as tf
-from mlia.utils import general as test_utils
+from mlia.utils.general import convert_to_tflite
+from mlia.utils.general import is_keras_model
+from mlia.utils.general import is_tflite_model
+from mlia.utils.general import save_keras_model
+from mlia.utils.general import save_tflite_model
 
 from tests.utils.generate_keras_model import generate_keras_model
 
 
 def test_convert_to_tflite() -> None:
     """Test converting keras model to tflite."""
-    tflite_model = test_utils.convert_to_tflite(generate_keras_model())
+    tflite_model = convert_to_tflite(generate_keras_model())
 
     assert tflite_model
 
 
-def test_save_keras_model(tmp_path: pathlib.Path) -> None:
+def test_save_keras_model(tmp_path: Path) -> None:
     """Test saving keras model."""
     model = generate_keras_model()
-    temp_file = tmp_path / "test_optimization_command.h5"
-    test_utils.save_keras_model(model, temp_file)
+    temp_file = tmp_path / "test_model_saving.h5"
+    save_keras_model(model, temp_file)
     loaded_model = tf.keras.models.load_model(temp_file)
 
     assert loaded_model.summary() == model.summary()
 
 
-def test_save_tflite_model(tmp_path: pathlib.Path) -> None:
+def test_save_tflite_model(tmp_path: Path) -> None:
     """Test saving tflite model."""
-    temp_file = tmp_path / "test_optimization_command.tflite"
-    tflite_model = test_utils.convert_to_tflite(generate_keras_model())
-    test_utils.save_tflite_model(tflite_model, temp_file)
+    temp_file = tmp_path / "test_model_saving.tflite"
+    tflite_model = convert_to_tflite(generate_keras_model())
+    save_tflite_model(tflite_model, temp_file)
     interpreter = tf.lite.Interpreter(model_path=str(temp_file))
 
     assert interpreter
+
+
+@pytest.mark.parametrize(
+    "model_path, expected_result",
+    [
+        [Path("sample_model.tflite"), True],
+        [Path("strange_model.tflite.tfl"), False],
+        [Path("sample_model.h5"), False],
+        [Path("sample_model"), False],
+    ],
+)
+def test_is_tflite_model(model_path: Path, expected_result: bool) -> None:
+    """Test function is_tflite_model."""
+    result = is_tflite_model(model_path)
+    assert result == expected_result
+
+
+@pytest.mark.parametrize(
+    "model_path, expected_result",
+    [
+        [Path("sample_model.h5"), True],
+        [Path("strange_model.h5.keras"), False],
+        [Path("sample_model.tflite"), False],
+        [Path("sample_model"), False],
+    ],
+)
+def test_is_keras_model(model_path: Path, expected_result: bool) -> None:
+    """Test function is_keras_model."""
+    result = is_keras_model(model_path)
+    assert result == expected_result

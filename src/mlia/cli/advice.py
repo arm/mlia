@@ -4,6 +4,7 @@ import logging
 import math
 from enum import Enum
 from functools import partial
+from pathlib import Path
 from typing import Callable
 from typing import Dict
 from typing import List
@@ -15,6 +16,7 @@ import pandas as pd
 from mlia.cli.options import get_device_opts
 from mlia.metadata import Operators
 from mlia.metrics import PerformanceMetrics
+from mlia.utils.general import is_keras_model
 from typing_extensions import TypedDict
 
 
@@ -134,14 +136,25 @@ def advice_increase_operator_compatibility(ctx: AdvisorContext) -> List[str]:
 
 def advice_optimization(ctx: AdvisorContext) -> List[str]:
     """Advice to try model optimization."""
-    return [
-        "Check if you can improve the performance by applying "
-        "tooling techniques to your model.",
-        "Note: you will need a Keras/TF.saved_model input for that.",
-        "For example: mlia optimization --optimization-type "
-        "pruning --optimization-target 0.5 /path/to/keras_model",
-        "For more info: mlia optimization --help",
-    ]
+    model_path = "/path/to/keras_model"
+    keras_note = ["Note: you will need a Keras/TF.saved_model input for that."]
+
+    if (model := ctx.get("model")) and is_keras_model(Path(model)):
+        model_path = model
+        keras_note = []
+
+    return (
+        [
+            "Check if you can improve the performance by applying "
+            "tooling techniques to your model."
+        ]
+        + keras_note
+        + [
+            "For example: mlia optimization --optimization-type "
+            f"pruning --optimization-target 0.5 {model_path}",
+            "For more info: mlia optimization --help",
+        ]
+    )
 
 
 def advice_npu_support(ctx: AdvisorContext) -> List[str]:

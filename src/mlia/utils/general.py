@@ -107,3 +107,13 @@ def is_list_of(data: Any, cls: type, elem_num: Optional[int] = None) -> bool:
         and all(isinstance(item, cls) for item in data)
         and (elem_num is None or len(data) == elem_num)
     )
+
+
+def is_tflite_model(model: Path) -> bool:
+    """Check if provided file is a TFLite model."""
+    return model.suffix == ".tflite"
+
+
+def is_keras_model(model: Path) -> bool:
+    """Check if provided file is a Keras model."""
+    return model.suffix == ".h5"

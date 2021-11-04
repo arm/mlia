@@ -14,7 +14,6 @@ be configured. Function 'setup_logging' from module
 >>> mlia.all_tests("path/to/model", device="ethos-u55")
 """
 import logging
-import os
 from pathlib import Path
 from typing import Any
 from typing import List
@@ -39,6 +38,8 @@ from mlia.performance import collect_performance_metrics
 from mlia.reporters import get_reporter
 from mlia.use_cases import compare_metrics
 from mlia.use_cases import optimize_and_compare
+from mlia.utils.general import is_keras_model
+from mlia.utils.general import is_tflite_model
 
 LOGGER = logging.getLogger("mlia.cli")
 
@@ -201,9 +202,9 @@ def operators(
     if not model:
         raise Exception("Model is not provided")
 
-    model = get_model_in_cmd_supported_format(model, working_dir)
+    supported_model = get_model_in_cmd_supported_format(model, working_dir)
 
-    tflite_model, device = TFLiteModel(model), get_device(**device_args)
+    tflite_model, device = TFLiteModel(supported_model), get_device(**device_args)
 
     with get_reporter(output_format, output) as reporter:
         reporter.submit(device)
@@ -262,9 +263,9 @@ def performance(
         >>> from mlia.cli.commands import performance
         >>> performance("model.tflite", device="ethos-u65")
     """
-    model = get_model_in_cmd_supported_format(model, working_dir)
+    supported_model = get_model_in_cmd_supported_format(model, working_dir)
 
-    tflite_model, device = TFLiteModel(model), get_device(**device_args)
+    tflite_model, device = TFLiteModel(supported_model), get_device(**device_args)
 
     with get_reporter(output_format, output) as reporter:
         reporter.submit(device)
@@ -413,16 +414,18 @@ def get_model_in_cmd_supported_format(
     working_dir: Optional[str] = None,
 ) -> str:
     """Convert keras model to tflite if needed, and return the path to the model."""
-    if os.path.splitext(model)[1] == ".tflite":
+    model_path = Path(model)
+
+    if is_tflite_model(model_path):
         return model
-    elif os.path.splitext(model)[1] == ".h5":
-        model = convert_from_keras_to_tflite(model)
-        return model
-    else:
-        raise ValueError(
-            "The input model format for the performance or operator commands"
-            "must be .tflite or keras(.h5)!"
-        )
+
+    if is_keras_model(model_path):
+        return convert_from_keras_to_tflite(model, working_dir=working_dir)
+
+    raise ValueError(
+        "The input model format for the performance or operator commands"
+        "must be .tflite or keras(.h5)!"
+    )
 
 
 def convert_from_keras_to_tflite(
