@@ -28,7 +28,7 @@ from mlia.utils.proc import OutputConsumer
 from mlia.utils.proc import RunningCommand
 
 
-LOGGER = logging.getLogger("mlia.tools.aiet")
+logger = logging.getLogger(__name__)
 
 
 class PerformanceMetrics:
@@ -67,7 +67,7 @@ class AIETLogWriter(OutputConsumer):
 
     def feed(self, line: str) -> None:
         """Process line from the output."""
-        LOGGER.info(line.strip())
+        logger.debug(line.strip())
 
 
 class GenericInferenceOutputParser(OutputConsumer):
@@ -183,12 +183,12 @@ class AIETRunner:
         return ["aiet", subcommand] + [p for p in params]
 
     def _execute(self, command: List[str]) -> Tuple[int, bytes, bytes]:
-        LOGGER.debug("Execute command %s", " ".join(command))
+        logger.debug("Execute command %s", " ".join(command))
         return self.executor.execute(command)
 
     def _submit(self, command: List[str]) -> RunningCommand:
         """Submit command for the execution."""
-        LOGGER.debug("Submit command %s", " ".join(command))
+        logger.debug("Submit command %s", " ".join(command))
         return self.executor.submit(command)
 
     def _execute_and_parse(self, command: List[str]) -> Any:
@@ -300,7 +300,7 @@ class GenericInferenceRunnerU65(GenericInferenceRunner):
             )
 
         random_input_file_path: str = self.context_stack.enter_context(temp_file())
-        LOGGER.debug("Save random input into %s", random_input_file_path)
+        logger.debug("Save random input into %s", random_input_file_path)
         save_random_input(input[0]["shape"], input[0]["dtype"], random_input_file_path)
 
         deploy_params = [

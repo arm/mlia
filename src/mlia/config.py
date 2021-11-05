@@ -1,6 +1,8 @@
 # Copyright 2021, Arm Ltd.
 """Model and IP configuration."""
 import logging
+from abc import ABC
+from abc import abstractmethod
 from pathlib import Path
 from typing import Any
 from typing import cast
@@ -18,7 +20,7 @@ from mlia.utils.general import is_tflite_model
 from mlia.utils.general import save_tflite_model
 from typing_extensions import Literal
 
-LOGGER = logging.getLogger("mlia.config")
+logger = logging.getLogger(__name__)
 
 
 class ModelConfiguration:
@@ -55,12 +57,13 @@ class KerasModel(ModelConfiguration):
         self, tflite_model_path: Union[str, Path], quantized: bool = False
     ) -> "TFLiteModel":
         """Convert model to TFLite format."""
-        LOGGER.info("Converting Keras to TFLite...")
+        logger.info("Converting Keras to TFLite...")
+
         converted_model = convert_to_tflite(self.get_keras_model(), quantized)
-        LOGGER.info("Done")
+        logger.info("Done")
 
         save_tflite_model(converted_model, tflite_model_path)
-        LOGGER.info(
+        logger.info(
             "Model %s converted and saved to %s", self.model_path, tflite_model_path
         )
 
@@ -130,26 +133,19 @@ def get_model(
     )
 
 
-def get_tflite_model(
-    model: str,
-    working_dir: Optional[str] = None,
-) -> "TFLiteModel":
+def get_tflite_model(model: str, ctx: "Context") -> "TFLiteModel":
     """Convert input model to tflite and returns TFLiteModel object."""
-    models_path = Path(working_dir) if working_dir else Path.cwd()
-    tflite_model_path = str(models_path / "converted_model.tflite")
-    convered_model = get_model(model)
-    return convered_model.convert_to_tflite(tflite_model_path, True)
+    tflite_model_path = str(ctx.get_model_path("converted_model.tflite"))
+    converted_model = get_model(model)
+    return converted_model.convert_to_tflite(tflite_model_path, True)
 
 
-def get_keras_model(
-    model: str,
-    working_dir: Optional[str] = None,
-) -> "KerasModel":
+def get_keras_model(model: str, ctx: "Context") -> "KerasModel":
     """Convert input model to Keras and returns KerasModel object."""
-    models_path = Path(working_dir) if working_dir else Path.cwd()
-    keras_model_path = str(models_path / "converted_model.h5")
-    convered_model = get_model(model)
-    return convered_model.convert_to_keras(keras_model_path)
+    keras_model_path = str(ctx.get_model_path("converted_model.h5"))
+
+    converted_model = get_model(model)
+    return converted_model.convert_to_keras(keras_model_path)
 
 
 class CompilerOptions:
@@ -270,3 +266,11 @@ def get_device(**kwargs: Any) -> IPConfiguration:
         return EthosU65(**kwargs)
 
     raise Exception(f"Unsupported device: {device}")
+
+
+class Context(ABC):
+    """Abstract class for the execution context."""
+
+    @abstractmethod
+    def get_model_path(self, model_filename: str) -> Path:
+        """Return path for the model."""

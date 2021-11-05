@@ -1,6 +1,5 @@
 # Copyright 2021, Arm Ltd.
 """Module for the advice generation."""
-import logging
 import math
 from enum import Enum
 from functools import partial
@@ -18,9 +17,6 @@ from mlia.metadata import Operators
 from mlia.metrics import PerformanceMetrics
 from mlia.utils.general import is_keras_model
 from typing_extensions import TypedDict
-
-
-LOGGER = logging.getLogger("mlia.cli")
 
 
 class Advice:

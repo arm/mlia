@@ -1,30 +1,49 @@
 # Copyright 2021, Arm Ltd.
 """CLI logging configuration."""
-import datetime
 import logging
 import sys
 from pathlib import Path
 from typing import Any
+from typing import Callable
 from typing import Optional
+from typing import Union
 
 
-_TOOLS_LOGGERS = [
-    "mlia.tools.aiet",
-    "mlia.tools.vela",
-    "tensorflow",
-    "py.warnings",
-]
+class LogFilter(logging.Filter):
+    """Configurable log filter."""
 
-_MLIA_LOGGERS = [
-    "mlia.cli",
-    "mlia.performance",
-    "mlia.operators",
-    "mlia.reporters",
-    "mlia.config",
-]
+    def __init__(self, log_record_filter: Callable[[logging.LogRecord], bool]) -> None:
+        """Init log filter instance."""
+        self.log_record_filter = log_record_filter
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        """Filter log messages."""
+        return self.log_record_filter(record)
+
+    @classmethod
+    def equals(cls, log_level: int) -> "LogFilter":
+        """Return log filter that filters messages by log level."""
+
+        def filter_by_level(log_record: logging.LogRecord) -> bool:
+            return log_record.levelno == log_level
+
+        return cls(filter_by_level)
+
+    @classmethod
+    def skip(cls, log_level: int) -> "LogFilter":
+        """Return log filter that skips messages with particular level."""
+
+        def skip_by_level(log_record: logging.LogRecord) -> bool:
+            return log_record.levelno != log_level
+
+        return cls(skip_by_level)
 
 
-def setup_logging(logs_dir: Optional[str] = None, verbose: bool = False) -> None:
+def setup_logging(
+    logs_dir: Optional[Union[str, Path]] = None,
+    verbose: bool = False,
+    log_filename: str = "mlia.log",
+) -> None:
     """Set up logging.
 
     IA uses module 'logging' when it needs to produce output.
@@ -33,45 +52,61 @@ def setup_logging(logs_dir: Optional[str] = None, verbose: bool = False) -> None
            debug information. If the path is not provided then no log files will
            be created during execution
     :param verbose: enable extended logging for the tools loggers
+    :param log_filename: name of the log file in the logs directory
     """
-    now_timestamp = f"{datetime.datetime.now():%Y%m%d_%H%M%S}"
-    logs_dir_path: Optional[Path] = None
+    mlia_logger, tensorflow_logger, python_warnings_logger = [
+        logging.getLogger(logger_name)
+        for logger_name in ["mlia", "tensorflow", "py.warnings"]
+    ]
+
+    mlia_logger.setLevel(logging.DEBUG)
+
+    stdout_handler = create_log_handler(
+        stream=sys.stdout,
+        log_level=logging.INFO,
+    )
+    mlia_logger.addHandler(stdout_handler)
+
+    if verbose:
+        mlia_verbose_handler = create_log_handler(
+            stream=sys.stdout,
+            log_level=logging.DEBUG,
+            log_format="%(name)s - %(message)s",
+            log_filter=LogFilter.equals(logging.DEBUG),
+        )
+        mlia_logger.addHandler(mlia_verbose_handler)
+
+        verbose_stdout_handler = create_log_handler(
+            stream=sys.stdout,
+            log_level=logging.DEBUG,
+            log_format="%(name)s - %(message)s",
+        )
+        for logger in [tensorflow_logger, python_warnings_logger]:
+            logger.addHandler(verbose_stdout_handler)
 
     if logs_dir:
         logs_dir_path = Path(logs_dir)
         logs_dir_path.mkdir(exist_ok=True)
+        log_file_path = logs_dir_path / log_filename
 
-    for logger_name in _TOOLS_LOGGERS:
-        module_name = logger_name.split(".")[-1]
-        logger = logging.getLogger(logger_name)
+        mlia_file_handler = create_log_handler(
+            file_path=log_file_path,
+            log_level=logging.DEBUG,
+            log_format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+            log_filter=LogFilter.skip(logging.INFO),
+            delay=True,
+        )
+        mlia_logger.addHandler(mlia_file_handler)
 
-        if logs_dir_path is not None:
-            log_file_path = logs_dir_path / f"{now_timestamp}_{module_name}.log"
+        file_handler = create_log_handler(
+            file_path=log_file_path,
+            log_level=logging.DEBUG,
+            log_format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+            delay=True,
+        )
 
-            file_handler = create_log_handler(
-                file_path=log_file_path,
-                log_level=logging.DEBUG,
-                log_format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-                delay=True,
-            )
-            logger.setLevel(logging.DEBUG)
+        for logger in [tensorflow_logger, python_warnings_logger]:
             logger.addHandler(file_handler)
-
-        if verbose:
-            stdout_handler = create_log_handler(
-                stream=sys.stdout,
-                log_level=logging.DEBUG,
-                log_format="%(name)s - %(message)s",
-            )
-            logger.setLevel(logging.DEBUG)
-            logger.addHandler(stdout_handler)
-
-    for logger_name in _MLIA_LOGGERS:
-        logger = logging.getLogger(logger_name)
-
-        logger.setLevel(logging.INFO)
-        stdout_handler = create_log_handler(stream=sys.stdout)
-        logger.addHandler(stdout_handler)
 
 
 def create_log_handler(
@@ -80,6 +115,7 @@ def create_log_handler(
     stream: Optional[Any] = None,
     log_level: Optional[int] = None,
     log_format: Optional[str] = None,
+    log_filter: Optional[logging.Filter] = None,
     delay: bool = True,
 ) -> logging.Handler:
     """Create logger handler."""
@@ -98,5 +134,8 @@ def create_log_handler(
 
     if log_format:
         handler.setFormatter(logging.Formatter(log_format))
+
+    if log_filter:
+        handler.addFilter(log_filter)
 
     return handler

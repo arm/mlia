@@ -24,7 +24,7 @@ def teardown_function() -> None:
 
 
 @pytest.mark.parametrize(
-    "file_path, stream, log_level, log_format, delay, "
+    "file_path, stream, log_level, log_format, log_filter, delay, "
     "expected_error, expected_class",
     [
         (
@@ -32,6 +32,7 @@ def teardown_function() -> None:
             None,
             logging.INFO,
             "%(name)s - %(message)s",
+            None,
             True,
             does_not_raise(),
             logging.FileHandler,
@@ -42,6 +43,7 @@ def teardown_function() -> None:
             logging.INFO,
             "%(name)s - %(message)s",
             None,
+            None,
             does_not_raise(),
             logging.StreamHandler,
         ),
@@ -50,6 +52,7 @@ def teardown_function() -> None:
             None,
             logging.INFO,
             "%(name)s - %(message)s",
+            None,
             None,
             pytest.raises(Exception, match="Unable to create logging handler"),
             None,
@@ -61,6 +64,7 @@ def test_create_log_handler(
     stream: Optional[Any],
     log_level: Optional[int],
     log_format: Optional[str],
+    log_filter: Optional[logging.Filter],
     delay: bool,
     expected_error: Any,
     expected_class: type,
@@ -72,40 +76,57 @@ def test_create_log_handler(
             stream=stream,
             log_level=log_level,
             log_format=log_format,
+            log_filter=log_filter,
             delay=delay,
         )
         assert isinstance(handler, expected_class)
 
 
 @pytest.mark.parametrize(
-    "logs_dir, verbose, expected_output",
+    "logs_dir, verbose, expected_output, expected_log_file_content",
     [
         (
             None,
             None,
             "cli info\n",
+            None,
         ),
         (
             None,
             True,
-            "mlia.tools.aiet - aiet debug\ncli info\n",
+            """mlia.tools.aiet_wrapper - aiet debug
+cli info
+mlia.cli - cli debug
+""",
+            None,
         ),
         (
             "logs",
             True,
-            "mlia.tools.aiet - aiet debug\ncli info\n",
+            """mlia.tools.aiet_wrapper - aiet debug
+cli info
+mlia.cli - cli debug
+""",
+            """mlia.tools.aiet_wrapper - DEBUG - aiet debug
+mlia.cli - DEBUG - cli debug
+""",
         ),
     ],
 )
 def test_setup_logging(
-    tmp_path: Path, capfd: Any, logs_dir: str, verbose: bool, expected_output: str
+    tmp_path: Path,
+    capfd: Any,
+    logs_dir: str,
+    verbose: bool,
+    expected_output: str,
+    expected_log_file_content: str,
 ) -> None:
     """Test function setup_logging."""
     logs_dir_path = tmp_path / logs_dir if logs_dir else None
 
-    setup_logging(str(logs_dir_path) if logs_dir_path is not None else None, verbose)
+    setup_logging(logs_dir_path, verbose)
 
-    aiet_logger = logging.getLogger("mlia.tools.aiet")
+    aiet_logger = logging.getLogger("mlia.tools.aiet_wrapper")
     aiet_logger.debug("aiet debug")
 
     cli_logger = logging.getLogger("mlia.cli")
@@ -116,8 +137,22 @@ def test_setup_logging(
     assert stdout == expected_output
 
     if logs_dir_path is not None:
+        assert logs_dir_path.is_dir()
+
         items = list(logs_dir_path.iterdir())
         assert len(items) == 1
 
-        log_file_name = items[0].name
-        assert log_file_name.endswith("aiet.log")
+        log_file_path = items[0]
+        assert log_file_path.is_file()
+
+        log_file_name = log_file_path.name
+        assert log_file_name == "mlia.log"
+
+        with open(log_file_path) as f:
+            log_content = f.read()
+        expected_lines = expected_log_file_content.split("\n")
+        produced_lines = log_content.split("\n")
+
+        assert len(expected_lines) == len(produced_lines)
+        for expected, produced in zip(expected_lines, produced_lines):
+            assert expected in produced

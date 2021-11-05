@@ -1,12 +1,11 @@
 # Copyright 2021, Arm Ltd.
 """Frequent use cases."""
 import logging
-from pathlib import Path
-from typing import Optional
 from typing import Tuple
 
 import pandas as pd
 import tensorflow as tf
+from mlia.config import Context
 from mlia.config import IPConfiguration
 from mlia.config import TFLiteModel
 from mlia.metrics import PerformanceMetrics
@@ -16,20 +15,20 @@ from mlia.utils.general import convert_to_tflite
 from mlia.utils.general import save_keras_model
 from mlia.utils.general import save_tflite_model
 
-LOGGER = logging.getLogger("mlia.performance")
+logger = logging.getLogger(__name__)
 
 
 def optimize_and_compare(
-    optimizer: Optimizer, device: IPConfiguration, working_dir: Optional[str] = None
+    optimizer: Optimizer, device: IPConfiguration, ctx: Context
 ) -> Tuple[PerformanceMetrics, PerformanceMetrics]:
     """Optimize model, return perf metrics for the original and optimized version."""
-    LOGGER.info("Original model:\n")
+    logger.info("Original model:\n")
     original_model = optimizer.get_model()
-    original = _process_model(original_model, device, "original", False, working_dir)
+    original = _process_model(original_model, device, "original", False, ctx)
 
-    LOGGER.info("\nOptimized model:\n")
+    logger.info("\nOptimized model:\n")
     optimized_model = optimize_model(optimizer)
-    optimized = _process_model(optimized_model, device, "optimized", True, working_dir)
+    optimized = _process_model(optimized_model, device, "optimized", True, ctx)
 
     return (original, optimized)
 
@@ -39,22 +38,18 @@ def _process_model(
     device: IPConfiguration,
     prefix: str,
     save_model: bool,
-    working_dir: Optional[str],
+    ctx: Context,
 ) -> PerformanceMetrics:
     """Convert and estimate performance for the model."""
-    models_path = Path(working_dir) if working_dir else Path.cwd()
-
     if save_model:
-        keras_model_path = models_path / f"{prefix}_model.h5"
+        keras_model_path = ctx.get_model_path(f"{prefix}_model.h5")
         save_keras_model(keras_model, keras_model_path)
 
     tflite_model = convert_to_tflite(keras_model, True)
-    tflite_model_path = models_path / f"{prefix}_model.tflite"
+    tflite_model_path = ctx.get_model_path(f"{prefix}_model.tflite")
     save_tflite_model(tflite_model, tflite_model_path)
 
-    return collect_performance_metrics(
-        TFLiteModel(tflite_model_path), device, working_dir
-    )
+    return collect_performance_metrics(TFLiteModel(tflite_model_path), device, ctx)
 
 
 def compare_metrics(
@@ -75,11 +70,11 @@ def compare_metrics(
 
 def optimize_model(optimizer: Optimizer) -> tf.keras.Model:
     """Optimize model and return the result."""
-    LOGGER.info("Applying optimizations (%s) ...", optimizer.optimization_config())
+    logger.info("Applying optimizations (%s) ...", optimizer.optimization_config())
 
     optimizer.apply_optimization()
     optimized_keras_model = optimizer.get_model()
 
-    LOGGER.info("Done")
+    logger.info("Done")
 
     return optimized_keras_model

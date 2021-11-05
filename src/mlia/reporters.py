@@ -39,10 +39,10 @@ from mlia.metrics import PerformanceMetrics
 from mlia.tools.vela_wrapper import get_vela_compiler
 from mlia.utils.general import is_list_of
 from mlia.utils.general import LoggerWriter
-from tabulate import tabulate  # type: ignore
+from tabulate import tabulate
 
 
-LOGGER = logging.getLogger("mlia.reporters")
+logger = logging.getLogger(__name__)
 
 
 class Report(ABC):
@@ -1057,7 +1057,7 @@ def report(
         formatter = find_appropriate_formatter(data)
 
     if output is None:
-        output = cast(TextIO, LoggerWriter(LOGGER, logging.INFO))
+        output = cast(TextIO, LoggerWriter(logger, logging.INFO))
 
     with ExitStack() as exit_stack:
         if isinstance(output, (str, Path)):

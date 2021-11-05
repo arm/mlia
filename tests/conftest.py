@@ -5,6 +5,8 @@ from typing import Any
 
 import pytest
 
+from tests.utils.common import DummyContext
+
 
 @pytest.fixture
 def test_models_path(test_resources_path: Path) -> Path:
@@ -16,6 +18,12 @@ def test_models_path(test_resources_path: Path) -> Path:
 def test_resources_path() -> Path:
     """Return test resources path."""
     return Path(__file__).parent / "test_resources"
+
+
+@pytest.fixture
+def dummy_context(tmpdir: str) -> DummyContext:
+    """Return dummy context fixture."""
+    return DummyContext(tmpdir)
 
 
 def pytest_collection_modifyitems(config: Any, items: Any) -> None:

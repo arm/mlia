@@ -13,6 +13,7 @@ from unittest.mock import call
 from unittest.mock import MagicMock
 
 import pytest
+from mlia.cli.common import ExecutionContext
 from mlia.cli.main import CommandInfo
 from mlia.cli.main import main
 from mlia.config import EthosU55
@@ -87,9 +88,9 @@ def test_default_command(monkeypatch: Any, tmp_path: Path) -> None:
             """Sample command."""
             func_mock(*args, **kwargs)
 
-        def g(working_dir: str, **kwargs: Any) -> None:
+        def g(ctx: ExecutionContext, **kwargs: Any) -> None:
             """Another sample command."""
-            func_mock(working_dir=working_dir, **kwargs)
+            func_mock(ctx=ctx, **kwargs)
 
         ret_func = g if with_working_dir else f
         ret_func.__name__ = name
@@ -134,9 +135,7 @@ def test_default_command(monkeypatch: Any, tmp_path: Path) -> None:
     main(["--working-dir", tmp_working_dir, "--sample", "1"])
     main(["command2", "--param", "test"])
 
-    default_command.assert_called_once_with(
-        working_dir=tmp_working_dir, sample="1", default_arg="123"
-    )
+    default_command.assert_called_once_with(ctx=ANY, sample="1", default_arg="123")
     non_default_command.assert_called_once_with(param="test")
 
 
@@ -285,8 +284,8 @@ def test_optimization_command(
 
     assert exit_code == 0
 
-    assert (tmp_path / "original_model.tflite").is_file()
-    assert (tmp_path / "optimized_model.tflite").is_file()
+    assert (tmp_path / "models/original_model.tflite").is_file()
+    assert (tmp_path / "models/optimized_model.tflite").is_file()
 
 
 @pytest.mark.parametrize(

@@ -14,7 +14,6 @@ be configured. Function 'setup_logging' from module
 >>> mlia.all_tests("path/to/model", device="ethos-u55")
 """
 import logging
-from pathlib import Path
 from typing import Any
 from typing import List
 from typing import Optional
@@ -26,11 +25,11 @@ from mlia.cli.advice import AdviceGroup
 from mlia.cli.advice import AdvisorContext
 from mlia.cli.advice import OptimizationResults
 from mlia.cli.advice import produce_advice
+from mlia.cli.common import ExecutionContext
 from mlia.cli.options import parse_optimization_parameters
 from mlia.config import get_device
 from mlia.config import get_keras_model
 from mlia.config import get_tflite_model
-from mlia.config import KerasModel
 from mlia.operators import generate_supported_operators_report
 from mlia.operators import supported_operators
 from mlia.optimizations.select import get_optimizer
@@ -40,7 +39,7 @@ from mlia.reporters import get_reporter
 from mlia.use_cases import compare_metrics
 from mlia.use_cases import optimize_and_compare
 
-LOGGER = logging.getLogger("mlia.cli")
+logger = logging.getLogger(__name__)
 
 
 MODEL_ANALYSIS_MSG = """
@@ -57,12 +56,12 @@ REPORT_GENERATION_MSG = """
 
 
 def all_tests(
+    ctx: ExecutionContext,
     model: str,
     optimization_type: str,
     optimization_target: str,
     output_format: OutputFormat = "plain_text",
     output: Optional[PathOrFileLike] = None,
-    working_dir: Optional[str] = None,
     **device_args: Any,
 ) -> None:
     """Generate a full report on the input model.
@@ -77,6 +76,7 @@ def all_tests(
         - generates a final report on the steps above
         - provides advice on how to (possibly) improve the inference performance
 
+    :param ctx: execution context
     :param model: path to the Keras model
     :param optimization_type: list of the optimization techniques separated
            by comma, e.g. 'pruning,clustering'
@@ -85,8 +85,6 @@ def all_tests(
     :param output_format: format of the report produced during the command
            execution
     :param output: path to the file where the report will be saved
-    :param working_dir: path to the directory which will be used for
-           storing models, temp files, etc.
     :param device_args: device related parameters, e.g. device="ethos-u55",
            mac=32, for full list of the supported parameters please refer
            to module 'mlia.cli.options'
@@ -102,22 +100,22 @@ def all_tests(
                        output_format="json", output="report.json",
                        working_dir="mlia_output", device="ethos-u55", mac=128)
     """
-    keras_model = get_keras_model(model, working_dir)
+    keras_model = get_keras_model(model, ctx)
     device = get_device(**device_args)
 
     with get_reporter(output_format, output) as reporter:
         reporter.submit(device)
 
-        LOGGER.info(MODEL_ANALYSIS_MSG)
+        logger.info(MODEL_ANALYSIS_MSG)
 
-        models_path = Path(working_dir) if working_dir else Path.cwd()
+        converted_model_path = ctx.get_model_path("converted_model.tflite")
         tflite_model = keras_model.convert_to_tflite(
-            models_path / "converted_model.tflite", quantized=True
+            converted_model_path, quantized=True
         )
 
         operators = supported_operators(tflite_model, device)
 
-        LOGGER.info("Evaluating performance ...\n")
+        logger.info("Evaluating performance ...\n")
 
         opt_params = parse_optimization_parameters(
             optimization_type, optimization_target
@@ -125,7 +123,7 @@ def all_tests(
         opt_settings = OptimizationSettings.create_from(opt_params)
 
         optimizer = get_optimizer(keras_model, opt_settings)
-        original, optimized = optimize_and_compare(optimizer, device, working_dir)
+        original, optimized = optimize_and_compare(optimizer, device, ctx)
 
         reporter.submit([operators.ops, operators], space="top")
 
@@ -137,9 +135,9 @@ def all_tests(
             notes="IMPORTANT: The performance figures above refer to NPU only",
         )
 
-        LOGGER.info(ADV_GENERATION_MSG)
+        logger.info(ADV_GENERATION_MSG)
 
-        ctx = AdvisorContext(
+        adv_ctx = AdvisorContext(
             operators=operators,
             optimization_results=OptimizationResults(
                 perf_metrics=compare_metrics(original, optimized),
@@ -148,7 +146,7 @@ def all_tests(
             device_args=device_args,
             model=model,
         )
-        advice = produce_advice(ctx, AdviceGroup.COMMON)
+        advice = produce_advice(adv_ctx, AdviceGroup.COMMON)
 
         reporter.submit(
             advice,
@@ -158,16 +156,16 @@ def all_tests(
             tablefmt="plain",
         )
         if output is not None:
-            LOGGER.info(REPORT_GENERATION_MSG)
-            LOGGER.info("Report(s) and advice list saved to: %s", output)
+            logger.info(REPORT_GENERATION_MSG)
+            logger.info("Report(s) and advice list saved to: %s", output)
 
 
 def operators(
+    ctx: ExecutionContext,
     model: Optional[str] = None,
     output_format: OutputFormat = "plain_text",
     output: Optional[PathOrFileLike] = None,
     supported_ops_report: bool = False,
-    working_dir: Optional[str] = None,
     **device_args: Any,
 ) -> None:
     """Print the model's operator list.
@@ -176,6 +174,7 @@ def operators(
     the specific device. Generates a report of the operator placement
     (NPU or CPU fallback) and advice on how to improve it (if necessary).
 
+    :param ctx: execution context
     :param model: path to the model, which can be TFLite or Keras
     :param output_format: format of the report produced during the command
            execution
@@ -197,27 +196,29 @@ def operators(
     """
     if supported_ops_report:
         generate_supported_operators_report()
-        LOGGER.info("Report saved into SUPPORTED_OPS.md")
+        logger.info("Report saved into SUPPORTED_OPS.md")
         return
 
     if not model:
         raise Exception("Model is not provided")
 
-    tflite_model = get_tflite_model(model, working_dir)
+    tflite_model = get_tflite_model(model, ctx)
     device = get_device(**device_args)
 
     with get_reporter(output_format, output) as reporter:
         reporter.submit(device)
 
-        LOGGER.info(MODEL_ANALYSIS_MSG)
+        logger.info(MODEL_ANALYSIS_MSG)
 
         operators = supported_operators(tflite_model, device)
         reporter.submit([operators.ops, operators], space="top")
 
-        LOGGER.info(ADV_GENERATION_MSG)
+        logger.info(ADV_GENERATION_MSG)
 
-        ctx = AdvisorContext(operators=operators, device_args=device_args, model=model)
-        advice = produce_advice(ctx, AdviceGroup.OPERATORS_COMPATIBILITY)
+        adv_ctx = AdvisorContext(
+            operators=operators, device_args=device_args, model=model
+        )
+        advice = produce_advice(adv_ctx, AdviceGroup.OPERATORS_COMPATIBILITY)
 
         reporter.submit(
             advice,
@@ -227,15 +228,15 @@ def operators(
             tablefmt="plain",
         )
         if output is not None:
-            LOGGER.info(REPORT_GENERATION_MSG)
-            LOGGER.info("Report(s) and advice list saved to: %s", output)
+            logger.info(REPORT_GENERATION_MSG)
+            logger.info("Report(s) and advice list saved to: %s", output)
 
 
 def performance(
+    ctx: ExecutionContext,
     model: str,
     output_format: OutputFormat = "plain_text",
     output: Optional[PathOrFileLike] = None,
-    working_dir: Optional[str] = None,
     **device_args: Any,
 ) -> None:
     """Print the model's performance stats.
@@ -244,12 +245,11 @@ def performance(
     on the specified device, and generates a report with advice on how
     to improve it.
 
+    :param ctx: execution context
     :param model: path to the model, which can be TFLite or Keras
     :param output_format: format of the report produced during the command
            execution
     :param output: path to the file where the report will be saved
-    :param working_dir: path to the directory which will be used for
-           storing models, temp files, etc.
     :param device_args: device related parameters, e.g. device="ethos-u55",
            mac=32, for full list of the supported parameters please refer
            to module 'mlia.cli.options'
@@ -263,23 +263,23 @@ def performance(
         >>> from mlia.cli.commands import performance
         >>> performance("model.tflite", device="ethos-u65")
     """
-    tflite_model = get_tflite_model(model, working_dir)
+    tflite_model = get_tflite_model(model, ctx)
     device = get_device(**device_args)
 
     with get_reporter(output_format, output) as reporter:
         reporter.submit(device)
 
-        LOGGER.info(MODEL_ANALYSIS_MSG)
+        logger.info(MODEL_ANALYSIS_MSG)
 
-        perf_metrics = collect_performance_metrics(tflite_model, device, working_dir)
+        perf_metrics = collect_performance_metrics(tflite_model, device, ctx)
         reporter.submit(perf_metrics, space="top")
 
-        LOGGER.info(ADV_GENERATION_MSG)
+        logger.info(ADV_GENERATION_MSG)
 
-        ctx = AdvisorContext(
+        adv_ctx = AdvisorContext(
             perf_metrics=perf_metrics, device_args=device_args, model=model
         )
-        advice = produce_advice(ctx, AdviceGroup.PERFORMANCE)
+        advice = produce_advice(adv_ctx, AdviceGroup.PERFORMANCE)
 
         reporter.submit(
             advice,
@@ -290,18 +290,18 @@ def performance(
         )
 
         if output is not None:
-            LOGGER.info(REPORT_GENERATION_MSG)
-            LOGGER.info("Report(s) and advice list saved to: %s", output)
+            logger.info(REPORT_GENERATION_MSG)
+            logger.info("Report(s) and advice list saved to: %s", output)
 
 
 def optimization(
+    ctx: ExecutionContext,
     model: str,
     optimization_type: str,
     optimization_target: Union[int, float],
     layers_to_optimize: Optional[List[str]] = None,
     output_format: OutputFormat = "plain_text",
     output: Optional[PathOrFileLike] = None,
-    working_dir: Optional[str] = None,
     **device_args: Any,
 ) -> None:
     """Show the performance improvements (if any) after applying the optimizations.
@@ -310,6 +310,7 @@ def optimization(
     indicated targets) and generates a report with advice on how to improve
     the inference performance (if possible).
 
+    :param ctx: execution context
     :param model: path to the TFLite model
     :param optimization_type: name of the optimization technique
            e.g. 'pruning'
@@ -320,8 +321,6 @@ def optimization(
     :param output_format: format of the report produced during the command
            execution
     :param output: path to the file where the report will be saved
-    :param working_dir: path to the directory which will be used for
-           storing models, temp files, etc.
     :param device_args: device related parameters, e.g. device="ethos-u55",
            mac=32, for full list of the supported parameters please refer
            to module 'mlia.cli.options'
@@ -335,19 +334,19 @@ def optimization(
         >>> from mlia.cli.commands import optimization
         >>> optimization("model.tflite", device="ethos-u65")
     """
-    keras_model = get_keras_model(model, working_dir)
+    keras_model = get_keras_model(model, ctx)
     device = get_device(**device_args)
 
     with get_reporter(output_format, output) as reporter:
         reporter.submit(device)
 
-        LOGGER.info(MODEL_ANALYSIS_MSG)
+        logger.info(MODEL_ANALYSIS_MSG)
 
         opt_settings = OptimizationSettings(
             optimization_type, optimization_target, layers_to_optimize
         )
         optimizer = get_optimizer(keras_model, opt_settings)
-        original, optimized = optimize_and_compare(optimizer, device, working_dir)
+        original, optimized = optimize_and_compare(optimizer, device, ctx)
 
         reporter.submit(
             [original, optimized],
@@ -361,19 +360,19 @@ def optimization(
             ),
         )
 
-        LOGGER.info(ADV_GENERATION_MSG)
+        logger.info(ADV_GENERATION_MSG)
 
         optimization_results = OptimizationResults(
             perf_metrics=compare_metrics(original, optimized),
             optimizations=[(optimization_type, optimization_target)],
         )
 
-        ctx = AdvisorContext(
+        adv_ctx = AdvisorContext(
             optimization_results=optimization_results,
             device_args=device_args,
             model=model,
         )
-        advice = produce_advice(ctx, AdviceGroup.OPTIMIZATION)
+        advice = produce_advice(adv_ctx, AdviceGroup.OPTIMIZATION)
 
         reporter.submit(
             advice,
@@ -384,33 +383,5 @@ def optimization(
         )
 
         if output is not None:
-            LOGGER.info(REPORT_GENERATION_MSG)
-            LOGGER.info("Report(s) and advice list saved to: %s", output)
-
-
-def keras_to_tflite(
-    model: str, quantized: bool, out_path: Optional[str] = None
-) -> None:
-    """Convert and save a Keras model into TFLite format.
-
-    :param model: path to the Keras model
-    :param quantized: If true the output model will be quantized
-    :param out_path: path to the directory where the TFLite model
-           will be saved
-
-    Example:
-        Run command to convert the Keras model into a TFLite model
-
-        >>> from mlia.cli.logging import setup_logging
-        >>> setup_logging()
-        >>> from mlia.cli.commands import keras_to_tflite
-        >>> keras_to_tflite("model.h5", True, "output_dir")
-    """
-    models_path = Path(out_path) if out_path else Path.cwd()
-    tflite_model_path = str(models_path / "converted_model.tflite")
-    keras_model = KerasModel(model)
-    LOGGER.info("Converting Keras to TFLite ...")
-    keras_model.convert_to_tflite(tflite_model_path, quantized)
-    LOGGER.info("Done")
-
-    LOGGER.info("Model %s saved to %s", model, models_path)
+            logger.info(REPORT_GENERATION_MSG)
+            logger.info("Report(s) and advice list saved to: %s", output)

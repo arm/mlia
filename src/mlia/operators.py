@@ -10,14 +10,14 @@ from mlia.metadata import Operators
 from mlia.tools import vela_wrapper
 
 
-LOGGER = logging.getLogger("mlia.operators")
+logger = logging.getLogger(__name__)
 
 
 def supported_operators(
     model: ModelConfiguration, device: IPConfiguration
 ) -> Operators:
     """Return list of model's operators."""
-    LOGGER.info("Checking operator compatibility ...")
+    logger.info("Checking operator compatibility ...")
 
     if not isinstance(model, TFLiteModel):
         raise Exception("Unsupported model configuration")
@@ -26,7 +26,7 @@ def supported_operators(
         raise Exception("Unsupported ip configuration")
 
     ops = vela_wrapper.supported_operators(model, device)
-    LOGGER.info("Done")
+    logger.info("Done")
 
     return ops
 

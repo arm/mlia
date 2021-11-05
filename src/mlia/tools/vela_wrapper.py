@@ -41,7 +41,7 @@ from mlia.utils.general import redirect_output
 from typing_extensions import Literal
 
 
-LOGGER = logging.getLogger("mlia.tools.vela")
+logger = logging.getLogger(__name__)
 
 VELA_INTERNAL_OPS = (Op.Placeholder, Op.SubgraphInput, Op.Const)
 
@@ -122,7 +122,7 @@ class OptimizedModel:
         self.compiler_options = compiler_options
         self.scheduler_options = scheduler_options
 
-    def save(self, output_filename: str) -> None:
+    def save(self, output_filename: Union[str, Path]) -> None:
         """Save instance of the optimized model to the file."""
         write_tflite(self.nng, output_filename)
 
@@ -171,7 +171,7 @@ class VelaCompiler:
 
     def read_model(self, model: Union[str, Path]) -> Model:
         """Read model."""
-        LOGGER.debug("Read model %s", model)
+        logger.debug("Read model %s", model)
 
         nng, network_type = self._read_model(model)
         return Model(nng, network_type)
@@ -190,7 +190,7 @@ class VelaCompiler:
         compiler_options = self._compiler_options()
         scheduler_options = self._scheduler_options()
 
-        with redirect_output(LOGGER):
+        with redirect_output(logger):
             compiler_driver(
                 nng, arch, compiler_options, scheduler_options, NetworkType.TFLite
             )
@@ -238,7 +238,7 @@ class VelaCompiler:
         """Read tflite model."""
         model_path = str(model) if isinstance(model, Path) else model
 
-        with redirect_output(LOGGER):
+        with redirect_output(logger):
             return read_model(model_path, ModelReaderOptions())  # type: ignore
 
     def _architecture_features(self) -> ArchitectureFeatures:
@@ -309,7 +309,7 @@ def estimate_performance(
 
     Logic for this function comes from vela module stats_writer.py
     """
-    LOGGER.debug(
+    logger.debug(
         "Estimate performance for the model %s on device %s",
         model.model_path,
         device.ip_class,
@@ -327,15 +327,15 @@ def estimate_performance(
 
 
 def optimize_model(
-    model: TFLiteModel, device: EthosUConfiguration, output_filename: str
+    model: TFLiteModel, device: EthosUConfiguration, output_filename: Union[str, Path]
 ) -> None:
     """Optimize model and return it's path after optimization."""
-    LOGGER.debug("Optimize model %s for device %s", model.model_path, device.ip_class)
+    logger.debug("Optimize model %s for device %s", model.model_path, device.ip_class)
 
     vela_compiler = get_vela_compiler(device)
     optimized_model = vela_compiler.compile_model(model.model_path)
 
-    LOGGER.debug("Save optimized model into %s", output_filename)
+    logger.debug("Save optimized model into %s", output_filename)
     optimized_model.save(output_filename)
 
 
@@ -375,7 +375,7 @@ def _performance_metrics(optimized_model: OptimizedModel) -> PerformanceMetrics:
 
 def supported_operators(model: TFLiteModel, device: EthosUConfiguration) -> Operators:
     """Return list of model's operators."""
-    LOGGER.debug("Check supported operators for the model %s", model.model_path)
+    logger.debug("Check supported operators for the model %s", model.model_path)
 
     vela_compiler = get_vela_compiler(device)
     initial_model = vela_compiler.read_model(model.model_path)
@@ -425,5 +425,5 @@ def run_on_npu(op: Op) -> NpuSupported:
 
 def generate_supported_operators_report() -> None:
     """Generate supported operators report in current working directory."""
-    with redirect_output(LOGGER):
+    with redirect_output(logger):
         generate_supported_ops()

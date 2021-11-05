@@ -6,16 +6,18 @@ import logging
 import sys
 from inspect import signature
 from pathlib import Path
-from typing import Callable
+from typing import Dict
 from typing import List
-from typing import NamedTuple
 from typing import Optional
+from typing import Tuple
 
 from mlia import __version__
 from mlia.cli.commands import all_tests
 from mlia.cli.commands import operators
 from mlia.cli.commands import optimization
 from mlia.cli.commands import performance
+from mlia.cli.common import CommandInfo
+from mlia.cli.common import ExecutionContext
 from mlia.cli.logging import setup_logging
 from mlia.cli.options import add_custom_supported_operators_options
 from mlia.cli.options import add_debug_options
@@ -28,7 +30,7 @@ from mlia.cli.options import add_output_options
 from mlia.cli.options import add_tflite_model_options
 
 
-LOGGER = logging.getLogger("mlia.cli")
+logger = logging.getLogger(__name__)
 
 INFO_MESSAGE = f"""
 ML Inference Advisor {__version__}
@@ -42,36 +44,6 @@ Supported targets:
 
 ARM {datetime.datetime.now():%Y} Copyright Reserved
 """
-
-
-class CommandInfo(NamedTuple):
-    """Command description."""
-
-    func: Callable
-    aliases: List[str]
-    opt_groups: List[Callable[[argparse.ArgumentParser], None]]
-    is_default: bool
-
-    @property
-    def command_name(self) -> str:
-        """Return command name."""
-        return self.func.__name__
-
-    @property
-    def command_name_and_aliases(self) -> List[str]:
-        """Return list of command name and aliases."""
-        return [self.command_name, *self.aliases]
-
-    @property
-    def command_help(self) -> str:
-        """Return help message for the command."""
-        assert self.func.__doc__, "Command function does not have a docstring"
-        func_help = self.func.__doc__.splitlines()[0].rstrip(".")
-
-        if self.is_default:
-            func_help = f"{func_help} [default]"
-
-        return func_help
 
 
 def get_commands() -> List[CommandInfo]:
@@ -99,7 +71,6 @@ def get_commands() -> List[CommandInfo]:
                 add_custom_supported_operators_options,
                 add_debug_options,
             ],
-            False,
         ),
         CommandInfo(
             performance,
@@ -110,7 +81,6 @@ def get_commands() -> List[CommandInfo]:
                 add_output_options,
                 add_debug_options,
             ],
-            False,
         ),
         CommandInfo(
             optimization,
@@ -122,7 +92,6 @@ def get_commands() -> List[CommandInfo]:
                 add_output_options,
                 add_debug_options,
             ],
-            False,
         ),
     ]
 
@@ -164,41 +133,66 @@ def init_commands(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
     return parser
 
 
+def setup_context(
+    args: argparse.Namespace, context_var_name: str = "ctx"
+) -> Tuple[ExecutionContext, Dict]:
+    """Set up context and resolve function parameters."""
+    ctx = ExecutionContext(
+        working_dir=args.working_dir,
+        verbose="verbose" in args and args.verbose,
+    )
+
+    # these parameters should not be passed into command function
+    skipped_params = ["func", "command", "working_dir", "verbose"]
+
+    # pass these parameters only if command expects them
+    expected_params = [context_var_name]
+    func_params = signature(args.func).parameters
+
+    params = {context_var_name: ctx, **vars(args)}
+
+    func_args = {
+        param_name: param_value
+        for param_name, param_value in params.items()
+        if param_name not in skipped_params
+        and (param_name not in expected_params or param_name in func_params)
+    }
+
+    return (ctx, func_args)
+
+
 def run_command(args: argparse.Namespace) -> int:
     """Run command."""
-    result = 1
+    ctx, func_args = setup_context(args)
+    setup_logging(ctx.logs_path, ctx.verbose)
+
+    logger.debug(
+        f"*** This is the beginning of the command '{args.command}' execution ***"
+    )
+
     try:
-        verbose = "verbose" in args and args.verbose
+        logger.info(INFO_MESSAGE)
 
-        setup_logging(args.working_dir, verbose)
-        LOGGER.info(INFO_MESSAGE)
-
-        # these parameters should not be passed into command function
-        skipped_params = ["func", "command", "verbose"]
-
-        # pass these parameters only if command expects them
-        expected_params = ["working_dir"]
-        func_params = signature(args.func).parameters
-
-        kwargs = {
-            param_name: param_value
-            for param_name, param_value in vars(args).items()
-            if param_name not in skipped_params
-            and (param_name not in expected_params or param_name in func_params)
-        }
-        args.func(**kwargs)
+        args.func(**func_args)
+        return 0
     except KeyboardInterrupt:
-        LOGGER.error("Execution has been interrupted")
+        logger.error("Execution has been interrupted")
     except Exception as e:
-        LOGGER.error(
-            f"Execution failed with error: {e}. Please check the log files in the "
-            f"{args.working_dir} directory for more details, or enable verbose mode",
-            exc_info=e if verbose else None,
+        logger.error(
+            f"Execution failed with the error: '{e}'",
+            exc_info=e if ctx.verbose else None,
         )
-    else:
-        result = 0
 
-    return result
+        err_advice_message = (
+            f"Please check the log files in the {ctx.logs_path} "
+            "directory for more details"
+        )
+        if not ctx.verbose:
+            err_advice_message += ", or enable verbose mode"
+
+        logger.error(err_advice_message)
+
+    return 1
 
 
 def init_common_parser() -> argparse.ArgumentParser:
@@ -233,7 +227,7 @@ def init_subcommand_parser(parent: argparse.ArgumentParser) -> argparse.Argument
         "-v",
         "--version",
         action="version",
-        version=f"%(prog)s { __version__}",
+        version=f"%(prog)s {__version__}",
         help="Show program's version number and exit",
     )
 

@@ -16,7 +16,7 @@ from typing import Optional
 
 import numpy as np
 import tensorflow as tf
-from tabulate import tabulate  # type: ignore
+from tabulate import tabulate
 
 DEFAULT_IGNORE_LIST = [
     "relu",
