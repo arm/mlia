@@ -388,27 +388,6 @@ def optimization(
             LOGGER.info("Report(s) and advice list saved to: %s", output)
 
 
-def keras_to_tflite(
-    model: str, quantized: bool, out_path: Optional[str] = None
-) -> None:
-    """Convert and save a Keras model into TFLite format.
-
-    :param model: path to the Keras model
-    :param quantized: If true the output model will be quantized
-    :param out_path: path to the directory where the TFLite model
-           will be saved
-
-    Example:
-        Run command to convert the Keras model into a TFLite model
-
-        >>> from mlia.cli.logging import setup_logging
-        >>> setup_logging()
-        >>> from mlia.cli.commands import keras_to_tflite
-        >>> keras_to_tflite("model.h5", True, "output_dir")
-    """
-    convert_from_keras_to_tflite(model, quantized, out_path)
-
-
 def get_model_in_cmd_supported_format(
     model: str,
     working_dir: Optional[str] = None,

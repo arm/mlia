@@ -205,19 +205,6 @@ def test_performance_custom_vela_init(
     assert exit_code == 0
 
 
-@pytest.mark.parametrize("extra_params", [[], ["--quantize"]])
-def test_keras_to_tflite_command(
-    test_models_path: Path, extra_params: List[str], tmp_path: Path
-) -> None:
-    """Test keras_to_flite command."""
-    model = test_models_path / "simple_model.h5"
-
-    exit_code = main(
-        ["keras_to_tflite", str(model), *extra_params, "--out-path", str(tmp_path)]
-    )
-    assert exit_code == 0
-
-
 def mock_optimize_and_compare(monkeypatch: Any) -> None:
     """Mock optimize_and_compare function."""
     perf_metrics = PerformanceMetrics(

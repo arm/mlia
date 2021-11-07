@@ -13,7 +13,6 @@ from typing import Optional
 
 from mlia import __version__
 from mlia.cli.commands import all_tests
-from mlia.cli.commands import keras_to_tflite
 from mlia.cli.commands import operators
 from mlia.cli.commands import optimization
 from mlia.cli.commands import performance
@@ -25,9 +24,7 @@ from mlia.cli.options import add_keras_model_options
 from mlia.cli.options import add_multi_optimization_options
 from mlia.cli.options import add_optimization_options
 from mlia.cli.options import add_optional_tflite_model_options
-from mlia.cli.options import add_out_path
 from mlia.cli.options import add_output_options
-from mlia.cli.options import add_quantize_option
 from mlia.cli.options import add_tflite_model_options
 
 
@@ -125,12 +122,6 @@ def get_commands() -> List[CommandInfo]:
                 add_output_options,
                 add_debug_options,
             ],
-            False,
-        ),
-        CommandInfo(
-            keras_to_tflite,
-            ["k2l"],
-            [add_keras_model_options, add_quantize_option, add_out_path],
             False,
         ),
     ]
