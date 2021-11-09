@@ -1,6 +1,7 @@
 # Copyright 2021, Arm Ltd.
 """Module for the CLI options."""
 import argparse
+import os
 from typing import Any
 from typing import Dict
 from typing import List
@@ -104,18 +105,34 @@ def add_output_options(parser: argparse.ArgumentParser) -> None:
     """Add output specific options."""
     output_group = parser.add_argument_group("output options")
     output_group.add_argument(
-        "--output-format",
-        choices=["plain_text", "json", "csv"],
-        default="plain_text",
-        help="Output format (default: %(default)s)",
-    )
-    output_group.add_argument(
         "--output",
+        action=OutputFormatAction,
         help=(
-            "Name of the file where report will be saved. If no file "
-            "name is specified, the report will be displayed on the standard output"
+            "Name of the file where report will be saved. "
+            "The report is always displayed the standard output "
+            "formatted as plain text. "
+            "Valid file extensions(formats) are {.txt,.json,.csv}, "
+            "anything else will be formatted as plain text."
         ),
     )
+
+
+class OutputFormatAction(argparse.Action):  # pylint: disable=too-few-public-methods
+    """Argparse action for --output option."""
+
+    def __call__(
+        self,
+        parser: argparse.ArgumentParser,
+        namespace: argparse.Namespace,
+        values: Any,
+        option_string: str = None,
+    ) -> None:
+        """Add the output file, and derive the format from file extension."""
+        output_formats = {".txt": "plain_text", ".json": "json", ".csv": "csv"}
+        setattr(namespace, self.dest, values)
+        file_ext = os.path.splitext(values)[1]
+        if file_ext in output_formats:
+            setattr(namespace, "output_format", output_formats[file_ext])
 
 
 def add_debug_options(parser: argparse.ArgumentParser) -> None:

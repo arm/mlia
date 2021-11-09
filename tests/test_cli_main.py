@@ -382,16 +382,25 @@ def test_all_tests_command(
         get_optimizer_mock.assert_has_calls([call(ANY, expected_opt_settings)])
 
 
-@pytest.mark.parametrize("output_format", ["plain_text", "csv", "json"])
+@pytest.mark.parametrize(
+    "outfile",
+    [
+        "report_all_cmd.txt",
+        "report_all_cmd.csv",
+        "report_all_cmd.json",
+        "report_all_cmd.unknown_fmt",
+        "report_all_cmd_no_fmt",
+    ],
+)
 def test_all_tests_command_output(
     tmp_path: Path,
     monkeypatch: Any,
-    output_format: str,
+    outfile: str,
     test_models_path: Path,
 ) -> None:
     """Test all_tests command can produce correct output file."""
     model = test_models_path / "simple_model.h5"
-    output = tmp_path / "report.all_command"
+    output = tmp_path / outfile
 
     mock_performance_estimation(monkeypatch)
 
@@ -403,8 +412,6 @@ def test_all_tests_command_output(
             "--device",
             "ethos-u55",
             str(model),
-            "--output-format",
-            output_format,
             "--output",
             str(output),
         ]
@@ -414,7 +421,7 @@ def test_all_tests_command_output(
     assert output.is_file()
     assert output.stat().st_size > 0
 
-    if output_format == "json":
+    if outfile.split(".")[-1] == "json":
         with open(output) as file:
             parsed_json = json.load(file)
             assert all(

@@ -154,14 +154,10 @@ lists the performance improvements.
 
 ##### Output options
 
-* --output-format: How to output the resulting table.
-  * options:
-    * plain_text: prints it in a human readable way
-    * json: saves it into a json file
-    * csv: saves it into a csv file
-  * default: plain_text
-* --output: Name of the file where report will be saved. If no file name is specified,
-  the report will be displayed on the standard output.
+* --output: Name of the file where the report will be saved.
+  The report is also displayed the standard output, as plain text.
+  Valid file extensions (formats) are {.txt,.json,.csv},
+  anything else will be formatted as plain text.
 
 ##### Debug options
 
@@ -219,14 +215,10 @@ Prints the model's operator list.
 
 ##### Output options
 
-* --output-format: How to output the resulting table.
-  * options:
-    * plain_text: prints it in a human readable way
-    * json: saves it into a json file
-    * csv: saves it into a csv file
-  * default: plain_text
-* --output: Name of the file where report will be saved. If no file name is specified,
-  the report will be displayed on the standard output.
+* --output: Name of the file where the report will be saved.
+  The report is also displayed the standard output, as plain text.
+  Valid file extensions (formats) are {.txt,.json,.csv},
+  anything else will be formatted as plain text.
 
 ### **Performance** (perf)
 
@@ -280,14 +272,10 @@ Prints the model's performance statistics.
 
 ##### Output options
 
-* --output-format: How to output the resulting table.
-  * options:
-    * plain_text: prints it in a human readable way
-    * json: saves it into a json file
-    * csv: saves it into a csv file
-  * default: plain_text
-* --output: Name of the file where report will be saved. If no file name is
-  specified, the report will be displayed on the standard output.
+* --output: Name of the file where the report will be saved.
+  The report is also displayed the standard output, as plain text.
+  Valid file extensions (formats) are {.txt,.json,.csv},
+  anything else will be formatted as plain text.
 
 ##### Debug options
 
