@@ -147,7 +147,7 @@ def advice_optimization(ctx: AdvisorContext) -> List[str]:
         + keras_note
         + [
             "For example: mlia optimization --optimization-type "
-            f"pruning --optimization-target 0.5 {model_path}",
+            f"pruning,clustering --optimization-target 0.5,32 {model_path}",
             "For more info: mlia optimization --help",
         ]
     )
@@ -283,12 +283,14 @@ def advice_optimization_improvement(
                 model_opts = ctx.get("model")
 
                 result.append("For more info, see: mlia optimization --help")
-                for opt_type, opt_target in next_opt_targets.items():
-                    result.append(
-                        f"{opt_type.capitalize()} command: "
-                        f"mlia optimization --optimization-type {opt_type} "
-                        f"--optimization-target {opt_target}{device_opts} {model_opts}"
-                    )
+
+                new_opt = ",".join(next_opt_targets.keys())
+                new_target = ",".join(str(v) for v in next_opt_targets.values())
+                result.append(
+                    f"Optimization command: "
+                    f"mlia optimization --optimization-type {new_opt} "
+                    f"--optimization-target {new_target}{device_opts} {model_opts}"
+                )
     elif degr_text:
         result.append(
             "The performance seems to have degraded after "
@@ -329,7 +331,10 @@ def get_advice_producers() -> Dict[AdviceGroup, List[Callable]]:
             advice_increase_operator_compatibility,
             advice_optimization,
         ],
-        AdviceGroup.OPTIMIZATION: [advice_optimization_improvement, advice_npu_support],
+        AdviceGroup.OPTIMIZATION: [
+            advice_optimization_improvement_extended,
+            advice_npu_support,
+        ],
         AdviceGroup.COMMON: [
             advice_non_npu_operators,
             advice_unsupported_operators,

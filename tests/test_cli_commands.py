@@ -2,7 +2,6 @@
 """Tests for cli.commands module."""
 import pathlib
 from typing import Any
-from typing import Union
 
 import pytest
 from mlia.cli.commands import optimization
@@ -32,13 +31,13 @@ def test_performance_unknown_device(dummy_context: ExecutionContext) -> None:
         [
             "ethos-u55",
             None,
-            0.5,
+            "0.5",
             pytest.raises(Exception, match="Optimization type is not provided"),
         ],
         [
             "ethos-u65",
             "unknown",
-            16,
+            "16",
             pytest.raises(Exception, match="Unsupported optimization type: unknown"),
         ],
         [
@@ -56,13 +55,13 @@ def test_performance_unknown_device(dummy_context: ExecutionContext) -> None:
         [
             None,
             "pruning",
-            0.5,
+            "0.5",
             pytest.raises(Exception, match="Device is not provided"),
         ],
         [
             "unknown",
             "clustering",
-            16,
+            "16",
             pytest.raises(Exception, match="Unsupported device: unknown"),
         ],
     ],
@@ -71,7 +70,7 @@ def test_opt_expected_parameters(
     dummy_context: ExecutionContext,
     device: str,
     optimization_type: str,
-    optimization_target: Union[int, float],
+    optimization_target: str,
     expected_error: Any,
     tmp_path: pathlib.Path,
 ) -> None:
@@ -92,15 +91,16 @@ def test_opt_expected_parameters(
 @pytest.mark.parametrize(
     "device, optimization_type, optimization_target",
     [
-        ["ethos-u55", "pruning", 0.5],
-        ["ethos-u65", "clustering", 32],
+        ["ethos-u55", "pruning", "0.5"],
+        ["ethos-u65", "clustering", "32"],
+        ["ethos-u55", "pruning,clustering", "0.5,32"],
     ],
 )
 def test_opt_valid_optimization_target(
     dummy_context: ExecutionContext,
     device: str,
     optimization_type: str,
-    optimization_target: Union[int, float],
+    optimization_target: str,
     monkeypatch: Any,
     tmp_path: pathlib.Path,
 ) -> None:

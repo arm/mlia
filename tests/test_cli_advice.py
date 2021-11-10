@@ -206,7 +206,7 @@ def test_operators_advice(
                 "tooling techniques to your model.",
                 "Note: you will need a Keras/TF.saved_model input for that.",
                 "For example: mlia optimization --optimization-type "
-                "pruning --optimization-target 0.5 /path/to/keras_model",
+                "pruning,clustering --optimization-target 0.5,32 /path/to/keras_model",
                 "For more info: mlia optimization --help",
             ],
         ),
@@ -218,7 +218,7 @@ def test_operators_advice(
                 "tooling techniques to your model.",
                 "Note: you will need a Keras/TF.saved_model input for that.",
                 "For example: mlia optimization --optimization-type "
-                "pruning --optimization-target 0.5 /path/to/keras_model",
+                "pruning,clustering --optimization-target 0.5,32 /path/to/keras_model",
                 "For more info: mlia optimization --help",
             ],
         ),
@@ -229,7 +229,7 @@ def test_operators_advice(
                 "Check if you can improve the performance by applying "
                 "tooling techniques to your model.",
                 "For example: mlia optimization --optimization-type "
-                "pruning --optimization-target 0.5 model.h5",
+                "pruning,clustering --optimization-target 0.5,32 model.h5",
                 "For more info: mlia optimization --help",
             ],
         ),
@@ -375,10 +375,8 @@ def test_performance_advice(
                 "and/or clustering 8) to "
                 "check if those results can be further improved.",
                 "For more info, see: mlia optimization --help",
-                "Pruning command: mlia optimization --optimization-type pruning "
-                "--optimization-target 0.2 sample.h5",
-                "Clustering command: mlia optimization --optimization-type "
-                "clustering --optimization-target 8 sample.h5",
+                "Optimization command: mlia optimization --optimization-type "
+                "pruning,clustering --optimization-target 0.2,8 sample.h5",
             ],
         ),
     ],

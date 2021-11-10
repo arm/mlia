@@ -27,14 +27,15 @@ class OptimizationSettings(NamedTuple):
 
     @staticmethod
     def create_from(
-        optimizer_params: List[Tuple[str, float]]
+        optimizer_params: List[Tuple[str, float]],
+        layers_to_optimize: Optional[List[str]] = None,
     ) -> List["OptimizationSettings"]:
         """Create optimization settings from the provided parameters."""
         return [
             OptimizationSettings(
                 optimization_type=opt_type,
                 optimization_target=opt_target,
-                layers_to_optimize=None,
+                layers_to_optimize=layers_to_optimize,
             )
             for opt_type, opt_target in optimizer_params
         ]

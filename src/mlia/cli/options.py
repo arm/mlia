@@ -68,35 +68,6 @@ def add_device_options(parser: argparse.ArgumentParser) -> None:
     )
 
 
-def add_optimization_options(parser: argparse.ArgumentParser) -> None:
-    """Add optimization specific options."""
-    optimization_group = parser.add_argument_group("optimization options")
-
-    optimization_group.add_argument(
-        "--optimization-type",
-        required=True,
-        choices=("pruning", "clustering"),
-        help="Optimization type [required]",
-    )
-    optimization_group.add_argument(
-        "--optimization-target",
-        required=True,
-        type=float,
-        help="""Target for optimization
-            (for pruning this is sparsity between (0,1),
-            for clustering this is the number of clusters (positive integer))
-            [required]""",
-    )
-    optimization_group.add_argument(
-        "--layers-to-optimize",
-        nargs="+",
-        type=str,
-        help="""Name of the layers to optimize (separated by space)
-            example: conv1 conv2 conv3
-            [default: every layer]""",
-    )
-
-
 def add_multi_optimization_options(parser: argparse.ArgumentParser) -> None:
     """Add optimization specific options."""
     multi_optimization_group = parser.add_argument_group("optimization options")

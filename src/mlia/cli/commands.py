@@ -17,7 +17,6 @@ import logging
 from typing import Any
 from typing import List
 from typing import Optional
-from typing import Union
 
 from mlia._typing import OutputFormat
 from mlia._typing import PathOrFileLike
@@ -298,7 +297,7 @@ def optimization(
     ctx: ExecutionContext,
     model: str,
     optimization_type: str,
-    optimization_target: Union[int, float],
+    optimization_target: str,
     layers_to_optimize: Optional[List[str]] = None,
     output_format: OutputFormat = "plain_text",
     output: Optional[PathOrFileLike] = None,
@@ -312,10 +311,10 @@ def optimization(
 
     :param ctx: execution context
     :param model: path to the TFLite model
-    :param optimization_type: name of the optimization technique
-           e.g. 'pruning'
-    :param optimization_target: corresponding target for the applied
-           optimization, e.g. '0.5'
+    :param optimization_type: list of the optimization techniques separated
+           by comma, e.g. 'pruning,clustering'
+    :param optimization_target: list of the corresponding targets for
+           the provided optimization techniques, e.g. '0.5,32'
     :param layers_to_optimize: list of the layers of the model which should be
            optimized, if None then all layers are used
     :param output_format: format of the report produced during the command
@@ -342,9 +341,11 @@ def optimization(
 
         logger.info(MODEL_ANALYSIS_MSG)
 
-        opt_settings = OptimizationSettings(
-            optimization_type, optimization_target, layers_to_optimize
+        opt_params = parse_optimization_parameters(
+            optimization_type, optimization_target
         )
+        opt_settings = OptimizationSettings.create_from(opt_params, layers_to_optimize)
+
         optimizer = get_optimizer(keras_model, opt_settings)
         original, optimized = optimize_and_compare(optimizer, device, ctx)
 
@@ -364,7 +365,7 @@ def optimization(
 
         optimization_results = OptimizationResults(
             perf_metrics=compare_metrics(original, optimized),
-            optimizations=[(optimization_type, optimization_target)],
+            optimizations=opt_params,
         )
 
         adv_ctx = AdvisorContext(
