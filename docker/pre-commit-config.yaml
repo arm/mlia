@@ -51,11 +51,6 @@ repos:
   hooks:
     - id: flake8
 
-- repo: https://github.com/pre-commit/mirrors-pylint
-  rev: v3.0.0a4
-  hooks:
-  - id: pylint
-
 - repo: https://github.com/PyCQA/pydocstyle
   rev: 6.1.1
   hooks:
@@ -74,14 +69,6 @@ repos:
 
 - repo: local
   hooks:
-    - id: pytest
-      name: pytest
-      stages: [manual]
-      language: system
-      entry: pytest
-      types: [python]
-      pass_filenames: false
-
     - id: pytest-cov
       name: pytest coverage
       stages: [push]
@@ -100,3 +87,11 @@ repos:
       types: [python]
       require_serial: true
       additional_dependencies: []
+
+- repo: local
+  hooks:
+    - id: pylint
+      name: pylint
+      entry: pylint
+      language: system
+      types: [python]

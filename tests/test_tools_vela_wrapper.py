@@ -10,6 +10,7 @@ from ethosu.vela.compiler_driver import TensorAllocator
 from ethosu.vela.scheduler import OptimizationStrategy
 from mlia.config import EthosU55
 from mlia.config import TFLiteModel
+from mlia.metadata import NpuSupported
 from mlia.tools.vela_wrapper import estimate_performance
 from mlia.tools.vela_wrapper import generate_supported_operators_report
 from mlia.tools.vela_wrapper import get_vela_compiler
@@ -185,17 +186,17 @@ def test_get_compiler_for_device() -> None:
         output_dir="output",
     )
 
-    compile = get_vela_compiler(device)
+    compiler = get_vela_compiler(device)
 
-    assert compile.config_files == "test_vela.ini"
-    assert compile.system_config == "test_system_config"
-    assert compile.memory_mode == "test_memory_mode"
-    assert compile.accelerator_config == "ethos-u55-32"
-    assert compile.arena_cache_size == 123
-    assert compile.tensor_allocator == TensorAllocator.Greedy
-    assert compile.cpu_tensor_alignment == 1
-    assert compile.output_dir == "output"
-    assert compile.optimization_strategy == OptimizationStrategy.Size
+    assert compiler.config_files == "test_vela.ini"
+    assert compiler.system_config == "test_system_config"
+    assert compiler.memory_mode == "test_memory_mode"
+    assert compiler.accelerator_config == "ethos-u55-32"
+    assert compiler.arena_cache_size == 123
+    assert compiler.tensor_allocator == TensorAllocator.Greedy
+    assert compiler.cpu_tensor_alignment == 1
+    assert compiler.output_dir == "output"
+    assert compiler.optimization_strategy == OptimizationStrategy.Size
 
 
 @pytest.mark.parametrize(
@@ -207,27 +208,18 @@ def test_get_compiler_for_device() -> None:
                 (
                     "sequential/dense/MatMul1",
                     "FULLY_CONNECTED",
-                    (
-                        True,
-                        [],
-                    ),
+                    NpuSupported(True, []),
                 ),
                 (
                     "sequential/dense/BiasAdd;sequential/dense_1/MatMul;"
                     "sequential/dense_1/Relu;sequential/dense_1/BiasAdd",
                     "FULLY_CONNECTED",
-                    (
-                        True,
-                        [],
-                    ),
+                    NpuSupported(True, []),
                 ),
                 (
                     "Identity",
                     "FULLY_CONNECTED",
-                    (
-                        True,
-                        [],
-                    ),
+                    NpuSupported(True, []),
                 ),
             ],
         )
@@ -247,15 +239,15 @@ def test_operators(
     assert operators.npu_supported_ratio == 1.0
     assert operators.npu_unsupported_ratio == 0.0
 
-    for i, op in enumerate(operators.ops):
+    for i, operator in enumerate(operators.ops):
         (
             expected_name,
             expected_type,
-            (expected_run_on_npu, expected_reasons),
+            expected_run_on_npu,
         ) = expected_ops[i]
-        assert op.name == expected_name
-        assert op.op_type == expected_type
-        assert op.run_on_npu == (expected_run_on_npu, expected_reasons)
+        assert operator.name == expected_name
+        assert operator.op_type == expected_type
+        assert operator.run_on_npu == expected_run_on_npu
 
 
 def test_estimate_performance(test_models_path: Path) -> None:

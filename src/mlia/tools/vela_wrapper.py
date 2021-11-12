@@ -2,10 +2,12 @@
 """Vela wrapper module."""
 import itertools
 import logging
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 from typing import Dict
 from typing import List
+from typing import Literal
 from typing import Optional
 from typing import Tuple
 from typing import Union
@@ -38,7 +40,6 @@ from mlia.metadata import NpuSupported
 from mlia.metadata import Operator
 from mlia.metadata import Operators
 from mlia.utils.general import redirect_output
-from typing_extensions import Literal
 
 
 logger = logging.getLogger(__name__)
@@ -46,55 +47,32 @@ logger = logging.getLogger(__name__)
 VELA_INTERNAL_OPS = (Op.Placeholder, Op.SubgraphInput, Op.Const)
 
 
-class PerformanceMetrics:
+@dataclass
+class PerformanceMetrics:  # pylint: disable=too-many-instance-attributes
     """Contains all the performance metrics Vela generates in a run."""
 
-    def __init__(
-        self,
-        npu_cycles: int,
-        sram_access_cycles: int,
-        dram_access_cycles: int,
-        on_chip_flash_access_cycles: int,
-        off_chip_flash_access_cycles: int,
-        total_cycles: int,
-        batch_inference_time: float,
-        inferences_per_second: float,
-        batch_size: int,
-        unknown_memory_area_size: int,
-        sram_memory_area_size: int,
-        dram_memory_area_size: int,
-        on_chip_flash_memory_area_size: int,
-        off_chip_flash_memory_area_size: int,
-    ) -> None:
-        """Initialize the performance metrics instance."""
-        self.npu_cycles = npu_cycles
-        self.sram_access_cycles = sram_access_cycles
-        self.dram_access_cycles = dram_access_cycles
-        self.on_chip_flash_access_cycles = on_chip_flash_access_cycles
-        self.off_chip_flash_access_cycles = off_chip_flash_access_cycles
-        self.total_cycles = total_cycles
-        self.batch_inference_time = batch_inference_time
-        self.inferences_per_second = inferences_per_second
-        self.batch_size = batch_size
-
-        self.cycles_per_batch_unit = "cycles/batch"
-        self.inference_time_unit = "ms"
-        self.inferences_per_second_unit = "inf/s"
-
-        self.unknown_memory_area_size = unknown_memory_area_size
-        self.sram_memory_area_size = sram_memory_area_size
-        self.dram_memory_area_size = dram_memory_area_size
-        self.on_chip_flash_memory_area_size = on_chip_flash_memory_area_size
-        self.off_chip_flash_memory_area_size = off_chip_flash_memory_area_size
+    npu_cycles: int
+    sram_access_cycles: int
+    dram_access_cycles: int
+    on_chip_flash_access_cycles: int
+    off_chip_flash_access_cycles: int
+    total_cycles: int
+    batch_inference_time: float
+    inferences_per_second: float
+    batch_size: int
+    unknown_memory_area_size: int
+    sram_memory_area_size: int
+    dram_memory_area_size: int
+    on_chip_flash_memory_area_size: int
+    off_chip_flash_memory_area_size: int
 
 
+@dataclass
 class Model:
     """Model metadata."""
 
-    def __init__(self, nng: Graph, network_type: NetworkType) -> None:
-        """Instance of the model metadata."""
-        self.nng = nng
-        self.network_type = network_type
+    nng: Graph
+    network_type: NetworkType
 
     @property
     def optimized(self) -> bool:
@@ -106,21 +84,14 @@ class Model:
         )
 
 
+@dataclass
 class OptimizedModel:
     """Instance of the vela optimized model."""
 
-    def __init__(
-        self,
-        nng: Graph,
-        arch: ArchitectureFeatures,
-        compiler_options: CompilerOptions,
-        scheduler_options: SchedulerOptions,
-    ) -> None:
-        """Vela optimized model instance."""
-        self.nng = nng
-        self.arch = arch
-        self.compiler_options = compiler_options
-        self.scheduler_options = scheduler_options
+    nng: Graph
+    arch: ArchitectureFeatures
+    compiler_options: CompilerOptions
+    scheduler_options: SchedulerOptions
 
     def save(self, output_filename: Union[str, Path]) -> None:
         """Save instance of the optimized model to the file."""
@@ -141,10 +112,10 @@ TensorAllocatorType = Literal["LinearAlloc", "Greedy", "HillClimb"]
 OptimizationStrategyType = Literal["Performance", "Size"]
 
 
-class VelaCompiler:
+class VelaCompiler:  # pylint: disable=too-many-instance-attributes
     """Vela compiler wrapper."""
 
-    def __init__(
+    def __init__(  # pylint: disable=too-many-arguments
         self,
         config_files: Optional[Union[str, List[str]]] = None,
         system_config: str = ArchitectureFeatures.DEFAULT_CONFIG,
@@ -181,7 +152,7 @@ class VelaCompiler:
         if isinstance(model, (str, Path)):
             nng, network_type = self._read_model(model)
         else:
-            nng = model.nng
+            nng, network_type = model.nng, NetworkType.TFLite
 
         if not nng:
             raise Exception("Unable to read model")
@@ -192,7 +163,7 @@ class VelaCompiler:
 
         with redirect_output(logger):
             compiler_driver(
-                nng, arch, compiler_options, scheduler_options, NetworkType.TFLite
+                nng, arch, compiler_options, scheduler_options, network_type
             )
 
         return OptimizedModel(nng, arch, compiler_options, scheduler_options)
@@ -390,33 +361,35 @@ def supported_operators(model: TFLiteModel, device: EthosUConfiguration) -> Oper
     )
 
 
-def run_on_npu(op: Op) -> NpuSupported:
+def run_on_npu(operator: Op) -> NpuSupported:
     """Return true if operator can run on NPU."""
     semantic_checker = TFLiteSemantic()
     semantic_constraints = itertools.chain(
         semantic_checker.generic_constraints,
-        semantic_checker.specific_constraints[op.type],
+        semantic_checker.specific_constraints[operator.type],
     )
 
     for constraint in semantic_constraints:
-        op_valid, op_reason = constraint(op)
+        op_valid, op_reason = constraint(operator)
         if not op_valid:
             return NpuSupported(False, [(constraint.__doc__, op_reason)])
 
-    supported_operators = TFLiteSupportedOperators()
-    if op.type not in TFLiteSupportedOperators.supported_operators:
+    if operator.type not in TFLiteSupportedOperators.supported_operators:
         reasons = (
-            [("CPU only operator", "")] if op.type not in VELA_INTERNAL_OPS else []
+            [("CPU only operator", "")]
+            if operator.type not in VELA_INTERNAL_OPS
+            else []
         )
 
         return NpuSupported(False, reasons)
 
+    tflite_supported_operators = TFLiteSupportedOperators()
     operation_constraints = itertools.chain(
-        supported_operators.generic_constraints,
-        supported_operators.specific_constraints[op.type],
+        tflite_supported_operators.generic_constraints,
+        tflite_supported_operators.specific_constraints[operator.type],
     )
     for constraint in operation_constraints:
-        op_valid, op_reason = constraint(op)
+        op_valid, op_reason = constraint(operator)
         if not op_valid:
             return NpuSupported(False, [(constraint.__doc__, op_reason)])
 

@@ -7,10 +7,10 @@ from typing import Any
 from typing import Callable
 from typing import Iterable
 from typing import Optional
+from typing import TypedDict
 
 import numpy as np
 import tensorflow as tf
-from typing_extensions import TypedDict
 
 tf.keras.backend.set_image_data_format("channels_last")
 
@@ -55,6 +55,26 @@ def simple_3_layers_model() -> tf.keras.Model:
             tf.keras.layers.Dense(units=1, input_shape=[1], batch_size=1),
             tf.keras.layers.Dense(units=16, activation="relu"),
             tf.keras.layers.Dense(units=1),
+        ]
+    )
+
+
+@test_model()
+def simple_model() -> tf.keras.Model:
+    """Generate simple model with conv2d and dense layers."""
+    return tf.keras.Sequential(
+        [
+            tf.keras.Input(shape=(28, 28), batch_size=1),
+            tf.keras.layers.Reshape((28, 28, 1)),
+            tf.keras.layers.Conv2D(
+                filters=12, kernel_size=(3, 3), activation="relu", name="conv1"
+            ),
+            tf.keras.layers.Conv2D(
+                filters=12, kernel_size=(3, 3), activation="relu", name="conv2"
+            ),
+            tf.keras.layers.MaxPool2D(2, 2),
+            tf.keras.layers.Flatten(),
+            tf.keras.layers.Dense(10),
         ]
     )
 
@@ -215,12 +235,12 @@ if __name__ == "__main__":
         default=False,
         help="Save TF saved-model in addition to the TFLite model",
     )
-    args = parser.parse_args()
+    cmd_args = parser.parse_args()
 
     gen_models(
-        args.output_dir,
-        args.model_name,
-        args.save_keras,
-        args.keras_saved_model,
-        args.tf_saved_model,
+        cmd_args.output_dir,
+        cmd_args.model_name,
+        cmd_args.save_keras,
+        cmd_args.keras_saved_model,
+        cmd_args.tf_saved_model,
     )

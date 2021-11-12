@@ -3,9 +3,7 @@
 import pathlib
 from typing import List
 from typing import Optional
-from typing import Tuple
 
-import numpy as np
 import pytest
 import tensorflow as tf
 from mlia.optimizations.clustering import Clusterer
@@ -15,36 +13,15 @@ from mlia.optimizations.pruning import PruningConfiguration
 from mlia.utils import general as test_utils
 from mlia.utils import tflite_metrics
 
+from tests.utils.common import get_dataset
+from tests.utils.common import train_model
 from tests.utils.generate_keras_model import generate_keras_model
-
-
-def _get_dataset() -> Tuple[np.array, np.array]:
-    mnist = tf.keras.datasets.mnist
-    (x_train, y_train), _ = mnist.load_data()
-    x_train = x_train / 255.0
-
-    # Use subset of 60000 examples to keep unit test speed fast.
-    x_train = x_train[0:1]
-    y_train = y_train[0:1]
-
-    return x_train, y_train
-
-
-def _train_model(model: tf.keras.Model) -> None:
-    num_epochs = 1
-
-    loss_fn = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
-    model.compile(optimizer="adam", loss=loss_fn, metrics=["accuracy"])
-
-    x_train, y_train = _get_dataset()
-
-    model.fit(x_train, y_train, epochs=num_epochs)
 
 
 def _prune_model(
     model: tf.keras.Model, target_sparsity: float, layers_to_prune: Optional[List[str]]
 ) -> tf.keras.Model:
-    x_train, y_train = _get_dataset()
+    x_train, y_train = get_dataset()
     batch_size = 1
     num_epochs = 1
 
@@ -123,7 +100,7 @@ def test_cluster_simple_model_fully(
     target_sparsity = 0.5
 
     base_model = generate_keras_model()
-    _train_model(base_model)
+    train_model(base_model)
 
     if sparsity_aware:
         base_model = _prune_model(base_model, target_sparsity, layers_to_cluster)

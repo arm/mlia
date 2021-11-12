@@ -3,4 +3,3 @@ tensorflow-model-optimization==0.6
 ethos-u-vela~=3.1.0
 pandas
 tabulate
-typing_extensions

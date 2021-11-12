@@ -14,6 +14,7 @@ class LogFilter(logging.Filter):
 
     def __init__(self, log_record_filter: Callable[[logging.LogRecord], bool]) -> None:
         """Init log filter instance."""
+        super().__init__()
         self.log_record_filter = log_record_filter
 
     def filter(self, record: logging.LogRecord) -> bool:

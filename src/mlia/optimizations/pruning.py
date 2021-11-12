@@ -5,6 +5,7 @@ Contains class Pruner to prune a model to a specified sparsity.
 In order to do this, we need to have a base model and corresponding training data.
 We also have to specify a subset of layers we want to prune.
 """
+from dataclasses import dataclass
 from typing import List
 from typing import Optional
 from typing import Tuple
@@ -14,32 +15,29 @@ import tensorflow as tf
 import tensorflow_model_optimization as tfmot
 from mlia.optimizations.common import Optimizer
 from mlia.optimizations.common import OptimizerConfiguration
-from tensorflow_model_optimization.python.core.sparsity.keras import pruning_wrapper
+from tensorflow_model_optimization.python.core.sparsity.keras import (  # pylint: disable=no-name-in-module
+    pruning_wrapper,
+)
 
 
+@dataclass
 class PruningConfiguration(OptimizerConfiguration):
     """Pruning configuration."""
 
-    def __init__(
-        self,
-        optimization_target: float,
-        layers_to_optimize: Optional[List[str]] = None,
-        x_train: Optional[np.array] = None,
-        y_train: Optional[np.array] = None,
-        batch_size: int = 1,
-        num_epochs: int = 1,
-    ):
-        """Init pruning configuration."""
-        self.optimization_target = optimization_target
-        self.layers_to_optimize = layers_to_optimize
-        self.x_train = x_train
-        self.y_train = y_train
-        self.batch_size = batch_size
-        self.num_epochs = num_epochs
+    optimization_target: float
+    layers_to_optimize: Optional[List[str]] = None
+    x_train: Optional[np.array] = None
+    y_train: Optional[np.array] = None
+    batch_size: int = 1
+    num_epochs: int = 1
 
     def __str__(self) -> str:
         """Return string representation of the configuration."""
         return f"pruning: {self.optimization_target}"
+
+    def has_training_data(self) -> bool:
+        """Return True if training data provided."""
+        return self.x_train is not None and self.y_train is not None
 
 
 class Pruner(Optimizer):
@@ -62,34 +60,28 @@ class Pruner(Optimizer):
         self.model = model
         self.optimizer_configuration = optimizer_configuration
 
-        if (
-            self.optimizer_configuration.x_train is None
-            or self.optimizer_configuration.y_train is None
-        ):
-            (
-                self.optimizer_configuration.x_train,
-                self.optimizer_configuration.y_train,
-            ) = self._mock_train_data(1)
+        if not optimizer_configuration.has_training_data():
+            mock_x_train, mock_y_train = self._mock_train_data(1)
+
+            self.optimizer_configuration.x_train = mock_x_train
+            self.optimizer_configuration.y_train = mock_y_train
 
     def optimization_config(self) -> str:
         """Return string representation of the optimization config."""
         return str(self.optimizer_configuration)
 
     def _mock_train_data(self, num_imgs: int) -> Tuple[np.array, np.array]:
-        input_shape = self.model.input_shape
-        # get rid of the batch_size dimension
-        input_shape = tuple([x for x in input_shape if x is not None])
-        output_shape = self.model.output_shape
-        # get rid of the batch_size dimension
-        output_shape = tuple([x for x in output_shape if x is not None])
+        # get rid of the batch_size dimension in input and output shape
+        input_shape = tuple(x for x in self.model.input_shape if x is not None)
+        output_shape = tuple(x for x in self.model.output_shape if x is not None)
+
         return (
             np.random.rand(*input_shape),
             np.random.randint(0, output_shape[-1], (num_imgs)),
         )
 
     def _setup_pruning_params(self) -> dict:
-
-        pruning_params = {
+        return {
             "pruning_schedule": tfmot.sparsity.keras.PolynomialDecay(
                 initial_sparsity=0,
                 final_sparsity=self.optimizer_configuration.optimization_target,
@@ -99,26 +91,22 @@ class Pruner(Optimizer):
             ),
         }
 
-        return pruning_params
-
     def _apply_pruning_to_layer(
         self, layer: tf.keras.layers.Layer
     ) -> tf.keras.layers.Layer:
+        layers_to_optimize = self.optimizer_configuration.layers_to_optimize
+        assert layers_to_optimize, "List of the layers to optimize is empty"
+
+        if layer.name not in layers_to_optimize:
+            return layer
+
         pruning_params = self._setup_pruning_params()
-
-        # To make mypy happy.
-        assert self.optimizer_configuration.layers_to_optimize is not None
-
-        if layer.name in self.optimizer_configuration.layers_to_optimize:
-            return tfmot.sparsity.keras.prune_low_magnitude(layer, **pruning_params)
-
-        return layer
+        return tfmot.sparsity.keras.prune_low_magnitude(layer, **pruning_params)
 
     def _init_for_pruning(self) -> None:
         # Use `tf.keras.models.clone_model` to apply `apply_pruning_to_layer`
-        # to the layers of the model.
-
-        if self.optimizer_configuration.layers_to_optimize is None:
+        # to the layers of the model
+        if not self.optimizer_configuration.layers_to_optimize:
             pruning_params = self._setup_pruning_params()
             prunable_model = tfmot.sparsity.keras.prune_low_magnitude(
                 self.model, **pruning_params
@@ -149,17 +137,18 @@ class Pruner(Optimizer):
 
     def _assert_sparsity_reached(self) -> None:
         for layer in self.model.layers:
-            if isinstance(layer, pruning_wrapper.PruneLowMagnitude):
-                for weight in layer.layer.get_prunable_weights():
-                    nonzero_weights = np.count_nonzero(
-                        tf.keras.backend.get_value(weight)
-                    )
-                    all_weights = tf.keras.backend.get_value(weight).size
-                    np.testing.assert_approx_equal(
-                        self.optimizer_configuration.optimization_target,
-                        1 - nonzero_weights / all_weights,
-                        significant=2,
-                    )
+            if not isinstance(layer, pruning_wrapper.PruneLowMagnitude):
+                continue
+
+            for weight in layer.layer.get_prunable_weights():
+                nonzero_weights = np.count_nonzero(tf.keras.backend.get_value(weight))
+                all_weights = tf.keras.backend.get_value(weight).size
+
+                np.testing.assert_approx_equal(
+                    self.optimizer_configuration.optimization_target,
+                    1 - nonzero_weights / all_weights,
+                    significant=2,
+                )
 
     def _strip_pruning(self) -> None:
         self.model = tfmot.sparsity.keras.strip_pruning(self.model)

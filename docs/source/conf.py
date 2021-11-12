@@ -13,6 +13,7 @@
 # sys.path.insert(0, os.path.abspath('.'))
 # -- Project information -----------------------------------------------------
 """The configuration file for sphinx."""
+# pylint: skip-file
 project = "mlia"
 copyright = "Copyright 2021, Arm Ltd."
 author = "ml-tooling-mlia"

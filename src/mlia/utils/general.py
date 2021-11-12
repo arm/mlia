@@ -16,7 +16,9 @@ from typing import Union
 import numpy as np
 import tensorflow as tf
 from tensorflow.lite.python.interpreter import Interpreter
-from tensorflow.python.tools import saved_model_utils
+from tensorflow.python.tools import (  # pylint: disable=no-name-in-module
+    saved_model_utils,
+)
 
 
 def representative_dataset(model: tf.keras.Model) -> Callable:
@@ -45,7 +47,7 @@ def get_tf_tensor_shape(model: str) -> list:
         signature_def_map = meta_graph.signature_def
         for signature_def_key in sorted(signature_def_map.keys()):
             inputs_tensor_info = meta_graph.signature_def[signature_def_key].inputs
-            for input_key, input_tensor in sorted(inputs_tensor_info.items()):
+            for _input_key, input_tensor in sorted(inputs_tensor_info.items()):
                 dims = [dim.size for dim in input_tensor.tensor_shape.dim]
                 return dims
     return []
@@ -53,7 +55,9 @@ def get_tf_tensor_shape(model: str) -> list:
 
 def representative_tf_dataset(model: str) -> Callable:
     """Sample dataset used for quantization."""
-    if not (input_shape := get_tf_tensor_shape(model)):
+    if not (
+        input_shape := get_tf_tensor_shape(model)  # pylint: disable=superfluous-parens
+    ):
         raise Exception("Unable to get input shape")
 
     def dataset() -> Iterable:

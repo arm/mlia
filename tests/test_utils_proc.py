@@ -1,5 +1,6 @@
 # Copyright 2021, Arm Ltd.
 """Tests for the module utils/proc."""
+# pylint: disable=no-self-use
 import time
 
 import pytest

@@ -22,12 +22,14 @@ class ExecutionFailed(Exception):
 
     def __init__(self, return_code: int, stdout: bytes, stderr: bytes) -> None:
         """Init ExecutionFailed exception instance."""
+        super().__init__()
+
         self.return_code = return_code
         self.stdout = stdout
         self.stderr = stderr
 
 
-class OutputConsumer(ABC):
+class OutputConsumer(ABC):  # pylint: disable=too-few-public-methods
     """Base class for the output consumers."""
 
     @abstractmethod
@@ -66,9 +68,9 @@ class RunningCommand:
         """Terminate the process."""
         self.process.terminate()
 
-    def send_signal(self, signal: int) -> None:
+    def send_signal(self, signal_num: int) -> None:
         """Send signal to the process."""
-        self.process.send_signal(signal)
+        self.process.send_signal(signal_num)
 
     @property
     def output_consumers(self) -> Optional[List[OutputConsumer]]:
@@ -116,10 +118,10 @@ class RunningCommand:
     def _close_fd(self) -> None:
         """Close file descriptors."""
 
-        def close(f: Any) -> None:
+        def close(file_descriptor: Any) -> None:
             """Check and close file."""
-            if f is not None and hasattr(f, "close"):
-                f.close()
+            if file_descriptor is not None and hasattr(file_descriptor, "close"):
+                file_descriptor.close()
 
         close(self.process.stdout)
         close(self.process.stderr)
@@ -136,18 +138,24 @@ class RunningCommand:
 class CommandExecutor:
     """Command executor."""
 
-    def execute(self, command: List[str]) -> Tuple[int, bytes, bytes]:
+    @staticmethod
+    def execute(command: List[str]) -> Tuple[int, bytes, bytes]:
         """Execute the command."""
-        result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        result = subprocess.run(  # pylint: disable=subprocess-run-check
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
 
         if result.returncode != 0:
             raise ExecutionFailed(result.returncode, result.stdout, result.stderr)
 
         return (result.returncode, result.stdout, result.stderr)
 
-    def submit(self, command: List[str]) -> RunningCommand:
+    @staticmethod
+    def submit(command: List[str]) -> RunningCommand:
         """Submit command for the execution."""
-        process = subprocess.Popen(
+        process = subprocess.Popen(  # pylint: disable=consider-using-with
             command,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,  # redirect command stderr to stdout

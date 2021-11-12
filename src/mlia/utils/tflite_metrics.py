@@ -158,9 +158,9 @@ class TFLiteMetrics:
             # Calculate unique weights along quantization axis
             axis = quant_params["quantized_dimension"]
             return calculate_num_unique_weights_per_axis(self.get_tensor(details), axis)
-        else:
-            # Calculate unique weights over all axes/dimensions
-            return [calculate_num_unique_weights(self.get_tensor(details))]
+
+        # Calculate unique weights over all axes/dimensions
+        return [calculate_num_unique_weights(self.get_tensor(details))]
 
     def num_unique_weights(self, mode: ReportClusterMode) -> dict:
         """Return a dict of layer name and number of unique weights."""
@@ -202,7 +202,7 @@ class TFLiteMetrics:
             return name.split("/", 1)[1]
         return name
 
-    def summary(
+    def summary(  # pylint: disable=too-many-locals
         self,
         report_sparsity: bool,
         report_cluster_mode: ReportClusterMode = None,
@@ -212,13 +212,15 @@ class TFLiteMetrics:
         """Print a summary of all the model information."""
 
         def print_in_outs(ios: List[dict], verbose: bool = False) -> None:
-            for io in ios:
+            for item in ios:
                 if verbose:
-                    pprint(io)
+                    pprint(item)
                 else:
                     print(
                         "- {} ({}): {}".format(
-                            io["name"], np.dtype(io["dtype"]).name, io["shape"]
+                            item["name"],
+                            np.dtype(item["dtype"]).name,
+                            item["shape"],
                         )
                     )
 

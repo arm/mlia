@@ -1,5 +1,6 @@
 # Copyright 2021, Arm Ltd.
 """Tests for module tools/aiet_wrapper."""
+# pylint: disable=no-self-use,too-many-arguments
 from contextlib import ExitStack as does_not_raise
 from pathlib import Path
 from typing import Any

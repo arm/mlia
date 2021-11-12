@@ -1,5 +1,7 @@
 # Copyright 2021, Arm Ltd.
 """End to end tests for MLIA CLI."""
+# pylint: disable=no-self-use,superfluous-parens
+# pylint: disable=too-many-arguments,too-many-locals,subprocess-run-check
 import argparse
 import itertools
 import json
@@ -45,7 +47,11 @@ class CommandExecution(NamedTuple):
 
         opt_type = self._get_param("optimization_type", None)
         opt_target = self._get_param("optimization_target", None)
-        opts = f" optimization={v}" if (v := self._merge(opt_type, opt_target)) else ""
+        opts = (
+            f" optimization={opts}"
+            if (opts := self._merge(opt_type, opt_target))
+            else ""
+        )
 
         return f"command {command}: device={device} mac={mac} model={model}{opts}"
 
@@ -172,8 +178,8 @@ def get_execution_definitions() -> Generator[CommandExecution, None, None]:
         # test will be skipped in this case
         return
 
-    with open(config_file) as f:
-        json_data = json.load(f)
+    with open(config_file) as file:
+        json_data = json.load(file)
     assert isinstance(json_data, dict), "JSON configuration expected to be a dictionary"
 
     executions = json_data.get("executions", [])
@@ -197,10 +203,10 @@ def get_execution_definitions() -> Generator[CommandExecution, None, None]:
         try:
             # parse parameters to generate meaningful test description
             args = subcommand_parser.parse_args(combination)
-        except SystemExit as e:
+        except SystemExit as err:
             raise Exception(
                 f"Configuration contains invalid parameters: {combination}"
-            ) from e
+            ) from err
 
         yield CommandExecution(args, combination)
 
@@ -287,6 +293,9 @@ class TestEndToEnd:
                 "-e",
                 venv,
             ]
+            if extra_flags:
+                command.append(extra_flags)
+
             run_command(command)
 
             assert Path(venv).is_dir()

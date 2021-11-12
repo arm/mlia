@@ -1,5 +1,6 @@
 # Copyright 2021, Arm Ltd.
 """Tests for main module."""
+# pylint: disable=too-many-arguments,too-many-locals
 import argparse
 import json
 import logging
@@ -84,15 +85,15 @@ def test_default_command(monkeypatch: Any, tmp_path: Path) -> None:
     ) -> Callable[..., None]:
         """Mock cli command."""
 
-        def f(*args: Any, **kwargs: Any) -> None:
+        def sample_cmd_1(*args: Any, **kwargs: Any) -> None:
             """Sample command."""
             func_mock(*args, **kwargs)
 
-        def g(ctx: ExecutionContext, **kwargs: Any) -> None:
+        def sample_cmd_2(ctx: ExecutionContext, **kwargs: Any) -> None:
             """Another sample command."""
             func_mock(ctx=ctx, **kwargs)
 
-        ret_func = g if with_working_dir else f
+        ret_func = sample_cmd_2 if with_working_dir else sample_cmd_1
         ret_func.__name__ = name
 
         return ret_func  # type: ignore

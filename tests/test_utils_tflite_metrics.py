@@ -1,5 +1,6 @@
 # Copyright 2021, Arm Ltd.
 """Test for module utils/tflite_metrics."""
+# pylint: disable=no-self-use,too-many-arguments,redefined-outer-name
 import os
 import tempfile
 from math import isclose
@@ -29,21 +30,21 @@ def _dummy_keras_model() -> tf.keras.Model:
 
 def _sparse_binary_keras_model() -> tf.keras.Model:
     def get_sparse_weights(shape: List[int]) -> np.array:
-        w = np.zeros(shape)
-        with np.nditer(w, op_flags=["writeonly"]) as it:
-            for idx, value in enumerate(it):
+        weights = np.zeros(shape)
+        with np.nditer(weights, op_flags=["writeonly"]) as weight_iterator:
+            for idx, value in enumerate(weight_iterator):
                 if idx % 2 == 0:
                     value[...] = 1.0
-        return w
+        return weights
 
     keras_model = _dummy_keras_model()
     # Assign weights to have 0.5 sparsity
     for layer in keras_model.layers:
         if not isinstance(layer, tf.keras.layers.Flatten):
-            w = layer.weights[0]
-            w.assign(get_sparse_weights(w.shape))
+            weight = layer.weights[0]
+            weight.assign(get_sparse_weights(weight.shape))
             print(layer)
-            print(w.numpy())
+            print(weight.numpy())
     return keras_model
 
 

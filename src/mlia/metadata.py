@@ -1,39 +1,41 @@
 # Copyright 2021, Arm Ltd.
 """Model's metadata module."""
+from dataclasses import dataclass
 from typing import List
-from typing import NamedTuple
 from typing import Tuple
 
 
-class NpuSupported(NamedTuple):
+@dataclass
+class NpuSupported:
     """Operator's npu supported attribute."""
 
     supported: bool
     reasons: List[Tuple[str, str]]
 
 
+@dataclass
 class Operator:
     """Model operator."""
 
-    def __init__(self, name: str, op_type: str, run_on_npu: NpuSupported) -> None:
-        """Init operation instance."""
-        self.name = name
-        self.op_type = op_type
-        self.run_on_npu = run_on_npu
+    name: str
+    op_type: str
+    run_on_npu: NpuSupported
 
     @property
     def cpu_only(self) -> bool:
         """Return true if operator is CPU only."""
-        npu_supported, reasons = self.run_on_npu
-        return not npu_supported and reasons == [("CPU only operator", "")]
+        cpu_only_reasons = [("CPU only operator", "")]
+        return (
+            not self.run_on_npu.supported
+            and self.run_on_npu.reasons == cpu_only_reasons
+        )
 
 
+@dataclass
 class Operators:
     """Model's operators."""
 
-    def __init__(self, ops: List[Operator]) -> None:
-        """Init operators instance."""
-        self.ops = ops
+    ops: List[Operator]
 
     @property
     def npu_supported_ratio(self) -> float:

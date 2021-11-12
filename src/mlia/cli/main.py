@@ -166,7 +166,7 @@ def run_command(args: argparse.Namespace) -> int:
     setup_logging(ctx.logs_path, ctx.verbose)
 
     logger.debug(
-        f"*** This is the beginning of the command '{args.command}' execution ***"
+        "*** This is the beginning of the command '%s' execution ***", args.command
     )
 
     try:
@@ -176,10 +176,11 @@ def run_command(args: argparse.Namespace) -> int:
         return 0
     except KeyboardInterrupt:
         logger.error("Execution has been interrupted")
-    except Exception as e:
+    except Exception as err:  # pylint: disable=broad-except
         logger.error(
-            f"Execution failed with the error: '{e}'",
-            exc_info=e if ctx.verbose else None,
+            "Execution failed with the error: '%s'",
+            err,
+            exc_info=err if ctx.verbose else None,
         )
 
         err_advice_message = (

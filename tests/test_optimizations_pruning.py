@@ -1,13 +1,11 @@
 # Copyright 2021, Arm Ltd.
 """Test for module optimizations/pruning."""
+# pylint: disable=too-many-arguments,too-many-locals
 import pathlib
 from typing import List
 from typing import Optional
-from typing import Tuple
 
-import numpy as np
 import pytest
-import tensorflow as tf
 from mlia.config import TFLiteModel
 from mlia.optimizations.pruning import Pruner
 from mlia.optimizations.pruning import PruningConfiguration
@@ -15,30 +13,9 @@ from mlia.utils import general as general_utils
 from mlia.utils import tflite_metrics
 from numpy.core.numeric import isclose
 
+from tests.utils.common import get_dataset
+from tests.utils.common import train_model
 from tests.utils.generate_keras_model import generate_keras_model
-
-
-def _get_dataset() -> Tuple[np.array, np.array]:
-    mnist = tf.keras.datasets.mnist
-    (x_train, y_train), _ = mnist.load_data()
-    x_train = x_train / 255.0
-
-    # Use subset of 60000 examples to keep unit test speed fast.
-    x_train = x_train[0:1]
-    y_train = y_train[0:1]
-
-    return x_train, y_train
-
-
-def _train_model(model: tf.keras.Model) -> None:
-    num_epochs = 1
-
-    loss_fn = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
-    model.compile(optimizer="adam", loss=loss_fn, metrics=["accuracy"])
-
-    x_train, y_train = _get_dataset()
-
-    model.fit(x_train, y_train, epochs=num_epochs)
 
 
 def _test_sparsity(
@@ -71,12 +48,12 @@ def test_prune_simple_model_fully(
     tmp_path: pathlib.Path,
 ) -> None:
     """Simple mnist test to see if pruning works correctly."""
-    x_train, y_train = _get_dataset()
+    x_train, y_train = get_dataset()
     batch_size = 1
     num_epochs = 1
 
     base_model = generate_keras_model()
-    _train_model(base_model)
+    train_model(base_model)
 
     temp_file = tmp_path / "test_prune_simple_model_fully_before.tflite"
     general_utils.save_tflite_model(

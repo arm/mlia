@@ -1,5 +1,6 @@
 # Copyright 2021, Arm Ltd.
 """Tests for the module cli.logging."""
+# pylint: disable=too-many-arguments,too-many-locals
 import logging
 import sys
 from contextlib import ExitStack as does_not_raise
@@ -148,8 +149,9 @@ def test_setup_logging(
         log_file_name = log_file_path.name
         assert log_file_name == "mlia.log"
 
-        with open(log_file_path) as f:
-            log_content = f.read()
+        with open(log_file_path) as log_file:
+            log_content = log_file.read()
+
         expected_lines = expected_log_file_content.split("\n")
         produced_lines = log_content.split("\n")
 

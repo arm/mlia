@@ -1,6 +1,7 @@
 # Copyright 2021, Arm Ltd.
 """Module for the advice generation."""
 import math
+from dataclasses import dataclass
 from enum import Enum
 from functools import partial
 from pathlib import Path
@@ -9,6 +10,7 @@ from typing import Dict
 from typing import List
 from typing import Optional
 from typing import Tuple
+from typing import TypedDict
 from typing import Union
 
 import pandas as pd
@@ -16,15 +18,13 @@ from mlia.cli.options import get_device_opts
 from mlia.metadata import Operators
 from mlia.metrics import PerformanceMetrics
 from mlia.utils.general import is_keras_model
-from typing_extensions import TypedDict
 
 
+@dataclass
 class Advice:
     """IA advice."""
 
-    def __init__(self, advice_msgs: List[str]) -> None:
-        """Init advice instance."""
-        self.advice_msgs = advice_msgs
+    advice_msgs: List[str]
 
 
 class AdviceGroup(Enum):
@@ -153,7 +153,7 @@ def advice_optimization(ctx: AdvisorContext) -> List[str]:
     )
 
 
-def advice_npu_support(ctx: AdvisorContext) -> List[str]:
+def advice_npu_support(_ctx: AdvisorContext) -> List[str]:
     """General NPU operators compatibility advice."""
     return [
         "For better performance, make sure that all the operators of your "
@@ -171,25 +171,35 @@ def next_optimization_target(
 
     if opt_type == "clustering":
         # return next lowest power of two for clustering
-        p = math.log(opt_target, 2)
-        if p.is_integer():
-            p = p - 1
+        next_target = math.log(opt_target, 2)
+        if next_target.is_integer():
+            next_target -= 1
 
-        return max(int(2 ** int(p)), 4)
+        return max(int(2 ** int(next_target)), 4)
 
     raise Exception(f"Unknown optimization type {opt_type}")
 
 
 def get_metrics(
-    data: pd.DataFrame, improved: bool, metrics: List[str]
+    optimization_results: OptimizationResults, improved: bool
 ) -> List[Tuple[str, int]]:
     """Filter and sort metrics."""
+    perf_metrics: pd.DataFrame = optimization_results.get("perf_metrics")
+
+    metrics = [
+        "SRAM used (KiB)",
+        "DRAM used (KiB)",
+        "On chip flash used (KiB)",
+        "Off chip flash used (KiB)",
+        "NPU total cycles",
+    ]
+
     impr_metric_name = "Improvement (%)"
 
     metric_values = (
-        data[data[impr_metric_name] > 0]
+        perf_metrics[perf_metrics[impr_metric_name] > 0]
         if improved
-        else data[data[impr_metric_name] < 0]
+        else perf_metrics[perf_metrics[impr_metric_name] < 0]
     )
 
     return sorted(
@@ -210,7 +220,6 @@ def advice_optimization_improvement(
     if not optimization_results:
         return []
 
-    perf_metrics: pd.DataFrame = optimization_results.get("perf_metrics")
     optimizations = [
         (
             opt_type,
@@ -220,7 +229,6 @@ def advice_optimization_improvement(
         )
         for opt_type, opt_target in optimization_results.get("optimizations", [])
     ]
-
     if not optimizations:
         return []
 
@@ -230,25 +238,14 @@ def advice_optimization_improvement(
 
     result = [f"With the selected optimization ({opt_text})"]
 
-    metrics = [
-        "SRAM used (KiB)",
-        "DRAM used (KiB)",
-        "On chip flash used (KiB)",
-        "Off chip flash used (KiB)",
-        "NPU total cycles",
-    ]
-
-    improved_metrics = get_metrics(perf_metrics, True, metrics)
-    degraded_metrics = get_metrics(perf_metrics, False, metrics)
-
     impr_text = [
         f"- You have achieved {value:.2f}% performance improvement in {metric}"
-        for metric, value in improved_metrics
+        for metric, value in get_metrics(optimization_results, improved=True)
     ]
 
     degr_text = [
         f"- {metric} have degraded by {abs(value):.2f}%"
-        for metric, value in degraded_metrics
+        for metric, value in get_metrics(optimization_results, improved=False)
     ]
 
     result = result + impr_text + degr_text
@@ -279,7 +276,7 @@ def advice_optimization_improvement(
             if recommend_run_optimizations:
                 device_opts = " ".join(get_device_opts(ctx.get("device_args")))
                 if device_opts:
-                    device_opts = " " + device_opts
+                    device_opts = f" {device_opts}"
                 model_opts = ctx.get("model")
 
                 result.append("For more info, see: mlia optimization --help")
@@ -301,7 +298,7 @@ def advice_optimization_improvement(
     return result
 
 
-def advice_hyperparameter_tuning(ctx: AdvisorContext) -> List[str]:
+def advice_hyperparameter_tuning(_ctx: AdvisorContext) -> List[str]:
     """Advice on hyperparameter tuning."""
     return [
         "The applied tooling techniques have an impact "

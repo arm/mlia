@@ -181,7 +181,7 @@ def get_device_opts(device_args: Optional[Dict]) -> List[str]:
 
     params_name = {
         action.dest: param_name
-        for param_name, action in dummy_parser._option_string_actions.items()
+        for param_name, action in dummy_parser._option_string_actions.items()  # pylint: disable=protected-access
     }
 
     non_default = [

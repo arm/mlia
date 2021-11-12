@@ -8,8 +8,8 @@ from setuptools import setup
 
 
 def _readme() -> str:
-    with open("README.md") as f:
-        return f.read()
+    with open("README.md") as file:
+        return file.read()
 
 
 def _install_requirements(requirements_filename: str = "requirements.txt") -> List[str]:
@@ -17,8 +17,8 @@ def _install_requirements(requirements_filename: str = "requirements.txt") -> Li
     if not requirements_file.exists():
         return []
 
-    with open(requirements_file) as f:
-        all_lines = (line.strip() for line in f.readlines())
+    with open(requirements_file) as file:
+        all_lines = (line.strip() for line in file.readlines())
         return [line for line in all_lines if line and not line.startswith("#")]
 
 

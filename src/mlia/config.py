@@ -1,13 +1,17 @@
 # Copyright 2021, Arm Ltd.
 """Model and IP configuration."""
+# pylint: disable=too-few-public-methods,too-many-instance-attributes
+# pylint: disable=too-many-arguments
 import logging
 from abc import ABC
 from abc import abstractmethod
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 from typing import cast
 from typing import Dict
 from typing import List
+from typing import Literal
 from typing import Optional
 from typing import Union
 
@@ -18,7 +22,6 @@ from mlia.utils.general import is_keras_model
 from mlia.utils.general import is_tf_model
 from mlia.utils.general import is_tflite_model
 from mlia.utils.general import save_tflite_model
-from typing_extensions import Literal
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +29,9 @@ logger = logging.getLogger(__name__)
 class ModelConfiguration:
     """Base class for model configuration."""
 
-    model_path: str
+    def __init__(self, model_path: Union[str, Path]) -> None:
+        """Init model configuration instance."""
+        self.model_path = str(model_path)
 
     def convert_to_tflite(
         self, tflite_model_path: Union[str, Path], quantized: bool = False
@@ -44,10 +49,6 @@ class KerasModel(ModelConfiguration):
 
     Supports all models supported by keras API: saved model, H5, HDF5
     """
-
-    def __init__(self, model_path: Union[str, Path]):
-        """Init Keras model configuration."""
-        self.model_path = str(model_path)
 
     def get_keras_model(self) -> tf.keras.Model:
         """Return associated keras model."""
@@ -74,12 +75,8 @@ class KerasModel(ModelConfiguration):
         return self
 
 
-class TFLiteModel(ModelConfiguration):
+class TFLiteModel(ModelConfiguration):  # pylint: disable=abstract-method
     """TFLite model configuration."""
-
-    def __init__(self, model_path: Union[Path, str]):
-        """Init TFLite model configuration."""
-        self.model_path: str = str(model_path)
 
     def input_details(self) -> List[Dict]:
         """Get model's input details."""
@@ -97,15 +94,11 @@ class TFLiteModel(ModelConfiguration):
         return self
 
 
-class TfModel(ModelConfiguration):
+class TfModel(ModelConfiguration):  # pylint: disable=abstract-method
     """Tensor Flow model configuration.
 
     Supports models supported by TF API (not Keras)
     """
-
-    def __init__(self, model_path: Union[str, Path]):
-        """Init TensorFlow model configuration."""
-        self.model_path = str(model_path)
 
     def convert_to_tflite(
         self, tflite_model_path: Union[str, Path], quantized: bool = False
@@ -148,40 +141,27 @@ def get_keras_model(model: str, ctx: "Context") -> "KerasModel":
     return converted_model.convert_to_keras(keras_model_path)
 
 
+@dataclass
 class CompilerOptions:
     """Compiler options."""
 
-    def __init__(
-        self,
-        config_files: Optional[Union[str, List[str]]] = None,
-        system_config: str = "internal-default",
-        memory_mode: str = "internal-default",
-        accelerator_config: Literal[
-            "ethos-u55-32",
-            "ethos-u55-64",
-            "ethos-u55-128",
-            "ethos-u55-256",
-            "ethos-u65-256",
-            "ethos-u65-512",
-        ] = "ethos-u55-256",
-        max_block_dependency: int = 3,
-        arena_cache_size: Optional[int] = None,
-        tensor_allocator: Literal["LinearAlloc", "Greedy", "HillClimb"] = "HillClimb",
-        cpu_tensor_alignment: int = 16,
-        optimization_strategy: Literal["Performance", "Size"] = "Performance",
-        output_dir: Optional[str] = None,
-    ):
-        """Init compiler options."""
-        self.config_files = config_files
-        self.system_config = system_config
-        self.memory_mode = memory_mode
-        self.accelerator_config = accelerator_config
-        self.max_block_dependency = max_block_dependency
-        self.arena_cache_size = arena_cache_size
-        self.tensor_allocator = tensor_allocator
-        self.cpu_tensor_alignment = cpu_tensor_alignment
-        self.optimization_strategy = optimization_strategy
-        self.output_dir = output_dir
+    config_files: Optional[Union[str, List[str]]] = None
+    system_config: str = "internal-default"
+    memory_mode: str = "internal-default"
+    accelerator_config: Literal[
+        "ethos-u55-32",
+        "ethos-u55-64",
+        "ethos-u55-128",
+        "ethos-u55-256",
+        "ethos-u65-256",
+        "ethos-u65-512",
+    ] = "ethos-u55-256"
+    max_block_dependency: int = 3
+    arena_cache_size: Optional[int] = None
+    tensor_allocator: Literal["LinearAlloc", "Greedy", "HillClimb"] = "HillClimb"
+    cpu_tensor_alignment: int = 16
+    optimization_strategy: Literal["Performance", "Size"] = "Performance"
+    output_dir: Optional[str] = None
 
     def __str__(self) -> str:
         """Return string representation."""

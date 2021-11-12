@@ -2,12 +2,13 @@
 """Common items for the optimizations module."""
 from abc import ABC
 from abc import abstractmethod
-from enum import Enum
+from dataclasses import dataclass
 
 import tensorflow as tf
 
 
-class OptimizerConfiguration(ABC):
+@dataclass
+class OptimizerConfiguration:
     """Abstract optimizer configuration."""
 
 
@@ -25,10 +26,3 @@ class Optimizer(ABC):
     @abstractmethod
     def optimization_config(self) -> str:
         """Return string representation of the optimization config."""
-
-
-class OptimizationType(Enum):
-    """Enumerator for optimization types."""
-
-    Pruning = "pruning"
-    Clustering = "clustering"

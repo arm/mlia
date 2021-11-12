@@ -1,5 +1,6 @@
 # Copyright 2021, Arm Ltd.
 """Tests for cli.commands module."""
+# pylint: disable=no-self-use,too-many-arguments
 import pathlib
 from typing import Any
 

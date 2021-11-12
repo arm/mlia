@@ -9,7 +9,9 @@ from tests.utils.common import DummyContext
 
 
 @pytest.fixture
-def test_models_path(test_resources_path: Path) -> Path:
+def test_models_path(
+    test_resources_path: Path,  # pylint: disable=redefined-outer-name
+) -> Path:
     """Return test models path."""
     return (test_resources_path / "models").absolute()
 

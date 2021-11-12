@@ -54,7 +54,7 @@ REPORT_GENERATION_MSG = """
 """
 
 
-def all_tests(
+def all_tests(  # pylint: disable=too-many-arguments, too-many-locals
     ctx: ExecutionContext,
     model: str,
     optimization_type: str,
@@ -111,8 +111,7 @@ def all_tests(
         tflite_model = keras_model.convert_to_tflite(
             converted_model_path, quantized=True
         )
-
-        operators = supported_operators(tflite_model, device)
+        operators_info = supported_operators(tflite_model, device)
 
         logger.info("Evaluating performance ...\n")
 
@@ -124,7 +123,7 @@ def all_tests(
         optimizer = get_optimizer(keras_model, opt_settings)
         original, optimized = optimize_and_compare(optimizer, device, ctx)
 
-        reporter.submit([operators.ops, operators], space="top")
+        reporter.submit([operators_info.ops, operators_info], space="top")
 
         reporter.submit(
             [original, optimized],
@@ -137,7 +136,7 @@ def all_tests(
         logger.info(ADV_GENERATION_MSG)
 
         adv_ctx = AdvisorContext(
-            operators=operators,
+            operators=operators_info,
             optimization_results=OptimizationResults(
                 perf_metrics=compare_metrics(original, optimized),
                 optimizations=opt_params,
@@ -209,13 +208,13 @@ def operators(
 
         logger.info(MODEL_ANALYSIS_MSG)
 
-        operators = supported_operators(tflite_model, device)
-        reporter.submit([operators.ops, operators], space="top")
+        operators_info = supported_operators(tflite_model, device)
+        reporter.submit([operators_info.ops, operators_info], space="top")
 
         logger.info(ADV_GENERATION_MSG)
 
         adv_ctx = AdvisorContext(
-            operators=operators, device_args=device_args, model=model
+            operators=operators_info, device_args=device_args, model=model
         )
         advice = produce_advice(adv_ctx, AdviceGroup.OPERATORS_COMPATIBILITY)
 
@@ -293,7 +292,7 @@ def performance(
             logger.info("Report(s) and advice list saved to: %s", output)
 
 
-def optimization(
+def optimization(  # pylint: disable=too-many-arguments, too-many-locals
     ctx: ExecutionContext,
     model: str,
     optimization_type: str,

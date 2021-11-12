@@ -7,12 +7,12 @@ import re
 from abc import ABC
 from abc import abstractmethod
 from contextlib import ExitStack
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 from typing import cast
 from typing import Dict
 from typing import List
-from typing import NamedTuple
 from typing import Optional
 from typing import Tuple
 from typing import Union
@@ -31,28 +31,20 @@ from mlia.utils.proc import RunningCommand
 logger = logging.getLogger(__name__)
 
 
+@dataclass
 class PerformanceMetrics:
     """Performance metrics parsed from generic inference output."""
 
-    def __init__(
-        self,
-        npu_active_cycles: int,
-        npu_idle_cycles: int,
-        npu_total_cycles: int,
-        npu_axi0_rd_data_beat_received: int,
-        npu_axi0_wr_data_beat_written: int,
-        npu_axi1_rd_data_beat_received: int,
-    ):
-        """Init performance metrics instance."""
-        self.npu_active_cycles = npu_active_cycles
-        self.npu_idle_cycles = npu_idle_cycles
-        self.npu_total_cycles = npu_total_cycles
-        self.npu_axi0_rd_data_beat_received = npu_axi0_rd_data_beat_received
-        self.npu_axi0_wr_data_beat_written = npu_axi0_wr_data_beat_written
-        self.npu_axi1_rd_data_beat_received = npu_axi1_rd_data_beat_received
+    npu_active_cycles: int
+    npu_idle_cycles: int
+    npu_total_cycles: int
+    npu_axi0_rd_data_beat_received: int
+    npu_axi0_wr_data_beat_written: int
+    npu_axi1_rd_data_beat_received: int
 
 
-class ExecutionParams(NamedTuple):
+@dataclass
+class ExecutionParams:
     """Software execution params."""
 
     software: str
@@ -62,7 +54,7 @@ class ExecutionParams(NamedTuple):
     deploy_params: List[str]
 
 
-class AIETLogWriter(OutputConsumer):
+class AIETLogWriter(OutputConsumer):  # pylint: disable=too-few-public-methods
     """Redirect AIET command output to the logger."""
 
     def feed(self, line: str) -> None:
@@ -180,7 +172,7 @@ class AIETRunner:
 
     @staticmethod
     def _aiet_command(subcommand: str, *params: str) -> List[str]:
-        return ["aiet", subcommand] + [p for p in params]
+        return ["aiet", subcommand, *params]
 
     def _execute(self, command: List[str]) -> Tuple[int, bytes, bytes]:
         logger.debug("Execute command %s", " ".join(command))
@@ -206,8 +198,8 @@ def save_random_input(
         input_dtype = np.dtype(input_dtype)
 
     random_input = os.urandom(input_dtype.itemsize * np.prod(input_shape))
-    with open(file, "wb") as f:
-        f.write(random_input)
+    with open(file, "wb") as input_file:
+        input_file.write(random_input)
 
 
 class GenericInferenceRunner(ABC):
@@ -293,15 +285,16 @@ class GenericInferenceRunnerU65(GenericInferenceRunner):
         model_file, input_file = "/tmp/model.tflite", "/tmp/input.ifm"
         software_params = [f"model_file={model_file}", f"input_file={input_file}"]
 
-        input = model.input_details()
-        if not input:
+        model_input = model.input_details()
+        if not model_input:
             raise Exception(
                 f"Unable to get input details for the model {model.model_path}"
             )
 
         random_input_file_path: str = self.context_stack.enter_context(temp_file())
         logger.debug("Save random input into %s", random_input_file_path)
-        save_random_input(input[0]["shape"], input[0]["dtype"], random_input_file_path)
+        input_shape, input_dtype = model_input[0]["shape"], model_input[0]["dtype"]
+        save_random_input(input_shape, input_dtype, random_input_file_path)
 
         deploy_params = [
             f"{Path(model.model_path).absolute()}:{model_file}",
