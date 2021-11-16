@@ -1,17 +1,15 @@
 # Copyright 2021, Arm Ltd.
 """Tests for cli.commands module."""
 # pylint: disable=no-self-use,too-many-arguments
-import pathlib
+from pathlib import Path
 from typing import Any
 
 import pytest
 from mlia.cli.commands import optimization
 from mlia.cli.commands import performance
 from mlia.cli.common import ExecutionContext
-from mlia.utils.general import save_keras_model
 
 from tests.test_cli_main import mock_performance_estimation
-from tests.utils.generate_keras_model import generate_keras_model
 
 
 def test_performance_no_device(dummy_context: ExecutionContext) -> None:
@@ -73,16 +71,15 @@ def test_opt_expected_parameters(
     optimization_type: str,
     optimization_target: str,
     expected_error: Any,
-    tmp_path: pathlib.Path,
+    test_models_path: Path,
 ) -> None:
     """Test that command should fail if no or unknown optimization type provided."""
-    model = generate_keras_model()
-    temp_file = tmp_path / "test_opt_expected_parameters.h5"
-    save_keras_model(model, temp_file)
+    model = test_models_path / "simple_model.h5"
+
     with expected_error:
         optimization(
             dummy_context,
-            str(temp_file),
+            str(model),
             device=device,
             optimization_type=optimization_type,
             optimization_target=optimization_target,
@@ -103,18 +100,17 @@ def test_opt_valid_optimization_target(
     optimization_type: str,
     optimization_target: str,
     monkeypatch: Any,
-    tmp_path: pathlib.Path,
+    tmp_path: Path,
+    test_models_path: Path,
 ) -> None:
     """Test that command should not fail with valid optimization targets."""
-    model = generate_keras_model()
-    temp_file = tmp_path / "test_opt_valid_optimization_target.h5"
-    save_keras_model(model, temp_file)
+    model = test_models_path / "simple_model.h5"
 
     mock_performance_estimation(monkeypatch)
 
     optimization(
         dummy_context,
-        str(temp_file),
+        str(model),
         device=device,
         optimization_type=optimization_type,
         optimization_target=optimization_target,

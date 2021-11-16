@@ -1,6 +1,6 @@
 # Copyright 2021, Arm Ltd.
 """Test for module optimizations/clustering."""
-import pathlib
+from pathlib import Path
 from typing import List
 from typing import Optional
 
@@ -15,7 +15,6 @@ from mlia.utils import tflite_metrics
 
 from tests.utils.common import get_dataset
 from tests.utils.common import train_model
-from tests.utils.generate_keras_model import generate_keras_model
 
 
 def _prune_model(
@@ -94,12 +93,14 @@ def test_cluster_simple_model_fully(
     target_num_clusters: int,
     sparsity_aware: bool,
     layers_to_cluster: Optional[List[str]],
-    tmp_path: pathlib.Path,
+    tmp_path: Path,
+    test_models_path: Path,
 ) -> None:
     """Simple mnist test to see if clustering works correctly."""
     target_sparsity = 0.5
 
-    base_model = generate_keras_model()
+    model_path = str(test_models_path / "simple_model.h5")
+    base_model = tf.keras.models.load_model(model_path)
     train_model(base_model)
 
     if sparsity_aware:

@@ -11,33 +11,39 @@ from mlia.utils.general import is_tflite_model
 from mlia.utils.general import save_keras_model
 from mlia.utils.general import save_tflite_model
 
-from tests.utils.generate_keras_model import generate_keras_model
 
-
-def test_convert_to_tflite() -> None:
+def test_convert_to_tflite(test_models_path: Path) -> None:
     """Test converting keras model to tflite."""
-    tflite_model = convert_to_tflite(generate_keras_model())
+    model_path = str(test_models_path / "simple_model.h5")
+    keras_model = tf.keras.models.load_model(model_path)
+    tflite_model = convert_to_tflite(keras_model)
 
     assert tflite_model
 
 
-def test_save_keras_model(tmp_path: Path) -> None:
+def test_save_keras_model(tmp_path: Path, test_models_path: Path) -> None:
     """Test saving keras model."""
-    model = generate_keras_model()
+    model_path = str(test_models_path / "simple_model.h5")
+    keras_model = tf.keras.models.load_model(model_path)
+
     temp_file = tmp_path / "test_model_saving.h5"
-    save_keras_model(model, temp_file)
+    save_keras_model(keras_model, temp_file)
     loaded_model = tf.keras.models.load_model(temp_file)
 
-    assert loaded_model.summary() == model.summary()
+    assert loaded_model.summary() == keras_model.summary()
 
 
-def test_save_tflite_model(tmp_path: Path) -> None:
+def test_save_tflite_model(tmp_path: Path, test_models_path: Path) -> None:
     """Test saving tflite model."""
-    temp_file = tmp_path / "test_model_saving.tflite"
-    tflite_model = convert_to_tflite(generate_keras_model())
-    save_tflite_model(tflite_model, temp_file)
-    interpreter = tf.lite.Interpreter(model_path=str(temp_file))
+    model_path = str(test_models_path / "simple_model.h5")
+    keras_model = tf.keras.models.load_model(model_path)
 
+    tflite_model = convert_to_tflite(keras_model)
+
+    temp_file = tmp_path / "test_model_saving.tflite"
+    save_tflite_model(tflite_model, temp_file)
+
+    interpreter = tf.lite.Interpreter(model_path=str(temp_file))
     assert interpreter
 
 

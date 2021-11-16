@@ -1,11 +1,13 @@
 # Copyright 2021, Arm Ltd.
 """Tests for module select."""
 from contextlib import ExitStack as does_not_raise
+from pathlib import Path
 from typing import Any
 from typing import List
 from typing import Tuple
 
 import pytest
+import tensorflow as tf
 from mlia.optimizations.clustering import Clusterer
 from mlia.optimizations.clustering import ClusteringConfiguration
 from mlia.optimizations.pruning import Pruner
@@ -13,8 +15,6 @@ from mlia.optimizations.pruning import PruningConfiguration
 from mlia.optimizations.select import get_optimizer
 from mlia.optimizations.select import MultiStageOptimizer
 from mlia.optimizations.select import OptimizationSettings
-
-from tests.utils.generate_keras_model import generate_keras_model
 
 
 @pytest.mark.parametrize(
@@ -120,9 +120,13 @@ from tests.utils.generate_keras_model import generate_keras_model
         ),
     ],
 )
-def test_get_optimizer(config: Any, expected_error: Any, expected_type: type) -> None:
+def test_get_optimizer(
+    config: Any, expected_error: Any, expected_type: type, test_models_path: Path
+) -> None:
     """Test function get_optimzer."""
-    model = generate_keras_model()
+    model_path = str(test_models_path / "simple_model.h5")
+    model = tf.keras.models.load_model(model_path)
+
     with expected_error:
         optimizer = get_optimizer(model, config)
         assert isinstance(optimizer, expected_type)

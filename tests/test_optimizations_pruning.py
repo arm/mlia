@@ -1,11 +1,12 @@
 # Copyright 2021, Arm Ltd.
 """Test for module optimizations/pruning."""
 # pylint: disable=too-many-arguments,too-many-locals
-import pathlib
+from pathlib import Path
 from typing import List
 from typing import Optional
 
 import pytest
+import tensorflow as tf
 from mlia.config import TFLiteModel
 from mlia.optimizations.pruning import Pruner
 from mlia.optimizations.pruning import PruningConfiguration
@@ -15,7 +16,6 @@ from numpy.core.numeric import isclose
 
 from tests.utils.common import get_dataset
 from tests.utils.common import train_model
-from tests.utils.generate_keras_model import generate_keras_model
 
 
 def _test_sparsity(
@@ -45,14 +45,16 @@ def test_prune_simple_model_fully(
     target_sparsity: float,
     mock_data: bool,
     layers_to_prune: Optional[List[str]],
-    tmp_path: pathlib.Path,
+    tmp_path: Path,
+    test_models_path: Path,
 ) -> None:
     """Simple mnist test to see if pruning works correctly."""
     x_train, y_train = get_dataset()
     batch_size = 1
     num_epochs = 1
 
-    base_model = generate_keras_model()
+    model_path = str(test_models_path / "simple_model.h5")
+    base_model = tf.keras.models.load_model(model_path)
     train_model(base_model)
 
     temp_file = tmp_path / "test_prune_simple_model_fully_before.tflite"
