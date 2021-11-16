@@ -127,6 +127,14 @@ class Cell:
         self.value = value
         self.fmt = fmt
 
+    def to_csv(self) -> Any:
+        """Cell definition for csv."""
+        return self.value
+
+    def to_json(self) -> Any:
+        """Cell definition for json."""
+        return self.value
+
     def __str__(self) -> str:
         """Return string representation."""
         if self.fmt:
@@ -150,6 +158,7 @@ class CountAwareCell(Cell):
         format_string: str = ",d",
     ):
         """Init cell instance."""
+        self.unit = singular if value == 1 else plural
 
         def format_value(v: Optional[Union[int, float]]) -> str:
             """Provide string representation for the value."""
@@ -162,6 +171,14 @@ class CountAwareCell(Cell):
             return f"{v:{format_string}} {plural}"
 
         super().__init__(value, Format(str_fmt=format_value))
+
+    def to_csv(self) -> Any:
+        """Cell definition for csv."""
+        return {"value": self.value, "unit": self.unit}
+
+    def to_json(self) -> Any:
+        """Cell definition for json."""
+        return {"value": self.value, "unit": self.unit}
 
 
 class BytesCell(CountAwareCell):
@@ -238,14 +255,19 @@ class NestedReport(Report):
         ) -> None:
             """Collect item values into a dictionary.."""
             if item.value is not None:
-                result[item.alias] = item.raw_value
+                if isinstance(item.value, Cell):
+                    out_dis = item.value.to_csv()
+                    result[f"{item.alias}_value"] = out_dis["value"]
+                    result[f"{item.alias}_unit"] = out_dis["unit"]
+                else:
+                    result[f"{item.alias}"] = item.raw_value
 
         self._traverse(self.items, collect_item_values)
 
         # make list out of the result dictionary
         # first element - keys of the dictionary as headers
         # second element - list of the dictionary values
-        return list(zip(*result.items()))  # type: ignore
+        return list(zip(*result.items()))
 
     def to_json(self, **kwargs: Any) -> Any:
         """Convert to json serializible format."""
@@ -265,7 +287,12 @@ class NestedReport(Report):
                 item_dict = per_parent[item]
                 parent_dict[item.alias] = item_dict
             else:
-                parent_dict[item.alias] = item.raw_value
+                out_dis = (
+                    item.value.to_json()
+                    if isinstance(item.value, Cell)
+                    else item.raw_value
+                )
+                parent_dict[item.alias] = out_dis
 
         self._traverse(self.items, collect_as_dicts)
 
