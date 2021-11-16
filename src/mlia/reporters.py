@@ -103,9 +103,7 @@ def report_operators(ops: List[Operator]) -> Report:
             i + 1,
             op.name,
             op.op_type,
-            Cell(
-                op.run_on_npu.supported, Format(str_fmt=lambda x: "NPU" if x else "CPU")
-            ),
+            "NPU" if op.run_on_npu.supported else "CPU",
             Table(
                 columns=[
                     Column(
@@ -115,7 +113,7 @@ def report_operators(ops: List[Operator]) -> Report:
                     )
                 ],
                 rows=[
-                    ("* " + item,)
+                    (Cell(item, Format(str_fmt=lambda x: f"* {x}")),)
                     for reason in op.run_on_npu.reasons
                     for item in reason
                     if item

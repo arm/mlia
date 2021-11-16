@@ -518,7 +518,9 @@ class Table(Report):
                 return item.value
 
             if isinstance(item, Table):
-                return ";".join(str(cell) for row in item.rows for cell in row)
+                return ";".join(
+                    str(item_data(cell)) for row in item.rows for cell in row
+                )
 
             return item
 

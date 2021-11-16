@@ -209,7 +209,7 @@ class VelaCompiler:  # pylint: disable=too-many-instance-attributes
         """Read tflite model."""
         model_path = str(model) if isinstance(model, Path) else model
 
-        with redirect_output(logger):
+        with redirect_output(logger, stdout_level=logging.DEBUG):
             return read_model(model_path, ModelReaderOptions())  # type: ignore
 
     def _architecture_features(self) -> ArchitectureFeatures:

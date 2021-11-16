@@ -6,6 +6,7 @@ from contextlib import ExitStack as doesnt_raise
 from pathlib import Path
 from typing import Any
 from typing import Callable
+from typing import Dict
 from typing import List
 from typing import Literal
 
@@ -20,6 +21,7 @@ from mlia.reporters import produce_report
 from mlia.reporters import report_dataframe
 from mlia.reporters import report_operators
 from mlia.reporters import report_perf_metrics
+from mlia.reporting import Table
 
 
 @pytest.mark.parametrize(
@@ -102,12 +104,11 @@ def test_report(
     fmt: Literal["plain_text", "json", "csv"],
     output: Any,
     expected_error: Any,
-    tmpdir: Any,
+    tmp_path: Path,
 ) -> None:
     """Test report function."""
-    is_file = isinstance(output, str)
-    if is_file:
-        output = Path(tmpdir) / output
+    if is_file := isinstance(output, str):
+        output = tmp_path / output
 
     for formatter in formatters:
         with expected_error:
@@ -115,3 +116,102 @@ def test_report(
 
             if is_file:
                 assert output.is_file()
+                assert output.stat().st_size > 0
+
+
+@pytest.mark.parametrize(
+    "ops, expected_plain_text, expected_json_dict, expected_csv_list",
+    [
+        (
+            [
+                Operator("npu_supported", "test_type", NpuSupported(True, [])),
+                Operator(
+                    "cpu_only",
+                    "test_type",
+                    NpuSupported(False, [("CPU only operator", "")]),
+                ),
+                Operator(
+                    "npu_unsupported",
+                    "test_type",
+                    NpuSupported(
+                        False,
+                        [
+                            (
+                                "Not supported operator",
+                                "Reason why operator is not supported",
+                            )
+                        ],
+                    ),
+                ),
+            ],
+            """
+Operators:
+╒═════╤═════════════════╤═════════════════╤═════════════╤══════════════════════════════╕
+│ #   │ Operator name   │ Operator type   │ Placement   │ Notes                        │
+╞═════╪═════════════════╪═════════════════╪═════════════╪══════════════════════════════╡
+│ 1   │ npu_supported   │ test_type       │ NPU         │                              │
+├─────┼─────────────────┼─────────────────┼─────────────┼──────────────────────────────┤
+│ 2   │ cpu_only        │ test_type       │ CPU         │ * CPU only operator          │
+├─────┼─────────────────┼─────────────────┼─────────────┼──────────────────────────────┤
+│ 3   │ npu_unsupported │ test_type       │ CPU         │ * Not supported operator     │
+│     │                 │                 │             │ * Reason why operator is not │
+│     │                 │                 │             │ supported                    │
+╘═════╧═════════════════╧═════════════════╧═════════════╧══════════════════════════════╛
+""".strip(),
+            {
+                "operators": [
+                    {
+                        "operator_name": "npu_supported",
+                        "operator_type": "test_type",
+                        "placement": "NPU",
+                        "notes": [],
+                    },
+                    {
+                        "operator_name": "cpu_only",
+                        "operator_type": "test_type",
+                        "placement": "CPU",
+                        "notes": [{"note": "CPU only operator"}],
+                    },
+                    {
+                        "operator_name": "npu_unsupported",
+                        "operator_type": "test_type",
+                        "placement": "CPU",
+                        "notes": [
+                            {"note": "Not supported operator"},
+                            {"note": "Reason why operator is not supported"},
+                        ],
+                    },
+                ]
+            },
+            [
+                ["Operator name", "Operator type", "Placement", "Notes"],
+                ["npu_supported", "test_type", "NPU", ""],
+                ["cpu_only", "test_type", "CPU", "CPU only operator"],
+                [
+                    "npu_unsupported",
+                    "test_type",
+                    "CPU",
+                    "Not supported operator;Reason why operator is not supported",
+                ],
+            ],
+        ),
+    ],
+)
+def test_report_operators(
+    ops: List[Operator],
+    expected_plain_text: str,
+    expected_json_dict: Dict,
+    expected_csv_list: List,
+) -> None:
+    """Test report_operatos formatter."""
+    report = report_operators(ops)
+    assert isinstance(report, Table)
+
+    plain_text = report.to_plain_text()
+    assert plain_text == expected_plain_text
+
+    json_dict = report.to_json()
+    assert json_dict == expected_json_dict
+
+    csv_list = report.to_csv()
+    assert csv_list == expected_csv_list

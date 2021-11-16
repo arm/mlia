@@ -149,10 +149,14 @@ class LoggerWriter:
 
 
 @contextmanager
-def redirect_output(logger: logging.Logger) -> Generator[None, None, None]:
+def redirect_output(
+    logger: logging.Logger,
+    stdout_level: int = logging.INFO,
+    stderr_level: int = logging.INFO,
+) -> Generator[None, None, None]:
     """Redirect standard output to the logger."""
-    stdout_to_log = LoggerWriter(logger, logging.INFO)
-    stderr_to_log = LoggerWriter(logger, logging.ERROR)
+    stdout_to_log = LoggerWriter(logger, stdout_level)
+    stderr_to_log = LoggerWriter(logger, stderr_level)
 
     with ExitStack() as exit_stack:
         exit_stack.enter_context(redirect_stdout(stdout_to_log))  # type: ignore
