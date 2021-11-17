@@ -1,6 +1,9 @@
 # Copyright 2021, Arm Ltd.
 """Script for generating sample TFLite models."""
 import argparse
+import sys
+from enum import auto
+from enum import Enum
 from functools import wraps
 from pathlib import Path
 from typing import Any
@@ -17,14 +20,24 @@ tf.keras.backend.set_image_data_format("channels_last")
 models = {}
 
 
+class QuantizationType(Enum):
+    """Type of model quantization."""
+
+    NO_QUANTIZATION = auto()
+    INTEGER_QUANTIZATION_INT8 = auto()
+
+
 class ModelCreatorAttrs(TypedDict):
     """Model creator attributes."""
 
     model_creator: Callable
-    quantize: bool
+    quantization_type: Optional[QuantizationType]
 
 
-def test_model(compile_model: bool = True, quantize: bool = True) -> Callable:
+def test_model(
+    compile_model: bool = True,
+    quantization_type: QuantizationType = QuantizationType.INTEGER_QUANTIZATION_INT8,
+) -> Callable:
     """Mark function as model creator."""
 
     def wrapper(model_creator: Callable) -> Callable:
@@ -40,7 +53,7 @@ def test_model(compile_model: bool = True, quantize: bool = True) -> Callable:
             return model
 
         models[model_creator.__name__] = ModelCreatorAttrs(
-            model_creator=model_creator_wrapper, quantize=quantize
+            model_creator=model_creator_wrapper, quantization_type=quantization_type
         )
         return model_creator_wrapper
 
@@ -97,7 +110,7 @@ def simple_conv_model() -> tf.keras.Model:
     )
 
 
-@test_model(quantize=False)
+@test_model(quantization_type=QuantizationType.NO_QUANTIZATION)
 def simple_mnist_convnet_non_quantized() -> tf.keras.Model:
     """Generate simple MNIST model.
 
@@ -182,7 +195,7 @@ def gen_models(
             continue
 
         model_creator = model_creator_attrs["model_creator"]
-        quantize = model_creator_attrs["quantize"]
+        quantization_type = model_creator_attrs["quantization_type"]
 
         print(f"==> Generate {model_name} ...")
         model = model_creator()
@@ -196,7 +209,7 @@ def gen_models(
             save_tf_model(model, model_name, output_dir_path)
 
         converter = tf.lite.TFLiteConverter.from_keras_model(model)
-        if quantize:
+        if quantization_type == QuantizationType.INTEGER_QUANTIZATION_INT8:
             converter.optimizations = [tf.lite.Optimize.DEFAULT]
             converter.representative_dataset = representative_dataset(model)
             converter.target_spec.supported_ops = [tf.lite.OpsSet.TFLITE_BUILTINS_INT8]
@@ -207,7 +220,8 @@ def gen_models(
         save_tflite_model(tflite_model, model_name, output_dir_path)
 
 
-if __name__ == "__main__":
+def main() -> int:
+    """Entrypoint for the application."""
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--output-dir", help="Path to the output directory where models will be saved"
@@ -244,3 +258,9 @@ if __name__ == "__main__":
         cmd_args.keras_saved_model,
         cmd_args.tf_saved_model,
     )
+
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

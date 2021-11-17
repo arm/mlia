@@ -346,6 +346,34 @@ class TestEndToEnd:
             "install_dev.sh", tmp_path, "dist3", self.full_commands_list, "-m"
         )
 
+    @pytest.mark.parametrize(
+        "model_name",
+        ["simple_3_layers_model"],
+    )
+    def test_model_generation(self, tmp_path: Path, model_name: str) -> None:
+        """Simple test for the gen_models.py script."""
+        args = [
+            "--output-dir",
+            str(tmp_path),
+            "--model-name",
+            model_name,
+            "--save-keras",
+            "--tf-saved-model",
+        ]
+
+        subprocess.check_call(["python", "scripts/gen_models.py", *args])
+
+        tflite_path = tmp_path / f"{model_name}.tflite"
+        keras_path = tmp_path / f"{model_name}.h5"
+
+        assert all(model_path.is_file() for model_path in [tflite_path, keras_path])
+
+        saved_model_path = tmp_path / f"tf_model_{model_name}"
+        assert saved_model_path.is_dir()
+
+        model_files = list(saved_model_path.iterdir())
+        assert len(model_files) > 0
+
     @pytest.mark.parametrize("command_execution", get_execution_definitions(), ids=str)
     def test_command(self, command_execution: CommandExecution) -> None:
         """Test MLIA command with the provided parameters."""
