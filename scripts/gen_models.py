@@ -113,9 +113,16 @@ def save_tflite_model(tflite_model: Any, model_name: str, output_dir: Path) -> N
 
 
 def save_keras_model(model: tf.keras.Model, model_name: str, output_dir: Path) -> None:
-    """Save Keras model."""
+    """Save Keras H5 model."""
     keras_file_path = get_model_path(model_name, output_dir, "h5")
     model.save(keras_file_path, include_optimizer=True)
+
+
+def save_keras_saved_model(
+    model: tf.keras.Model, model_name: str, output_dir: Path
+) -> None:
+    """Save Keras SavedModel."""
+    model.save(str(output_dir / f"keras_model_{model_name}"), include_optimizer=True)
 
 
 def save_tf_model(
@@ -140,6 +147,7 @@ def gen_models(
     output_dir: Optional[str],
     specific_model: Optional[str],
     save_keras: bool,
+    keras_saved_model: bool,
     tf_saved_model: bool,
 ) -> None:
     """Generate test models."""
@@ -160,6 +168,9 @@ def gen_models(
         model = model_creator()
         if save_keras:
             save_keras_model(model, model_name, output_dir_path)
+
+        if keras_saved_model:
+            save_keras_saved_model(model, model_name, output_dir_path)
 
         if tf_saved_model:
             save_tf_model(model, model_name, output_dir_path)
@@ -190,7 +201,13 @@ if __name__ == "__main__":
         "--save-keras",
         action="store_true",
         default=False,
-        help="Save Keras model in addition to the TFLite model",
+        help="Save Keras H5 model in addition to the TFLite model",
+    )
+    parser.add_argument(
+        "--keras-saved-model",
+        action="store_true",
+        default=False,
+        help="Save Keras SavedModel in addition to the TFLite model",
     )
     parser.add_argument(
         "--tf-saved-model",
@@ -200,4 +217,10 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    gen_models(args.output_dir, args.model_name, args.save_keras, args.tf_saved_model)
+    gen_models(
+        args.output_dir,
+        args.model_name,
+        args.save_keras,
+        args.keras_saved_model,
+        args.tf_saved_model,
+    )
