@@ -89,10 +89,7 @@ def convert_tf_to_tflite(model: str, quantized: bool = False) -> Interpreter:
     if not isinstance(model, str):
         raise Exception("Invalid model type")
 
-    if tf.__version__ >= str(2.0):
-        converter = tf.lite.TFLiteConverter.from_saved_model(model)
-    else:
-        converter = tf.compat.v1.TFLiteConverter.from_saved_model(model)
+    converter = tf.lite.TFLiteConverter.from_saved_model(model)
 
     if quantized:
         converter.optimizations = [tf.lite.Optimize.DEFAULT]
