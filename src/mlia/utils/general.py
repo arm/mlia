@@ -16,9 +16,6 @@ from typing import Union
 import numpy as np
 import tensorflow as tf
 from tensorflow.lite.python.interpreter import Interpreter
-from tensorflow.python.tools import (  # pylint: disable=no-name-in-module
-    saved_model_utils,
-)
 
 
 def representative_dataset(model: tf.keras.Model) -> Callable:
@@ -36,21 +33,20 @@ def representative_dataset(model: tf.keras.Model) -> Callable:
 
 
 def get_tf_tensor_shape(model: str) -> list:
-    """Get input shape for the TF tensor model.
-
-    Based on saved_model_cli tool
-    """
-    tag_sets = saved_model_utils.get_saved_model_tag_sets(model)
-    for tag_set in sorted(tag_sets):
-        tag_set = ",".join(tag_set)
-        meta_graph = saved_model_utils.get_meta_graph_def(model, tag_set)
-        signature_def_map = meta_graph.signature_def
-        for signature_def_key in sorted(signature_def_map.keys()):
-            inputs_tensor_info = meta_graph.signature_def[signature_def_key].inputs
-            for _input_key, input_tensor in sorted(inputs_tensor_info.items()):
-                dims = [dim.size for dim in input_tensor.tensor_shape.dim]
-                return dims
-    return []
+    """Get input shape for the TF tensor model."""
+    # Loading the model
+    loaded = tf.saved_model.load(model)
+    # The model signature must have 'serving_default' as a key
+    if "serving_default" not in loaded.signatures.keys():
+        raise Exception("Unsupported TF modelsignature, must have 'serving_default'")
+    # Get the signature inputs
+    inputs_tensor_info = loaded.signatures["serving_default"].inputs
+    dims = []
+    # Build a list of all inputs shape sizes
+    for input_key in inputs_tensor_info:
+        if input_key.get_shape():
+            dims.extend(list(input_key.get_shape()))
+    return dims
 
 
 def representative_tf_dataset(model: str) -> Callable:
