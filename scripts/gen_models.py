@@ -10,6 +10,7 @@ from typing import Any
 from typing import Callable
 from typing import Iterable
 from typing import Optional
+from typing import Tuple
 from typing import TypedDict
 
 import numpy as np
@@ -36,6 +37,7 @@ class ModelCreatorAttrs(TypedDict):
 
 def test_model(
     compile_model: bool = True,
+    train_model: bool = True,
     quantization_type: QuantizationType = QuantizationType.INTEGER_QUANTIZATION_INT8,
 ) -> Callable:
     """Mark function as model creator."""
@@ -49,6 +51,10 @@ def test_model(
 
             if compile_model:
                 model.compile(optimizer="sgd", loss="mean_squared_error")
+
+            if train_model and model.input_shape == (28, 28, 1):
+                x_train, y_train = get_dataset()
+                model.fit(x_train, y_train, epochs=1)
 
             return model
 
@@ -77,7 +83,7 @@ def simple_model() -> tf.keras.Model:
     """Generate simple model with conv2d and dense layers."""
     return tf.keras.Sequential(
         [
-            tf.keras.Input(shape=(28, 28), batch_size=1),
+            tf.keras.Input(shape=(28, 28, 1), batch_size=1),
             tf.keras.layers.Reshape((28, 28, 1)),
             tf.keras.layers.Conv2D(
                 filters=12, kernel_size=(3, 3), activation="relu", name="conv1"
@@ -128,6 +134,21 @@ def simple_mnist_convnet_non_quantized() -> tf.keras.Model:
             tf.keras.layers.Dense(10, activation="softmax"),
         ]
     )
+
+
+def get_dataset() -> Tuple[np.array, np.array]:
+    """Return sample dataset."""
+    # input image dimensions
+    img_rows, img_cols = 28, 28
+
+    # loading the dataset
+    mnist = tf.keras.datasets.mnist
+    (x_train, y_train), _ = mnist.load_data()
+    x_train = x_train / 255.0
+    # batch_size=1 is for current setup in the inference advisor
+    x_train = x_train.reshape(1, img_rows, img_cols, 1)
+
+    return x_train, y_train
 
 
 def get_model_path(model_name: str, output_dir: Path, ext: str = "tflite") -> Path:
