@@ -6,77 +6,6 @@ A tool to help AI developers to design and optimize neural network models for
 efficient inference on Arm targets by enabling performance analysis and providing
 actionable advice early in the model development cycle.
 
-## Prerequisites
-
-* Ubuntu 18.04.05 LTS (other OSs may work, this has been tested on that one specifically)
-* Python >= 3.8
-* CMake >= 3.20.5
-* armclang 6.15 (later versions don't work)
-* IPSS-ML (see below)
-* Docker
-* Virtualenv
-* Git
-
-## Setup
-
-The mlia package assumes a [virtualenv]
-(<https://virtualenv.pypa.io/en/stable/>)
-managed development environment.
-
-Install Virtualenv:
-
-```shell
-apt install virtualenv
-```
-
-Change current working directory and create the virtual environment with Python
-3.8 inside:
-
-```shell
-cd mlia
-virtualenv -p python3.8 venv
-```
-
-Activate the virtual environment:
-
-```shell
-source venv/bin/activate
-```
-
-### CMake
-
-Go to <https://cmake.org/download/> and get the latest version of CMake
-(anything above 3.20 should be fine)
-
-Install CMake so that this new version will be available to your current user
-(e.g. put a link in /usr/local/bin)
-
-### Armclang
-
-Go to <https://developer.arm.com/tools-and-software/embedded/arm-compiler/downloads/version-6>
-and get verion 6.15 of armclang (at the moment AIET does not work with later versions)
-
-Untar the archive in a temp directory, then run the install script
-(install_x86_64.sh). Follow the instructions on the screen.
-
-Like for CMake, put a link to the executable in /usr/local/bin, so that this
-version will be available to your current user
-
-### License file
-
-In order to be able to run the software, you first need to set the license file:
-
-```shell
-export ARMLMD_LICENSE_FILE=[link to license file]
-```
-
-## Installation
-
-Please refer to the installation steps for your use case:
-
-* For end users, please refer to USER_GUIDE.md
-* For developers, please refer to DEV_GUIDE.md
-
 ## Usage
 
 After the initial setup, you can start the program by opening your terminal and
@@ -86,13 +15,26 @@ typing the following command:
 mlia [command] [arguments]
 ```
 
-where [command] is to be substituted by one of the following options:
+where [command] is to be substituted by one of the supported options, discussed in
+the next section.
 
-### **All tests**
+To get a list of all available options, use:
+
+```shell
+mlia --help
+```
+
+To get help on a specific command, use:
+
+```shell
+mlia [command] --help
+```
+
+### **All tests** (all)
 
 #### *Description*
 
-Generates full report.
+Generates a full report on the input model performance and operator support.
 Shows the original model's operator list, runs the specified optimizations and
 lists the performance improvements.
 
