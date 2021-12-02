@@ -3,16 +3,16 @@
 set -e
 
 init_packages() {
-    AIET_PACKAGE="$PACKAGE_DIR/aiet-21.9.0-py3-none-any.whl"
+    AIET_PACKAGE="$PACKAGE_DIR/aiet-21.12.0-py3-none-any.whl"
     MLIA_PACKAGE="$PACKAGE_DIR/mlia-0.1-py3-none-any.whl"
 
     CORSTONE_PACKAGE="$PACKAGE_DIR/fvp_corstone_sse-300_ethos-u55-21.08.0.tar.gz"
-    CORSTONE_PACKAGE_APPS="$PACKAGE_DIR/ethosu_eval_platform_release_aiet-21.08.0.tar.gz"
+    CORSTONE_PACKAGE_APPS="$PACKAGE_DIR/ethosu_eval_platform_release_aiet-21.11.1.tar.gz"
 
-    SGM_PACKAGE="$PACKAGE_DIR/sgm775_ethosu_platform-21.03.0.tar.gz"
+    SGM_PACKAGE="$PACKAGE_DIR/sgm775_ethosu_platform-21.11.0.tar.gz"
     SGM_PACKAGE_OSS="$PACKAGE_DIR/sgm775_ethosu_platform-21.08.0-oss.tar.gz"
     SGM_PACKAGE_DIR="$PACKAGE_DIR/sgm775_ethosu_platform"
-    SGM_PACKAGE_APPS="$PACKAGE_DIR/ethosU65_eval_app-21.08.0.tar.gz"
+    SGM_PACKAGE_APPS="$PACKAGE_DIR/ethosU65_eval_app-21.11.0.tar.gz"
 }
 
 check_package() {
@@ -55,12 +55,12 @@ install_aiet() {
     pip $PIP_OPTIONS install "$AIET_PACKAGE"
 
     aiet system install -s "$CORSTONE_PACKAGE"
-    aiet software install -s "$CORSTONE_PACKAGE_APPS"
+    aiet application install -s "$CORSTONE_PACKAGE_APPS"
 
     tar xzf "$SGM_PACKAGE" -C "$PACKAGE_DIR"
     tar xzf "$SGM_PACKAGE_OSS" -C "$PACKAGE_DIR"
     aiet system install -s "$SGM_PACKAGE_DIR"
-    aiet software install -s "$SGM_PACKAGE_APPS"
+    aiet application install -s "$SGM_PACKAGE_APPS"
 }
 
 install_mlia() {

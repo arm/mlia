@@ -171,79 +171,81 @@ class TestAIETRunner:
         )
 
     @pytest.mark.parametrize(
-        "json_output, software, expected_error",
+        "json_output, applications, expected_error",
         [
             ('{"available":[]}', [], does_not_raise()),
             (
-                '{"available":["software1", "software2"]}',
-                ["software1", "software2"],
+                '{"available":["application1", "application2"]}',
+                ["application1", "application2"],
                 does_not_raise(),
             ),
             (
                 "{}",
                 [],
-                pytest.raises(Exception, match="Unable to get software information"),
+                pytest.raises(Exception, match="Unable to get application information"),
             ),
         ],
     )
-    def test_get_installed_software(
-        self, json_output: str, software: List[str], expected_error: Any
+    def test_get_installed_applications(
+        self, json_output: str, applications: List[str], expected_error: Any
     ) -> None:
-        """Test method get_installed_software."""
+        """Test method get_installed_applications."""
         mock_executor = MagicMock()
         mock_executor.execute.return_value = (0, bytes(json_output.encode()), bytes())
 
         with expected_error:
             aiet_runner = AIETRunner(mock_executor)
-            assert software == aiet_runner.get_installed_software()
+            assert applications == aiet_runner.get_installed_applications()
 
         mock_executor.execute.assert_called_once_with(
-            ["aiet", "software", "-f", "json", "list"]
+            ["aiet", "application", "-f", "json", "list"]
         )
 
     @pytest.mark.parametrize(
-        "json_output, software, installed, expected_error",
+        "json_output, application, installed, expected_error",
         [
             ('{"available":[]}', "system1", False, does_not_raise()),
             (
-                '{"available":["software1", "software2"]}',
-                "software1",
+                '{"available":["application1", "application2"]}',
+                "application1",
                 True,
                 does_not_raise(),
             ),
             (
                 "{}",
-                "software1",
+                "application1",
                 False,
-                pytest.raises(Exception, match="Unable to get software information"),
+                pytest.raises(Exception, match="Unable to get application information"),
             ),
         ],
     )
-    def test_is_software_installed(
-        self, json_output: str, software: str, installed: bool, expected_error: Any
+    def test_is_application_installed(
+        self, json_output: str, application: str, installed: bool, expected_error: Any
     ) -> None:
-        """Test method is_software_installed."""
+        """Test method is_application_installed."""
         mock_executor = MagicMock()
         mock_executor.execute.return_value = (0, bytes(json_output.encode()), bytes())
 
         with expected_error:
             aiet_runner = AIETRunner(mock_executor)
-            assert installed == aiet_runner.is_software_installed(software, "system1")
+            assert installed == aiet_runner.is_application_installed(
+                application, "system1"
+            )
 
         mock_executor.execute.assert_called_once_with(
-            ["aiet", "software", "-f", "json", "list", "-s", "system1"]
+            ["aiet", "application", "-f", "json", "list", "-s", "system1"]
         )
 
     @pytest.mark.parametrize(
         "execution_params, expected_command",
         [
             (
-                ExecutionParams("software1", "system1", [], [], []),
-                ["aiet", "software", "run", "-n", "software1", "-s", "system1"],
+                ExecutionParams("application1", "system1", [], [], []),
+                ["aiet", "application", "run", "-n", "application1", "-s", "system1"],
             ),
             (
                 ExecutionParams(
-                    "software1",
+                    "application1",
                     "system1",
                     ["input_file=123.txt", "size=777"],
                     ["param1=456", "param2=789"],
@@ -251,10 +253,10 @@ class TestAIETRunner:
                 ),
                 [
                     "aiet",
-                    "software",
+                    "application",
                     "run",
                     "-n",
-                    "software1",
+                    "application1",
                     "-s",
                     "system1",
                     "-p",
@@ -273,16 +275,16 @@ class TestAIETRunner:
             ),
         ],
     )
-    def test_run_software(
+    def test_run_application(
         self, execution_params: ExecutionParams, expected_command: List[str]
     ) -> None:
-        """Test methos run_software."""
+        """Test method run_application."""
         mock_executor = MagicMock()
         mock_running_command = MagicMock()
         mock_executor.submit.return_value = mock_running_command
 
         aiet_runner = AIETRunner(mock_executor)
-        aiet_runner.run_software(execution_params)
+        aiet_runner.run_application(execution_params)
 
         mock_executor.submit.assert_called_once_with(expected_command)
 
@@ -307,7 +309,7 @@ def test_save_random_input(
 
 
 @pytest.mark.parametrize(
-    "device, system, software, expected_error",
+    "device, system, application, expected_error",
     [
         (
             EthosU55(mac=32),
@@ -330,7 +332,7 @@ def test_save_random_input(
             ("generic_inference", False),
             pytest.raises(
                 Exception,
-                match=r"Software generic_inference for the system "
+                match=r"Application generic_inference for the system "
                 r"CS-300: Cortex-M55\+Ethos-U55 is not installed",
             ),
         ),
@@ -352,14 +354,14 @@ def test_save_random_input(
             ("generic_inference", False),
             pytest.raises(
                 Exception,
-                match="Software generic_inference for the system SGM-775"
+                match="Application generic_inference for the system SGM-775"
                 " is not installed",
             ),
         ),
         (
             "unknown_device",
             ("some_system", False),
-            ("some_software", False),
+            ("some_application", False),
             pytest.raises(Exception, match="Unsupported device unknown_device"),
         ),
     ],
@@ -367,18 +369,18 @@ def test_save_random_input(
 def test_estimate_performance(
     device: EthosUConfiguration,
     system: Tuple[str, bool],
-    software: Tuple[str, bool],
+    application: Tuple[str, bool],
     test_models_path: Path,
     expected_error: Any,
     monkeypatch: Any,
 ) -> None:
     """Test getting performance estimations."""
     system_name, system_installed = system
-    software_name, software_installed = software
+    application_name, application_installed = application
 
     mock_aiet_runner = MagicMock()
     mock_aiet_runner.is_system_installed.return_value = system_installed
-    mock_aiet_runner.is_software_installed.return_value = software_installed
+    mock_aiet_runner.is_application_installed.return_value = application_installed
 
     mock_process = create_mock_process(
         [
@@ -393,7 +395,7 @@ def test_estimate_performance(
     )
 
     mock_generic_inference_run = RunningCommand(mock_process)
-    mock_aiet_runner.run_software.return_value = mock_generic_inference_run
+    mock_aiet_runner.run_application.return_value = mock_generic_inference_run
 
     monkeypatch.setattr(
         "mlia.tools.aiet_wrapper.get_aiet_runner",
@@ -413,8 +415,8 @@ def test_estimate_performance(
         assert perf_metrics.npu_total_cycles == 6
 
         assert mock_aiet_runner.is_system_installed.called_once_with(system_name)
-        assert mock_aiet_runner.is_software_installed.called_once_with(
-            software_name, system_name
+        assert mock_aiet_runner.is_application_installed.called_once_with(
+            application_name, system_name
         )
 
 
@@ -424,12 +426,12 @@ def test_estimate_performance_invalid_output(
     """Test estimation could not be done if inference produces unexpected output."""
     mock_aiet_runner = MagicMock()
     mock_aiet_runner.is_system_installed.return_value = True
-    mock_aiet_runner.is_software_installed.return_value = True
+    mock_aiet_runner.is_application_installed.return_value = True
 
     mock_process = create_mock_process(
         ["Something", "is", "wrong"], ["What a nice error!"]
     )
-    mock_aiet_runner.run_software.return_value = RunningCommand(mock_process)
+    mock_aiet_runner.run_application.return_value = RunningCommand(mock_process)
 
     monkeypatch.setattr(
         "mlia.tools.aiet_wrapper.get_aiet_runner",

@@ -33,7 +33,7 @@ pip install "$WHEEL_PATH"
 
 echo "Extracting artifacts"
 cat "$MLIA_E2E_CONFIG"/systems/*.tar.gz | tar -xzf - -i -C "$MLIA_E2E_CONFIG"/systems
-cat "$MLIA_E2E_CONFIG"/software/*.tar.gz | tar -xzf - -i -C "$MLIA_E2E_CONFIG"/software
+cat "$MLIA_E2E_CONFIG"/applications/*.tar.gz | tar -xzf - -i -C "$MLIA_E2E_CONFIG"/applications
 
 export PYTHONUNBUFFERED=1
 export MLIA_ARTIFACT_PATH="$WHEEL_PATH"

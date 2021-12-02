@@ -125,8 +125,10 @@ def run_command(cmd: List[str]) -> None:
         raise Exception(f"Execution failed {' '.join(cmd)}")
 
 
-def install_aiet_artifacts(system_dirs: List[Path], software_dirs: List[Path]) -> None:
-    """Install AIET software and systems."""
+def install_aiet_artifacts(
+    system_dirs: List[Path], application_dirs: List[Path]
+) -> None:
+    """Install AIET applications and systems."""
     run_command(["aiet", "--version"])
 
     for system in system_dirs:
@@ -138,14 +140,16 @@ def install_aiet_artifacts(system_dirs: List[Path], software_dirs: List[Path]) -
 
     run_command(["aiet", "system", "list"])
 
-    for software in software_dirs:
-        if not software.is_dir():
-            raise Exception(f"Wrong directory {software}. Unable to install software")
+    for application in application_dirs:
+        if not application.is_dir():
+            raise Exception(
+                f"Wrong directory {application}. Unable to install application"
+            )
 
-        run_command(["aiet", "software", "install", "-s", str(software)])
-        print(f"Software {software} installed")
+        run_command(["aiet", "application", "install", "-s", str(application)])
+        print(f"Application {application} installed")
 
-    run_command(["aiet", "software", "list"])
+    run_command(["aiet", "application", "list"])
 
 
 def get_config_dir() -> Optional[Path]:
@@ -227,9 +231,9 @@ def discover_and_install_aiet_artifacts() -> None:
 
     print(f"Found e2e config directory {config_dir_path}")
     systems_dirs = get_directories(config_dir_path / "systems")
-    software_dirs = get_directories(config_dir_path / "software")
+    application_dirs = get_directories(config_dir_path / "applications")
 
-    install_aiet_artifacts(systems_dirs, software_dirs)
+    install_aiet_artifacts(systems_dirs, application_dirs)
 
 
 @pytest.mark.e2e
@@ -266,7 +270,7 @@ class TestEndToEnd:
             for archive in archives:
                 shutil.copy2(archive, install_dir_path)
 
-        for item in ["systems", "software"]:
+        for item in ["systems", "applications"]:
             copy_archives(config_dir / item)
 
         def copy_env_path(env_var: str) -> None:
@@ -320,12 +324,12 @@ class TestEndToEnd:
         "mlia perf --help",
         "aiet --help",
         "aiet system list",
-        "aiet software list",
+        "aiet application list",
     ]
     partial_commands_list = [
         "aiet --help",
         "aiet system list",
-        "aiet software list",
+        "aiet application list",
     ]
 
     def test_install_script(self, tmp_path: Path) -> None:

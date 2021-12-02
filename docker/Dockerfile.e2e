@@ -47,6 +47,8 @@ RUN rm cmake-3.17.0-Linux-x86_64.sh
 RUN pip3 install virtualenv
 RUN virtualenv --quiet --clear --python python3.8 "/home/foo/v"
 RUN /home/foo/v/bin/pip install --upgrade pip setuptools wheel
+# Pillow for temporarily handling the change introduced by the application in aiet
+RUN /home/foo/v/bin/pip install Pillow
 
 COPY requirements-dev.txt /home/foo/
 RUN /home/foo/v/bin/pip install -r /home/foo/requirements-dev.txt

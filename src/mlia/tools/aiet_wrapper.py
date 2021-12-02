@@ -45,11 +45,11 @@ class PerformanceMetrics:
 
 @dataclass
 class ExecutionParams:
-    """Software execution params."""
+    """Application execution params."""
 
-    software: str
+    application: str
     system: str
-    software_params: List[str]
+    application_params: List[str]
     system_params: List[str]
     deploy_params: List[str]
 
@@ -125,35 +125,35 @@ class AIETRunner:
 
         return cast(List[str], json_data["available"])
 
-    def get_installed_software(self, system: Optional[str] = None) -> List[str]:
-        """Get list of the installed software."""
+    def get_installed_applications(self, system: Optional[str] = None) -> List[str]:
+        """Get list of the installed application."""
         params = ["-s", system] if system else []
-        command = self._software_command("list", *params)
+        command = self._application_command("list", *params)
 
         json_data = self._execute_and_parse(command)
         if not isinstance(json_data, dict) or "available" not in json_data:
-            raise Exception("Unable to get software information")
+            raise Exception("Unable to get application information")
 
         return cast(List[str], json_data["available"])
 
-    def is_software_installed(self, software: str, system: str) -> bool:
-        """Return true if requested software installed."""
-        return software in self.get_installed_software(system)
+    def is_application_installed(self, application: str, system: str) -> bool:
+        """Return true if requested application installed."""
+        return application in self.get_installed_applications(system)
 
     def is_system_installed(self, system: str) -> bool:
         """Return true if requested system installed."""
         return system in self.get_installed_systems()
 
-    def run_software(self, execution_params: ExecutionParams) -> RunningCommand:
-        """Run requested software."""
+    def run_application(self, execution_params: ExecutionParams) -> RunningCommand:
+        """Run requested application."""
         command = self._aiet_command(
-            "software",
+            "application",
             "run",
             "-n",
-            execution_params.software,
+            execution_params.application,
             "-s",
             execution_params.system,
-            *self._params("-p", execution_params.software_params),
+            *self._params("-p", execution_params.application_params),
             *self._params("--system-param", execution_params.system_params),
             *self._params("--deploy", execution_params.deploy_params),
         )
@@ -164,8 +164,8 @@ class AIETRunner:
     def _params(name: str, params: List[str]) -> List[str]:
         return [p for item in [(name, param) for param in params] for p in item]
 
-    def _software_command(self, cmd: str, *params: str) -> List[str]:
-        return self._aiet_command("software", "-f", "json", cmd, *params)
+    def _application_command(self, cmd: str, *params: str) -> List[str]:
+        return self._aiet_command("application", "-f", "json", cmd, *params)
 
     def _system_command(self, cmd: str, *params: str) -> List[str]:
         return self._aiet_command("system", "-f", "json", cmd, *params)
@@ -218,12 +218,12 @@ class GenericInferenceRunner(ABC):
         output_consumers: List[OutputConsumer],
     ) -> None:
         """Run generic inference for the provided device/model."""
-        self.check_system_and_software(self.system, self.software)
+        self.check_system_and_application(self.system, self.application)
 
         with self.context_stack:
             execution_params = self.get_execution_params(device, model)
 
-            self.running_inference = self.aiet_runner.run_software(execution_params)
+            self.running_inference = self.aiet_runner.run_application(execution_params)
             self.running_inference.output_consumers = output_consumers
             self.running_inference.consume_output()
 
@@ -241,8 +241,8 @@ class GenericInferenceRunner(ABC):
         """Get execution params for the provided device."""
 
     @property
-    def software(self) -> str:
-        """Return AIET software name."""
+    def application(self) -> str:
+        """Return AIET application name."""
         return "generic_inference"
 
     @property
@@ -258,14 +258,16 @@ class GenericInferenceRunner(ABC):
         """Exit context."""
         self.stop()
 
-    def check_system_and_software(self, system_name: str, software_name: str) -> None:
-        """Check if requested system and software installed."""
+    def check_system_and_application(
+        self, system_name: str, application_name: str
+    ) -> None:
+        """Check if requested system and application installed."""
         if not self.aiet_runner.is_system_installed(system_name):
             raise Exception(f"System {system_name} is not installed")
 
-        if not self.aiet_runner.is_software_installed(software_name, system_name):
+        if not self.aiet_runner.is_application_installed(application_name, system_name):
             raise Exception(
-                f"Software {software_name} for the system {system_name} "
+                f"Application {application_name} for the system {system_name} "
                 "is not installed"
             )
 
@@ -283,7 +285,7 @@ class GenericInferenceRunnerU65(GenericInferenceRunner):
     ) -> ExecutionParams:
         """Get execution params for Ethos-U65."""
         model_file, input_file = "/tmp/model.tflite", "/tmp/input.ifm"
-        software_params = [f"model_file={model_file}", f"input_file={input_file}"]
+        application_params = [f"model_file={model_file}", f"input_file={input_file}"]
 
         model_input = model.input_details()
         if not model_input:
@@ -300,10 +302,14 @@ class GenericInferenceRunnerU65(GenericInferenceRunner):
             f"{Path(model.model_path).absolute()}:{model_file}",
             f"{random_input_file_path}:{input_file}",
         ]
-        system_params = [f"-c=Y{device.mac}"]
+        system_params = [f"mac={device.mac}"]
 
         return ExecutionParams(
-            self.software, self.system, software_params, system_params, deploy_params
+            self.application,
+            self.system,
+            application_params,
+            system_params,
+            deploy_params,
         )
 
 
@@ -319,11 +325,11 @@ class GenericInferenceRunnerU55(GenericInferenceRunner):
         self, device: EthosUConfiguration, model: TFLiteModel
     ) -> ExecutionParams:
         """Get execution params for Ethous-U55."""
-        software_params = [f"input_file={Path(model.model_path).absolute()}"]
+        application_params = [f"input_file={Path(model.model_path).absolute()}"]
         system_params = [f"mac={device.mac}"]
 
         return ExecutionParams(
-            self.software, self.system, software_params, system_params, []
+            self.application, self.system, application_params, system_params, []
         )
 
 

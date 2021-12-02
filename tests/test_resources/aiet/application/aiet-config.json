@@ -1,7 +1,7 @@
 [
     {
         "name": "generic_inference",
-        "description": "This is a fake software generic_inference.",
+        "description": "This is a fake application generic_inference.",
         "build_dir": "build_dir",
         "supported_systems": [
             {
@@ -10,7 +10,7 @@
         ],
         "commands": {
             "build": [
-                "echo Build generic_inference for the {system.name} in {software.build_dir}",
+                "echo Build generic_inference for the {system.name} in {application.build_dir}",
                 "echo Passed parameters: input_file={user_params:input_file} profile_enabled={user_params:profile_enabled}"
             ]
         },
