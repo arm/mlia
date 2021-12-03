@@ -249,17 +249,16 @@ class TestEndToEnd:
     def run_install_script_test(
         self,
         install_script: str,
+        install_script_options: List,
+        install_dir_path: Path,
         tmp_path: Path,
-        test_dir: str,
         commands: List,
-        extra_flags: str = "",
     ) -> None:
         """Run an install script use case."""
         config_dir = get_config_dir()
         if not config_dir:
             raise Exception("E2E configuration directory is not provided")
 
-        install_dir_path = tmp_path / test_dir
         install_dir_path.mkdir()
 
         def copy_archives(subfolder_path: Path, pattern: str = "*.tar.gz") -> None:
@@ -290,16 +289,9 @@ class TestEndToEnd:
         with working_directory(tmp_path):
             run_command(["ls", "-R", str(tmp_path)])
 
-            venv = f"e2e_venv_{test_dir}"
-            command = [
-                f"./{install_script}",
-                "-d",
-                str(install_dir_path),
-                "-e",
-                venv,
-            ]
-            if extra_flags:
-                command.append(extra_flags)
+            test_path = install_dir_path.resolve()
+            venv = f"e2e_venv_{test_path.name}"
+            command = [f"./{install_script}", *install_script_options, "-e", venv, "-v"]
 
             run_command(command)
 
@@ -333,22 +325,67 @@ class TestEndToEnd:
         "aiet application list",
     ]
 
+    @pytest.mark.skip
     def test_install_script(self, tmp_path: Path) -> None:
         """Test MLIA installation script."""
+        test_dir = "dist1"
+        install_dir_path = tmp_path / test_dir
         self.run_install_script_test(
-            "install.sh", tmp_path, "dist1", self.full_commands_list
+            "install.sh",
+            ["-d", str(install_dir_path)],
+            install_dir_path,
+            tmp_path,
+            self.full_commands_list,
         )
 
+    @pytest.mark.skip
     def test_install_dev_script_without_mlia(self, tmp_path: Path) -> None:
         """Test MLIA install_dev.sh script without installing MLIA flag."""
+        test_dir = "dist2"
+        install_dir_path = tmp_path / test_dir
         self.run_install_script_test(
-            "install_dev.sh", tmp_path, "dist2", self.partial_commands_list
+            "install_dev.sh",
+            ["-d", str(install_dir_path)],
+            install_dir_path,
+            tmp_path,
+            self.partial_commands_list,
         )
 
+    @pytest.mark.skip
     def test_install_dev_script_with_mlia(self, tmp_path: Path) -> None:
         """Test MLIA install_dev.sh script with installing MLIA flag."""
+        test_dir = "dist3"
+        install_dir_path = tmp_path / test_dir
         self.run_install_script_test(
-            "install_dev.sh", tmp_path, "dist3", self.full_commands_list, "-m"
+            "install_dev.sh",
+            ["-d", str(install_dir_path), "-m"],
+            install_dir_path,
+            tmp_path,
+            self.full_commands_list,
+        )
+
+    def test_install_new_script_use_default_fvp_paths(self, tmp_path: Path) -> None:
+        """Test MLIA install_new script using the default FVP paths."""
+        test_dir = "dist4"
+        install_dir_path = tmp_path / test_dir
+
+        self.run_install_script_test(
+            "install_new.sh", [], install_dir_path, tmp_path, []
+        )
+
+    def test_install_new_script_use_specific_fvp_path(self, tmp_path: Path) -> None:
+        """Test MLIA install_new script using a specific FVP path."""
+        config_dir_path = get_config_dir()
+        assert config_dir_path
+
+        fvp_path = config_dir_path.resolve() / "systems/fvp_corstone_sse-300_ethos-u"
+        assert fvp_path.is_dir()
+
+        test_dir = "dist5"
+        install_dir_path = tmp_path / test_dir
+
+        self.run_install_script_test(
+            "install_new.sh", ["-f", str(fvp_path)], install_dir_path, tmp_path, []
         )
 
     @pytest.mark.parametrize(
