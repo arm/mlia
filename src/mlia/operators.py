@@ -1,11 +1,14 @@
 # Copyright 2021, Arm Ltd.
 """Operators module."""
 import logging
+from pathlib import Path
 
 from mlia.config import EthosUConfiguration
 from mlia.config import IPConfiguration
 from mlia.config import ModelConfiguration
 from mlia.config import TFLiteModel
+from mlia.metadata import NpuSupported
+from mlia.metadata import Operator
 from mlia.metadata import Operators
 from mlia.tools import vela_wrapper
 
@@ -25,7 +28,23 @@ def supported_operators(
     if not isinstance(device, EthosUConfiguration):
         raise Exception("Unsupported ip configuration")
 
-    ops = vela_wrapper.supported_operators(model, device)
+    model_operators = vela_wrapper.supported_operators(
+        Path(model.model_path), device.compiler_options
+    )
+
+    ops = Operators(
+        [
+            Operator(
+                model_operator.name,
+                model_operator.op_type,
+                NpuSupported(
+                    model_operator.supported_on_npu[0],
+                    model_operator.supported_on_npu[1],
+                ),
+            )
+            for model_operator in model_operators
+        ]
+    )
     logger.info("Done")
 
     return ops

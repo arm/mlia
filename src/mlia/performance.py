@@ -38,7 +38,9 @@ def ethosu_performance_metrics(
     """Return performance metrics for the EthousU device."""
     logger.info("Getting the memory usage metrics ...")
 
-    vela_perf_metrics = vela.estimate_performance(model, device)
+    vela_perf_metrics = vela.estimate_performance(
+        Path(model.model_path), device.compiler_options
+    )
     memory_usage = MemoryUsage(
         vela_perf_metrics.sram_memory_area_size,
         vela_perf_metrics.dram_memory_area_size,
@@ -52,7 +54,9 @@ def ethosu_performance_metrics(
     model_filename = f"{Path(model.model_path).stem}_vela.tflite"
 
     optimized_model_path = ctx.get_model_path(model_filename)
-    vela.optimize_model(model, device, optimized_model_path)
+    vela.optimize_model(
+        Path(model.model_path), device.compiler_options, optimized_model_path
+    )
     logger.info("Done")
 
     logger.info("Getting the performance metrics ...")

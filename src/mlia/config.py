@@ -5,17 +5,16 @@
 import logging
 from abc import ABC
 from abc import abstractmethod
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 from typing import cast
 from typing import Dict
 from typing import List
 from typing import Literal
-from typing import Optional
 from typing import Union
 
 import tensorflow as tf
+from mlia.tools.vela_wrapper import VelaCompilerOptions
 from mlia.utils.general import convert_tf_to_tflite
 from mlia.utils.general import convert_to_tflite
 from mlia.utils.general import extract_if_archived
@@ -153,37 +152,6 @@ def get_keras_model(model: str, ctx: "Context") -> "KerasModel":
     return converted_model.convert_to_keras(keras_model_path)
 
 
-@dataclass
-class CompilerOptions:
-    """Compiler options."""
-
-    config_files: Optional[Union[str, List[str]]] = None
-    system_config: str = "internal-default"
-    memory_mode: str = "internal-default"
-    accelerator_config: Literal[
-        "ethos-u55-32",
-        "ethos-u55-64",
-        "ethos-u55-128",
-        "ethos-u55-256",
-        "ethos-u65-256",
-        "ethos-u65-512",
-    ] = "ethos-u55-256"
-    max_block_dependency: int = 3
-    arena_cache_size: Optional[int] = None
-    tensor_allocator: Literal["LinearAlloc", "Greedy", "HillClimb"] = "HillClimb"
-    cpu_tensor_alignment: int = 16
-    recursion_limit: int = 1000
-    optimization_strategy: Literal["Performance", "Size"] = "Performance"
-    output_dir: Optional[str] = None
-
-    def __str__(self) -> str:
-        """Return string representation."""
-        params = ", ".join(
-            f"{param}: {param_value}" for param, param_value in vars(self).items()
-        )
-        return f"Compiler options {params}"
-
-
 class IPConfiguration:
     """Base class for IP configuration."""
 
@@ -195,7 +163,7 @@ class EthosUConfiguration(IPConfiguration):
         self,
         ip_class: Literal["ethos-u55", "ethos-u65"],
         mac: int,
-        compiler_options: CompilerOptions,
+        compiler_options: VelaCompilerOptions,
     ):
         """Init EthosU configuration."""
         self.ip_class = ip_class
@@ -222,7 +190,7 @@ class EthosU55(EthosUConfiguration):
         super().__init__(
             ip_class="ethos-u55",
             mac=mac,
-            compiler_options=CompilerOptions(
+            compiler_options=VelaCompilerOptions(
                 accelerator_config=f"ethos-u55-{mac}", **kwargs  # type: ignore
             ),
         )
@@ -239,7 +207,7 @@ class EthosU65(EthosUConfiguration):
         super().__init__(
             ip_class="ethos-u65",
             mac=mac,
-            compiler_options=CompilerOptions(
+            compiler_options=VelaCompilerOptions(
                 accelerator_config=f"ethos-u65-{mac}", **kwargs  # type: ignore
             ),
         )

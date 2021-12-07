@@ -4,18 +4,18 @@ from pathlib import Path
 
 import pytest
 from mlia.cli.common import ExecutionContext
-from mlia.config import CompilerOptions
 from mlia.config import EthosU55
 from mlia.config import EthosU65
 from mlia.config import get_model
 from mlia.config import KerasModel
 from mlia.config import TFLiteModel
 from mlia.config import TfModel
+from mlia.tools.vela_wrapper import VelaCompilerOptions
 
 
 def test_compiler_options_default_init() -> None:
     """Test compiler options default init."""
-    opts = CompilerOptions()
+    opts = VelaCompilerOptions()
 
     assert opts.config_files is None
     assert opts.system_config == "internal-default"
@@ -28,17 +28,6 @@ def test_compiler_options_default_init() -> None:
     assert opts.recursion_limit == 1000
     assert opts.optimization_strategy == "Performance"
     assert opts.output_dir is None
-
-    assert str(opts) == (
-        "Compiler options "
-        "config_files: None, system_config: internal-default, "
-        "memory_mode: internal-default, "
-        "accelerator_config: ethos-u55-256, max_block_dependency: 3, "
-        "arena_cache_size: None, "
-        "tensor_allocator: HillClimb, cpu_tensor_alignment: 16, "
-        "recursion_limit: 1000, optimization_strategy: Performance, "
-        "output_dir: None"
-    )
 
 
 def test_ethosu55_init_configuration() -> None:
@@ -71,16 +60,6 @@ def test_ethosu65_init_configuration() -> None:
     config_mac_512 = EthosU65(mac=512)
     assert config_mac_512.mac == 512
     assert config_mac_512.compiler_options.accelerator_config == "ethos-u65-512"
-    assert str(config_mac_512) == (
-        "EthosU ip_class=ethos-u65 mac=512 "
-        "compiler_options= Compiler options config_files: None, "
-        "system_config: internal-default, memory_mode: internal-default, "
-        "accelerator_config: ethos-u65-512, max_block_dependency: 3, "
-        "arena_cache_size: None, "
-        "tensor_allocator: HillClimb, cpu_tensor_alignment: 16, "
-        "recursion_limit: 1000, optimization_strategy: Performance, "
-        "output_dir: None"
-    )
 
 
 def test_convert_keras_to_tflite(test_models_path: Path, tmp_path: Path) -> None:

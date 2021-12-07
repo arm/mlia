@@ -41,7 +41,7 @@ from mlia.reporting import report_dataframe
 from mlia.reporting import ReportItem
 from mlia.reporting import SingleRow
 from mlia.reporting import Table
-from mlia.tools.vela_wrapper import get_vela_compiler
+from mlia.tools.vela_wrapper import resolve_compiler_config
 from mlia.utils.general import is_list_of
 from mlia.utils.general import LoggerWriter
 
@@ -152,7 +152,7 @@ def report_device(device: EthosUConfiguration) -> Report:
 
 def report_device_details(device: EthosUConfiguration) -> Report:
     """Return table representation for the device."""
-    compiler_config = get_vela_compiler(device).get_config()
+    compiler_config = resolve_compiler_config(device.compiler_options)
 
     memory_settings = [
         ReportItem(

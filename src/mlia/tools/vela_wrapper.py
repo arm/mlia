@@ -35,11 +35,6 @@ from ethosu.vela.tflite_model_semantic import TFLiteSemantic
 from ethosu.vela.tflite_supported_operators import TFLiteSupportedOperators
 from ethosu.vela.tflite_writer import write_tflite
 from ethosu.vela.vela import generate_supported_ops
-from mlia.config import EthosUConfiguration
-from mlia.config import TFLiteModel
-from mlia.metadata import NpuSupported
-from mlia.metadata import Operator
-from mlia.metadata import Operators
 from mlia.utils.general import redirect_output
 
 
@@ -66,6 +61,15 @@ class PerformanceMetrics:  # pylint: disable=too-many-instance-attributes
     dram_memory_area_size: int
     on_chip_flash_memory_area_size: int
     off_chip_flash_memory_area_size: int
+
+
+@dataclass
+class ModelOperator:
+    """Model operator."""
+
+    name: str
+    op_type: str
+    supported_on_npu: Tuple[bool, List[Tuple[str, str]]]
 
 
 @dataclass
@@ -113,35 +117,43 @@ TensorAllocatorType = Literal["LinearAlloc", "Greedy", "HillClimb"]
 OptimizationStrategyType = Literal["Performance", "Size"]
 
 
+@dataclass
+class VelaCompilerOptions:  # pylint: disable=too-many-instance-attributes
+    """Vela compiler options."""
+
+    config_files: Optional[Union[str, List[str]]] = None
+    system_config: str = ArchitectureFeatures.DEFAULT_CONFIG
+    memory_mode: str = ArchitectureFeatures.DEFAULT_CONFIG
+    accelerator_config: AcceleratorConfigType = "ethos-u55-256"
+    max_block_dependency: int = ArchitectureFeatures.MAX_BLOCKDEP
+    arena_cache_size: Optional[int] = None
+    tensor_allocator: TensorAllocatorType = "HillClimb"
+    cpu_tensor_alignment: int = Tensor.AllocationQuantum
+    optimization_strategy: OptimizationStrategyType = "Performance"
+    output_dir: Optional[str] = None
+    recursion_limit: int = 1000
+
+
 class VelaCompiler:  # pylint: disable=too-many-instance-attributes
     """Vela compiler wrapper."""
 
     def __init__(  # pylint: disable=too-many-arguments
-        self,
-        config_files: Optional[Union[str, List[str]]] = None,
-        system_config: str = ArchitectureFeatures.DEFAULT_CONFIG,
-        memory_mode: str = ArchitectureFeatures.DEFAULT_CONFIG,
-        accelerator_config: AcceleratorConfigType = "ethos-u55-256",
-        max_block_dependency: int = ArchitectureFeatures.MAX_BLOCKDEP,
-        arena_cache_size: Optional[int] = None,
-        tensor_allocator: TensorAllocatorType = "HillClimb",
-        cpu_tensor_alignment: int = Tensor.AllocationQuantum,
-        recursion_limit: int = 1000,
-        optimization_strategy: OptimizationStrategyType = "Performance",
-        output_dir: Optional[str] = None,
+        self, compiler_options: VelaCompilerOptions
     ):
         """Init Vela wrapper instance."""
-        self.config_files = config_files
-        self.system_config = system_config
-        self.memory_mode = memory_mode
-        self.accelerator_config = accelerator_config
-        self.max_block_dependency = max_block_dependency
-        self.arena_cache_size = arena_cache_size
-        self.tensor_allocator = TensorAllocator[tensor_allocator]
-        self.cpu_tensor_alignment = cpu_tensor_alignment
-        self.recursion_limit = recursion_limit
-        self.optimization_strategy = OptimizationStrategy[optimization_strategy]
-        self.output_dir = output_dir
+        self.config_files = compiler_options.config_files
+        self.system_config = compiler_options.system_config
+        self.memory_mode = compiler_options.memory_mode
+        self.accelerator_config = compiler_options.accelerator_config
+        self.max_block_dependency = compiler_options.max_block_dependency
+        self.arena_cache_size = compiler_options.arena_cache_size
+        self.tensor_allocator = TensorAllocator[compiler_options.tensor_allocator]
+        self.cpu_tensor_alignment = compiler_options.cpu_tensor_alignment
+        self.optimization_strategy = OptimizationStrategy[
+            compiler_options.optimization_strategy
+        ]
+        self.output_dir = compiler_options.output_dir
+        self.recursion_limit = compiler_options.recursion_limit
 
         sys.setrecursionlimit(self.recursion_limit)
 
@@ -260,41 +272,40 @@ class VelaCompiler:  # pylint: disable=too-many-instance-attributes
         )
 
 
-def get_vela_compiler(device: EthosUConfiguration) -> VelaCompiler:
-    """Get Vela compiler instance for provided device configuration."""
-    compiler_options = device.compiler_options
+def resolve_compiler_config(
+    vela_compiler_options: VelaCompilerOptions,
+) -> Dict[str, Any]:
+    """Resolve passed compiler options.
 
-    return VelaCompiler(
-        config_files=compiler_options.config_files,
-        system_config=compiler_options.system_config,
-        memory_mode=compiler_options.memory_mode,
-        accelerator_config=compiler_options.accelerator_config,
-        max_block_dependency=compiler_options.max_block_dependency,
-        arena_cache_size=compiler_options.arena_cache_size,
-        tensor_allocator=compiler_options.tensor_allocator,
-        cpu_tensor_alignment=compiler_options.cpu_tensor_alignment,
-        recursion_limit=compiler_options.recursion_limit,
-        optimization_strategy=compiler_options.optimization_strategy,
-        output_dir=compiler_options.output_dir,
-    )
+    Vela has number of configuration parameters that being
+    resolved during passing compiler options. E.g. Vela
+    reads configuration parameters from vela.ini and fills
+    it's internal structures with resolved values (memory mode,
+    system mode, etc.).
+
+    In order to get this information we need to create
+    instance of the Vela compiler first.
+    """
+    vela_compiler = VelaCompiler(vela_compiler_options)
+    return vela_compiler.get_config()
 
 
 def estimate_performance(
-    model: TFLiteModel, device: EthosUConfiguration
+    model_path: Path, compiler_options: VelaCompilerOptions
 ) -> PerformanceMetrics:
     """Return performance estimations for the model/device.
 
     Logic for this function comes from vela module stats_writer.py
     """
     logger.debug(
-        "Estimate performance for the model %s on device %s",
-        model.model_path,
-        device.ip_class,
+        "Estimate performance for the model %s on %s",
+        model_path,
+        compiler_options.accelerator_config,
     )
 
-    vela_compiler = get_vela_compiler(device)
+    vela_compiler = VelaCompiler(compiler_options)
 
-    initial_model = vela_compiler.read_model(model.model_path)
+    initial_model = vela_compiler.read_model(model_path)
     if initial_model.optimized:
         raise Exception("Unable to estimate performance for the given optimized model")
 
@@ -304,16 +315,20 @@ def estimate_performance(
 
 
 def optimize_model(
-    model: TFLiteModel, device: EthosUConfiguration, output_filename: Union[str, Path]
+    model_path: Path, compiler_options: VelaCompilerOptions, output_model_path: Path
 ) -> None:
     """Optimize model and return it's path after optimization."""
-    logger.debug("Optimize model %s for device %s", model.model_path, device.ip_class)
+    logger.debug(
+        "Optimize model %s for device %s",
+        model_path,
+        compiler_options.accelerator_config,
+    )
 
-    vela_compiler = get_vela_compiler(device)
-    optimized_model = vela_compiler.compile_model(model.model_path)
+    vela_compiler = VelaCompiler(compiler_options)
+    optimized_model = vela_compiler.compile_model(model_path)
 
-    logger.debug("Save optimized model into %s", output_filename)
-    optimized_model.save(output_filename)
+    logger.debug("Save optimized model into %s", output_model_path)
+    optimized_model.save(output_model_path)
 
 
 def _performance_metrics(optimized_model: OptimizedModel) -> PerformanceMetrics:
@@ -350,25 +365,40 @@ def _performance_metrics(optimized_model: OptimizedModel) -> PerformanceMetrics:
     )
 
 
-def supported_operators(model: TFLiteModel, device: EthosUConfiguration) -> Operators:
+def supported_operators(
+    model_path: Path, compiler_options: VelaCompilerOptions
+) -> List[ModelOperator]:
     """Return list of model's operators."""
-    logger.debug("Check supported operators for the model %s", model.model_path)
+    logger.debug("Check supported operators for the model %s", model_path)
 
-    vela_compiler = get_vela_compiler(device)
-    initial_model = vela_compiler.read_model(model.model_path)
+    vela_compiler = VelaCompiler(compiler_options)
+    initial_model = vela_compiler.read_model(model_path)
 
-    return Operators(
-        [
-            Operator(op.name, optype_to_builtintype(op.type), run_on_npu(op))
-            for sg in initial_model.nng.subgraphs
-            for op in sg.get_all_ops()
-            if op.type not in VELA_INTERNAL_OPS
-        ]
-    )
+    return [
+        ModelOperator(op.name, optype_to_builtintype(op.type), run_on_npu(op))
+        for sg in initial_model.nng.subgraphs
+        for op in sg.get_all_ops()
+        if op.type not in VELA_INTERNAL_OPS
+    ]
 
 
-def run_on_npu(operator: Op) -> NpuSupported:
-    """Return true if operator can run on NPU."""
+def run_on_npu(operator: Op) -> Tuple[bool, List[Tuple[str, str]]]:
+    """Return information if operator can run on NPU.
+
+    Vela does a number of checks that can help establish whether
+    a particular operator is supported to run on NPU.
+
+    There are two groups of checks:
+      - general TFLite constraints
+      - operator specific constraints
+
+    If an operator is not supported on NPU then this function
+    will return the reason of that.
+
+    The reason is split in two parts:
+      - general description of why the operator cannot be placed on NPU
+      - details on the particular operator
+    """
     semantic_checker = TFLiteSemantic()
     semantic_constraints = itertools.chain(
         semantic_checker.generic_constraints,
@@ -378,7 +408,7 @@ def run_on_npu(operator: Op) -> NpuSupported:
     for constraint in semantic_constraints:
         op_valid, op_reason = constraint(operator)
         if not op_valid:
-            return NpuSupported(False, [(constraint.__doc__, op_reason)])
+            return (False, [(constraint.__doc__, op_reason)])
 
     if operator.type not in TFLiteSupportedOperators.supported_operators:
         reasons = (
@@ -387,7 +417,7 @@ def run_on_npu(operator: Op) -> NpuSupported:
             else []
         )
 
-        return NpuSupported(False, reasons)
+        return (False, reasons)
 
     tflite_supported_operators = TFLiteSupportedOperators()
     operation_constraints = itertools.chain(
@@ -397,9 +427,9 @@ def run_on_npu(operator: Op) -> NpuSupported:
     for constraint in operation_constraints:
         op_valid, op_reason = constraint(operator)
         if not op_valid:
-            return NpuSupported(False, [(constraint.__doc__, op_reason)])
+            return (False, [(constraint.__doc__, op_reason)])
 
-    return NpuSupported(True, [])
+    return (True, [])
 
 
 def generate_supported_operators_report() -> None:

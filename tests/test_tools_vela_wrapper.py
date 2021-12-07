@@ -1,7 +1,6 @@
 # Copyright 2021, Arm Ltd.
 """Tests for module tools/vela_wrapper."""
 from pathlib import Path
-from typing import Any
 from typing import List
 from typing import Tuple
 
@@ -9,22 +8,22 @@ import pytest
 from ethosu.vela.compiler_driver import TensorAllocator
 from ethosu.vela.scheduler import OptimizationStrategy
 from mlia.config import EthosU55
-from mlia.config import TFLiteModel
-from mlia.metadata import NpuSupported
 from mlia.tools.vela_wrapper import estimate_performance
 from mlia.tools.vela_wrapper import generate_supported_operators_report
-from mlia.tools.vela_wrapper import get_vela_compiler
+from mlia.tools.vela_wrapper import ModelOperator
 from mlia.tools.vela_wrapper import optimize_model
 from mlia.tools.vela_wrapper import OptimizedModel
 from mlia.tools.vela_wrapper import PerformanceMetrics
 from mlia.tools.vela_wrapper import supported_operators
 from mlia.tools.vela_wrapper import VelaCompiler
+from mlia.tools.vela_wrapper import VelaCompilerOptions
 from mlia.utils.proc import working_directory
 
 
 def test_default_vela_compiler() -> None:
     """Test default Vela compiler instance."""
-    default_compiler = VelaCompiler()
+    default_compiler_options = VelaCompilerOptions()
+    default_compiler = VelaCompiler(default_compiler_options)
 
     assert default_compiler.config_files is None
     assert default_compiler.system_config == "internal-default"
@@ -84,7 +83,7 @@ def test_vela_compiler_with_parameters(test_resources_path: Path) -> None:
     """Test creation of Vela compiler instance with non-default params."""
     vela_ini_path = str(test_resources_path / "vela/sample_vela.ini")
 
-    compiler = VelaCompiler(
+    compiler_options = VelaCompilerOptions(
         config_files=[vela_ini_path],
         system_config="Ethos_U65_High_End",
         memory_mode="Shared_Sram",
@@ -96,6 +95,7 @@ def test_vela_compiler_with_parameters(test_resources_path: Path) -> None:
         optimization_strategy="Size",
         output_dir="output",
     )
+    compiler = VelaCompiler(compiler_options)
 
     assert compiler.config_files == [vela_ini_path]
     assert compiler.system_config == "Ethos_U65_High_End"
@@ -154,49 +154,22 @@ def test_vela_compiler_with_parameters(test_resources_path: Path) -> None:
 def test_compile_model(test_models_path: Path) -> None:
     """Test model optimization."""
     model = test_models_path / "simple_3_layers_model.tflite"
-    compiler = get_vela_compiler(EthosU55())
+    compiler = VelaCompiler(EthosU55().compiler_options)
 
     optimized_model = compiler.compile_model(model)
     assert isinstance(optimized_model, OptimizedModel)
 
 
-def test_optimize_model(test_models_path: Path, tmpdir: Any) -> None:
+def test_optimize_model(test_models_path: Path, tmp_path: Path) -> None:
     """Test model optimization and saving into file."""
     model = test_models_path / "simple_3_layers_model.tflite"
-    tmp_file = Path(tmpdir) / "temp.tflite"
+    tmp_file = tmp_path / "temp.tflite"
 
-    optimize_model(TFLiteModel(str(model)), EthosU55(), str(tmp_file.absolute()))
+    device = EthosU55()
+    optimize_model(model, device.compiler_options, tmp_file.absolute())
 
     assert tmp_file.is_file()
     assert tmp_file.stat().st_size > 0
-
-
-def test_get_compiler_for_device() -> None:
-    """Test getting Vela compiler for the device."""
-    device = EthosU55(
-        mac=32,
-        config_files="test_vela.ini",
-        system_config="test_system_config",
-        memory_mode="test_memory_mode",
-        max_block_dependency=1,
-        arena_cache_size=123,
-        tensor_allocator="Greedy",
-        cpu_tensor_alignment=1,
-        optimization_strategy="Size",
-        output_dir="output",
-    )
-
-    compiler = get_vela_compiler(device)
-
-    assert compiler.config_files == "test_vela.ini"
-    assert compiler.system_config == "test_system_config"
-    assert compiler.memory_mode == "test_memory_mode"
-    assert compiler.accelerator_config == "ethos-u55-32"
-    assert compiler.arena_cache_size == 123
-    assert compiler.tensor_allocator == TensorAllocator.Greedy
-    assert compiler.cpu_tensor_alignment == 1
-    assert compiler.output_dir == "output"
-    assert compiler.optimization_strategy == OptimizationStrategy.Size
 
 
 @pytest.mark.parametrize(
@@ -205,21 +178,21 @@ def test_get_compiler_for_device() -> None:
         (
             "simple_3_layers_model.tflite",
             [
-                (
+                ModelOperator(
                     "sequential/dense/MatMul1",
                     "FULLY_CONNECTED",
-                    NpuSupported(True, []),
+                    (True, []),
                 ),
-                (
+                ModelOperator(
                     "sequential/dense/BiasAdd;sequential/dense_1/MatMul;"
                     "sequential/dense_1/Relu;sequential/dense_1/BiasAdd",
                     "FULLY_CONNECTED",
-                    NpuSupported(True, []),
+                    (True, []),
                 ),
-                (
+                ModelOperator(
                     "Identity",
                     "FULLY_CONNECTED",
-                    NpuSupported(True, []),
+                    (True, []),
                 ),
             ],
         )
@@ -229,49 +202,36 @@ def test_operators(
     test_models_path: Path, model: str, expected_ops: List[Tuple]
 ) -> None:
     """Test operators function."""
-    tflite_model = TFLiteModel(str(test_models_path / model))
     device = EthosU55()
 
-    operators = supported_operators(tflite_model, device)
-
-    assert operators.total_number == len(expected_ops)
-    assert operators.npu_supported_number == operators.total_number
-    assert operators.npu_supported_ratio == 1.0
-    assert operators.npu_unsupported_ratio == 0.0
-
-    for i, operator in enumerate(operators.ops):
-        (
-            expected_name,
-            expected_type,
-            expected_run_on_npu,
-        ) = expected_ops[i]
-        assert operator.name == expected_name
-        assert operator.op_type == expected_type
-        assert operator.run_on_npu == expected_run_on_npu
+    operators = supported_operators(test_models_path / model, device.compiler_options)
+    assert operators == expected_ops
 
 
 def test_estimate_performance(test_models_path: Path) -> None:
     """Test getting performance estimations."""
-    model = TFLiteModel(str(test_models_path / "simple_3_layers_model.tflite"))
-    perf_metrics = estimate_performance(model, EthosU55())
+    model = test_models_path / "simple_3_layers_model.tflite"
+    device = EthosU55()
+    perf_metrics = estimate_performance(model, device.compiler_options)
 
     assert isinstance(perf_metrics, PerformanceMetrics)
 
 
 def test_estimate_performance_already_optimized(
-    test_models_path: Path, tmpdir: Any
+    test_models_path: Path, tmp_path: Path
 ) -> None:
     """Test that performance estimation should fail for already optimized model."""
     device = EthosU55()
-    model = TFLiteModel(str(test_models_path / "simple_3_layers_model.tflite"))
-    optimized_model_path = str(Path(tmpdir) / "optimized_model.tflite")
 
-    optimize_model(model, device, optimized_model_path)
+    model = test_models_path / "simple_3_layers_model.tflite"
+    optimized_model_path = tmp_path / "optimized_model.tflite"
+
+    optimize_model(model, device.compiler_options, optimized_model_path)
 
     with pytest.raises(
         Exception, match="Unable to estimate performance for the given optimized model"
     ):
-        estimate_performance(TFLiteModel(optimized_model_path), device)
+        estimate_performance(optimized_model_path, device.compiler_options)
 
 
 def test_generate_supported_operators_report(tmp_path: Path) -> None:
