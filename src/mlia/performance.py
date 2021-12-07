@@ -60,7 +60,20 @@ def ethosu_performance_metrics(
         "WARNING: This task may require several minutes (press ctrl-c to interrupt)"
     )
 
-    perf_metrics = aiet.estimate_performance(TFLiteModel(optimized_model_path), device)
+    optimized_model = TFLiteModel(optimized_model_path)
+    optimized_model_input = optimized_model.input_details()
+    if not optimized_model_input:
+        raise Exception(
+            f"Unable to get input details for the model {optimized_model.model_path}"
+        )
+
+    model_info = aiet.ModelInfo(
+        model_path=Path(optimized_model.model_path),
+        input_shape=optimized_model_input[0]["shape"],
+        input_dtype=optimized_model_input[0]["dtype"],
+    )
+    device_info = aiet.DeviceInfo(device_type=device.ip_class, mac=device.mac)
+    perf_metrics = aiet.estimate_performance(model_info, device_info)
     logger.info("Done")
 
     npu_cycles = NPUCycles(

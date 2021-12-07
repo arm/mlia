@@ -13,21 +13,35 @@ from typing import Any
 from typing import cast
 from typing import Dict
 from typing import List
+from typing import Literal
 from typing import Optional
 from typing import Tuple
 from typing import Union
 
 import numpy as np
-from mlia.config import EthosU55
-from mlia.config import EthosU65
-from mlia.config import EthosUConfiguration
-from mlia.config import TFLiteModel
 from mlia.utils.proc import CommandExecutor
 from mlia.utils.proc import OutputConsumer
 from mlia.utils.proc import RunningCommand
 
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class DeviceInfo:
+    """Device information."""
+
+    device_type: Literal["ethos-u55", "ethos-u65"]
+    mac: int
+
+
+@dataclass
+class ModelInfo:
+    """Model info."""
+
+    model_path: Path
+    input_shape: np.ndarray
+    input_dtype: np.dtype
 
 
 @dataclass
@@ -213,15 +227,15 @@ class GenericInferenceRunner(ABC):
 
     def run(
         self,
-        device: EthosUConfiguration,
-        model: TFLiteModel,
+        device_info: DeviceInfo,
+        model_info: ModelInfo,
         output_consumers: List[OutputConsumer],
     ) -> None:
         """Run generic inference for the provided device/model."""
         self.check_system_and_application(self.system, self.application)
 
         with self.context_stack:
-            execution_params = self.get_execution_params(device, model)
+            execution_params = self.get_execution_params(device_info, model_info)
 
             self.running_inference = self.aiet_runner.run_application(execution_params)
             self.running_inference.output_consumers = output_consumers
@@ -236,7 +250,7 @@ class GenericInferenceRunner(ABC):
 
     @abstractmethod
     def get_execution_params(
-        self, device: EthosUConfiguration, model: TFLiteModel
+        self, device_info: DeviceInfo, model_info: ModelInfo
     ) -> ExecutionParams:
         """Get execution params for the provided device."""
 
@@ -286,37 +300,37 @@ class GenericInferenceRunnerEthosU(GenericInferenceRunner):
         super().__init__(aietrunner, system_name)
 
     def get_execution_params(
-        self, device: EthosUConfiguration, model: TFLiteModel
+        self, device_info: DeviceInfo, model_info: ModelInfo
     ) -> ExecutionParams:
         """Get execution params for Ethos-U55/65."""
         system_params = [
-            f"mac={device.mac}",
-            f"input_file={Path(model.model_path).absolute()}",
+            f"mac={device_info.mac}",
+            f"input_file={Path(model_info.model_path).absolute()}",
         ]
 
         return ExecutionParams(self.application, self.system, [], system_params, [])
 
 
 def get_generic_runner(
-    device: EthosUConfiguration, aiet_runner: AIETRunner
+    device_info: DeviceInfo, aiet_runner: AIETRunner
 ) -> GenericInferenceRunner:
     """Get generic runner for provided device."""
-    if isinstance(device, EthosU55):
+    if device_info.device_type == "ethos-u55":
         return GenericInferenceRunnerEthosU("CS-300: Cortex-M55+Ethos-U55", aiet_runner)
 
-    if isinstance(device, EthosU65):
+    if device_info.device_type == "ethos-u65":
         return GenericInferenceRunnerEthosU("CS-300: Cortex-M55+Ethos-U65", aiet_runner)
 
-    raise Exception(f"Unsupported device {device}")
+    raise Exception(f"Unsupported device {device_info.device_type}")
 
 
 def estimate_performance(
-    model: TFLiteModel, device: EthosUConfiguration
+    model_info: ModelInfo, device_info: DeviceInfo
 ) -> PerformanceMetrics:
     """Get performance estimations."""
-    with get_generic_runner(device, get_aiet_runner()) as generic_runner:
+    with get_generic_runner(device_info, get_aiet_runner()) as generic_runner:
         output_parser = GenericInferenceOutputParser()
-        generic_runner.run(device, model, [output_parser, AIETLogWriter()])
+        generic_runner.run(device_info, model_info, [output_parser, AIETLogWriter()])
 
         if output_parser.is_ready():
             return PerformanceMetrics(**output_parser.result)

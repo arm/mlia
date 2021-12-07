@@ -12,15 +12,14 @@ from unittest.mock import PropertyMock
 
 import numpy as np
 import pytest
-from mlia.config import EthosU55
-from mlia.config import EthosU65
-from mlia.config import EthosUConfiguration
 from mlia.config import TFLiteModel
 from mlia.tools.aiet_wrapper import AIETRunner
+from mlia.tools.aiet_wrapper import DeviceInfo
 from mlia.tools.aiet_wrapper import estimate_performance
 from mlia.tools.aiet_wrapper import ExecutionParams
 from mlia.tools.aiet_wrapper import GenericInferenceOutputParser
 from mlia.tools.aiet_wrapper import get_aiet_runner
+from mlia.tools.aiet_wrapper import ModelInfo
 from mlia.tools.aiet_wrapper import PerformanceMetrics
 from mlia.tools.aiet_wrapper import save_random_input
 from mlia.utils.proc import RunningCommand
@@ -312,13 +311,13 @@ def test_save_random_input(
     "device, system, application, expected_error",
     [
         (
-            EthosU55(mac=32),
+            DeviceInfo(device_type="ethos-u55", mac=32),
             ("CS-300: Cortex-M55+Ethos-U55", True),
             ("Generic Inference Runner: Ethos-U55 SRAM", True),
             does_not_raise(),
         ),
         (
-            EthosU55(mac=32),
+            DeviceInfo(device_type="ethos-u55", mac=32),
             ("CS-300: Cortex-M55+Ethos-U55", False),
             ("Generic Inference Runner: Ethos-U55 SRAM", False),
             pytest.raises(
@@ -327,7 +326,7 @@ def test_save_random_input(
             ),
         ),
         (
-            EthosU55(mac=32),
+            DeviceInfo(device_type="ethos-u55", mac=32),
             ("CS-300: Cortex-M55+Ethos-U55", True),
             ("Generic Inference Runner: Ethos-U55 SRAM", False),
             pytest.raises(
@@ -337,13 +336,13 @@ def test_save_random_input(
             ),
         ),
         (
-            EthosU65(mac=512),
+            DeviceInfo(device_type="ethos-u65", mac=512),
             ("CS-300: Cortex-M55+Ethos-U65", True),
             ("Generic Inference Runner: Ethos-U65 Dedicated SRAM", True),
             does_not_raise(),
         ),
         (
-            EthosU65(mac=512),
+            DeviceInfo(device_type="ethos-u65", mac=512),
             ("CS-300: Cortex-M55+Ethos-U65", False),
             ("Generic Inference Runner: Ethos-U65 Dedicated SRAM", False),
             pytest.raises(
@@ -352,7 +351,7 @@ def test_save_random_input(
             ),
         ),
         (
-            EthosU65(mac=512),
+            DeviceInfo(device_type="ethos-u65", mac=512),
             ("CS-300: Cortex-M55+Ethos-U65", True),
             ("Generic Inference Runner: Ethos-U65 Dedicated SRAM", False),
             pytest.raises(
@@ -362,7 +361,7 @@ def test_save_random_input(
             ),
         ),
         (
-            "unknown_device",
+            DeviceInfo(device_type="unknown_device", mac=None),  # type: ignore
             ("some_system", False),
             ("some_application", False),
             pytest.raises(Exception, match="Unsupported device unknown_device"),
@@ -370,7 +369,7 @@ def test_save_random_input(
     ],
 )
 def test_estimate_performance(
-    device: EthosUConfiguration,
+    device: DeviceInfo,
     system: Tuple[str, bool],
     application: Tuple[str, bool],
     test_models_path: Path,
@@ -407,7 +406,7 @@ def test_estimate_performance(
 
     with expected_error:
         model = test_models_path / "simple_3_layers_model.tflite"
-        perf_metrics = estimate_performance(TFLiteModel(str(model)), device)
+        perf_metrics = estimate_performance(fill_model_info(model), device)
 
         assert isinstance(perf_metrics, PerformanceMetrics)
         assert perf_metrics.npu_axi0_rd_data_beat_received == 1
@@ -443,7 +442,8 @@ def test_estimate_performance_invalid_output(
 
     with pytest.raises(Exception, match="Unable to get performance metrics"):
         model = test_models_path / "simple_3_layers_model.tflite"
-        estimate_performance(TFLiteModel(str(model)), EthosU55())
+        model_info = fill_model_info(model)
+        estimate_performance(model_info, DeviceInfo(device_type="ethos-u55", mac=256))
 
 
 def test_get_aiet_runner() -> None:
@@ -459,3 +459,18 @@ def create_mock_process(stdout: List[str], stderr: List[str]) -> MagicMock:
     type(mock_process).stdout = PropertyMock(return_value=iter(stdout))
     type(mock_process).stderr = PropertyMock(return_value=iter(stderr))
     return mock_process
+
+
+def fill_model_info(model_path: Path) -> ModelInfo:
+    """Fill ModelInfo instance."""
+    tflite_model = TFLiteModel(model_path)
+    model_input = tflite_model.input_details()
+    model_input_shape, model_input_dtype = (
+        model_input[0]["shape"],
+        model_input[0]["dtype"],
+    )
+    return ModelInfo(
+        model_path=Path(tflite_model.model_path),
+        input_shape=model_input_shape,
+        input_dtype=model_input_dtype,
+    )

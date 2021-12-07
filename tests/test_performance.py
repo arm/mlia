@@ -53,12 +53,6 @@ def test_collect_performance_metrics(
 def mock_performance_estimation(monkeypatch: Any) -> None:
     """Mock performance estimation."""
     monkeypatch.setattr(
-        "mlia.tools.vela_wrapper.estimate_performance",
-        MagicMock(return_value=MagicMock()),
-    )
-    monkeypatch.setattr("mlia.tools.vela_wrapper.optimize_model", MagicMock())
-
-    monkeypatch.setattr(
         "mlia.tools.aiet_wrapper.estimate_performance",
         MagicMock(return_value=MagicMock()),
     )
