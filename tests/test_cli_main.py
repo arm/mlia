@@ -17,11 +17,11 @@ import pytest
 from mlia.cli.common import ExecutionContext
 from mlia.cli.main import CommandInfo
 from mlia.cli.main import main
-from mlia.config import EthosU55
-from mlia.metadata import Operators
-from mlia.metrics import MemoryUsage
-from mlia.metrics import NPUCycles
-from mlia.metrics import PerformanceMetrics
+from mlia.devices.ethosu.config import EthosU55
+from mlia.devices.ethosu.metadata import Operators
+from mlia.devices.ethosu.metrics import MemoryUsage
+from mlia.devices.ethosu.metrics import NPUCycles
+from mlia.devices.ethosu.metrics import PerformanceMetrics
 from mlia.optimizations.select import OptimizationSettings
 from mlia.utils.proc import working_directory
 
@@ -244,7 +244,7 @@ def mock_performance_estimation(monkeypatch: Any, verbose: bool = False) -> None
     )
 
     monkeypatch.setattr(
-        "mlia.performance.ethosu_performance_metrics",
+        "mlia.devices.ethosu.performance.ethosu_performance_metrics",
         MagicMock(return_value=perf_metrics),
     )
 

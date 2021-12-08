@@ -15,8 +15,8 @@ from typing import Union
 
 import pandas as pd
 from mlia.cli.options import get_device_opts
-from mlia.metadata import Operators
-from mlia.metrics import PerformanceMetrics
+from mlia.devices.ethosu.metadata import Operators
+from mlia.devices.ethosu.metrics import PerformanceMetrics
 from mlia.utils.general import is_keras_model
 
 

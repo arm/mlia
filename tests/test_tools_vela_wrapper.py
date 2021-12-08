@@ -7,7 +7,7 @@ from typing import Tuple
 import pytest
 from ethosu.vela.compiler_driver import TensorAllocator
 from ethosu.vela.scheduler import OptimizationStrategy
-from mlia.config import EthosU55
+from mlia.devices.ethosu.config import EthosU55
 from mlia.tools.vela_wrapper import estimate_performance
 from mlia.tools.vela_wrapper import generate_supported_operators_report
 from mlia.tools.vela_wrapper import ModelOperator

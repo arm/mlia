@@ -16,9 +16,9 @@ from mlia.cli.advice import advice_optimization_improvement_extended
 from mlia.cli.advice import advice_unsupported_operators
 from mlia.cli.advice import AdvisorContext
 from mlia.cli.advice import OptimizationResults
-from mlia.metadata import NpuSupported
-from mlia.metadata import Operator
-from mlia.metadata import Operators
+from mlia.devices.ethosu.metadata import NpuSupported
+from mlia.devices.ethosu.metadata import Operator
+from mlia.devices.ethosu.metadata import Operators
 
 
 @pytest.mark.parametrize(

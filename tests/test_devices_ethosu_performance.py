@@ -7,11 +7,11 @@ from unittest.mock import MagicMock
 import pytest
 from ethosu.vela.errors import InputFileError
 from mlia.config import Context
-from mlia.config import EthosU55
 from mlia.config import TFLiteModel
+from mlia.devices.ethosu.config import EthosU55
+from mlia.devices.ethosu.metrics import PerformanceMetrics
+from mlia.devices.ethosu.performance import collect_performance_metrics
 from mlia.exceptions import ConfigurationError
-from mlia.metrics import PerformanceMetrics
-from mlia.performance import collect_performance_metrics
 
 
 def test_collect_performance_metrics(

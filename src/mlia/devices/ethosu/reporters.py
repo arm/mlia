@@ -24,10 +24,10 @@ from mlia._typing import FileLike
 from mlia._typing import OutputFormat
 from mlia._typing import PathOrFileLike
 from mlia.cli.advice import Advice
-from mlia.config import EthosUConfiguration
-from mlia.metadata import Operator
-from mlia.metadata import Operators
-from mlia.metrics import PerformanceMetrics
+from mlia.devices.ethosu.config import EthosUConfiguration
+from mlia.devices.ethosu.metadata import Operator
+from mlia.devices.ethosu.metadata import Operators
+from mlia.devices.ethosu.metrics import PerformanceMetrics
 from mlia.reporting import BytesCell
 from mlia.reporting import Cell
 from mlia.reporting import ClockCell

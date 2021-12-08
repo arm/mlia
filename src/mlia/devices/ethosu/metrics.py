@@ -5,7 +5,7 @@ from enum import Enum
 from typing import Union
 
 import pandas as pd
-from mlia.config import EthosUConfiguration
+from mlia.devices.ethosu.config import EthosUConfiguration
 
 
 @dataclass

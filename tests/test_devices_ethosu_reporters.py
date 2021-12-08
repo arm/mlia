@@ -11,16 +11,16 @@ from typing import List
 from typing import Literal
 
 import pytest
-from mlia.config import EthosU55
-from mlia.metadata import NpuSupported
-from mlia.metadata import Operator
-from mlia.metrics import MemoryUsage
-from mlia.metrics import NPUCycles
-from mlia.metrics import PerformanceMetrics
-from mlia.reporters import produce_report
-from mlia.reporters import report_dataframe
-from mlia.reporters import report_operators
-from mlia.reporters import report_perf_metrics
+from mlia.devices.ethosu.config import EthosU55
+from mlia.devices.ethosu.metadata import NpuSupported
+from mlia.devices.ethosu.metadata import Operator
+from mlia.devices.ethosu.metrics import MemoryUsage
+from mlia.devices.ethosu.metrics import NPUCycles
+from mlia.devices.ethosu.metrics import PerformanceMetrics
+from mlia.devices.ethosu.reporters import produce_report
+from mlia.devices.ethosu.reporters import report_dataframe
+from mlia.devices.ethosu.reporters import report_operators
+from mlia.devices.ethosu.reporters import report_perf_metrics
 from mlia.reporting import Table
 
 

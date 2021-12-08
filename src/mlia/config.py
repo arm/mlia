@@ -6,15 +6,12 @@ import logging
 from abc import ABC
 from abc import abstractmethod
 from pathlib import Path
-from typing import Any
 from typing import cast
 from typing import Dict
 from typing import List
-from typing import Literal
 from typing import Union
 
 import tensorflow as tf
-from mlia.tools.vela_wrapper import VelaCompilerOptions
 from mlia.utils.general import convert_tf_to_tflite
 from mlia.utils.general import convert_to_tflite
 from mlia.utils.general import extract_if_archived
@@ -150,83 +147,6 @@ def get_keras_model(model: str, ctx: "Context") -> "KerasModel":
 
     converted_model = get_model(model, ctx)
     return converted_model.convert_to_keras(keras_model_path)
-
-
-class IPConfiguration:
-    """Base class for IP configuration."""
-
-
-class EthosUConfiguration(IPConfiguration):
-    """EthosU configuration."""
-
-    def __init__(
-        self,
-        ip_class: Literal["ethos-u55", "ethos-u65"],
-        mac: int,
-        compiler_options: VelaCompilerOptions,
-    ):
-        """Init EthosU configuration."""
-        self.ip_class = ip_class
-        self.mac = mac
-        self.compiler_options = compiler_options
-
-    def __str__(self) -> str:
-        """Return string representation."""
-        return (
-            f"EthosU ip_class={self.ip_class} "
-            f"mac={self.mac} "
-            f"compiler_options= {self.compiler_options}"
-        )
-
-
-class EthosU55(EthosUConfiguration):
-    """EthosU55 configuration."""
-
-    def __init__(self, mac: Literal[32, 64, 128, 256] = 256, **kwargs: Any) -> None:
-        """Init EthosU55 configuration."""
-        if not mac or mac not in (32, 64, 128, 256):
-            raise Exception("Wrong or empty MAC value")
-
-        super().__init__(
-            ip_class="ethos-u55",
-            mac=mac,
-            compiler_options=VelaCompilerOptions(
-                accelerator_config=f"ethos-u55-{mac}", **kwargs  # type: ignore
-            ),
-        )
-
-
-class EthosU65(EthosUConfiguration):
-    """EthosU65 configuration."""
-
-    def __init__(self, mac: Literal[256, 512] = 256, **kwargs: Any) -> None:
-        """Init EthosU65 configuration."""
-        if not mac or mac not in (256, 512):
-            raise Exception("Wrong or empty MAC value")
-
-        super().__init__(
-            ip_class="ethos-u65",
-            mac=mac,
-            compiler_options=VelaCompilerOptions(
-                accelerator_config=f"ethos-u65-{mac}", **kwargs  # type: ignore
-            ),
-        )
-
-
-def get_device(**kwargs: Any) -> IPConfiguration:
-    """Get device instance based on provided params."""
-    device = kwargs.pop("device", None)
-
-    if not device:
-        raise Exception("Device is not provided")
-
-    if device.lower() == "ethos-u55":
-        return EthosU55(**kwargs)
-
-    if device.lower() == "ethos-u65":
-        return EthosU65(**kwargs)
-
-    raise Exception(f"Unsupported device: {device}")
 
 
 class Context(ABC):

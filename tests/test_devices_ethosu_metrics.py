@@ -4,10 +4,10 @@ from typing import Union
 
 import pandas as pd
 import pytest
-from mlia.config import EthosU55
-from mlia.metrics import MemoryUsage
-from mlia.metrics import NPUCycles
-from mlia.metrics import PerformanceMetrics
+from mlia.devices.ethosu.config import EthosU55
+from mlia.devices.ethosu.metrics import MemoryUsage
+from mlia.devices.ethosu.metrics import NPUCycles
+from mlia.devices.ethosu.metrics import PerformanceMetrics
 
 
 @pytest.mark.parametrize(

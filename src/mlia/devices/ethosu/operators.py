@@ -3,13 +3,13 @@
 import logging
 from pathlib import Path
 
-from mlia.config import EthosUConfiguration
-from mlia.config import IPConfiguration
 from mlia.config import ModelConfiguration
 from mlia.config import TFLiteModel
-from mlia.metadata import NpuSupported
-from mlia.metadata import Operator
-from mlia.metadata import Operators
+from mlia.devices.ethosu.config import EthosUConfiguration
+from mlia.devices.ethosu.config import IPConfiguration
+from mlia.devices.ethosu.metadata import NpuSupported
+from mlia.devices.ethosu.metadata import Operator
+from mlia.devices.ethosu.metadata import Operators
 from mlia.tools import vela_wrapper
 
 
