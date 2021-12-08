@@ -10,8 +10,8 @@ from typing import List
 import numpy as np
 import pytest
 import tensorflow as tf
-from mlia.utils.tflite_metrics import ReportClusterMode
-from mlia.utils.tflite_metrics import TFLiteMetrics
+from mlia.nn.tensorflow.tflite_metrics import ReportClusterMode
+from mlia.nn.tensorflow.tflite_metrics import TFLiteMetrics
 
 
 def _dummy_keras_model() -> tf.keras.Model:

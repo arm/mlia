@@ -13,8 +13,8 @@ from typing import Optional
 
 import tensorflow as tf
 import tensorflow_model_optimization as tfmot
-from mlia.optimizations.common import Optimizer
-from mlia.optimizations.common import OptimizerConfiguration
+from mlia.nn.tensorflow.optimizations.common import Optimizer
+from mlia.nn.tensorflow.optimizations.common import OptimizerConfiguration
 from tensorflow_model_optimization.python.core.clustering.keras.experimental import (  # pylint: disable=no-name-in-module
     cluster as experimental_cluster,
 )

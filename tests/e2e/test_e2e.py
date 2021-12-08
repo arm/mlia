@@ -23,8 +23,8 @@ from mlia.cli.main import get_possible_command_names
 from mlia.cli.main import init_commands
 from mlia.cli.main import init_common_parser
 from mlia.cli.main import init_subcommand_parser
-from mlia.utils.general import is_list_of
 from mlia.utils.proc import working_directory
+from mlia.utils.types import is_list_of
 
 
 pytestmark = pytest.mark.e2e

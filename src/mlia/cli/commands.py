@@ -26,15 +26,15 @@ from mlia.cli.advice import OptimizationResults
 from mlia.cli.advice import produce_advice
 from mlia.cli.common import ExecutionContext
 from mlia.cli.options import parse_optimization_parameters
-from mlia.config import get_keras_model
-from mlia.config import get_tflite_model
 from mlia.devices.ethosu.config import get_device
 from mlia.devices.ethosu.operators import generate_supported_operators_report
 from mlia.devices.ethosu.operators import supported_operators
 from mlia.devices.ethosu.performance import collect_performance_metrics
 from mlia.devices.ethosu.reporters import get_reporter
-from mlia.optimizations.select import get_optimizer
-from mlia.optimizations.select import OptimizationSettings
+from mlia.nn.tensorflow.config import get_keras_model
+from mlia.nn.tensorflow.config import get_tflite_model
+from mlia.nn.tensorflow.optimizations.select import get_optimizer
+from mlia.nn.tensorflow.optimizations.select import OptimizationSettings
 from mlia.use_cases import compare_metrics
 from mlia.use_cases import optimize_and_compare
 

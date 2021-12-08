@@ -4,9 +4,9 @@ from typing import Any
 from typing import Tuple
 
 import pytest
-from mlia.config import TFLiteModel
 from mlia.devices.ethosu.config import EthosU55
 from mlia.devices.ethosu.operators import supported_operators
+from mlia.nn.tensorflow.config import TFLiteModel
 
 
 @pytest.mark.parametrize(

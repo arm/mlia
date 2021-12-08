@@ -16,7 +16,7 @@ from typing import Optional
 from typing import Union
 
 import pandas as pd
-from mlia.utils.general import is_list_of
+from mlia.utils.types import is_list_of
 from tabulate import tabulate
 
 

@@ -1,21 +1,14 @@
 # Copyright 2021, Arm Ltd.
 """Collection of useful functions for optimizations."""
 import logging
-import shutil
-from contextlib import contextmanager
-from contextlib import ExitStack
-from contextlib import redirect_stderr
-from contextlib import redirect_stdout
 from pathlib import Path
-from typing import Any
 from typing import Callable
-from typing import Generator
 from typing import Iterable
-from typing import Optional
 from typing import Union
 
 import numpy as np
 import tensorflow as tf
+from mlia.utils.logging import redirect_output
 from tensorflow.lite.python.interpreter import Interpreter
 
 
@@ -126,65 +119,6 @@ def deep_clone_model(model: tf.keras.Model) -> tf.keras.Model:
     cloned_model.set_weights(model.get_weights())
 
     return cloned_model
-
-
-class LoggerWriter:
-    """Redirect printed messages to the logger."""
-
-    def __init__(self, logger: logging.Logger, level: int):
-        """Init logger writer."""
-        self.logger = logger
-        self.level = level
-
-    def write(self, message: str) -> None:
-        """Write message."""
-        if message.strip() != "":
-            self.logger.log(self.level, message)
-
-    def flush(self) -> None:
-        """Flush buffers."""
-
-
-@contextmanager
-def redirect_output(
-    logger: logging.Logger,
-    stdout_level: int = logging.INFO,
-    stderr_level: int = logging.INFO,
-) -> Generator[None, None, None]:
-    """Redirect standard output to the logger."""
-    stdout_to_log = LoggerWriter(logger, stdout_level)
-    stderr_to_log = LoggerWriter(logger, stderr_level)
-
-    with ExitStack() as exit_stack:
-        exit_stack.enter_context(redirect_stdout(stdout_to_log))  # type: ignore
-        exit_stack.enter_context(redirect_stderr(stderr_to_log))  # type: ignore
-
-        yield
-
-
-def is_list_of(data: Any, cls: type, elem_num: Optional[int] = None) -> bool:
-    """Check if data is a list of object of the same class."""
-    return (
-        isinstance(data, (tuple, list))
-        and all(isinstance(item, cls) for item in data)
-        and (elem_num is None or len(data) == elem_num)
-    )
-
-
-def extract_if_archived(
-    in_path: Union[Path, str], save_path: Union[str, Path]
-) -> Union[Path, str]:
-    """Extract if archived, return extracted path.
-
-    If not archived, do nothing and return original path.
-    """
-    in_path = Path(in_path)
-
-    try:
-        shutil.unpack_archive(in_path, save_path)
-        return save_path
-    except (shutil.ReadError, ValueError):
-        return in_path
 
 
 def is_tflite_model(model: Union[Path, str]) -> bool:

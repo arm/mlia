@@ -6,12 +6,14 @@ from typing import Optional
 
 import pytest
 import tensorflow as tf
-from mlia.optimizations.clustering import Clusterer
-from mlia.optimizations.clustering import ClusteringConfiguration
-from mlia.optimizations.pruning import Pruner
-from mlia.optimizations.pruning import PruningConfiguration
-from mlia.utils import general as test_utils
-from mlia.utils import tflite_metrics
+from mlia.nn.tensorflow.optimizations.clustering import Clusterer
+from mlia.nn.tensorflow.optimizations.clustering import ClusteringConfiguration
+from mlia.nn.tensorflow.optimizations.pruning import Pruner
+from mlia.nn.tensorflow.optimizations.pruning import PruningConfiguration
+from mlia.nn.tensorflow.tflite_metrics import ReportClusterMode
+from mlia.nn.tensorflow.tflite_metrics import TFLiteMetrics
+from mlia.nn.tensorflow.utils import convert_to_tflite
+from mlia.nn.tensorflow.utils import save_tflite_model
 
 from tests.utils.common import get_dataset
 from tests.utils.common import train_model
@@ -42,12 +44,12 @@ def _prune_model(
 
 
 def _test_num_unique_weights(
-    metrics: tflite_metrics.TFLiteMetrics,
+    metrics: TFLiteMetrics,
     target_num_clusters: int,
     layers_to_cluster: Optional[List[str]],
 ) -> None:
     clustered_uniqueness_dict = metrics.num_unique_weights(
-        tflite_metrics.ReportClusterMode.NUM_CLUSTERS_PER_AXIS
+        ReportClusterMode.NUM_CLUSTERS_PER_AXIS
     )
     num_clustered_layers = 0
     num_optimizable_layers = len(clustered_uniqueness_dict)
@@ -66,7 +68,7 @@ def _test_num_unique_weights(
 
 
 def _test_sparsity(
-    metrics: tflite_metrics.TFLiteMetrics,
+    metrics: TFLiteMetrics,
     target_sparsity: float,
     layers_to_cluster: Optional[List[str]],
 ) -> None:
@@ -117,9 +119,9 @@ def test_cluster_simple_model_fully(
     clustered_model = clusterer.get_model()
 
     temp_file = tmp_path / "test_cluster_simple_model_fully_after.tflite"
-    tflite_clustered_model = test_utils.convert_to_tflite(clustered_model)
-    test_utils.save_tflite_model(tflite_clustered_model, temp_file)
-    clustered_tflite_metrics = tflite_metrics.TFLiteMetrics(str(temp_file))
+    tflite_clustered_model = convert_to_tflite(clustered_model)
+    save_tflite_model(tflite_clustered_model, temp_file)
+    clustered_tflite_metrics = TFLiteMetrics(str(temp_file))
 
     _test_num_unique_weights(
         clustered_tflite_metrics, target_num_clusters, layers_to_cluster

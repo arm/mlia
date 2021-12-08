@@ -12,7 +12,7 @@ from unittest.mock import PropertyMock
 
 import numpy as np
 import pytest
-from mlia.config import TFLiteModel
+from mlia.nn.tensorflow.config import TFLiteModel
 from mlia.tools.aiet_wrapper import AIETRunner
 from mlia.tools.aiet_wrapper import DeviceInfo
 from mlia.tools.aiet_wrapper import estimate_performance

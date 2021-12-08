@@ -6,14 +6,14 @@ from typing import Tuple
 import pandas as pd
 import tensorflow as tf
 from mlia.config import Context
-from mlia.config import TFLiteModel
 from mlia.devices.ethosu.config import IPConfiguration
 from mlia.devices.ethosu.metrics import PerformanceMetrics
 from mlia.devices.ethosu.performance import collect_performance_metrics
-from mlia.optimizations.common import Optimizer
-from mlia.utils.general import convert_to_tflite
-from mlia.utils.general import save_keras_model
-from mlia.utils.general import save_tflite_model
+from mlia.nn.tensorflow.config import TFLiteModel
+from mlia.nn.tensorflow.optimizations.common import Optimizer
+from mlia.nn.tensorflow.utils import convert_to_tflite
+from mlia.nn.tensorflow.utils import save_keras_model
+from mlia.nn.tensorflow.utils import save_tflite_model
 
 logger = logging.getLogger(__name__)
 

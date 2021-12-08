@@ -3,11 +3,10 @@
 from pathlib import Path
 
 import pytest
-from mlia.cli.common import ExecutionContext
-from mlia.config import get_model
-from mlia.config import KerasModel
-from mlia.config import TFLiteModel
-from mlia.config import TfModel
+from mlia.nn.tensorflow.config import get_model
+from mlia.nn.tensorflow.config import KerasModel
+from mlia.nn.tensorflow.config import TFLiteModel
+from mlia.nn.tensorflow.config import TfModel
 
 
 def test_convert_keras_to_tflite(test_models_path: Path, tmp_path: Path) -> None:
@@ -42,11 +41,9 @@ def test_convert_tf_to_tflite(test_models_path: Path, tmp_path: Path) -> None:
         ("test.hdf5", KerasModel),
     ],
 )
-def test_get_model_file(
-    model_path: str, expected_type: type, dummy_context: ExecutionContext
-) -> None:
+def test_get_model_file(model_path: str, expected_type: type) -> None:
     """Test TFLite model type."""
-    model = get_model(model_path, ctx=dummy_context)
+    model = get_model(model_path)
     assert isinstance(model, expected_type)
 
 
@@ -54,11 +51,8 @@ def test_get_model_file(
     "model_path, expected_type", [("tf_model_simple_3_layers_model", TfModel)]
 )
 def test_get_model_dir(
-    test_models_path: Path,
-    model_path: str,
-    expected_type: type,
-    dummy_context: ExecutionContext,
+    test_models_path: Path, model_path: str, expected_type: type
 ) -> None:
     """Test TFLite model type."""
-    model = get_model(str(test_models_path / model_path), ctx=dummy_context)
+    model = get_model(str(test_models_path / model_path))
     assert isinstance(model, expected_type)

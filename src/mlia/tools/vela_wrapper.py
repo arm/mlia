@@ -35,7 +35,7 @@ from ethosu.vela.tflite_model_semantic import TFLiteSemantic
 from ethosu.vela.tflite_supported_operators import TFLiteSupportedOperators
 from ethosu.vela.tflite_writer import write_tflite
 from ethosu.vela.vela import generate_supported_ops
-from mlia.utils.general import redirect_output
+from mlia.utils.logging import redirect_output
 
 
 logger = logging.getLogger(__name__)

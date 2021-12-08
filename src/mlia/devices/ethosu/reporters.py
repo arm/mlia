@@ -42,8 +42,8 @@ from mlia.reporting import ReportItem
 from mlia.reporting import SingleRow
 from mlia.reporting import Table
 from mlia.tools.vela_wrapper import resolve_compiler_config
-from mlia.utils.general import is_list_of
-from mlia.utils.general import LoggerWriter
+from mlia.utils.logging import LoggerWriter
+from mlia.utils.types import is_list_of
 
 
 logger = logging.getLogger(__name__)

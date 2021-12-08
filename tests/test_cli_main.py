@@ -22,7 +22,7 @@ from mlia.devices.ethosu.metadata import Operators
 from mlia.devices.ethosu.metrics import MemoryUsage
 from mlia.devices.ethosu.metrics import NPUCycles
 from mlia.devices.ethosu.metrics import PerformanceMetrics
-from mlia.optimizations.select import OptimizationSettings
+from mlia.nn.tensorflow.optimizations.select import OptimizationSettings
 from mlia.utils.proc import working_directory
 
 from tests.utils.logging import clear_loggers

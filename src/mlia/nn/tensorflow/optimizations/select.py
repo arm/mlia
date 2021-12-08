@@ -7,15 +7,15 @@ from typing import Tuple
 from typing import Union
 
 import tensorflow as tf
-from mlia.config import KerasModel
 from mlia.exceptions import ConfigurationError
-from mlia.optimizations.clustering import Clusterer
-from mlia.optimizations.clustering import ClusteringConfiguration
-from mlia.optimizations.common import Optimizer
-from mlia.optimizations.common import OptimizerConfiguration
-from mlia.optimizations.pruning import Pruner
-from mlia.optimizations.pruning import PruningConfiguration
-from mlia.utils.general import is_list_of
+from mlia.nn.tensorflow.config import KerasModel
+from mlia.nn.tensorflow.optimizations.clustering import Clusterer
+from mlia.nn.tensorflow.optimizations.clustering import ClusteringConfiguration
+from mlia.nn.tensorflow.optimizations.common import Optimizer
+from mlia.nn.tensorflow.optimizations.common import OptimizerConfiguration
+from mlia.nn.tensorflow.optimizations.pruning import Pruner
+from mlia.nn.tensorflow.optimizations.pruning import PruningConfiguration
+from mlia.utils.types import is_list_of
 
 
 class OptimizationSettings(NamedTuple):

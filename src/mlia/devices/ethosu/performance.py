@@ -6,14 +6,14 @@ from pathlib import Path
 import mlia.tools.aiet_wrapper as aiet
 import mlia.tools.vela_wrapper as vela
 from mlia.config import Context
-from mlia.config import ModelConfiguration
-from mlia.config import TFLiteModel
 from mlia.devices.ethosu.config import EthosUConfiguration
 from mlia.devices.ethosu.config import IPConfiguration
 from mlia.devices.ethosu.metrics import MemoryUsage
 from mlia.devices.ethosu.metrics import NPUCycles
 from mlia.devices.ethosu.metrics import PerformanceMetrics
 from mlia.exceptions import ConfigurationError
+from mlia.nn.tensorflow.config import ModelConfiguration
+from mlia.nn.tensorflow.config import TFLiteModel
 
 
 logger = logging.getLogger(__name__)

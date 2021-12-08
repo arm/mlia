@@ -8,13 +8,13 @@ from typing import Tuple
 
 import pytest
 import tensorflow as tf
-from mlia.optimizations.clustering import Clusterer
-from mlia.optimizations.clustering import ClusteringConfiguration
-from mlia.optimizations.pruning import Pruner
-from mlia.optimizations.pruning import PruningConfiguration
-from mlia.optimizations.select import get_optimizer
-from mlia.optimizations.select import MultiStageOptimizer
-from mlia.optimizations.select import OptimizationSettings
+from mlia.nn.tensorflow.optimizations.clustering import Clusterer
+from mlia.nn.tensorflow.optimizations.clustering import ClusteringConfiguration
+from mlia.nn.tensorflow.optimizations.pruning import Pruner
+from mlia.nn.tensorflow.optimizations.pruning import PruningConfiguration
+from mlia.nn.tensorflow.optimizations.select import get_optimizer
+from mlia.nn.tensorflow.optimizations.select import MultiStageOptimizer
+from mlia.nn.tensorflow.optimizations.select import OptimizationSettings
 
 
 @pytest.mark.parametrize(
