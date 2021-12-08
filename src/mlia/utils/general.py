@@ -1,6 +1,7 @@
 # Copyright 2021, Arm Ltd.
 """Collection of useful functions for optimizations."""
 import logging
+import shutil
 from contextlib import contextmanager
 from contextlib import ExitStack
 from contextlib import redirect_stderr
@@ -170,6 +171,22 @@ def is_list_of(data: Any, cls: type, elem_num: Optional[int] = None) -> bool:
     )
 
 
+def extract_if_archived(
+    in_path: Union[Path, str], save_path: Union[str, Path]
+) -> Union[Path, str]:
+    """Extract if archived, return extracted path.
+
+    If not archived, do nothing and return original path.
+    """
+    in_path = Path(in_path)
+
+    try:
+        shutil.unpack_archive(in_path, save_path)
+        return save_path
+    except (shutil.ReadError, ValueError):
+        return in_path
+
+
 def is_tflite_model(model: Union[Path, str]) -> bool:
     """Check if model type is supported by TFLite API.
 
@@ -183,11 +200,12 @@ def is_keras_model(model: Union[Path, str]) -> bool:
     """Check if model type is supported by Keras API.
 
     Keras is model is indicated by:
-        1. if its directory (meaning saved model),
+        1. if it's a directory (meaning saved model),
              it should contain keras_metadata.pb file
         2. or if the model file extension .h5/.hdf5
     """
     model_path = Path(model)
+
     if model_path.is_dir():
         return (model_path / "keras_metadata.pb").exists()
     return model_path.suffix == ".h5" or model_path.suffix == ".hdf5"

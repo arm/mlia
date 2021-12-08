@@ -18,6 +18,7 @@ from typing import Union
 import tensorflow as tf
 from mlia.utils.general import convert_tf_to_tflite
 from mlia.utils.general import convert_to_tflite
+from mlia.utils.general import extract_if_archived
 from mlia.utils.general import is_keras_model
 from mlia.utils.general import is_tf_model
 from mlia.utils.general import is_tflite_model
@@ -109,11 +110,22 @@ class TfModel(ModelConfiguration):  # pylint: disable=abstract-method
 
         return TFLiteModel(tflite_model_path)
 
+    def convert_to_keras(self, keras_model_path: Union[str, Path]) -> "KerasModel":
+        """Print error."""
+        raise Exception(
+            "TfModel cannot be converted into Keras Model. \n"
+            "Please ensure that you are saving the model with "
+            "model.save() or tf.keras.models.save_model(), "
+            "NOT tf.saved_model.save(). \n"
+            "To confirm, there should be a file named "
+            "'keras_metadata.pb' in the SavedModel directory."
+        )
 
-def get_model(
-    model: str,
-) -> "ModelConfiguration":
+
+def get_model(model: Union[Path, str], ctx: "Context") -> "ModelConfiguration":
     """Return the model object."""
+    extracted_model_path = ctx.get_model_path("extracted_model")
+    model = extract_if_archived(model, extracted_model_path)
     if is_tflite_model(model):
         return TFLiteModel(model)
     if is_keras_model(model):
@@ -129,7 +141,7 @@ def get_model(
 def get_tflite_model(model: str, ctx: "Context") -> "TFLiteModel":
     """Convert input model to tflite and returns TFLiteModel object."""
     tflite_model_path = str(ctx.get_model_path("converted_model.tflite"))
-    converted_model = get_model(model)
+    converted_model = get_model(model, ctx)
     return converted_model.convert_to_tflite(tflite_model_path, True)
 
 
@@ -137,7 +149,7 @@ def get_keras_model(model: str, ctx: "Context") -> "KerasModel":
     """Convert input model to Keras and returns KerasModel object."""
     keras_model_path = str(ctx.get_model_path("converted_model.h5"))
 
-    converted_model = get_model(model)
+    converted_model = get_model(model, ctx)
     return converted_model.convert_to_keras(keras_model_path)
 
 

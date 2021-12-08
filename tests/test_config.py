@@ -3,6 +3,7 @@
 from pathlib import Path
 
 import pytest
+from mlia.cli.common import ExecutionContext
 from mlia.config import CompilerOptions
 from mlia.config import EthosU55
 from mlia.config import EthosU65
@@ -111,9 +112,11 @@ def test_convert_tf_to_tflite(test_models_path: Path, tmp_path: Path) -> None:
         ("test.hdf5", KerasModel),
     ],
 )
-def test_get_model_file(model_path: str, expected_type: type) -> None:
+def test_get_model_file(
+    model_path: str, expected_type: type, dummy_context: ExecutionContext
+) -> None:
     """Test TFLite model type."""
-    model = get_model(model_path)
+    model = get_model(model_path, ctx=dummy_context)
     assert isinstance(model, expected_type)
 
 
@@ -121,8 +124,11 @@ def test_get_model_file(model_path: str, expected_type: type) -> None:
     "model_path, expected_type", [("tf_model_simple_3_layers_model", TfModel)]
 )
 def test_get_model_dir(
-    test_models_path: Path, model_path: str, expected_type: type
+    test_models_path: Path,
+    model_path: str,
+    expected_type: type,
+    dummy_context: ExecutionContext,
 ) -> None:
     """Test TFLite model type."""
-    model = get_model(str(test_models_path / model_path))
+    model = get_model(str(test_models_path / model_path), ctx=dummy_context)
     assert isinstance(model, expected_type)

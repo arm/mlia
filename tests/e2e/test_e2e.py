@@ -155,6 +155,7 @@ def install_aiet_artifacts(
 def get_config_dir() -> Optional[Path]:
     """Get configuration directory path."""
     if not (config_dir := os.environ.get("MLIA_E2E_CONFIG")):
+        print("Config directory (MLIA_E2E_CONFIG) not set.")
         return None
 
     if not (config_dir_path := Path(config_dir)).is_dir():
