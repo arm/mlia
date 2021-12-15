@@ -385,7 +385,11 @@ class TestEndToEnd:
         install_dir_path = tmp_path / test_dir
 
         self.run_install_script_test(
-            "install_new.sh", ["-f", str(fvp_path)], install_dir_path, tmp_path, []
+            "install_new.sh",
+            ["-f", str(fvp_path), "-d", str(install_dir_path)],
+            install_dir_path,
+            tmp_path,
+            self.partial_commands_list,
         )
 
     @pytest.mark.parametrize(

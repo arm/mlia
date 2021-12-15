@@ -4,7 +4,17 @@ set -e
 
 # === GLOBAL VARIABLES ===
 
-# Temp path where all the dependencies will be downloaded
+# Required Python version
+PYTHON_REQUIRED_MAJOR_VERSION=3
+PYTHON_REQUIRED_MINOR_VERSION=8
+PYTHON_REQUIRED_VERSION="$PYTHON_REQUIRED_MAJOR_VERSION.$PYTHON_REQUIRED_MINOR_VERSION"
+
+# Current Python version
+PYTHON_MAJOR_VERSION=$(python3 -c 'import sys; print(sys.version_info.major)')
+PYTHON_MINOR_VERSION=$(python3 -c 'import sys; print(sys.version_info.minor)')
+PYTHON_VERSION="$PYTHON_MAJOR_VERSION.$PYTHON_MINOR_VERSION"
+
+# Default temp path where all the dependencies will be downloaded
 PACKAGE_DIR=$(mktemp -d -t mlia-XXXXXX)
 
 # FVP Corstone-300 Ecosystem instance params
@@ -14,6 +24,8 @@ CS_300_FVP_DEFAULT_PATHS=("/opt/$CS_300_FVP_DIRECTORY" \
                           "$HOME/$CS_300_FVP_DIRECTORY" \
                           "$PWD/$CS_300_FVP_DIRECTORY")
 CS_300_FVP_MODELS_PATH="models/Linux64_GCC-6.4"
+CS_300_FVP_AIET_CONFIG_NAME="aiet-config.json"
+CS_300_FVP_AIET_CONFIG_RELATIVE_PATH="resources/aiet/system/cs-300"
 CS_300_FVP_VALID_PATH=""
 
 # Name of the virtual environment directory
@@ -28,7 +40,7 @@ VERBOSE=0
 # === FUNCTIONS ===
 
 log() {
-    echo "$@"
+    echo -e "$@"
 }
 
 verbose () {
@@ -39,7 +51,7 @@ verbose () {
 
 error() {
     # shellcheck disable=SC2145
-    log -e "ERROR: $@\n"
+    log "ERROR: $@"
 }
 
 check_fvp_instance() {
@@ -112,65 +124,75 @@ check_fvp_path() {
 }
 
 init_packages() {
-    AIET_PACKAGE="$PACKAGE_DIR/aiet-21.9.0-py3-none-any.whl"
-    MLIA_PACKAGE="$PACKAGE_DIR/mlia-0.1-py3-none-any.whl"
-
-    CORSTONE_PACKAGE="$PACKAGE_DIR/fvp_corstone_sse-300_ethos-u55-21.08.0.tar.gz"
-    CORSTONE_PACKAGE_APPS="$PACKAGE_DIR/ethosu_eval_platform_release_aiet-21.08.0.tar.gz"
-
-    SGM_PACKAGE="$PACKAGE_DIR/sgm775_ethosu_platform-21.03.0.tar.gz"
-    SGM_PACKAGE_OSS="$PACKAGE_DIR/sgm775_ethosu_platform-21.08.0-oss.tar.gz"
-    SGM_PACKAGE_DIR="$PACKAGE_DIR/sgm775_ethosu_platform"
-    SGM_PACKAGE_APPS="$PACKAGE_DIR/ethosU65_eval_app-21.08.0.tar.gz"
+    AIET_PACKAGE="$PACKAGE_DIR/aiet-21.12.1-py3-none-any.whl"
+    MLIA_PACKAGE="$PACKAGE_DIR/mlia-0.1.1-py3-none-any.whl"
+    CORSTONE_PACKAGE_APPS="$PACKAGE_DIR/ethosu_eval_platform_release_aiet-21.11.1.tar.gz"
 }
 
-check_package() {
+check_path() {
     if [ -z "$1" ]; then
-        error "Configuration error"
+        error "No path specified to check"
         usage
     fi
 
-    if [ ! -f "$1" ]; then
-        error "Package $1 does not exist. Exiting ..."
+    if [ ! -d "$1" ]; then
+        error "Path $1 does not exist or it's not a directory. Exiting ..."
         exit 1
     fi
 }
 
+check_file() {
+    if [ -z "$1" ]; then
+        error "No file specified to check"
+        usage
+    fi
+
+    if [ ! -f "$1" ]; then
+        error "File $1 does not exist. Exiting ..."
+        exit 1
+    fi
+}
+
+check_package() {
+    if [ -z "$1" ]; then
+        error "No package specified to check"
+        usage
+    fi
+
+    check_file "$1"
+}
+
 check_packages() {
     check_package "$AIET_PACKAGE"
-
-    check_package "$CORSTONE_PACKAGE"
-    check_package "$CORSTONE_PACKAGE_APPS"
-
-    check_package "$SGM_PACKAGE"
-    check_package "$SGM_PACKAGE_OSS"
-    check_package "$SGM_PACKAGE_APPS"
-
     check_package "$MLIA_PACKAGE"
+    check_package "$CORSTONE_PACKAGE_APPS"
 }
 
 create_and_init_virtual_env() {
-    # shellcheck disable=SC2086
-    virtualenv -p python3 $VIRT_ENV_OPTIONS "$1"
+    # Create the virtual environment
+    python3 -m venv "$1"
+
+    # Activate the virtual environment
     # shellcheck disable=SC1091
     source "$1/bin/activate"
+
+    # Update setuptools in the virtual environment
+    pip install -U pip setuptools
 }
 
 install_aiet() {
-    # shellcheck disable=SC2086
+    # Install the AI Evaluation Toolkit, but not the systems or the applications
     pip $PIP_OPTIONS install "$AIET_PACKAGE"
+}
 
-    aiet system install -s "$CORSTONE_PACKAGE"
-    aiet software install -s "$CORSTONE_PACKAGE_APPS"
-
-    tar xzf "$SGM_PACKAGE" -C "$PACKAGE_DIR"
-    tar xzf "$SGM_PACKAGE_OSS" -C "$PACKAGE_DIR"
-    aiet system install -s "$SGM_PACKAGE_DIR"
-    aiet software install -s "$SGM_PACKAGE_APPS"
+configure_aiet() {
+    # Install the AI Evaluation Toolkit systems and applications
+    aiet system install -s "$CS_300_FVP_VALID_PATH"
+    aiet application install -s "$CORSTONE_PACKAGE_APPS"
 }
 
 install_mlia() {
-    # shellcheck disable=SC2086
+    # Install the Inference Advisor
     pip $PIP_OPTIONS install "$MLIA_PACKAGE"
 }
 
@@ -183,16 +205,17 @@ This script creates a virtual environment and installs the required packages:
   - $CS_300_FVP_NAME
   - Ethos-U55/65 Generic Inference Runner
 
-Usage: $0 [-v] -f fvp_path -e venv_dir
+Usage: $0 [-v] [-f fvp_path] [-d package_dir] -e venv_dir
 
 Options:
   -h Print this help message and exit
-  -v Enable verbose output
-  -f Path to a local instance of the $CS_300_FVP_NAME
+  -v [optional] Enable verbose output
+  -f [optional] Path to a local instance of the $CS_300_FVP_NAME
      If not specified, the script will check in the following locations in that order:
       1. /opt/FVP_Corstone_SSE-300
       2. $HOME/FVP_Corstone_SSE-300
       3. $PWD/FVP_Corstone_SSE-300
+  -d [optional] Path to the directory where to download the install packages
   -e The name of the virtual environment directory
   "
 
@@ -202,11 +225,24 @@ Options:
 
 # === ENTRY POINT ===
 
+# Check the Python version
+if [[ $PYTHON_MAJOR_VERSION -lt $PYTHON_REQUIRED_MAJOR_VERSION ]]; then
+    error "The minimum Python version required is $PYTHON_REQUIRED_VERSION, you have $PYTHON_VERSION"
+    exit 1
+fi
+if [[ $PYTHON_MINOR_VERSION -lt $PYTHON_REQUIRED_MINOR_VERSION ]]; then
+    error "The minimum Python version required is $PYTHON_REQUIRED_VERSION, you have $PYTHON_VERSION"
+    exit 1
+fi
+
 # Argument parsing
-while getopts "hvf:e:" o; do
+while getopts "hvf:e:d:" o; do
     case "${o}" in
         f)
             CS_300_FVP_PATH=${OPTARG}
+            ;;
+        d)
+            PACKAGE_DIR=${OPTARG}
             ;;
         e)
             VENV_PATH=${OPTARG}
@@ -231,6 +267,16 @@ if [ -n "$CS_300_FVP_PATH" ] && [ ! -d "$CS_300_FVP_PATH" ]; then
     usage
 fi
 
+if [ -z "$PACKAGE_DIR" ]; then
+    error "No package directory provided"
+    usage
+fi
+
+if [ ! -d "$PACKAGE_DIR" ]; then
+    error "\"$PACKAGE_DIR\" is not a directory"
+    usage
+fi
+
 if [ -z "$VENV_PATH" ]; then
     error "No directory provided for the virtual environment"
     usage
@@ -242,12 +288,12 @@ if [ -d "$VENV_PATH" ]; then
 fi
 
 # Installation process
-log "Installing the Inference Advisor and its dependencies ..."
+log "\nInstalling the Inference Advisor and its dependencies ..."
 
-log "Creating virtual environment \"$VENV_PATH\" ..."
+log "\nCreating virtual environment \"$VENV_PATH\" ..."
 create_and_init_virtual_env "$VENV_PATH"
 
-log "Checking local $CS_300_FVP_NAME instance ..."
+log "\nChecking local $CS_300_FVP_NAME instance ..."
 check_fvp_path "$CS_300_FVP_PATH"
 # Check if a valid FVP instance has been found
 if [ -z "$CS_300_FVP_VALID_PATH" ]; then
@@ -258,12 +304,51 @@ if [ -z "$CS_300_FVP_VALID_PATH" ]; then
     exit 0
 fi
 
-log "Using the local instance of the $CS_300_FVP_NAME at \"$CS_300_FVP_VALID_PATH\""
+log "\nUsing the local instance of the $CS_300_FVP_NAME at \"$CS_300_FVP_VALID_PATH\" ..."
 
-# TODO Add the next install steps here
+# TODO Download the Inference Advisor
+# TODO Download the AI Evaluation Toolkit
 
-log "Installation complete"
-log "Please activate the virtual environment \"$VENV_PATH\" to start working with the ML Inference Advisor"
+verbose "Checking packages ..."
+init_packages "$PACKAGE_DIR"
+check_packages
+
+log "\nInstalling the AI Evaluation Toolkit ..."
+# The AI Evaluation Toolkit has to be installed first (before the Inference Advisor)
+# due to a less strict dependency from Vela than that the Inference Advisor, but without
+# installing the systems and the applications just yet. Installing the systems requires
+# the configuration files included in the Inference Advisor
+install_aiet
+
+log "\nInstalling the ML Inference Advisor ..."
+# The Inference Advisor has to be installed after the AI Evaluation Toolkit, since it has
+# a stronger dependency on Vela
+install_mlia
+
+# Get the Inference Advisor install path (i.e. its location in site-packages)
+MLIA_PACKAGE_PATH=$(python3 -c "import os, mlia; print(os.path.dirname(mlia.__file__))")
+check_path "$MLIA_PACKAGE_PATH"
+verbose "MLIA package found at \"$MLIA_PACKAGE_PATH\""
+
+verbose "Checking the $CS_300_FVP_NAME configuration file ... "
+# Check that the configuration file for the AI Evaluation Toolkit system is included in
+# the Inference Advisor
+CS_300_FVP_AIET_CONFIG_PATH="$MLIA_PACKAGE_PATH/$CS_300_FVP_AIET_CONFIG_RELATIVE_PATH"
+CS_300_FVP_AIET_CONFIG="$CS_300_FVP_AIET_CONFIG_PATH/$CS_300_FVP_AIET_CONFIG_NAME"
+check_file "$CS_300_FVP_AIET_CONFIG"
+
+# Prepare the FVP package for AIET
+log "\nInitializing the $CS_300_FVP_NAME instance at \"$CS_300_FVP_VALID_PATH\" ..."
+# Copy the AIET configuration file to the FVP directory
+cp -f "$CS_300_FVP_AIET_CONFIG" "$CS_300_FVP_VALID_PATH"
+
+log "\nConfiguring the AI Evaluation Toolkit ..."
+# Installing the AI Evaluation Toolkit systems and applications using the configuration file
+# included in the Inference Advisor
+configure_aiet
+
+log "\nInstallation complete"
+log "Please activate the virtual environment \"$VENV_PATH\" to start working with the ML Inference Advisor [source $VENV_PATH/bin/activate]"
 
 # All done
 exit 0

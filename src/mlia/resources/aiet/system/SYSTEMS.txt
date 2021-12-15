@@ -1,0 +1,5 @@
+This directory contains the configuration files of the systems for the IPSS-ML middleware (AIET)
+
+Supported systems:
+
+ * FVP Corstone-300 Ecosystem

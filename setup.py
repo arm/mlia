@@ -28,12 +28,14 @@ setup(
     long_description=_readme(),
     packages=find_packages("src"),
     package_dir={"": "src"},
+    include_package_data=True,
     entry_points={"console_scripts": ["mlia = mlia.cli.main:main"]},
     scripts=[
         #        "scripts/foo.sh",
     ],
     setup_requires=["setuptools_scm"],
     install_requires=_install_requirements(),
-    maintainer="ML Inference Advisor",
-    maintainer_email="matteo.martincigh@arm.com",
+    maintainer="Arm Ltd",
+    url="https://www.arm.com",
+    maintainer_email="support-esl@arm.com",
 )
