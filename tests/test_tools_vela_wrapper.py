@@ -258,7 +258,6 @@ def test_estimate_performance(test_models_path: Path) -> None:
     assert isinstance(perf_metrics, PerformanceMetrics)
 
 
-@pytest.mark.skip("Failed with Vela 3.1, further investigation is needed")
 def test_estimate_performance_already_optimized(
     test_models_path: Path, tmpdir: Any
 ) -> None:
