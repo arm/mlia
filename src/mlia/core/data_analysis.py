@@ -33,7 +33,11 @@ class DataAnalyzer(ABC):
 
 
 class ContextAwareDataAnalyzer(DataAnalyzer, ContextMixin):
-    """Context aware data analyzer."""
+    """Context aware data analyzer.
+
+    This class makes easier access to the Context object. Context object could
+    be automatically injected during workflow configuration.
+    """
 
 
 @dataclass
