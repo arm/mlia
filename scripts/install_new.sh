@@ -17,7 +17,19 @@ PYTHON_VERSION="$PYTHON_MAJOR_VERSION.$PYTHON_MINOR_VERSION"
 # Default temp path where all the dependencies will be downloaded
 PACKAGE_DIR=$(mktemp -d -t mlia-XXXXXX)
 
-# FVP Corstone-300 Ecosystem instance params
+# ML Inference Advisor params
+MLIA_NAME="ML Inference Advisor"
+MLIA_VERSION="0.1.1"
+MLIA_WHEEL_FILE="mlia-$MLIA_VERSION-py3-none-any.whl"
+MLIA_URL="https://artifactory.eu02.arm.com:443/artifactory/ml-tooling.pypi-local/mlia/$MLIA_VERSION/$MLIA_WHEEL_FILE"
+
+# AI Evaluation Toolkit params
+AIET_NAME="AI Evaluation Toolkit"
+AIET_VERSION="21.12.1"
+AIET_WHEEL_FILE="aiet-$AIET_VERSION-py3-none-any.whl"
+AIET_URL="https://artifactory.eu02.arm.com:443/artifactory/ml-tooling.pypi-local/aiet/$AIET_VERSION/$AIET_WHEEL_FILE"
+
+# FVP Corstone-300 Ecosystem params
 CS_300_FVP_NAME="FVP Corstone-300 Ecosystem"
 CS_300_FVP_DIRECTORY="FVP_Corstone_SSE-300"
 CS_300_FVP_DEFAULT_PATHS=("/opt/$CS_300_FVP_DIRECTORY" \
@@ -197,11 +209,11 @@ install_mlia() {
 }
 
 usage() {
-    USAGE_NOTE="ML Inference Advisor installation script
+    USAGE_NOTE="$MLIA_NAME installation script
 
 This script creates a virtual environment and installs the required packages:
-  - ML Inference Advisor
-  - AI Evaluation Toolkit
+  - $MLIA_NAME
+  - $AIET_NAME
   - $CS_300_FVP_NAME
   - Ethos-U55/65 Generic Inference Runner
 
@@ -288,7 +300,7 @@ if [ -d "$VENV_PATH" ]; then
 fi
 
 # Installation process
-log "\nInstalling the Inference Advisor and its dependencies ..."
+log "\nInstalling the $MLIA_NAME and its dependencies ..."
 
 log "\nCreating virtual environment \"$VENV_PATH\" ..."
 create_and_init_virtual_env "$VENV_PATH"
@@ -306,21 +318,26 @@ fi
 
 log "\nUsing the local instance of the $CS_300_FVP_NAME at \"$CS_300_FVP_VALID_PATH\" ..."
 
-# TODO Download the Inference Advisor
-# TODO Download the AI Evaluation Toolkit
+# Downloading components
+log "\nDownloading the $MLIA_NAME version $MLIA_VERSION to \"$PACKAGE_DIR\" ..."
+wget "$MLIA_URL" -O "$PACKAGE_DIR/$MLIA_WHEEL_FILE"
+
+log "\nDownloading the $AIET_NAME version $AIET_VERSION to \"$PACKAGE_DIR\" ..."
+wget "$AIET_URL" -O "$PACKAGE_DIR/$AIET_WHEEL_FILE"
 
 verbose "Checking packages ..."
 init_packages "$PACKAGE_DIR"
 check_packages
 
-log "\nInstalling the AI Evaluation Toolkit ..."
+# Installing components
+log "\nInstalling the $AIET_NAME ..."
 # The AI Evaluation Toolkit has to be installed first (before the Inference Advisor)
 # due to a less strict dependency from Vela than that the Inference Advisor, but without
 # installing the systems and the applications just yet. Installing the systems requires
 # the configuration files included in the Inference Advisor
 install_aiet
 
-log "\nInstalling the ML Inference Advisor ..."
+log "\nInstalling the $MLIA_NAME ..."
 # The Inference Advisor has to be installed after the AI Evaluation Toolkit, since it has
 # a stronger dependency on Vela
 install_mlia
@@ -342,13 +359,13 @@ log "\nInitializing the $CS_300_FVP_NAME instance at \"$CS_300_FVP_VALID_PATH\" 
 # Copy the AIET configuration file to the FVP directory
 cp -f "$CS_300_FVP_AIET_CONFIG" "$CS_300_FVP_VALID_PATH"
 
-log "\nConfiguring the AI Evaluation Toolkit ..."
+log "\nConfiguring the $AIET_NAME ..."
 # Installing the AI Evaluation Toolkit systems and applications using the configuration file
 # included in the Inference Advisor
 configure_aiet
 
 log "\nInstallation complete"
-log "Please activate the virtual environment \"$VENV_PATH\" to start working with the ML Inference Advisor [source $VENV_PATH/bin/activate]"
+log "Please activate the virtual environment \"$VENV_PATH\" to start working with the $MLIA_NAME [source $VENV_PATH/bin/activate]"
 
 # All done
 exit 0
