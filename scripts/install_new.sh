@@ -41,11 +41,15 @@ CS_300_FVP_DIRECTORY="FVP_Corstone_SSE-300"
 CS_300_FVP_DEFAULT_PATHS=("/opt/$CS_300_FVP_DIRECTORY" \
                           "$HOME/$CS_300_FVP_DIRECTORY" \
                           "$PWD/$CS_300_FVP_DIRECTORY")
+
 CS_300_FVP_MODELS_PATH="models/Linux64_GCC-6.4"
 CS_300_FVP_AIET_CONFIG_NAME="aiet-config.json"
 CS_300_FVP_AIET_CONFIG_RELATIVE_PATH="resources/aiet/system/cs-300"
 CS_300_FVP_VALID_PATH=""
-
+CS_300_FVP_VERSION="11.16_26"
+CS_300_FVP_TAR_FILE="FVP_Corstone_SSE-300_$CS_300_FVP_VERSION.tgz"
+CS_300_FVP_WEB_LINK="https://developer.arm.com/-/media/Arm%20Developer%20Community/Downloads/OSS/FVP/Corstone-300/$CS_300_FVP_TAR_FILE"
+CS_300_FVP_DOWNLOADED="false"
 # Name of the virtual environment directory
 VENV_PATH=
 
@@ -214,6 +218,47 @@ install_mlia() {
     pip $PIP_OPTIONS install "$MLIA_PACKAGE"
 }
 
+download_fvp() {
+    CS_300_FVP_PATH="$PACKAGE_DIR"
+    wget -nv $CS_300_FVP_WEB_LINK -O "$CS_300_FVP_PATH/$CS_300_FVP_TAR_FILE"
+    CS_300_FVP_DOWNLOADED="true"
+}
+
+install_fvp() {
+    CORSTONE_PACKAGE="$CS_300_FVP_PATH/$CS_300_FVP_TAR_FILE"
+    tar xzf "$CORSTONE_PACKAGE" -C "$CS_300_FVP_PATH"
+    "$CS_300_FVP_PATH/FVP_Corstone_SSE-300.sh" -q --i-agree-to-the-contained-eula -d "$CS_300_FVP_PATH" --nointeractive
+    CS_300_FVP_VALID_PATH="$CS_300_FVP_PATH/$CS_300_FVP_MODELS_PATH"
+}
+
+print_manual_fvp_installation_instructions() {
+    echo "For downloading the FVP: wget -nv $CS_300_FVP_WEB_LINK -O $PACKAGE_DIR/$CS_300_FVP_TAR_FILE"
+    echo "For installing the FVP, please run the install_new.sh with the command line for example like this: install_new.sh -f your_fvp_path -e name_of_your_env"
+}
+
+download_maybe() {
+    local MS="Please confirm downloading FVP from developer.arm.com? y/[n]: "
+    local TMOUT=10
+
+    while true; do
+            if ! read -p "$MS" -r; then
+                    echo "Timed out so nothing will be downloaded. Exiting ..."
+                    exit 0
+            fi
+            case $REPLY in
+                    [yY]*)
+                            download_fvp
+                            break;;
+                    [nN]*)
+                            print_manual_fvp_installation_instructions
+                            echo "Nothing downloaded. Exiting ..."
+                            exit 0;;
+                    *)
+                            echo "Sorry, try again" >&2
+            esac
+    done
+}
+
 usage() {
     USAGE_NOTE="$MLIA_NAME installation script
 
@@ -313,16 +358,17 @@ create_and_init_virtual_env "$VENV_PATH"
 
 log "\nChecking local $CS_300_FVP_NAME instance ..."
 check_fvp_path "$CS_300_FVP_PATH"
-# Check if a valid FVP instance has been found
+
+# If no FVP file exists, we need to download and install them
 if [ -z "$CS_300_FVP_VALID_PATH" ]; then
-    # Exit for now
-    # TODO Offer to download the FVP from developer.arm.com
-    error "No valid local $CS_300_FVP_NAME instance found. Exiting ..."
-    # Returning without an error code for now to make the E2E tests pass
-    exit 0
+    download_maybe
+    log "\nDownloaded the $CS_300_FVP_NAME version $CS_300_FVP_VERSION to \"$CS_300_FVP_PATH\" ..."
+    if [ "$CS_300_FVP_DOWNLOADED" == "true" ]; then
+        install_fvp
+    fi
 fi
 
-log "\nUsing the local instance of the $CS_300_FVP_NAME at \"$CS_300_FVP_VALID_PATH\" ..."
+log "\nUsing the local instance of the $CS_300_FVP_NAME version $CS_300_FVP_VERSION at \"$CS_300_FVP_VALID_PATH\" ..."
 
 # Downloading components
 log "\nDownloading the $MLIA_NAME version $MLIA_VERSION to \"$PACKAGE_DIR\" ..."

@@ -23,7 +23,6 @@ from mlia.cli.main import init_commands
 from mlia.cli.main import init_common_parser
 from mlia.cli.main import init_subcommand_parser
 from mlia.utils.general import is_list_of
-from mlia.utils.proc import CommandExecutor
 from mlia.utils.proc import working_directory
 
 
@@ -112,17 +111,17 @@ class ExecutionConfiguration(NamedTuple):
         )
 
 
-def run_command(cmd: List[str]) -> None:
+def run_command(cmd: List[str], extra_input: Optional[str] = None) -> None:
     """Run command."""
     print(f"Run command: {' '.join(cmd)}")
 
-    executor = CommandExecutor()
-    running_command = executor.submit(cmd)
-    running_command.wait(redirect_output=True)
-
-    exit_code = running_command.exit_code()
-    if exit_code is None or exit_code != 0:
-        raise Exception(f"Execution failed {' '.join(cmd)}")
+    subprocess.run(
+        cmd,
+        check=True,
+        input=extra_input,
+        universal_newlines=True,
+        bufsize=1,
+    )
 
 
 def install_aiet_artifacts(
@@ -253,6 +252,7 @@ class TestEndToEnd:
         install_dir_path: Path,
         tmp_path: Path,
         commands: List,
+        flag_download: str = "",
     ) -> None:
         """Run an install script use case."""
         config_dir = get_config_dir()
@@ -291,9 +291,18 @@ class TestEndToEnd:
 
             test_path = install_dir_path.resolve()
             venv = f"e2e_venv_{test_path.name}"
-            command = [f"./{install_script}", *install_script_options, "-e", venv, "-v"]
+            extra_input = (
+                flag_download if flag_download in ["Y", "y", "N", "n"] else None
+            )
+            command = [
+                f"./{install_script}",
+                *install_script_options,
+                "-e",
+                venv,
+                "-v",
+            ]
 
-            run_command(command)
+            run_command(command, extra_input)
 
             assert Path(venv).is_dir()
 
@@ -364,7 +373,9 @@ class TestEndToEnd:
             self.full_commands_list,
         )
 
-    def test_install_new_script_use_default_fvp_paths(self, tmp_path: Path) -> None:
+    def test_install_new_script_use_default_fvp_paths_download_timeout(
+        self, tmp_path: Path
+    ) -> None:
         """Test MLIA install_new script using the default FVP paths."""
         test_dir = "dist4"
         install_dir_path = tmp_path / test_dir
@@ -390,6 +401,32 @@ class TestEndToEnd:
             install_dir_path,
             tmp_path,
             self.partial_commands_list,
+        )
+
+    @pytest.mark.parametrize(
+        "flag_yn, pass_install_directory, test_dir",
+        [
+            ["Y", False, "dist6"],
+            ["Y", True, "dist7"],
+            ["N", False, "dist8"],
+        ],
+    )
+    def test_install_new_script_download_fvp(
+        self, tmp_path: Path, flag_yn: str, pass_install_directory: bool, test_dir: str
+    ) -> None:
+        """Test MLIA install_new script can download and install FVP."""
+        install_dir_path = tmp_path / test_dir
+        install_dir_option = []
+        if pass_install_directory:
+            install_dir_option = ["-d", str(install_dir_path)]
+
+        self.run_install_script_test(
+            "install_new.sh",
+            install_dir_option,
+            install_dir_path,
+            tmp_path,
+            [],
+            flag_yn,
         )
 
     @pytest.mark.parametrize(
