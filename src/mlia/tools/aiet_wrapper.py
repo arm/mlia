@@ -22,7 +22,6 @@ from mlia.config import EthosU55
 from mlia.config import EthosU65
 from mlia.config import EthosUConfiguration
 from mlia.config import TFLiteModel
-from mlia.utils.filesystem import temp_file
 from mlia.utils.proc import CommandExecutor
 from mlia.utils.proc import OutputConsumer
 from mlia.utils.proc import RunningCommand
@@ -272,59 +271,23 @@ class GenericInferenceRunner(ABC):
             )
 
 
-class GenericInferenceRunnerU65(GenericInferenceRunner):
-    """Generic inference runner on U65."""
+class GenericInferenceRunnerEthosU(GenericInferenceRunner):
+    """Generic inference runner on U55/65."""
+
+    def __init__(self, system_name: str, aietrunner: AIETRunner):
+        """Init generic inference runner instance."""
+        self.system_name = system_name
+        super().__init__(aietrunner)
 
     @property
     def system(self) -> str:
         """Return AIET system name."""
-        return "SGM-775"
+        return self.system_name
 
     def get_execution_params(
         self, device: EthosUConfiguration, model: TFLiteModel
     ) -> ExecutionParams:
-        """Get execution params for Ethos-U65."""
-        model_file, input_file = "/tmp/model.tflite", "/tmp/input.ifm"
-        application_params = [f"model_file={model_file}", f"input_file={input_file}"]
-
-        model_input = model.input_details()
-        if not model_input:
-            raise Exception(
-                f"Unable to get input details for the model {model.model_path}"
-            )
-
-        random_input_file_path: str = self.context_stack.enter_context(temp_file())
-        logger.debug("Save random input into %s", random_input_file_path)
-        input_shape, input_dtype = model_input[0]["shape"], model_input[0]["dtype"]
-        save_random_input(input_shape, input_dtype, random_input_file_path)
-
-        deploy_params = [
-            f"{Path(model.model_path).absolute()}:{model_file}",
-            f"{random_input_file_path}:{input_file}",
-        ]
-        system_params = [f"mac={device.mac}"]
-
-        return ExecutionParams(
-            self.application,
-            self.system,
-            application_params,
-            system_params,
-            deploy_params,
-        )
-
-
-class GenericInferenceRunnerU55(GenericInferenceRunner):
-    """Generic inference runner on U55."""
-
-    @property
-    def system(self) -> str:
-        """Return AIET system name."""
-        return "CS-300: Cortex-M55+Ethos-U55"
-
-    def get_execution_params(
-        self, device: EthosUConfiguration, model: TFLiteModel
-    ) -> ExecutionParams:
-        """Get execution params for Ethous-U55."""
+        """Get execution params for Ethos-U55/65."""
         application_params = [f"input_file={Path(model.model_path).absolute()}"]
         system_params = [f"mac={device.mac}"]
 
@@ -338,10 +301,10 @@ def get_generic_runner(
 ) -> GenericInferenceRunner:
     """Get generic runner for provided device."""
     if isinstance(device, EthosU55):
-        return GenericInferenceRunnerU55(aiet_runner)
+        return GenericInferenceRunnerEthosU("CS-300: Cortex-M55+Ethos-U55", aiet_runner)
 
     if isinstance(device, EthosU65):
-        return GenericInferenceRunnerU65(aiet_runner)
+        return GenericInferenceRunnerEthosU("CS-300: Cortex-M55+Ethos-U65", aiet_runner)
 
     raise Exception(f"Unsupported device {device}")
 

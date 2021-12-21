@@ -338,24 +338,27 @@ def test_save_random_input(
         ),
         (
             EthosU65(mac=512),
-            ("SGM-775", True),
+            ("CS-300: Cortex-M55+Ethos-U65", True),
             ("generic_inference", True),
             does_not_raise(),
         ),
         (
             EthosU65(mac=512),
-            ("SGM-775", False),
-            ("generic_inference", False),
-            pytest.raises(Exception, match="System SGM-775 is not installed"),
-        ),
-        (
-            EthosU65(mac=512),
-            ("SGM-775", True),
+            ("CS-300: Cortex-M55+Ethos-U65", False),
             ("generic_inference", False),
             pytest.raises(
                 Exception,
-                match="Application generic_inference for the system SGM-775"
-                " is not installed",
+                match=r"System CS-300: Cortex-M55\+Ethos-U65 is not installed",
+            ),
+        ),
+        (
+            EthosU65(mac=512),
+            ("CS-300: Cortex-M55+Ethos-U65", True),
+            ("generic_inference", False),
+            pytest.raises(
+                Exception,
+                match=r"Application generic_inference for the system "
+                r"CS-300: Cortex-M55\+Ethos-U65 is not installed",
             ),
         ),
         (

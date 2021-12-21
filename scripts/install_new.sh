@@ -29,6 +29,12 @@ AIET_VERSION="21.12.1"
 AIET_WHEEL_FILE="aiet-$AIET_VERSION-py3-none-any.whl"
 AIET_URL="https://artifactory.eu02.arm.com:443/artifactory/ml-tooling.pypi-local/aiet/$AIET_VERSION/$AIET_WHEEL_FILE"
 
+# Generic Inference Runner AIET application
+AIET_GENERIC_INFERENCE_RUNNER_NAME="Generic Inference Runner"
+AIET_GENERIC_INFERENCE_RUNNER_VERSION="0.1.1"
+AIET_GENERIC_INFERENCE_RUNNER_ARCHIVE="ethosu_generic_inference_runner_aiet-$AIET_GENERIC_INFERENCE_RUNNER_VERSION.tar.gz"
+AIET_GENERIC_INFERENCE_RUNNER_URL="https://artifactory.eu02.arm.com:443/artifactory/ml-tooling.pypi-local/mlia/generic_inference_runner/$AIET_GENERIC_INFERENCE_RUNNER_VERSION/$AIET_GENERIC_INFERENCE_RUNNER_ARCHIVE"
+
 # FVP Corstone-300 Ecosystem params
 CS_300_FVP_NAME="FVP Corstone-300 Ecosystem"
 CS_300_FVP_DIRECTORY="FVP_Corstone_SSE-300"
@@ -136,9 +142,9 @@ check_fvp_path() {
 }
 
 init_packages() {
-    AIET_PACKAGE="$PACKAGE_DIR/aiet-21.12.1-py3-none-any.whl"
-    MLIA_PACKAGE="$PACKAGE_DIR/mlia-0.1.1-py3-none-any.whl"
-    CORSTONE_PACKAGE_APPS="$PACKAGE_DIR/ethosu_eval_platform_release_aiet-21.11.1.tar.gz"
+    MLIA_PACKAGE="$PACKAGE_DIR/$MLIA_WHEEL_FILE"
+    AIET_PACKAGE="$PACKAGE_DIR/$AIET_WHEEL_FILE"
+    CS_300_APP_PACKAGE="$PACKAGE_DIR/$AIET_GENERIC_INFERENCE_RUNNER_ARCHIVE"
 }
 
 check_path() {
@@ -177,7 +183,7 @@ check_package() {
 check_packages() {
     check_package "$AIET_PACKAGE"
     check_package "$MLIA_PACKAGE"
-    check_package "$CORSTONE_PACKAGE_APPS"
+    check_package "$CS_300_APP_PACKAGE"
 }
 
 create_and_init_virtual_env() {
@@ -200,7 +206,7 @@ install_aiet() {
 configure_aiet() {
     # Install the AI Evaluation Toolkit systems and applications
     aiet system install -s "$CS_300_FVP_VALID_PATH"
-    aiet application install -s "$CORSTONE_PACKAGE_APPS"
+    aiet application install -s "$CS_300_APP_PACKAGE"
 }
 
 install_mlia() {
@@ -324,6 +330,9 @@ wget "$MLIA_URL" -O "$PACKAGE_DIR/$MLIA_WHEEL_FILE"
 
 log "\nDownloading the $AIET_NAME version $AIET_VERSION to \"$PACKAGE_DIR\" ..."
 wget "$AIET_URL" -O "$PACKAGE_DIR/$AIET_WHEEL_FILE"
+
+log "\nDownloading the $AIET_GENERIC_INFERENCE_RUNNER_NAME version $AIET_GENERIC_INFERENCE_RUNNER_VERSION to \"$PACKAGE_DIR\" ..."
+wget "$AIET_GENERIC_INFERENCE_RUNNER_URL" -O "$PACKAGE_DIR/$AIET_GENERIC_INFERENCE_RUNNER_ARCHIVE"
 
 verbose "Checking packages ..."
 init_packages "$PACKAGE_DIR"

@@ -52,5 +52,38 @@
         }
       ]
     }
+  },
+  {
+    "name": "CS-300: Cortex-M55+Ethos-U65",
+    "description": "Cortex-M55 and Ethos-U65 functional model implementations based on Corstone-300 design for MPS3 board.",
+    "annotations": {
+      "ip_class": "Ethos-U65",
+      "sim_type": "FM",
+      "variant": "Cortex-M55+Ethos-U65"
+    },
+    "build_dir": "",
+    "data_transfer": {
+      "protocol": "local"
+    },
+    "lock": true,
+    "commands": {
+      "run": [
+        "FVP_Corstone_SSE-300_Ethos-U65 -a {software.variables:eval_app} -C {user_params:mac} -C mps3_board.telnetterminal0.start_telnet=0 -C mps3_board.uart0.out_file='-' -C mps3_board.uart0.shutdown_on_eot=1 -C mps3_board.visualisation.disable-visualisation=1 --stat"
+      ]
+    },
+    "user_params": {
+      "shared": [
+        {
+          "name": "ethosu.num_macs=",
+          "description": "Arm Ethos-U65 configuration - the number represents MACs per cycle.",
+          "values": [
+            "256",
+            "512"
+          ],
+          "default_value": "128",
+          "alias": "mac"
+        }
+      ]
+    }
   }
 ]
