@@ -7,6 +7,7 @@ from typing import Any
 from typing import Literal
 
 from mlia.tools.vela_wrapper import VelaCompilerOptions
+from mlia.utils.filesystem import get_vela_config
 
 
 logger = logging.getLogger(__name__)
@@ -51,7 +52,9 @@ class EthosU55(EthosUConfiguration):
             ip_class="ethos-u55",
             mac=mac,
             compiler_options=VelaCompilerOptions(
-                accelerator_config=f"ethos-u55-{mac}", **kwargs  # type: ignore
+                config_files=[str(get_vela_config())],
+                accelerator_config=f"ethos-u55-{mac}",  # type: ignore
+                **kwargs,
             ),
         )
 
@@ -68,7 +71,9 @@ class EthosU65(EthosUConfiguration):
             ip_class="ethos-u65",
             mac=mac,
             compiler_options=VelaCompilerOptions(
-                accelerator_config=f"ethos-u65-{mac}", **kwargs  # type: ignore
+                config_files=[str(get_vela_config())],
+                accelerator_config=f"ethos-u65-{mac}",  # type: ignore
+                **kwargs,
             ),
         )
 

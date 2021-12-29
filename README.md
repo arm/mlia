@@ -111,7 +111,6 @@ lists the performance improvements.
     * 256
     * 512
   * default: 256
-* --config: Vela configuration file(s) in Python ConfigParser .ini file format
 * --system-config: System configuration
   * default: internal-default
 * --memory-mode: Memory mode
@@ -189,7 +188,6 @@ Prints the model's operator list.
     * 256
     * 512
   * default: 256
-* --config: Vela configuration file(s) in Python ConfigParser .ini file format
 * --system-config: System configuration
   * default: internal-default
 * --memory-mode: Memory mode
@@ -253,7 +251,6 @@ Prints the model's performance statistics.
     * 256
     * 512
   * default: 256
-* --config: Vela configuration file(s) in Python ConfigParser .ini file format
 * --system-config: System configuration
   * default: internal-default
 * --memory-mode: Memory mode
@@ -321,7 +318,6 @@ Shows the performance improvements after applying optimizations to the model.
     * 256
     * 512
   * default: 256
-* --config: Vela configuration file(s) in Python ConfigParser .ini file format
 * --system-config: System configuration
   * default: internal-default
 * --memory-mode: Memory mode
