@@ -25,9 +25,19 @@ tmpdir=$(mktemp -d)
 cleanup()
 {
   rm -rf "$tmpdir"
+  echo
+  echo "Done cleaning up. Quitting now."
+}
+
+handle_abort()
+{
+  kill "$DOCKER_PID"
+  echo
+  echo "Process interrupted. Docker process killed."
 }
 
 trap cleanup 0
+trap handle_abort SIGINT SIGHUP SIGTERM
 
 # The name of the docker image used for linting this project both
 # locally and via CI, this image name must be globally unique.
@@ -46,4 +56,7 @@ docker run --rm \
        -v "$execdir:/workspace" \
        "$tag" \
        ./self-check-helper.sh \
-       /workspace
+       /workspace \
+       & DOCKER_PID=$!
+
+wait $DOCKER_PID
