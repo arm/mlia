@@ -172,6 +172,7 @@ class CompilerOptions:
     arena_cache_size: Optional[int] = None
     tensor_allocator: Literal["LinearAlloc", "Greedy", "HillClimb"] = "HillClimb"
     cpu_tensor_alignment: int = 16
+    recursion_limit: int = 1000
     optimization_strategy: Literal["Performance", "Size"] = "Performance"
     output_dir: Optional[str] = None
 

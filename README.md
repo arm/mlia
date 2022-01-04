@@ -72,8 +72,11 @@ lists the performance improvements.
     * LinearAlloc
     * Greedy
     * HillClimb
+  * default: HillClimb
 * --cpu-tensor-alignment: CPU tensor alignment
   * default: 16
+* --recursion-limit: Recursion limit
+  * default: 1000
 * --optimization-strategy: Optimization strategy
   * options:
     * Performance
@@ -143,8 +146,15 @@ Prints the model's operator list.
   * default: 3
 * --arena-cache-size: Arena cache size
 * --tensor-allocator: Tensor allocator algorithm
+  * options:
+    * LinearAlloc
+    * Greedy
+    * HillClimb
+  * default: HillClimb
 * --cpu-tensor-alignment: CPU tensor alignment
   * default: 16
+* --recursion-limit: Recursion limit
+  * default: 1000
 * --optimization-strategy:
   * options:
     * Performance
@@ -200,8 +210,15 @@ Prints the model's performance statistics.
   * default: 3
 * --arena-cache-size: Arena cache size
 * --tensor-allocator: Tensor allocator algorithm
+  * options:
+    * LinearAlloc
+    * Greedy
+    * HillClimb
+  * default: HillClimb
 * --cpu-tensor-alignment: CPU tensor alignment
   * default: 16
+* --recursion-limit: Recursion limit
+  * default: 1000
 * --optimization-strategy:
   * options:
     * Performance
@@ -261,8 +278,15 @@ Shows the performance improvements after applying optimizations to the model.
   * default: 3
 * --arena-cache-size: Arena cache size
 * --tensor-allocator: Tensor allocator algorithm
+  * options:
+    * LinearAlloc
+    * Greedy
+    * HillClimb
+  * default: HillClimb
 * --cpu-tensor-alignment: CPU tensor alignment
   * default: 16
+* --recursion-limit: Recursion limit
+  * default: 1000
 * --optimization-strategy:
   * options:
     * Performance

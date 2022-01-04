@@ -2,6 +2,7 @@
 """Vela wrapper module."""
 import itertools
 import logging
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -125,6 +126,7 @@ class VelaCompiler:  # pylint: disable=too-many-instance-attributes
         arena_cache_size: Optional[int] = None,
         tensor_allocator: TensorAllocatorType = "HillClimb",
         cpu_tensor_alignment: int = Tensor.AllocationQuantum,
+        recursion_limit: int = 1000,
         optimization_strategy: OptimizationStrategyType = "Performance",
         output_dir: Optional[str] = None,
     ):
@@ -137,8 +139,11 @@ class VelaCompiler:  # pylint: disable=too-many-instance-attributes
         self.arena_cache_size = arena_cache_size
         self.tensor_allocator = TensorAllocator[tensor_allocator]
         self.cpu_tensor_alignment = cpu_tensor_alignment
+        self.recursion_limit = recursion_limit
         self.optimization_strategy = OptimizationStrategy[optimization_strategy]
         self.output_dir = output_dir
+
+        sys.setrecursionlimit(self.recursion_limit)
 
     def read_model(self, model: Union[str, Path]) -> Model:
         """Read model."""
@@ -268,6 +273,7 @@ def get_vela_compiler(device: EthosUConfiguration) -> VelaCompiler:
         arena_cache_size=compiler_options.arena_cache_size,
         tensor_allocator=compiler_options.tensor_allocator,
         cpu_tensor_alignment=compiler_options.cpu_tensor_alignment,
+        recursion_limit=compiler_options.recursion_limit,
         optimization_strategy=compiler_options.optimization_strategy,
         output_dir=compiler_options.output_dir,
     )

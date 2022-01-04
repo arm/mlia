@@ -53,7 +53,7 @@ def add_device_options(parser: argparse.ArgumentParser) -> None:
         "--tensor-allocator",
         choices=("LinearAlloc", "Greedy", "HillClimb"),
         default="HillClimb",
-        help="Tensor allocator algorithm",
+        help="Tensor allocator algorithm (default: %(default)s)",
     )
     device_group.add_argument(
         "--cpu-tensor-alignment",
@@ -66,6 +66,13 @@ def add_device_options(parser: argparse.ArgumentParser) -> None:
         choices=("Performance", "Size"),
         default="Performance",
         help="Optimization strategy (default: %(default)s)",
+    )
+    device_group.add_argument(
+        "--recursion-limit",
+        type=int,
+        default=1000,
+        help="""Set the recursion depth limit,
+                may result in RecursionError if too low (default: %(default)s)""",
     )
 
 

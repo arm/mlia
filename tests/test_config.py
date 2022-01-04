@@ -25,6 +25,7 @@ def test_compiler_options_default_init() -> None:
     assert opts.arena_cache_size is None
     assert opts.tensor_allocator == "HillClimb"
     assert opts.cpu_tensor_alignment == 16
+    assert opts.recursion_limit == 1000
     assert opts.optimization_strategy == "Performance"
     assert opts.output_dir is None
 
@@ -35,7 +36,8 @@ def test_compiler_options_default_init() -> None:
         "accelerator_config: ethos-u55-256, max_block_dependency: 3, "
         "arena_cache_size: None, "
         "tensor_allocator: HillClimb, cpu_tensor_alignment: 16, "
-        "optimization_strategy: Performance, output_dir: None"
+        "recursion_limit: 1000, optimization_strategy: Performance, "
+        "output_dir: None"
     )
 
 
@@ -76,7 +78,8 @@ def test_ethosu65_init_configuration() -> None:
         "accelerator_config: ethos-u65-512, max_block_dependency: 3, "
         "arena_cache_size: None, "
         "tensor_allocator: HillClimb, cpu_tensor_alignment: 16, "
-        "optimization_strategy: Performance, output_dir: None"
+        "recursion_limit: 1000, optimization_strategy: Performance, "
+        "output_dir: None"
     )
 
 
