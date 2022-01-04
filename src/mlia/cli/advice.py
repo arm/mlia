@@ -14,7 +14,6 @@ from typing import TypedDict
 from typing import Union
 
 import pandas as pd
-from mlia.cli.options import get_device_opts
 from mlia.devices.ethosu.metadata import Operators
 from mlia.devices.ethosu.metrics import PerformanceMetrics
 from mlia.nn.tensorflow.utils import is_keras_model
@@ -49,7 +48,7 @@ class AdvisorContext(TypedDict, total=False):
     operators: Operators
     perf_metrics: PerformanceMetrics
     optimization_results: OptimizationResults
-    device_args: Dict
+    target: str
     model: str
 
 
@@ -98,9 +97,7 @@ def advice_all_operators_supported(
     if not operators or operators.npu_unsupported_ratio != 0:
         return []
 
-    device_opts = " ".join(get_device_opts(ctx.get("device_args")))
-    if device_opts:
-        device_opts = " " + device_opts
+    target_opts = ctx.get("target")
     model_opts = ctx.get("model")
 
     result = [
@@ -110,23 +107,21 @@ def advice_all_operators_supported(
     if recommend_estimate_performance:
         result += [
             "Check the estimated performance by running the following command:",
-            f"mlia performance{device_opts} {model_opts}",
+            f"mlia performance --target {target_opts} {model_opts}",
         ]
     return result
 
 
 def advice_increase_operator_compatibility(ctx: AdvisorContext) -> List[str]:
     """Advice to increase op compatibility for performance improvement."""
-    device_opts = " ".join(get_device_opts(ctx.get("device_args")))
-    if device_opts:
-        device_opts = " " + device_opts
+    target_opts = ctx.get("target")
     model_opts = ctx.get("model")
 
     return [
         "You can improve the inference time by using only operators "
         "that are supported by the NPU.",
         "Try running the following command to verify that:",
-        f"mlia operators{device_opts} {model_opts}",
+        f"mlia operators --target {target_opts} {model_opts}",
     ]
 
 
@@ -274,9 +269,7 @@ def advice_optimization_improvement(
                 "to check if those results can be further improved."
             )
             if recommend_run_optimizations:
-                device_opts = " ".join(get_device_opts(ctx.get("device_args")))
-                if device_opts:
-                    device_opts = f" {device_opts}"
+                target_opts = ctx.get("target")
                 model_opts = ctx.get("model")
 
                 result.append("For more info, see: mlia optimization --help")
@@ -286,7 +279,8 @@ def advice_optimization_improvement(
                 result.append(
                     f"Optimization command: "
                     f"mlia optimization --optimization-type {new_opt} "
-                    f"--optimization-target {new_target}{device_opts} {model_opts}"
+                    f"--optimization-target {new_target} --target "
+                    f"{target_opts} {model_opts}"
                 )
     elif degr_text:
         result.append(

@@ -11,7 +11,7 @@ from typing import List
 from typing import Literal
 
 import pytest
-from mlia.devices.ethosu.config import EthosU55
+from mlia.devices.ethosu.config import EthosUConfiguration
 from mlia.devices.ethosu.metadata import NpuSupported
 from mlia.devices.ethosu.metadata import Operator
 from mlia.devices.ethosu.metrics import MemoryUsage
@@ -33,13 +33,17 @@ from mlia.reporting import Table
         ),
         (
             PerformanceMetrics(
-                EthosU55(), NPUCycles(0, 0, 0, 0, 0, 0), MemoryUsage(0, 0, 0, 0, 0)
+                EthosUConfiguration(target="U55-256"),
+                NPUCycles(0, 0, 0, 0, 0, 0),
+                MemoryUsage(0, 0, 0, 0, 0),
             ),
             [report_perf_metrics, None],
         ),
         (
             PerformanceMetrics(
-                EthosU55(), NPUCycles(0, 0, 0, 0, 0, 0), MemoryUsage(0, 0, 0, 0, 0)
+                EthosUConfiguration(target="U55-256"),
+                NPUCycles(0, 0, 0, 0, 0, 0),
+                MemoryUsage(0, 0, 0, 0, 0),
             ).to_df(),
             [report_dataframe, None],
         ),
@@ -48,7 +52,7 @@ from mlia.reporting import Table
                 (
                     [Operator("test_operator", "test_type", NpuSupported(False, []))],
                     PerformanceMetrics(
-                        EthosU55(),
+                        EthosUConfiguration(target="U55-256"),
                         NPUCycles(0, 0, 0, 0, 0, 0),
                         MemoryUsage(0, 0, 0, 0, 0),
                     ),

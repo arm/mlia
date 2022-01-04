@@ -7,7 +7,7 @@ from typing import Tuple
 import pytest
 from ethosu.vela.compiler_driver import TensorAllocator
 from ethosu.vela.scheduler import OptimizationStrategy
-from mlia.devices.ethosu.config import EthosU55
+from mlia.devices.ethosu.config import EthosUConfiguration
 from mlia.tools.vela_wrapper import estimate_performance
 from mlia.tools.vela_wrapper import generate_supported_operators_report
 from mlia.tools.vela_wrapper import ModelOperator
@@ -22,7 +22,7 @@ from mlia.utils.proc import working_directory
 
 def test_default_vela_compiler() -> None:
     """Test default Vela compiler instance."""
-    default_compiler_options = VelaCompilerOptions()
+    default_compiler_options = VelaCompilerOptions(accelerator_config="ethos-u55-256")
     default_compiler = VelaCompiler(default_compiler_options)
 
     assert default_compiler.config_files is None
@@ -84,7 +84,7 @@ def test_vela_compiler_with_parameters(test_resources_path: Path) -> None:
     vela_ini_path = str(test_resources_path / "vela/sample_vela.ini")
 
     compiler_options = VelaCompilerOptions(
-        config_files=[vela_ini_path],
+        config_files=vela_ini_path,
         system_config="Ethos_U65_High_End",
         memory_mode="Shared_Sram",
         accelerator_config="ethos-u65-256",
@@ -97,7 +97,7 @@ def test_vela_compiler_with_parameters(test_resources_path: Path) -> None:
     )
     compiler = VelaCompiler(compiler_options)
 
-    assert compiler.config_files == [vela_ini_path]
+    assert compiler.config_files == vela_ini_path
     assert compiler.system_config == "Ethos_U65_High_End"
     assert compiler.memory_mode == "Shared_Sram"
     assert compiler.accelerator_config == "ethos-u65-256"
@@ -154,7 +154,7 @@ def test_vela_compiler_with_parameters(test_resources_path: Path) -> None:
 def test_compile_model(test_models_path: Path) -> None:
     """Test model optimization."""
     model = test_models_path / "simple_3_layers_model.tflite"
-    compiler = VelaCompiler(EthosU55().compiler_options)
+    compiler = VelaCompiler(EthosUConfiguration(target="U55-256").compiler_options)
 
     optimized_model = compiler.compile_model(model)
     assert isinstance(optimized_model, OptimizedModel)
@@ -165,7 +165,7 @@ def test_optimize_model(test_models_path: Path, tmp_path: Path) -> None:
     model = test_models_path / "simple_3_layers_model.tflite"
     tmp_file = tmp_path / "temp.tflite"
 
-    device = EthosU55()
+    device = EthosUConfiguration(target="U55-256")
     optimize_model(model, device.compiler_options, tmp_file.absolute())
 
     assert tmp_file.is_file()
@@ -202,7 +202,7 @@ def test_operators(
     test_models_path: Path, model: str, expected_ops: List[Tuple]
 ) -> None:
     """Test operators function."""
-    device = EthosU55()
+    device = EthosUConfiguration(target="U55-256")
 
     operators = supported_operators(test_models_path / model, device.compiler_options)
     assert operators == expected_ops
@@ -211,7 +211,7 @@ def test_operators(
 def test_estimate_performance(test_models_path: Path) -> None:
     """Test getting performance estimations."""
     model = test_models_path / "simple_3_layers_model.tflite"
-    device = EthosU55()
+    device = EthosUConfiguration(target="U55-256")
     perf_metrics = estimate_performance(model, device.compiler_options)
 
     assert isinstance(perf_metrics, PerformanceMetrics)
@@ -221,7 +221,7 @@ def test_estimate_performance_already_optimized(
     test_models_path: Path, tmp_path: Path
 ) -> None:
     """Test that performance estimation should fail for already optimized model."""
-    device = EthosU55()
+    device = EthosUConfiguration(target="U55-256")
 
     model = test_models_path / "simple_3_layers_model.tflite"
     optimized_model_path = tmp_path / "optimized_model.tflite"

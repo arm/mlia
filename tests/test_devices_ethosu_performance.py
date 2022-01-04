@@ -7,7 +7,7 @@ from unittest.mock import MagicMock
 import pytest
 from ethosu.vela.errors import InputFileError
 from mlia.config import Context
-from mlia.devices.ethosu.config import EthosU55
+from mlia.devices.ethosu.config import EthosUConfiguration
 from mlia.devices.ethosu.metrics import PerformanceMetrics
 from mlia.devices.ethosu.performance import collect_performance_metrics
 from mlia.exceptions import ConfigurationError
@@ -21,13 +21,15 @@ def test_collect_performance_metrics(
     # Test empty path/model
     with pytest.raises(InputFileError):
         performance_metrics = collect_performance_metrics(
-            TFLiteModel(""), EthosU55(), dummy_context
+            TFLiteModel(""), EthosUConfiguration(target="U55-256"), dummy_context
         )
 
     # Test non-existing path/model
     with pytest.raises(FileNotFoundError):
         performance_metrics = collect_performance_metrics(
-            TFLiteModel("invalid_model.tflite"), EthosU55(), dummy_context
+            TFLiteModel("invalid_model.tflite"),
+            EthosUConfiguration(target="U55-256"),
+            dummy_context,
         )
 
     with pytest.raises(ConfigurationError):
@@ -44,7 +46,9 @@ def test_collect_performance_metrics(
 
     input_tflite = test_models_path / "simple_3_layers_model.tflite"
     performance_metrics = collect_performance_metrics(
-        TFLiteModel(str(input_tflite)), EthosU55(), dummy_context
+        TFLiteModel(str(input_tflite)),
+        EthosUConfiguration(target="U55-256"),
+        dummy_context,
     )
 
     assert isinstance(performance_metrics, PerformanceMetrics)

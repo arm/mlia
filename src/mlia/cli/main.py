@@ -21,11 +21,11 @@ from mlia.cli.common import ExecutionContext
 from mlia.cli.logging import setup_logging
 from mlia.cli.options import add_custom_supported_operators_options
 from mlia.cli.options import add_debug_options
-from mlia.cli.options import add_device_options
 from mlia.cli.options import add_keras_model_options
 from mlia.cli.options import add_multi_optimization_options
 from mlia.cli.options import add_optional_tflite_model_options
 from mlia.cli.options import add_output_options
+from mlia.cli.options import add_target_options
 from mlia.cli.options import add_tflite_model_options
 
 
@@ -52,7 +52,7 @@ def get_commands() -> List[CommandInfo]:
             all_tests,
             ["all"],
             [
-                add_device_options,
+                add_target_options,
                 add_keras_model_options,
                 add_multi_optimization_options,
                 add_output_options,
@@ -64,7 +64,7 @@ def get_commands() -> List[CommandInfo]:
             operators,
             ["ops"],
             [
-                add_device_options,
+                add_target_options,
                 add_optional_tflite_model_options,
                 add_output_options,
                 add_custom_supported_operators_options,
@@ -75,7 +75,7 @@ def get_commands() -> List[CommandInfo]:
             performance,
             ["perf"],
             [
-                add_device_options,
+                add_target_options,
                 add_tflite_model_options,
                 add_output_options,
                 add_debug_options,
@@ -85,7 +85,7 @@ def get_commands() -> List[CommandInfo]:
             optimization,
             ["opt"],
             [
-                add_device_options,
+                add_target_options,
                 add_keras_model_options,
                 add_multi_optimization_options,
                 add_output_options,

@@ -4,7 +4,7 @@ from typing import Any
 from typing import Tuple
 
 import pytest
-from mlia.devices.ethosu.config import EthosU55
+from mlia.devices.ethosu.config import EthosUConfiguration
 from mlia.devices.ethosu.operators import supported_operators
 from mlia.nn.tensorflow.config import TFLiteModel
 
@@ -13,7 +13,7 @@ from mlia.nn.tensorflow.config import TFLiteModel
     "params, expected_error",
     [
         (
-            ["model.tflite", EthosU55()],
+            ["model.tflite", EthosUConfiguration(target="U55-256")],
             pytest.raises(Exception, match="Unsupported model configuration"),
         ),
         (

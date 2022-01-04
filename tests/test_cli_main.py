@@ -17,7 +17,7 @@ import pytest
 from mlia.cli.common import ExecutionContext
 from mlia.cli.main import CommandInfo
 from mlia.cli.main import main
-from mlia.devices.ethosu.config import EthosU55
+from mlia.devices.ethosu.config import EthosUConfiguration
 from mlia.devices.ethosu.metadata import Operators
 from mlia.devices.ethosu.metrics import MemoryUsage
 from mlia.devices.ethosu.metrics import NPUCycles
@@ -50,11 +50,17 @@ def test_option_version(capfd: Any) -> None:
     assert stderr == ""
 
 
-@pytest.mark.parametrize("model", ("simple_3_layers_model.tflite", "simple_model.h5"))
-def test_operators_command(test_models_path: Path, model: str) -> None:
+@pytest.mark.parametrize(
+    "model, target",
+    [
+        ["simple_3_layers_model.tflite", "U55-256"],
+        ["simple_model.h5", "U65-512"],
+    ],
+)
+def test_operators_command(test_models_path: Path, model: str, target: str) -> None:
     """Test operators command."""
     model_path = test_models_path / model
-    exit_code = main(["operators", str(model_path)])
+    exit_code = main(["operators", str(model_path), "--target", target])
     assert exit_code == 0
 
 
@@ -143,9 +149,7 @@ def test_default_command(monkeypatch: Any, tmp_path: Path) -> None:
 @pytest.mark.parametrize(
     "args",
     [
-        ["operators", "--supported-ops-report"],
-        ["operators", "--supported-ops-report", "--mac", "32"],
-        ["operators", "--supported-ops-report", "--device", "ethos-u65"],
+        ["operators", "--supported-ops-report", "--target", "U55-256"],
     ],
 )
 def test_operators_command_gen_supported_report(
@@ -165,9 +169,7 @@ def test_operators_command_gen_supported_report(
 @pytest.mark.parametrize(
     "args",
     [
-        ["performance"],
-        ["performance", "--device", "ethos-u65"],
-        ["performance", "--device", "ethos-u55", "--mac", "32"],
+        ["performance", "--target", "U55-256"],
     ],
 )
 def test_performance_command(
@@ -184,7 +186,9 @@ def test_performance_command(
 def mock_optimize_and_compare(monkeypatch: Any) -> None:
     """Mock optimize_and_compare function."""
     perf_metrics = PerformanceMetrics(
-        EthosU55(), NPUCycles(0, 0, 0, 0, 0, 0), MemoryUsage(0, 0, 0, 0, 0)
+        EthosUConfiguration(target="U55-256"),
+        NPUCycles(0, 0, 0, 0, 0, 0),
+        MemoryUsage(0, 0, 0, 0, 0),
     )
 
     monkeypatch.setattr(
@@ -216,7 +220,9 @@ def mock_performance_estimation(monkeypatch: Any, verbose: bool = False) -> None
         logger.addHandler(logging.StreamHandler(sys.stdout))
         logger.info("Mocking performance estimation")
     perf_metrics = PerformanceMetrics(
-        EthosU55(), NPUCycles(0, 0, 0, 0, 0, 0), MemoryUsage(0, 0, 0, 0, 0)
+        EthosUConfiguration(target="U55-256"),
+        NPUCycles(0, 0, 0, 0, 0, 0),
+        MemoryUsage(0, 0, 0, 0, 0),
     )
 
     monkeypatch.setattr(
@@ -226,15 +232,15 @@ def mock_performance_estimation(monkeypatch: Any, verbose: bool = False) -> None
 
 
 @pytest.mark.parametrize(
-    "device, optimization_type, optimization_target",
+    "target, optimization_type, optimization_target",
     [
-        ["ethos-u55", "pruning", "0.5"],
-        ["ethos-u65", "clustering", "32"],
+        ["U55-256", "pruning", "0.5"],
+        ["U65-512", "clustering", "32"],
     ],
 )
 def test_optimization_command(
     test_models_path: Path,
-    device: str,
+    target: str,
     optimization_type: str,
     optimization_target: str,
     monkeypatch: Any,
@@ -250,8 +256,8 @@ def test_optimization_command(
             str(tmp_path),
             "optimization",
             str(model),
-            "--device",
-            device,
+            "--target",
+            target,
             "--optimization-type",
             optimization_type,
             "--optimization-target",
@@ -343,12 +349,21 @@ def test_all_tests_command(
 ) -> None:
     """Test all_tests command."""
     model = test_models_path / "simple_model.h5"
+    target = "U55-256"
 
     mock_optimize_and_compare(monkeypatch)
     mock_operators_compatibility(monkeypatch)
     get_optimizer_mock = mock_get_optimizer(monkeypatch)
 
-    args = ["--working-dir", str(tmp_path), "all_tests", *extra_params, str(model)]
+    args = [
+        "--working-dir",
+        str(tmp_path),
+        "all_tests",
+        "--target",
+        target,
+        *extra_params,
+        str(model),
+    ]
 
     exit_code = main(args)
     assert exit_code == expected_exit_code
@@ -385,8 +400,8 @@ def test_all_tests_command_output(
             "--working-dir",
             str(tmp_path),
             "all_tests",
-            "--device",
-            "ethos-u55",
+            "--target",
+            "U55-256",
             str(model),
             "--output",
             str(output),
@@ -416,10 +431,8 @@ args_ops = [
     [
         [
             "performance",
-            "--device",
-            "ethos-u55",
-            "--mac",
-            "256",
+            "--target",
+            "U55-256",
             "--verbose",
         ],
         True,
@@ -430,10 +443,8 @@ args_ops = [
     [
         [
             "performance",
-            "--device",
-            "ethos-u55",
-            "--mac",
-            "256",
+            "--target",
+            "U55-256",
             "--verbose",
         ],
         True,
@@ -444,10 +455,8 @@ args_ops = [
     [
         [
             "performance",
-            "--device",
-            "ethos-u55",
-            "--mac",
-            "256",
+            "--target",
+            "U55-256",
             "--verbose",
         ],
         True,
@@ -458,10 +467,8 @@ args_ops = [
     [
         [
             "operators",
-            "--device",
-            "ethos-u55",
-            "--mac",
-            "256",
+            "--target",
+            "U55-256",
             "--verbose",
         ],
         False,
@@ -472,10 +479,8 @@ args_ops = [
     [
         [
             "operators",
-            "--device",
-            "ethos-u55",
-            "--mac",
-            "256",
+            "--target",
+            "U55-256",
             "--verbose",
         ],
         False,
@@ -486,14 +491,12 @@ args_ops = [
     [
         [
             "optimization",
-            "--device",
-            "ethos-u55",
+            "--target",
+            "U55-256",
             "--optimization-type",
             "pruning",
             "--optimization-target",
             "0.5",
-            "--mac",
-            "256",
             "--verbose",
         ],
         False,
@@ -504,10 +507,8 @@ args_ops = [
     [
         [
             "all",
-            "--device",
-            "ethos-u55",
-            "--mac",
-            "256",
+            "--target",
+            "U55-256",
             "--verbose",
         ],
         False,

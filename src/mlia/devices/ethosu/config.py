@@ -4,9 +4,11 @@
 # pylint: disable=too-many-arguments
 import logging
 from typing import Any
-from typing import Literal
+from typing import Dict
 
 from mlia.tools.vela_wrapper import VelaCompilerOptions
+from mlia.utils.filesystem import get_profiles_data
+from mlia.utils.filesystem import get_supported_profile_names
 from mlia.utils.filesystem import get_vela_config
 
 
@@ -20,16 +22,32 @@ class IPConfiguration:
 class EthosUConfiguration(IPConfiguration):
     """EthosU configuration."""
 
-    def __init__(
-        self,
-        ip_class: Literal["ethos-u55", "ethos-u65"],
-        mac: int,
-        compiler_options: VelaCompilerOptions,
-    ):
-        """Init EthosU configuration."""
-        self.ip_class = ip_class
+    def __init__(self, target: str, **kwargs: Any) -> None:
+        """Init EthosU target configuration."""
+        target_data = get_profiles_data()[target]
+
+        _check_target_data_complete(target_data)
+
+        device = target_data["device"]
+        mac = target_data["mac"]
+
+        _check_device_options_valid(device, mac)
+
+        accelerator_config = f"{device}-{mac}"
+
+        system_config = target_data["system_config"]
+        memory_mode = target_data["memory_mode"]
+        config_files = str(get_vela_config())
+
+        self.ip_class = device
         self.mac = mac
-        self.compiler_options = compiler_options
+        self.compiler_options = VelaCompilerOptions(
+            system_config=system_config,
+            memory_mode=memory_mode,
+            config_files=config_files,
+            accelerator_config=accelerator_config,  # type: ignore
+            **kwargs,
+        )
 
     def __str__(self) -> str:
         """Return string representation."""
@@ -40,55 +58,39 @@ class EthosUConfiguration(IPConfiguration):
         )
 
 
-class EthosU55(EthosUConfiguration):
-    """EthosU55 configuration."""
+def get_target(**kwargs: Any) -> IPConfiguration:
+    """Get target instance based on provided params."""
+    target = kwargs.pop("target", None)
 
-    def __init__(self, mac: Literal[32, 64, 128, 256] = 256, **kwargs: Any) -> None:
-        """Init EthosU55 configuration."""
-        if not mac or mac not in (32, 64, 128, 256):
-            raise Exception("Wrong or empty MAC value")
+    if not target:
+        raise Exception("No target given!")
 
-        super().__init__(
-            ip_class="ethos-u55",
-            mac=mac,
-            compiler_options=VelaCompilerOptions(
-                config_files=[str(get_vela_config())],
-                accelerator_config=f"ethos-u55-{mac}",  # type: ignore
-                **kwargs,
-            ),
-        )
+    if target not in get_supported_profile_names():
+        raise Exception(f"Unsupported target: {target}")
+
+    return EthosUConfiguration(target, **kwargs)
 
 
-class EthosU65(EthosUConfiguration):
-    """EthosU65 configuration."""
-
-    def __init__(self, mac: Literal[256, 512] = 256, **kwargs: Any) -> None:
-        """Init EthosU65 configuration."""
-        if not mac or mac not in (256, 512):
-            raise Exception("Wrong or empty MAC value")
-
-        super().__init__(
-            ip_class="ethos-u65",
-            mac=mac,
-            compiler_options=VelaCompilerOptions(
-                config_files=[str(get_vela_config())],
-                accelerator_config=f"ethos-u65-{mac}",  # type: ignore
-                **kwargs,
-            ),
-        )
+def _check_target_data_complete(target_data: Dict[str, Any]) -> None:
+    mandatory_keys = set(["device", "mac", "system_config", "memory_mode"])
+    missing_keys = mandatory_keys - target_data.keys()
+    if missing_keys:
+        raise Exception("Mandatory fields missing from target profile: {missing_keys}")
 
 
-def get_device(**kwargs: Any) -> IPConfiguration:
-    """Get device instance based on provided params."""
-    device = kwargs.pop("device", None)
-
-    if not device:
-        raise Exception("Device is not provided")
-
-    if device.lower() == "ethos-u55":
-        return EthosU55(**kwargs)
-
-    if device.lower() == "ethos-u65":
-        return EthosU65(**kwargs)
-
+def _check_device_options_valid(device: str, mac: int) -> None:
+    if device == "ethos-u55":
+        target_mac_range = [32, 64, 128, 256]
+        if mac not in target_mac_range:
+            raise Exception(
+                f"Mac value for selected device should be in {target_mac_range}"
+            )
+        return
+    if device == "ethos-u65":
+        target_mac_range = [256, 512]
+        if mac not in target_mac_range:
+            raise Exception(
+                f"Mac value for selected device should be in {target_mac_range}"
+            )
+        return
     raise Exception(f"Unsupported device: {device}")

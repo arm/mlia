@@ -96,43 +96,20 @@ lists the performance improvements.
 
 * -h/--help: show this help message and exit
 
-##### Device options
+##### Target profile options
 
-* --device: Device type
+* --target: Target profile that will set
+                        the default device options
+                        such as device type, mac
+                        value, memory mode, etc.. For
+                        the values associated with
+                        each profile, see:
+                        resources/profiles.json [required].
   * options:
-    * ethos-u55
-    * ethos-u65
-  * default: ethos-u55
-* --mac: MAC value
-  * options:
-    * 32
-    * 64
-    * 128
-    * 256
-    * 512
-  * default: 256
-* --system-config: System configuration
-  * default: internal-default
-* --memory-mode: Memory mode
-  * default: internal-default
-* --max-block-dependency: Max block dependency
-  * default: 3
-* --arena-cache-size: Arena cache size
-* --tensor-allocator: Tensor allocator algorithm
-  * options:
-    * LinearAlloc
-    * Greedy
-    * HillClimb
-  * default: HillClimb
-* --cpu-tensor-alignment: CPU tensor alignment
-  * default: 16
-* --recursion-limit: Recursion limit
-  * default: 1000
-* --optimization-strategy: Optimization strategy
-  * options:
-    * Performance
-    * Size
-  * default: Performance
+    * U55-256
+    * U55-128
+    * U65-512
+  (can be extended by modifying the profiles.json file)
 
 ##### Keras model options
 
@@ -173,43 +150,20 @@ Prints the model's operator list.
 * --supported-ops-report: Generate the SUPPORTED_OPS.md file in the current working
   directory and exit.
 
-##### Device options
+##### Target profile options
 
-* --device: Type of device to optimise for.
+* --target: Target profile that will set
+                        the default device options
+                        such as device type, mac
+                        value, memory mode, etc.. For
+                        the values associated with
+                        each profile, see:
+                        resources/profiles.json [required].
   * options:
-    * ethos-u55
-    * ethos-u65
-  * default: ethos-u55
-* --mac: MAC value of the target device.
-  * options:
-    * 32
-    * 64
-    * 128
-    * 256
-    * 512
-  * default: 256
-* --system-config: System configuration
-  * default: internal-default
-* --memory-mode: Memory mode
-  * default: internal-default
-* --max-block-dependency: Maximum block dependency
-  * default: 3
-* --arena-cache-size: Arena cache size
-* --tensor-allocator: Tensor allocator algorithm
-  * options:
-    * LinearAlloc
-    * Greedy
-    * HillClimb
-  * default: HillClimb
-* --cpu-tensor-alignment: CPU tensor alignment
-  * default: 16
-* --recursion-limit: Recursion limit
-  * default: 1000
-* --optimization-strategy:
-  * options:
-    * Performance
-    * Size
-  * default: Performance
+    * U55-256
+    * U55-128
+    * U65-512
+  (can be extended by modifying the profiles.json file)
 
 ##### TFLite model options
 
@@ -236,43 +190,20 @@ Prints the model's performance statistics.
 * --supported-ops-report: Generate the SUPPORTED_OPS.md file in the current
   working directory and exit.
 
-##### device options
+##### Target profile options
 
-* --device: Type of device to optimise for.
+* --target: Target profile that will set
+                        the default device options
+                        such as device type, mac
+                        value, memory mode, etc.. For
+                        the values associated with
+                        each profile, see:
+                        resources/profiles.json [required].
   * options:
-    * ethos-u55
-    * ethos-u65
-  * default: ethos-u55
-* --mac: MAC value of the target device.
-  * options:
-    * 32
-    * 64
-    * 128
-    * 256
-    * 512
-  * default: 256
-* --system-config: System configuration
-  * default: internal-default
-* --memory-mode: Memory mode
-  * default: internal-default
-* --max-block-dependency: Maximum block dependency
-  * default: 3
-* --arena-cache-size: Arena cache size
-* --tensor-allocator: Tensor allocator algorithm
-  * options:
-    * LinearAlloc
-    * Greedy
-    * HillClimb
-  * default: HillClimb
-* --cpu-tensor-alignment: CPU tensor alignment
-  * default: 16
-* --recursion-limit: Recursion limit
-  * default: 1000
-* --optimization-strategy:
-  * options:
-    * Performance
-    * Size
-  * default: Performance
+    * U55-256
+    * U55-128
+    * U65-512
+  (can be extended by modifying the profiles.json file)
 
 ##### TFLite model options
 
@@ -303,43 +234,20 @@ Shows the performance improvements after applying optimizations to the model.
 * --supported-ops-report: Generate the SUPPORTED_OPS.md file in the current
   working directory and exit.
 
-##### device options
+##### Target profile options
 
-* --device: Type of device to optimise for.
+* --target: Target profile that will set
+                        the default device options
+                        such as device type, mac
+                        value, memory mode, etc.. For
+                        the values associated with
+                        each profile, see:
+                        resources/profiles.json [required].
   * options:
-    * ethos-u55
-    * ethos-u65
-  * default: ethos-u55
-* --mac: MAC value of the target device.
-  * options:
-    * 32
-    * 64
-    * 128
-    * 256
-    * 512
-  * default: 256
-* --system-config: System configuration
-  * default: internal-default
-* --memory-mode: Memory mode
-  * default: internal-default
-* --max-block-dependency: Maximum block dependency
-  * default: 3
-* --arena-cache-size: Arena cache size
-* --tensor-allocator: Tensor allocator algorithm
-  * options:
-    * LinearAlloc
-    * Greedy
-    * HillClimb
-  * default: HillClimb
-* --cpu-tensor-alignment: CPU tensor alignment
-  * default: 16
-* --recursion-limit: Recursion limit
-  * default: 1000
-* --optimization-strategy:
-  * options:
-    * Performance
-    * Size
-  * default: Performance
+    * U55-256
+    * U55-128
+    * U65-512
+  (can be extended by modifying the profiles.json file)
 
 ##### Keras model options
 

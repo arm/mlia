@@ -3,69 +3,22 @@
 import argparse
 import os
 from typing import Any
-from typing import Dict
 from typing import List
-from typing import Optional
 from typing import Tuple
 
+from mlia.utils.filesystem import get_supported_profile_names
 
-def add_device_options(parser: argparse.ArgumentParser) -> None:
-    """Add device specific options."""
-    device_group = parser.add_argument_group("device options")
-    device_group.add_argument(
-        "--device",
-        choices=("ethos-u55", "ethos-u65"),
-        default="ethos-u55",
-        help="Device type (default: %(default)s)",
-    )
-    device_group.add_argument(
-        "--mac",
-        choices=[32, 64, 128, 256, 512],
-        type=int,
-        default=256,
-        help="MAC value (default: %(default)s)",
-    )
-    device_group.add_argument(
-        "--system-config",
-        default="internal-default",
-        help="System configuration (default: %(default)s)",
-    )
-    device_group.add_argument(
-        "--memory-mode",
-        default="internal-default",
-        help="Memory mode (default: %(default)s)",
-    )
-    device_group.add_argument(
-        "--max-block-dependency",
-        type=int,
-        default=3,
-        help="Max block dependency (default: %(default)s)",
-    )
-    device_group.add_argument("--arena-cache-size", type=int, help="Arena cache size")
-    device_group.add_argument(
-        "--tensor-allocator",
-        choices=("LinearAlloc", "Greedy", "HillClimb"),
-        default="HillClimb",
-        help="Tensor allocator algorithm (default: %(default)s)",
-    )
-    device_group.add_argument(
-        "--cpu-tensor-alignment",
-        type=int,
-        default=16,
-        help="CPU tensor alignment (default: %(default)s)",
-    )
-    device_group.add_argument(
-        "--optimization-strategy",
-        choices=("Performance", "Size"),
-        default="Performance",
-        help="Optimization strategy (default: %(default)s)",
-    )
-    device_group.add_argument(
-        "--recursion-limit",
-        type=int,
-        default=1000,
-        help="""Set the recursion depth limit,
-                may result in RecursionError if too low (default: %(default)s)""",
+
+def add_target_options(parser: argparse.ArgumentParser) -> None:
+    """Add target specific options."""
+    target_group = parser.add_argument_group("target options")
+    target_group.add_argument(
+        "--target",
+        choices=get_supported_profile_names(),
+        help="""Target profile that will set the default device options
+                such as device type, mac value, memory mode, etc..
+                For the values associated with each target profile,
+                see: resources/profiles.json.""",
     )
 
 
@@ -185,40 +138,6 @@ def add_custom_supported_operators_options(parser: argparse.ArgumentParser) -> N
             "current working directory and exit"
         ),
     )
-
-
-def get_device_opts(device_args: Optional[Dict]) -> List[str]:
-    """Get non default values passed as parameters for the device."""
-    if not device_args:
-        return []
-
-    dummy_parser = argparse.ArgumentParser()
-    add_device_options(dummy_parser)
-    args = dummy_parser.parse_args([])
-
-    params_name = {
-        action.dest: param_name
-        for param_name, action in dummy_parser._option_string_actions.items()  # pylint: disable=protected-access
-    }
-
-    non_default = [
-        arg_name
-        for arg_name, arg_value in device_args.items()
-        if arg_name in args and vars(args)[arg_name] != arg_value
-    ]
-
-    def construct_param(name: str, value: Any) -> List[str]:
-        """Construct parameter."""
-        if isinstance(value, list):
-            return [str(item) for v in value for item in [name, v]]
-
-        return [name, str(value)]
-
-    return [
-        item
-        for name in non_default
-        for item in construct_param(params_name[name], device_args[name])
-    ]
 
 
 def parse_optimization_parameters(

@@ -1,0 +1,23 @@
+{
+    "U55-256":
+    {
+        "device": "ethos-u55",
+        "mac": 256,
+        "system_config": "Ethos_U55_High_End_Embedded",
+        "memory_mode": "Shared_Sram"
+    },
+    "U55-128":
+    {
+        "device": "ethos-u55",
+        "mac": 128,
+        "system_config": "Ethos_U55_High_End_Embedded",
+        "memory_mode": "Shared_Sram"
+    },
+    "U65-512":
+    {
+        "device": "ethos-u65",
+        "mac": 512,
+        "system_config": "Ethos_U65_Embedded",
+        "memory_mode": "Shared_Sram"
+    }
+}

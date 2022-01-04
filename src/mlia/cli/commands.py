@@ -11,10 +11,9 @@ be configured. Function 'setup_logging' from module
 >>> from mlia.cli.logging import setup_logging
 >>> setup_logging(verbose=True)
 >>> import mlia.cli.commands as mlia
->>> mlia.all_tests("path/to/model", device="ethos-u55")
+>>> mlia.all_tests("path/to/model", target="U55-256")
 """
 import logging
-from typing import Any
 from typing import List
 from typing import Optional
 
@@ -26,7 +25,7 @@ from mlia.cli.advice import OptimizationResults
 from mlia.cli.advice import produce_advice
 from mlia.cli.common import ExecutionContext
 from mlia.cli.options import parse_optimization_parameters
-from mlia.devices.ethosu.config import get_device
+from mlia.devices.ethosu.config import get_target
 from mlia.devices.ethosu.operators import generate_supported_operators_report
 from mlia.devices.ethosu.operators import supported_operators
 from mlia.devices.ethosu.performance import collect_performance_metrics
@@ -56,12 +55,12 @@ REPORT_GENERATION_MSG = """
 
 def all_tests(  # pylint: disable=too-many-arguments, too-many-locals
     ctx: ExecutionContext,
+    target: str,
     model: str,
     optimization_type: str,
     optimization_target: str,
     output_format: OutputFormat = "plain_text",
     output: Optional[PathOrFileLike] = None,
-    **device_args: Any,
 ) -> None:
     """Generate a full report on the input model.
 
@@ -76,6 +75,8 @@ def all_tests(  # pylint: disable=too-many-arguments, too-many-locals
         - provides advice on how to (possibly) improve the inference performance
 
     :param ctx: execution context
+    :param target: target profile identifier. Will load appropriate parameters
+            from the profile.json file based on this argument.
     :param model: path to the Keras model
     :param optimization_type: list of the optimization techniques separated
            by comma, e.g. 'pruning,clustering'
@@ -84,12 +85,9 @@ def all_tests(  # pylint: disable=too-many-arguments, too-many-locals
     :param output_format: format of the report produced during the command
            execution
     :param output: path to the file where the report will be saved
-    :param device_args: device related parameters, e.g. device="ethos-u55",
-           mac=32, for full list of the supported parameters please refer
-           to module 'mlia.cli.options'
 
     Example:
-        Run command for the device Ethos-U55 (mac=128) with two model optimizations
+        Run command for the target profile U55-256 with two model optimizations
         and save report in json format locally in the file report.json
 
         >>> from mlia.cli.logging import setup_logging
@@ -97,10 +95,10 @@ def all_tests(  # pylint: disable=too-many-arguments, too-many-locals
         >>> from mlia.cli.commands import all_tests
         >>> all_tests("model.h5", "pruning,clustering", "0.5,32",
                        output_format="json", output="report.json",
-                       working_dir="mlia_output", device="ethos-u55", mac=128)
+                       working_dir="mlia_output", target="U55-256")
     """
     keras_model = get_keras_model(model, ctx)
-    device = get_device(**device_args)
+    device = get_target(target=target)
 
     with get_reporter(output_format, output) as reporter:
         reporter.submit(device)
@@ -141,7 +139,7 @@ def all_tests(  # pylint: disable=too-many-arguments, too-many-locals
                 perf_metrics=compare_metrics(original, optimized),
                 optimizations=opt_params,
             ),
-            device_args=device_args,
+            target=target,
             model=model,
         )
         advice = produce_advice(adv_ctx, AdviceGroup.COMMON)
@@ -158,39 +156,38 @@ def all_tests(  # pylint: disable=too-many-arguments, too-many-locals
             logger.info("Report(s) and advice list saved to: %s", output)
 
 
-def operators(
+def operators(  # pylint: disable=too-many-arguments
     ctx: ExecutionContext,
+    target: str,
     model: Optional[str] = None,
     output_format: OutputFormat = "plain_text",
     output: Optional[PathOrFileLike] = None,
     supported_ops_report: bool = False,
-    **device_args: Any,
 ) -> None:
     """Print the model's operator list.
 
     This command checks the operator compatibility of the input model with
-    the specific device. Generates a report of the operator placement
+    the specific target profile. Generates a report of the operator placement
     (NPU or CPU fallback) and advice on how to improve it (if necessary).
 
     :param ctx: execution context
+    :param target: target profile identifier. Will load appropriate parameters
+            from the profile.json file based on this argument.
     :param model: path to the model, which can be TFLite or Keras
     :param output_format: format of the report produced during the command
            execution
     :param output: path to the file where the report will be saved
     :param supported_ops_report: if True then generates supported operators
            report in current directory and exits
-    :param device_args: device related parameters, e.g. device="ethos-u55",
-           mac=32, for full list of the supported parameters please refer
-           to module 'mlia.cli.options'
 
     Example:
-        Run command for the device Ethos-U55 and the provided TFLite model and
+        Run command for the target profile U55-256 and the provided TFLite model and
         print report on the standard output
 
         >>> from mlia.cli.logging import setup_logging
         >>> setup_logging()
         >>> from mlia.cli.commands import operators
-        >>> operators("model.tflite", device="ethos-u55")
+        >>> operators("model.tflite", target="U55-256")
     """
     if supported_ops_report:
         generate_supported_operators_report()
@@ -201,7 +198,7 @@ def operators(
         raise Exception("Model is not provided")
 
     tflite_model = get_tflite_model(model, ctx)
-    device = get_device(**device_args)
+    device = get_target(target=target)
 
     with get_reporter(output_format, output) as reporter:
         reporter.submit(device)
@@ -213,9 +210,7 @@ def operators(
 
         logger.info(ADV_GENERATION_MSG)
 
-        adv_ctx = AdvisorContext(
-            operators=operators_info, device_args=device_args, model=model
-        )
+        adv_ctx = AdvisorContext(operators=operators_info, target=target, model=model)
         advice = produce_advice(adv_ctx, AdviceGroup.OPERATORS_COMPATIBILITY)
 
         reporter.submit(
@@ -232,37 +227,36 @@ def operators(
 
 def performance(
     ctx: ExecutionContext,
+    target: str,
     model: str,
     output_format: OutputFormat = "plain_text",
     output: Optional[PathOrFileLike] = None,
-    **device_args: Any,
 ) -> None:
     """Print the model's performance stats.
 
     This command estimates the inference performance of the input model
-    on the specified device, and generates a report with advice on how
+    on the specified target profile, and generates a report with advice on how
     to improve it.
 
     :param ctx: execution context
+    :param target: target profile identifier. Will load appropriate parameters
+            from the profile.json file based on this argument.
     :param model: path to the model, which can be TFLite or Keras
     :param output_format: format of the report produced during the command
            execution
     :param output: path to the file where the report will be saved
-    :param device_args: device related parameters, e.g. device="ethos-u55",
-           mac=32, for full list of the supported parameters please refer
-           to module 'mlia.cli.options'
 
     Example:
-        Run command for the device Ethos-U65 and the provided TFLite model and
+        Run command for the target profile U55-256 and the provided TFLite model and
         print report on the standard output
 
         >>> from mlia.cli.logging import setup_logging
         >>> setup_logging()
         >>> from mlia.cli.commands import performance
-        >>> performance("model.tflite", device="ethos-u65")
+        >>> performance("model.tflite", target="U55-256")
     """
     tflite_model = get_tflite_model(model, ctx)
-    device = get_device(**device_args)
+    device = get_target(target=target)
 
     with get_reporter(output_format, output) as reporter:
         reporter.submit(device)
@@ -274,9 +268,7 @@ def performance(
 
         logger.info(ADV_GENERATION_MSG)
 
-        adv_ctx = AdvisorContext(
-            perf_metrics=perf_metrics, device_args=device_args, model=model
-        )
+        adv_ctx = AdvisorContext(perf_metrics=perf_metrics, target=target, model=model)
         advice = produce_advice(adv_ctx, AdviceGroup.PERFORMANCE)
 
         reporter.submit(
@@ -294,13 +286,13 @@ def performance(
 
 def optimization(  # pylint: disable=too-many-arguments, too-many-locals
     ctx: ExecutionContext,
+    target: str,
     model: str,
     optimization_type: str,
     optimization_target: str,
     layers_to_optimize: Optional[List[str]] = None,
     output_format: OutputFormat = "plain_text",
     output: Optional[PathOrFileLike] = None,
-    **device_args: Any,
 ) -> None:
     """Show the performance improvements (if any) after applying the optimizations.
 
@@ -309,6 +301,8 @@ def optimization(  # pylint: disable=too-many-arguments, too-many-locals
     the inference performance (if possible).
 
     :param ctx: execution context
+    :param target: target profile identifier. Will load appropriate parameters
+            from the profile.json file based on this argument.
     :param model: path to the TFLite model
     :param optimization_type: list of the optimization techniques separated
            by comma, e.g. 'pruning,clustering'
@@ -319,21 +313,18 @@ def optimization(  # pylint: disable=too-many-arguments, too-many-locals
     :param output_format: format of the report produced during the command
            execution
     :param output: path to the file where the report will be saved
-    :param device_args: device related parameters, e.g. device="ethos-u55",
-           mac=32, for full list of the supported parameters please refer
-           to module 'mlia.cli.options'
 
     Example:
-        Run command for the device Ethos-U65 and the provided TFLite model and
+        Run command for the target profile U55-256 and the provided TFLite model and
         print report on the standard output
 
         >>> from mlia.cli.logging import setup_logging
         >>> setup_logging()
         >>> from mlia.cli.commands import optimization
-        >>> optimization("model.tflite", device="ethos-u65")
+        >>> optimization("model.tflite", target="U55-256")
     """
     keras_model = get_keras_model(model, ctx)
-    device = get_device(**device_args)
+    device = get_target(target=target)
 
     with get_reporter(output_format, output) as reporter:
         reporter.submit(device)
@@ -369,7 +360,7 @@ def optimization(  # pylint: disable=too-many-arguments, too-many-locals
 
         adv_ctx = AdvisorContext(
             optimization_results=optimization_results,
-            device_args=device_args,
+            target=target,
             model=model,
         )
         advice = produce_advice(adv_ctx, AdviceGroup.OPTIMIZATION)

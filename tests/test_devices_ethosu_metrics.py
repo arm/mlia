@@ -4,7 +4,7 @@ from typing import Union
 
 import pandas as pd
 import pytest
-from mlia.devices.ethosu.config import EthosU55
+from mlia.devices.ethosu.config import EthosUConfiguration
 from mlia.devices.ethosu.metrics import MemoryUsage
 from mlia.devices.ethosu.metrics import NPUCycles
 from mlia.devices.ethosu.metrics import PerformanceMetrics
@@ -55,7 +55,7 @@ from mlia.devices.ethosu.metrics import PerformanceMetrics
         ),
         (
             PerformanceMetrics(
-                EthosU55(),
+                EthosUConfiguration(target="U55-256"),
                 NPUCycles(1, 2, 3, 4, 5, 6),
                 MemoryUsage(1, 2, 3, 4, 5),
             ),
@@ -78,7 +78,7 @@ from mlia.devices.ethosu.metrics import PerformanceMetrics
         ),
         (
             PerformanceMetrics(
-                EthosU55(),
+                EthosUConfiguration(target="U55-256"),
                 NPUCycles(1, 2, 3, 4, 5, 6),
                 MemoryUsage(1024, 2 * 1024, 3 * 1024, 4 * 1024, 5 * 1024),
             ).in_kilobytes(),

@@ -28,6 +28,7 @@ from mlia.devices.ethosu.metadata import Operators
         (
             AdvisorContext(
                 model="model.tflite",
+                target="U65-512",
                 operators=Operators(
                     [Operator("operator", "magic operator", NpuSupported(True, []))]
                 ),
@@ -37,29 +38,13 @@ from mlia.devices.ethosu.metadata import Operators
                 "You don't have any unsupported operators, "
                 "your model will run completely on NPU.",
                 "Check the estimated performance by running the following command:",
-                "mlia performance model.tflite",
+                "mlia performance --target U65-512 model.tflite",
             ],
         ),
         (
             AdvisorContext(
                 model="model.tflite",
-                device_args={"device": "ethos-u65", "mac": 512},
-                operators=Operators(
-                    [Operator("operator", "magic operator", NpuSupported(True, []))]
-                ),
-            ),
-            advice_all_operators_supported,
-            [
-                "You don't have any unsupported operators, "
-                "your model will run completely on NPU.",
-                "Check the estimated performance by running the following command:",
-                "mlia performance --device ethos-u65 --mac 512 model.tflite",
-            ],
-        ),
-        (
-            AdvisorContext(
-                model="model.tflite",
-                device_args={"device": "ethos-u65", "mac": 512},
+                target="U65-512",
                 operators=Operators(
                     [Operator("operator", "magic operator", NpuSupported(True, []))]
                 ),
@@ -73,6 +58,7 @@ from mlia.devices.ethosu.metadata import Operators
         (
             AdvisorContext(
                 model="model.tflite",
+                target="U55-256",
                 operators=Operators(
                     [Operator("operator", "magic operator", NpuSupported(False, []))]
                 ),
@@ -83,6 +69,7 @@ from mlia.devices.ethosu.metadata import Operators
         (
             AdvisorContext(
                 model="model.tflite",
+                target="U55-256",
                 operators=Operators(
                     [
                         Operator(
@@ -105,6 +92,7 @@ from mlia.devices.ethosu.metadata import Operators
         (
             AdvisorContext(
                 model="model.tflite",
+                target="U55-256",
                 operators=Operators(
                     [
                         Operator(
@@ -133,6 +121,7 @@ from mlia.devices.ethosu.metadata import Operators
         (
             AdvisorContext(
                 model="model.tflite",
+                target="U55-256",
                 operators=Operators(
                     [
                         Operator(
@@ -151,6 +140,7 @@ from mlia.devices.ethosu.metadata import Operators
         (
             AdvisorContext(
                 model="model.tflite",
+                target="U55-256",
                 operators=Operators(
                     [
                         Operator(
@@ -189,13 +179,13 @@ def test_operators_advice(
     "ctx, advice_producer, expected_result",
     [
         (
-            AdvisorContext(model="model.tflite"),
+            AdvisorContext(model="model.tflite", target="U55-256"),
             advice_increase_operator_compatibility,
             [
                 "You can improve the inference time by using only operators "
                 "that are supported by the NPU.",
                 "Try running the following command to verify that:",
-                "mlia operators model.tflite",
+                "mlia operators --target U55-256 model.tflite",
             ],
         ),
         (
@@ -231,19 +221,6 @@ def test_operators_advice(
                 "For example: mlia optimization --optimization-type "
                 "pruning,clustering --optimization-target 0.5,32 model.h5",
                 "For more info: mlia optimization --help",
-            ],
-        ),
-        (
-            AdvisorContext(
-                model="model.tflite",
-                device_args={"mac": 32, "optimization_strategy": "Size"},
-            ),
-            advice_increase_operator_compatibility,
-            [
-                "You can improve the inference time by using only operators "
-                "that are supported by the NPU.",
-                "Try running the following command to verify that:",
-                "mlia operators --mac 32 --optimization-strategy Size model.tflite",
             ],
         ),
     ],
@@ -356,6 +333,7 @@ def test_performance_advice(
         (
             AdvisorContext(
                 model="sample.h5",
+                target="U55-256",
                 optimization_results=OptimizationResults(
                     optimizations=[("pruning", 0.1), ("clustering", 11)],
                     perf_metrics=pd.DataFrame.from_dict(
@@ -376,7 +354,8 @@ def test_performance_advice(
                 "check if those results can be further improved.",
                 "For more info, see: mlia optimization --help",
                 "Optimization command: mlia optimization --optimization-type "
-                "pruning,clustering --optimization-target 0.2,8 sample.h5",
+                "pruning,clustering --optimization-target 0.2,8 "
+                "--target U55-256 sample.h5",
             ],
         ),
     ],
