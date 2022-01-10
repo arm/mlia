@@ -19,7 +19,7 @@ PACKAGE_DIR=$(mktemp -d -t mlia-XXXXXX)
 
 # ML Inference Advisor params
 MLIA_NAME="ML Inference Advisor"
-MLIA_VERSION="0.1.1"
+MLIA_VERSION="0.1.2"
 MLIA_WHEEL_FILE="mlia-$MLIA_VERSION-py3-none-any.whl"
 MLIA_URL="https://artifactory.eu02.arm.com:443/artifactory/ml-tooling.pypi-local/mlia/$MLIA_VERSION/$MLIA_WHEEL_FILE"
 
@@ -209,7 +209,9 @@ install_aiet() {
 
 configure_aiet() {
     # Install the AI Evaluation Toolkit systems and applications
+    verbose "Installing systems ..."
     aiet system install -s "$CS_300_FVP_VALID_PATH"
+    verbose "Installing applications ..."
     aiet application install -s "$CS_300_APP_PACKAGE"
 }
 
@@ -289,12 +291,13 @@ Options:
 # === ENTRY POINT ===
 
 # Check the Python version
+PYTHON_VERSION_ERROR_MESSAGE="The minimum Python version required is $PYTHON_REQUIRED_VERSION, you have $PYTHON_VERSION"
 if [[ $PYTHON_MAJOR_VERSION -lt $PYTHON_REQUIRED_MAJOR_VERSION ]]; then
-    error "The minimum Python version required is $PYTHON_REQUIRED_VERSION, you have $PYTHON_VERSION"
+    error "$PYTHON_VERSION_ERROR_MESSAGE"
     exit 1
 fi
 if [[ $PYTHON_MINOR_VERSION -lt $PYTHON_REQUIRED_MINOR_VERSION ]]; then
-    error "The minimum Python version required is $PYTHON_REQUIRED_VERSION, you have $PYTHON_VERSION"
+    error "$PYTHON_VERSION_ERROR_MESSAGE"
     exit 1
 fi
 
@@ -372,13 +375,13 @@ log "\nUsing the local instance of the $CS_300_FVP_NAME version $CS_300_FVP_VERS
 
 # Downloading components
 log "\nDownloading the $MLIA_NAME version $MLIA_VERSION to \"$PACKAGE_DIR\" ..."
-wget "$MLIA_URL" -O "$PACKAGE_DIR/$MLIA_WHEEL_FILE"
+wget -nv "$MLIA_URL" -O "$PACKAGE_DIR/$MLIA_WHEEL_FILE"
 
 log "\nDownloading the $AIET_NAME version $AIET_VERSION to \"$PACKAGE_DIR\" ..."
-wget "$AIET_URL" -O "$PACKAGE_DIR/$AIET_WHEEL_FILE"
+wget -nv "$AIET_URL" -O "$PACKAGE_DIR/$AIET_WHEEL_FILE"
 
 log "\nDownloading the $AIET_GENERIC_INFERENCE_RUNNER_NAME version $AIET_GENERIC_INFERENCE_RUNNER_VERSION to \"$PACKAGE_DIR\" ..."
-wget "$AIET_GENERIC_INFERENCE_RUNNER_URL" -O "$PACKAGE_DIR/$AIET_GENERIC_INFERENCE_RUNNER_ARCHIVE"
+wget -nv "$AIET_GENERIC_INFERENCE_RUNNER_URL" -O "$PACKAGE_DIR/$AIET_GENERIC_INFERENCE_RUNNER_ARCHIVE"
 
 verbose "Checking packages ..."
 init_packages "$PACKAGE_DIR"
@@ -391,6 +394,11 @@ log "\nInstalling the $AIET_NAME ..."
 # installing the systems and the applications just yet. Installing the systems requires
 # the configuration files included in the Inference Advisor
 install_aiet
+
+# Check the AIET installation
+AIET_PACKAGE_PATH=$(python3 -c "import os, aiet; print(os.path.dirname(aiet.__file__))")
+check_path "$AIET_PACKAGE_PATH"
+verbose "AIET package found at \"$AIET_PACKAGE_PATH\""
 
 log "\nInstalling the $MLIA_NAME ..."
 # The Inference Advisor has to be installed after the AI Evaluation Toolkit, since it has
