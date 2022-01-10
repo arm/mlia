@@ -8,10 +8,14 @@ calling application.
 Each component of the workflow can generate events of specific type.
 Application can subscribe and react to those events.
 """
+import traceback
 from abc import ABC
 from abc import abstractmethod
 from contextlib import contextmanager
 from dataclasses import dataclass
+from functools import singledispatchmethod
+from typing import Any
+from typing import Dict
 from typing import Generator
 from typing import List
 from typing import Tuple
@@ -55,6 +59,13 @@ class ExecutionFinishedEvent(SystemEvent):
 
     This event is published when workflow execution finished.
     """
+
+
+@dataclass
+class ExecutionFailedEvent(SystemEvent):
+    """Execution failed event."""
+
+    err: Exception
 
 
 @dataclass
@@ -129,13 +140,12 @@ class AnalyzedDataEvent(SystemEvent):
     data_item: DataItem
 
 
-class EventHandler(ABC):
+class EventHandler:
     """Base class for the event handlers.
 
     Each event handler should derive from this base class.
     """
 
-    @abstractmethod
     def handle_event(self, event: Event) -> None:
         """Handle the event.
 
@@ -143,6 +153,83 @@ class EventHandler(ABC):
         registered event handler. It is handler's responsibility
         to filter events that it interested in.
         """
+
+
+class DebugEventHandler(EventHandler):
+    """Event handler for debugging purposes.
+
+    This handler could print every published event to the
+    standard output.
+    """
+
+    def __init__(self, with_stacktrace: bool = False) -> None:
+        """Init event handler.
+
+        :param with_stacktrace: enable printing stacktrace of the
+               place where event publishing occurred.
+        """
+        self.with_stacktrace = with_stacktrace
+
+    def handle_event(self, event: Event) -> None:
+        """Handle event."""
+        print(f"Got event {event}")
+
+        if self.with_stacktrace:
+            traceback.print_stack()
+
+
+class EventDispatcherMetaclass(type):
+    """Metaclass for event dispatching.
+
+    It could be tedious to check type of the published event
+    inside event handler. Instead the following convention could be
+    established: if method name of the class starts with some
+    prefix then it is considered to be event handler of particular
+    type.
+
+    This metaclass goes through the list of class methods and
+    links all methods with the prefix "on_" to the common dispatcher
+    method.
+    """
+
+    def __new__(
+        cls,
+        clsname: str,
+        bases: Tuple,
+        namespace: Dict[str, Any],
+        event_handler_method_prefix: str = "on_",
+    ) -> Any:
+        """Create event dispatcher and link event handlers."""
+        new_class = super().__new__(cls, clsname, bases, namespace)
+
+        @singledispatchmethod
+        def dispatcher(
+            self: Any, event: Event  # pylint: disable=unused-argument
+        ) -> Any:
+            """Event dispatcher."""
+
+        # get all class methods which starts with particular prefix
+        event_handler_methods = (
+            (item_name, item)
+            for item_name in dir(new_class)
+            if callable((item := getattr(new_class, item_name)))
+            and item_name.startswith(event_handler_method_prefix)
+        )
+
+        # link all collected event handlers to one dispatcher method
+        for method_name, method in event_handler_methods:
+            event_handler = dispatcher.register(method)
+            setattr(new_class, method_name, event_handler)
+
+        # override default handle_event method, replace it with the
+        # dispatcher
+        setattr(new_class, "handle_event", dispatcher)
+
+        return new_class
+
+
+class EventDispatcher(EventHandler, metaclass=EventDispatcherMetaclass):
+    """Event dispatcher."""
 
 
 class EventPublisher(ABC):
@@ -220,3 +307,48 @@ def stage(
     publisher.publish_event(started)
     yield
     publisher.publish_event(finished)
+
+
+class SystemEventsHandler(EventDispatcher):
+    """System events handler."""
+
+    def on_execution_started(self, event: ExecutionStartedEvent) -> None:
+        """Handle ExecutionStarted event."""
+
+    def on_execution_finished(self, event: ExecutionFinishedEvent) -> None:
+        """Handle ExecutionFinished event."""
+
+    def on_execution_failed(self, event: ExecutionFailedEvent) -> None:
+        """Handle ExecutionFailed event."""
+
+    def on_data_collection_stage_started(
+        self, event: DataCollectionStageStartedEvent
+    ) -> None:
+        """Handle DataCollectionStageStarted event."""
+
+    def on_data_collection_stage_finished(
+        self, event: DataCollectionStageFinishedEvent
+    ) -> None:
+        """Handle DataCollectionStageFinished event."""
+
+    def on_data_analysis_stage_started(
+        self, event: DataAnalysisStageStartedEvent
+    ) -> None:
+        """Handle DataAnalysisStageStartedEvent event."""
+
+    def on_data_analysis_stage_finished(
+        self, event: DataAnalysisStageFinishedEvent
+    ) -> None:
+        """Handle DataAnalysisStageFinishedEvent event."""
+
+    def on_advice_stage_started(self, event: AdviceStageStartedEvent) -> None:
+        """Handle AdviceStageStarted event."""
+
+    def on_advice_stage_finished(self, event: AdviceStageFinishedEvent) -> None:
+        """Handle AdviceStageFinished event."""
+
+    def on_collected_data(self, event: CollectedDataEvent) -> None:
+        """Handle CollectedData event."""
+
+    def on_analyzed_data(self, event: AnalyzedDataEvent) -> None:
+        """Handle AnalyzedData event."""

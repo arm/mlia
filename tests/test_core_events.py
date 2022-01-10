@@ -1,13 +1,19 @@
 # Copyright 2021, Arm Ltd.
 """Tests for the module events."""
 from dataclasses import dataclass
+from typing import Any
 from unittest.mock import call
 from unittest.mock import MagicMock
 
+from mlia.core.events import DebugEventHandler
 from mlia.core.events import DefaultEventPublisher
 from mlia.core.events import Event
+from mlia.core.events import EventDispatcher
 from mlia.core.events import EventHandler
+from mlia.core.events import ExecutionFinishedEvent
+from mlia.core.events import ExecutionStartedEvent
 from mlia.core.events import stage
+from mlia.core.events import SystemEventsHandler
 
 
 @dataclass
@@ -46,3 +52,62 @@ def test_stage_context_manager() -> None:
     assert handler_mock.handle_event.call_count == 2
     calls = [call(event) for event in events]
     handler_mock.handle_event.assert_has_calls(calls)
+
+
+def test_debug_event_handler(capsys: Any) -> None:
+    """Test debugging event handler."""
+    publisher = DefaultEventPublisher()
+    publisher.register_event_handler(DebugEventHandler())
+
+    msgs = ["Sample event 1", "Sample event 2"]
+    for msg in msgs:
+        publisher.publish_event(SampleEvent(msg))
+
+    captured = capsys.readouterr()
+    for msg in msgs:
+        assert f"Got event SampleEvent(msg='{msg}')" in captured.out
+
+
+def test_event_dispatcher(capsys: Any) -> None:
+    """Test event dispatcher."""
+
+    class SampleEventHandler(EventDispatcher):
+        """Sample event handler."""
+
+        def on_sample_event(  # pylint: disable=no-self-use
+            self, _event: SampleEvent
+        ) -> None:
+            """Event handler for SampleEvent."""
+            print("Got sample event")
+
+    publisher = DefaultEventPublisher()
+    publisher.register_event_handler(SampleEventHandler())
+    publisher.publish_event(SampleEvent("Sample event"))
+
+    captured = capsys.readouterr()
+    assert captured.out.strip() == "Got sample event"
+
+
+def test_system_events_handler(capsys: Any) -> None:
+    """Test system events handler."""
+
+    class CustomSystemEventHandler(SystemEventsHandler):
+        """Custom system event handler."""
+
+        def on_execution_started(self, event: ExecutionStartedEvent) -> None:
+            """Handle ExecutionStarted event."""
+            print("Execution started")
+
+        def on_execution_finished(self, event: ExecutionFinishedEvent) -> None:
+            """Handle ExecutionFinished event."""
+            print("Execution finished")
+
+    publisher = DefaultEventPublisher()
+    publisher.register_event_handler(CustomSystemEventHandler())
+
+    publisher.publish_event(ExecutionStartedEvent())
+    publisher.publish_event(SampleEvent("Hello world!"))
+    publisher.publish_event(ExecutionFinishedEvent())
+
+    captured = capsys.readouterr()
+    assert captured.out.strip() == "Execution started\nExecution finished"
