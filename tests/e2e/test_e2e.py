@@ -8,6 +8,8 @@ import json
 import os
 import shutil
 import subprocess
+import sys
+import tempfile
 from pathlib import Path
 from typing import Any
 from typing import Dict
@@ -111,17 +113,39 @@ class ExecutionConfiguration(NamedTuple):
         )
 
 
-def run_command(cmd: List[str], extra_input: Optional[str] = None) -> None:
-    """Run command."""
-    print(f"Run command: {' '.join(cmd)}")
-
-    subprocess.run(
+def launch_and_wait(cmd: List[str], stdin: Optional[Any] = None) -> None:
+    """Launch command and wait for the completion."""
+    with subprocess.Popen(
         cmd,
-        check=True,
-        input=extra_input,
+        stdin=stdin,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,  # redirect command stderr to stdout
         universal_newlines=True,
         bufsize=1,
-    )
+    ) as process:
+        if process.stdout is None:
+            raise Exception("Unable to get process output")
+        # redirect output of the process into current process stdout
+        for line in process.stdout:
+            print(line, end="")
+        process.wait()
+        if (exit_code := process.poll()) != 0:
+            raise Exception(f"Command failed with exit_code {exit_code}")
+
+
+def run_command(cmd: List[str], cmd_input: Optional[str] = None) -> None:
+    """Run command."""
+    print(f"Run command: {' '.join(cmd)}")
+    if cmd_input is None:
+        launch_and_wait(cmd)
+        return
+    print(f"Command will receive next input: {repr(cmd_input)}")
+    with tempfile.NamedTemporaryFile(
+        mode="w", prefix="mlia_", suffix="_test"
+    ) as cmd_input_file:
+        cmd_input_file.write(cmd_input)
+        cmd_input_file.seek(0)
+        launch_and_wait(cmd, cmd_input_file)
 
 
 def get_config_dir() -> Optional[Path]:
@@ -172,8 +196,9 @@ class TestInstallScript:
             test_path = install_dir_path.resolve()
             venv = f"e2e_venv_{test_path.name}"
             extra_input = (
-                flag_download if flag_download in ["Y", "y", "N", "n"] else None
+                f"{flag_download}\n" if flag_download in ["Y", "y", "N", "n"] else None
             )
+
             command = [
                 f"./{install_script}",
                 *install_script_options,
@@ -257,7 +282,9 @@ class TestInstallScript:
         )
 
     def test_install_new_script_use_default_fvp_paths_download_timeout(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
+        capsys: Any,
     ) -> None:
         """Test MLIA install_new script using the default FVP paths."""
         test_dir = "dist4"
@@ -267,7 +294,16 @@ class TestInstallScript:
             "install_new.sh", [], install_dir_path, tmp_path, []
         )
 
-    def test_install_new_script_use_specific_fvp_path(self, tmp_path: Path) -> None:
+        out, err = capsys.readouterr()
+        sys.stdout.write(out)
+        sys.stderr.write(err)
+        assert out.find("Timed out so nothing will be downloaded") != -1
+
+    def test_install_new_script_use_specific_fvp_path(
+        self,
+        tmp_path: Path,
+        capsys: Any,
+    ) -> None:
         """Test MLIA install_new script using a specific FVP path."""
         config_dir_path = get_config_dir()
         assert config_dir_path
@@ -286,16 +322,32 @@ class TestInstallScript:
             self.full_commands_list,
         )
 
+        out, err = capsys.readouterr()
+        sys.stdout.write(out)
+        sys.stderr.write(err)
+        assert out.find("Using the local instance of the FVP") != -1
+
     @pytest.mark.parametrize(
-        "flag_yn, pass_install_directory, test_dir",
+        "flag_yn, pass_install_directory, test_dir, cap_str",
         [
-            ["Y", False, "dist6"],
-            ["Y", True, "dist7"],
-            ["N", False, "dist8"],
+            [
+                "Y",
+                False,
+                "dist6",
+                "Successfully downloaded from developer.arm.com",
+            ],
+            ["Y", True, "dist7", "Successfully downloaded from developer.arm.com"],
+            ["N", False, "dist8", "Nothing downloaded. Exiting"],
         ],
     )
     def test_install_new_script_download_fvp(
-        self, tmp_path: Path, flag_yn: str, pass_install_directory: bool, test_dir: str
+        self,
+        tmp_path: Path,
+        flag_yn: str,
+        pass_install_directory: bool,
+        test_dir: str,
+        cap_str: str,
+        capsys: Any,
     ) -> None:
         """Test MLIA install_new script can download and install FVP."""
         install_dir_path = tmp_path / test_dir
@@ -311,6 +363,11 @@ class TestInstallScript:
             [],
             flag_yn,
         )
+
+        out, err = capsys.readouterr()
+        sys.stdout.write(out)
+        sys.stderr.write(err)
+        assert out.find(cap_str) != -1
 
     @pytest.mark.parametrize(
         "model_name",

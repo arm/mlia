@@ -365,7 +365,7 @@ check_fvp_path "$CS_300_FVP_PATH"
 # If no FVP file exists, we need to download and install them
 if [ -z "$CS_300_FVP_VALID_PATH" ]; then
     download_maybe
-    log "\nDownloaded the $CS_300_FVP_NAME version $CS_300_FVP_VERSION to \"$CS_300_FVP_PATH\" ..."
+    log "\nSuccessfully downloaded from developer.arm.com: the $CS_300_FVP_NAME version $CS_300_FVP_VERSION to \"$CS_300_FVP_PATH\" ..."
     if [ "$CS_300_FVP_DOWNLOADED" == "true" ]; then
         install_fvp
     fi
