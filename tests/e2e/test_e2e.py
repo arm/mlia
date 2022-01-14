@@ -230,72 +230,28 @@ class TestInstallScript:
                 assert result.returncode == 0
                 print(result.stdout.decode())
 
-    full_commands_list = [
+    command_list = [
         "mlia --version",
         "mlia --help",
         "mlia ops --help",
         "mlia perf --help",
-        "aiet --help",
-        "aiet system list",
-        "aiet application list",
-    ]
-    partial_commands_list = [
         "aiet --version",
         "aiet --help",
         "aiet system list",
         "aiet application list",
     ]
 
-    @pytest.mark.skip
-    def test_install_script(self, tmp_path: Path) -> None:
-        """Test MLIA installation script."""
-        test_dir = "dist1"
-        install_dir_path = tmp_path / test_dir
-        self.run_install_script_test(
-            "install.sh",
-            ["-d", str(install_dir_path)],
-            install_dir_path,
-            tmp_path,
-            self.full_commands_list,
-        )
-
-    @pytest.mark.skip
-    def test_install_dev_script_without_mlia(self, tmp_path: Path) -> None:
-        """Test MLIA install_dev.sh script without installing MLIA flag."""
-        test_dir = "dist2"
-        install_dir_path = tmp_path / test_dir
-        self.run_install_script_test(
-            "install_dev.sh",
-            ["-d", str(install_dir_path)],
-            install_dir_path,
-            tmp_path,
-            self.partial_commands_list,
-        )
-
-    @pytest.mark.skip
-    def test_install_dev_script_with_mlia(self, tmp_path: Path) -> None:
-        """Test MLIA install_dev.sh script with installing MLIA flag."""
-        test_dir = "dist3"
-        install_dir_path = tmp_path / test_dir
-        self.run_install_script_test(
-            "install_dev.sh",
-            ["-d", str(install_dir_path), "-m"],
-            install_dir_path,
-            tmp_path,
-            self.full_commands_list,
-        )
-
     def test_install_new_script_use_default_fvp_paths_download_timeout(
         self,
         tmp_path: Path,
         capsys: Any,
     ) -> None:
-        """Test MLIA install_new script using the default FVP paths."""
-        test_dir = "dist4"
+        """Test MLIA mlia_install script using the default FVP paths."""
+        test_dir = "dist1"
         install_dir_path = tmp_path / test_dir
 
         self.run_install_script_test(
-            "install_new.sh", [], install_dir_path, tmp_path, []
+            "mlia_install.sh", [], install_dir_path, tmp_path, []
         )
 
         out, err = capsys.readouterr()
@@ -315,15 +271,15 @@ class TestInstallScript:
         fvp_path = config_dir_path.resolve() / "systems/fvp_corstone_sse-300_ethos-u"
         assert fvp_path.is_dir()
 
-        test_dir = "dist5"
+        test_dir = "dist2"
         install_dir_path = tmp_path / test_dir
 
         self.run_install_script_test(
-            "install_new.sh",
+            "mlia_install.sh",
             ["-f", str(fvp_path), "-d", str(install_dir_path)],
             install_dir_path,
             tmp_path,
-            self.full_commands_list,
+            self.command_list,
         )
 
         out, err = capsys.readouterr()
@@ -353,18 +309,18 @@ class TestInstallScript:
         cap_str: str,
         capsys: Any,
     ) -> None:
-        """Test MLIA install_new script can download and install FVP."""
+        """Test MLIA mlia_install script can download and install FVP."""
         install_dir_path = tmp_path / test_dir
         install_dir_option = []
         if pass_install_directory:
             install_dir_option = ["-d", str(install_dir_path)]
 
         self.run_install_script_test(
-            "install_new.sh",
+            "mlia_install.sh",
             install_dir_option,
             install_dir_path,
             tmp_path,
-            [],
+            self.command_list,
             flag_yn,
         )
 
@@ -505,3 +461,36 @@ class TestEndToEnd:
         mlia_command = ["mlia", *command_execution.parameters]
 
         run_command(mlia_command)
+
+
+@pytest.mark.model_gen
+class TestModelGeneration:
+    """Model generation tests."""
+
+    @pytest.mark.parametrize(
+        "model_name",
+        ["simple_3_layers_model"],
+    )
+    def test_model_generation(self, tmp_path: Path, model_name: str) -> None:
+        """Simple test for the gen_models.py script."""
+        args = [
+            "--output-dir",
+            str(tmp_path),
+            "--model-name",
+            model_name,
+            "--save-keras",
+            "--tf-saved-model",
+        ]
+
+        subprocess.check_call(["python", "scripts/gen_models.py", *args])
+
+        tflite_path = tmp_path / f"{model_name}.tflite"
+        keras_path = tmp_path / f"{model_name}.h5"
+
+        assert all(model_path.is_file() for model_path in [tflite_path, keras_path])
+
+        saved_model_path = tmp_path / f"tf_model_{model_name}"
+        assert saved_model_path.is_dir()
+
+        model_files = list(saved_model_path.iterdir())
+        assert len(model_files) > 0

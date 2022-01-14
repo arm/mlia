@@ -9,15 +9,15 @@
 #  * all: runs all end-to-end tests (default, can be omitted)
 #  * install: runs the installation tests only
 #  * command: runs the command test only
-#
-# Note: all end-to-end tests are labeled with the global 'e2e' marker
+#  * model_gen: run the model generation tests only
 #
 # Examples:
 #
 #  * MLIA_E2E_CONFIG=e2e_config AIET_ARTIFACT_PATH=e2e_config/aiet-21.12.1-py3-none-any.whl ./check-e2e.sh
 #  * MLIA_E2E_CONFIG=e2e_config AIET_ARTIFACT_PATH=e2e_config/aiet-21.12.1-py3-none-any.whl ./check-e2e.sh all (same as the above)
-#  * MLIA_E2E_CONFIG=e2e_config ./check-e2e.sh install
+#  * MLIA_E2E_CONFIG=e2e_config ./check-e2e.sh install (does not require AIET_ARTIFACT_PATH, can be omitted)
 #  * MLIA_E2E_CONFIG=e2e_config AIET_ARTIFACT_PATH=e2e_config/aiet-21.12.1-py3-none-any.whl ./check-e2e.sh command
+#  * MLIA_E2E_CONFIG=e2e_config AIET_ARTIFACT_PATH=e2e_config/aiet-21.12.1-py3-none-any.whl ./check-e2e.sh model_gen
 
 set -e
 set -u

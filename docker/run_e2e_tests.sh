@@ -15,7 +15,7 @@ case $TESTS_TO_RUN in
     echo "Running all the end-to-end-tests ..."
     TESTS_TO_RUN="e2e"
     ;;
-  install | command )
+  install | command | model_gen )
     echo "Running only the \"$TESTS_TO_RUN\" end-to-end-tests ..."
     TESTS_TO_RUN="e2e and $TESTS_TO_RUN"
     ;;
