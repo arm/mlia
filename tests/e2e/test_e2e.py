@@ -28,6 +28,8 @@ from mlia.utils.general import is_list_of
 from mlia.utils.proc import working_directory
 
 
+pytestmark = pytest.mark.e2e
+
 VALID_COMMANDS = get_possible_command_names()
 
 
@@ -172,7 +174,7 @@ def get_config_file(config_filename: str = "e2e_tests_config.json") -> Optional[
     return config_file
 
 
-@pytest.mark.e2e
+@pytest.mark.install
 class TestInstallScript:
     """Install script tests."""
 
@@ -229,6 +231,7 @@ class TestInstallScript:
                 print(result.stdout.decode())
 
     full_commands_list = [
+        "mlia --version",
         "mlia --help",
         "mlia ops --help",
         "mlia perf --help",
@@ -237,6 +240,7 @@ class TestInstallScript:
         "aiet application list",
     ]
     partial_commands_list = [
+        "aiet --version",
         "aiet --help",
         "aiet system list",
         "aiet application list",
@@ -486,9 +490,9 @@ def install_aiet_artifacts(
     run_command(["aiet", "application", "list"])
 
 
-@pytest.mark.e2e
+@pytest.mark.command
 class TestEndToEnd:
-    """End to end tests."""
+    """End to end command tests."""
 
     @classmethod
     def setup_class(cls) -> None:

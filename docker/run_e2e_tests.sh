@@ -9,7 +9,23 @@ set -o pipefail
 # shellcheck disable=SC1091
 source utils.sh
 
-WORKSPACE="$1"
+TESTS_TO_RUN="$1"
+case $TESTS_TO_RUN in
+  all )
+    echo "Running all the end-to-end-tests ..."
+    TESTS_TO_RUN="e2e"
+    ;;
+  install | command )
+    echo "Running only the \"$TESTS_TO_RUN\" end-to-end-tests ..."
+    TESTS_TO_RUN="e2e and $TESTS_TO_RUN"
+    ;;
+  * )
+    echo "Invalid end-to-end test set name: \"$TESTS_TO_RUN\". Stopping ..."
+    exit 1
+    ;;
+esac
+
+WORKSPACE="$2"
 utils::check_workspace_path "$WORKSPACE"
 
 # shellcheck disable=SC1091
@@ -37,5 +53,5 @@ cat "$MLIA_E2E_CONFIG"/applications/*.tar.gz | tar -xzf - -i -C "$MLIA_E2E_CONFI
 
 echo "Running E2E tests ..."
 export PYTHONUNBUFFERED=1
-pytest --collect-only -m e2e
-pytest -v --capture=tee-sys --durations=0 --durations-min=5 --tb=long --junit-xml=report/report.xml -m e2e
+pytest --collect-only -m "$TESTS_TO_RUN"
+pytest -v --capture=tee-sys --durations=0 --durations-min=5 --tb=long --junit-xml=report/report.xml -m "$TESTS_TO_RUN"
