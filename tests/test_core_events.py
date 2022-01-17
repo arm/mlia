@@ -5,6 +5,9 @@ from typing import Any
 from unittest.mock import call
 from unittest.mock import MagicMock
 
+from mlia.core.events import action
+from mlia.core.events import ActionFinishedEvent
+from mlia.core.events import ActionStartedEvent
 from mlia.core.events import DebugEventHandler
 from mlia.core.events import DefaultEventPublisher
 from mlia.core.events import Event
@@ -54,10 +57,34 @@ def test_stage_context_manager() -> None:
     handler_mock.handle_event.assert_has_calls(calls)
 
 
+def test_action_context_manager() -> None:
+    """Test action stage context manager."""
+    publisher = DefaultEventPublisher()
+
+    handler_mock = MagicMock(spec=EventHandler)
+    publisher.register_event_handler(handler_mock)
+
+    with action(publisher, "Sample action"):
+        print("perform actions")
+
+    assert handler_mock.handle_event.call_count == 2
+    calls = handler_mock.handle_event.mock_calls
+
+    action_started = calls[0].args[0]
+    action_finished = calls[1].args[0]
+
+    assert isinstance(action_started, ActionStartedEvent)
+    assert isinstance(action_finished, ActionFinishedEvent)
+
+    assert action_finished.parent_event_id == action_started.event_id
+
+
 def test_debug_event_handler(capsys: Any) -> None:
     """Test debugging event handler."""
     publisher = DefaultEventPublisher()
+
     publisher.register_event_handler(DebugEventHandler())
+    publisher.register_event_handler(DebugEventHandler(with_stacktrace=True))
 
     msgs = ["Sample event 1", "Sample event 2"]
     for msg in msgs:
@@ -65,7 +92,9 @@ def test_debug_event_handler(capsys: Any) -> None:
 
     captured = capsys.readouterr()
     for msg in msgs:
-        assert f"Got event SampleEvent(msg='{msg}')" in captured.out
+        assert msg in captured.out
+
+    assert "traceback.print_stack" in captured.err
 
 
 def test_event_dispatcher(capsys: Any) -> None:
@@ -111,3 +140,14 @@ def test_system_events_handler(capsys: Any) -> None:
 
     captured = capsys.readouterr()
     assert captured.out.strip() == "Execution started\nExecution finished"
+
+
+def test_compare_without_id() -> None:
+    """Test event comparison without event_id."""
+    event1 = SampleEvent("message")
+    event2 = SampleEvent("message")
+
+    assert event1 != event2
+    assert event1.compare_without_id(event2)
+
+    assert not event1.compare_without_id("message")  # type: ignore

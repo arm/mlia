@@ -74,7 +74,7 @@ repos:
       name: pytest coverage
       stages: [push]
       language: system
-      entry: pytest --cov=mlia --cov-report term-missing --cov-fail-under=90 tests/
+      entry: pytest --cov=mlia --cov-report term-missing --cov-fail-under=80 tests/
       types: [python]
       pass_filenames: false
       verbose: true

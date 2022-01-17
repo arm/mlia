@@ -1,14 +1,19 @@
 # Copyright 2021, Arm Ltd.
 """Inference advisor module."""
-from abc import ABC
 from abc import abstractmethod
 
+from mlia.core.common import NamedEntity
 from mlia.core.context import Context
 from mlia.core.workflow import WorkflowExecutor
 
 
-class InferenceAdvisor(ABC):
+class InferenceAdvisor(NamedEntity):
     """Base class for the inference advisor."""
+
+    @classmethod
+    @abstractmethod
+    def info(cls) -> None:
+        """Print detailed information about advisor."""
 
     @abstractmethod
     def configure(self, context: Context) -> WorkflowExecutor:

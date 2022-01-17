@@ -1,6 +1,6 @@
 # Copyright 2021, Arm Ltd.
 """Test for module utils/tflite_metrics."""
-# pylint: disable=no-self-use,too-many-arguments,redefined-outer-name
+# pylint: disable=no-self-use,redefined-outer-name
 import os
 import tempfile
 from math import isclose

@@ -8,6 +8,8 @@ from abc import ABC
 from abc import abstractmethod
 from enum import Enum
 from typing import Any
+from typing import List
+from typing import TypedDict
 
 # This type is used as type alias for the items which are being passed around
 # in advisor workflow. There are no restrictions on the type of the
@@ -28,15 +30,27 @@ class AdviceCategory(Enum):
     COMMON = 4
 
 
+class Parameter(TypedDict, total=False):
+    """Parameter description."""
+
+    name: str
+    description: str
+
+
 class NamedEntity(ABC):
     """Entity with a name and description."""
 
-    @property
+    @classmethod
     @abstractmethod
-    def name(self) -> str:
+    def name(cls) -> str:
         """Return name of the entity."""
 
-    @property
+    @classmethod
     @abstractmethod
-    def description(self) -> str:
+    def description(cls) -> str:
         """Return description of the entity."""
+
+    @classmethod
+    def input_parameters(cls) -> List[Parameter]:
+        """Return input parameters description."""
+        return []

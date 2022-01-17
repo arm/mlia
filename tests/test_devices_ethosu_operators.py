@@ -8,6 +8,17 @@ from mlia.devices.ethosu.config import EthosUConfiguration
 from mlia.devices.ethosu.operators import supported_operators
 from mlia.nn.tensorflow.config import TFLiteModel
 
+from tests.utils.logging import clear_loggers
+
+
+def setup_function() -> None:
+    """Perform action after test completion.
+
+    This function is launched automatically by pytest after each test
+    in this module.
+    """
+    clear_loggers()
+
 
 @pytest.mark.parametrize(
     "params, expected_error",

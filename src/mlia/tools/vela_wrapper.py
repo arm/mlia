@@ -64,12 +64,62 @@ class PerformanceMetrics:  # pylint: disable=too-many-instance-attributes
 
 
 @dataclass
-class ModelOperator:
+class NpuSupported:
+    """Operator's npu supported attribute."""
+
+    supported: bool
+    reasons: List[Tuple[str, str]]
+
+
+@dataclass
+class Operator:
     """Model operator."""
 
     name: str
     op_type: str
-    supported_on_npu: Tuple[bool, List[Tuple[str, str]]]
+    run_on_npu: NpuSupported
+
+    @property
+    def cpu_only(self) -> bool:
+        """Return true if operator is CPU only."""
+        cpu_only_reasons = [("CPU only operator", "")]
+        return (
+            not self.run_on_npu.supported
+            and self.run_on_npu.reasons == cpu_only_reasons
+        )
+
+
+@dataclass
+class Operators:
+    """Model's operators."""
+
+    ops: List[Operator]
+
+    @property
+    def npu_supported_ratio(self) -> float:
+        """Return NPU supported ratio."""
+        total = self.total_number
+        npu_supported = self.npu_supported_number
+
+        if total == 0 or npu_supported == 0:
+            return 0
+
+        return npu_supported / total
+
+    @property
+    def npu_unsupported_ratio(self) -> float:
+        """Return NPU unsupported ratio."""
+        return 1 - self.npu_supported_ratio
+
+    @property
+    def total_number(self) -> int:
+        """Return total number of operators."""
+        return len(self.ops)
+
+    @property
+    def npu_supported_number(self) -> int:
+        """Return number of npu supported operators."""
+        return sum(op.run_on_npu.supported for op in self.ops)
 
 
 @dataclass
@@ -137,9 +187,7 @@ class VelaCompilerOptions:  # pylint: disable=too-many-instance-attributes
 class VelaCompiler:  # pylint: disable=too-many-instance-attributes
     """Vela compiler wrapper."""
 
-    def __init__(  # pylint: disable=too-many-arguments
-        self, compiler_options: VelaCompilerOptions
-    ):
+    def __init__(self, compiler_options: VelaCompilerOptions):
         """Init Vela wrapper instance."""
         self.config_files = compiler_options.config_files
         self.system_config = compiler_options.system_config
@@ -367,22 +415,24 @@ def _performance_metrics(optimized_model: OptimizedModel) -> PerformanceMetrics:
 
 def supported_operators(
     model_path: Path, compiler_options: VelaCompilerOptions
-) -> List[ModelOperator]:
+) -> Operators:
     """Return list of model's operators."""
     logger.debug("Check supported operators for the model %s", model_path)
 
     vela_compiler = VelaCompiler(compiler_options)
     initial_model = vela_compiler.read_model(model_path)
 
-    return [
-        ModelOperator(op.name, optype_to_builtintype(op.type), run_on_npu(op))
-        for sg in initial_model.nng.subgraphs
-        for op in sg.get_all_ops()
-        if op.type not in VELA_INTERNAL_OPS
-    ]
+    return Operators(
+        [
+            Operator(op.name, optype_to_builtintype(op.type), run_on_npu(op))
+            for sg in initial_model.nng.subgraphs
+            for op in sg.get_all_ops()
+            if op.type not in VELA_INTERNAL_OPS
+        ]
+    )
 
 
-def run_on_npu(operator: Op) -> Tuple[bool, List[Tuple[str, str]]]:
+def run_on_npu(operator: Op) -> NpuSupported:
     """Return information if operator can run on NPU.
 
     Vela does a number of checks that can help establish whether
@@ -408,7 +458,7 @@ def run_on_npu(operator: Op) -> Tuple[bool, List[Tuple[str, str]]]:
     for constraint in semantic_constraints:
         op_valid, op_reason = constraint(operator)
         if not op_valid:
-            return (False, [(constraint.__doc__, op_reason)])
+            return NpuSupported(False, [(constraint.__doc__, op_reason)])
 
     if operator.type not in TFLiteSupportedOperators.supported_operators:
         reasons = (
@@ -417,7 +467,7 @@ def run_on_npu(operator: Op) -> Tuple[bool, List[Tuple[str, str]]]:
             else []
         )
 
-        return (False, reasons)
+        return NpuSupported(False, reasons)
 
     tflite_supported_operators = TFLiteSupportedOperators()
     operation_constraints = itertools.chain(
@@ -427,9 +477,9 @@ def run_on_npu(operator: Op) -> Tuple[bool, List[Tuple[str, str]]]:
     for constraint in operation_constraints:
         op_valid, op_reason = constraint(operator)
         if not op_valid:
-            return (False, [(constraint.__doc__, op_reason)])
+            return NpuSupported(False, [(constraint.__doc__, op_reason)])
 
-    return (True, [])
+    return NpuSupported(True, [])
 
 
 def generate_supported_operators_report() -> None:

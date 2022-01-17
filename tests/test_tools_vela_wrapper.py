@@ -10,7 +10,9 @@ from ethosu.vela.scheduler import OptimizationStrategy
 from mlia.devices.ethosu.config import EthosUConfiguration
 from mlia.tools.vela_wrapper import estimate_performance
 from mlia.tools.vela_wrapper import generate_supported_operators_report
-from mlia.tools.vela_wrapper import ModelOperator
+from mlia.tools.vela_wrapper import NpuSupported
+from mlia.tools.vela_wrapper import Operator
+from mlia.tools.vela_wrapper import Operators
 from mlia.tools.vela_wrapper import optimize_model
 from mlia.tools.vela_wrapper import OptimizedModel
 from mlia.tools.vela_wrapper import PerformanceMetrics
@@ -177,24 +179,26 @@ def test_optimize_model(test_models_path: Path, tmp_path: Path) -> None:
     [
         (
             "simple_3_layers_model.tflite",
-            [
-                ModelOperator(
-                    "sequential/dense/MatMul1",
-                    "FULLY_CONNECTED",
-                    (True, []),
-                ),
-                ModelOperator(
-                    "sequential/dense/BiasAdd;sequential/dense_1/MatMul;"
-                    "sequential/dense_1/Relu;sequential/dense_1/BiasAdd",
-                    "FULLY_CONNECTED",
-                    (True, []),
-                ),
-                ModelOperator(
-                    "Identity",
-                    "FULLY_CONNECTED",
-                    (True, []),
-                ),
-            ],
+            Operators(
+                [
+                    Operator(
+                        "sequential/dense/MatMul1",
+                        "FULLY_CONNECTED",
+                        NpuSupported(True, []),
+                    ),
+                    Operator(
+                        "sequential/dense/BiasAdd;sequential/dense_1/MatMul;"
+                        "sequential/dense_1/Relu;sequential/dense_1/BiasAdd",
+                        "FULLY_CONNECTED",
+                        NpuSupported(True, []),
+                    ),
+                    Operator(
+                        "Identity",
+                        "FULLY_CONNECTED",
+                        NpuSupported(True, []),
+                    ),
+                ]
+            ),
         )
     ],
 )

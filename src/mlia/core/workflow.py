@@ -31,6 +31,9 @@ from mlia.core.events import DataAnalysisStageStartedEvent
 from mlia.core.events import DataCollectionStageFinishedEvent
 from mlia.core.events import DataCollectionStageStartedEvent
 from mlia.core.events import Event
+from mlia.core.events import ExecutionFailedEvent
+from mlia.core.events import ExecutionFinishedEvent
+from mlia.core.events import ExecutionStartedEvent
 from mlia.core.events import stage
 from mlia.core.mixins import ContextMixin
 
@@ -75,7 +78,7 @@ class DefaultWorkflowExecutor(WorkflowExecutor):
     All components are launched sequentually in the same process.
     """
 
-    def __init__(  # pylint: disable=too-many-arguments
+    def __init__(
         self,
         context: Context,
         collectors: Sequence[DataCollector],
@@ -103,18 +106,25 @@ class DefaultWorkflowExecutor(WorkflowExecutor):
         self.inject_context()
         self.context.register_event_handlers()
 
-        self.before_start()
+        try:
+            self.publish(ExecutionStartedEvent())
 
-        collected_data = self.collect_data()
-        analyzed_data = self.analyze_data(collected_data)
+            self.before_start()
 
-        self.produce_advice(analyzed_data)
+            collected_data = self.collect_data()
+            analyzed_data = self.analyze_data(collected_data)
+
+            self.produce_advice(analyzed_data)
+        except Exception as err:  # pylint: disable=broad-except
+            self.publish(ExecutionFailedEvent(err))
+        else:
+            self.publish(ExecutionFinishedEvent())
 
     def before_start(self) -> None:
         """Run actions before start of the workflow execution."""
-        if self.before_start_events:
-            for event in self.before_start_events:
-                self.publish(event)
+        events = self.before_start_events or []
+        for event in events:
+            self.publish(event)
 
     @on_stage(STAGE_COLLECTION)
     def collect_data(self) -> List[DataItem]:
@@ -126,9 +136,10 @@ class DefaultWorkflowExecutor(WorkflowExecutor):
         collected_data = []
         for collector in self.collectors:
             data_item = collector.collect_data()
-            collected_data.append(data_item)
+            if data_item is not None:
+                collected_data.append(data_item)
+                self.publish(CollectedDataEvent(data_item))
 
-            self.publish(CollectedDataEvent(data_item))
         return collected_data
 
     @on_stage(STAGE_ANALYSIS)
@@ -177,15 +188,18 @@ class DefaultWorkflowExecutor(WorkflowExecutor):
         Inject context object into components that supports context
         injection.
         """
-        components = itertools.chain(
-            self.collectors,
-            self.analyzers,
-            self.producers,
+        context_aware_components = (
+            comp
+            for comp in itertools.chain(
+                self.collectors,
+                self.analyzers,
+                self.producers,
+            )
+            if isinstance(comp, ContextMixin)
         )
 
-        for component in components:
-            if isinstance(component, ContextMixin):
-                component.set_context(self.context)
+        for component in context_aware_components:
+            component.set_context(self.context)
 
     def publish(self, event: Event) -> None:
         """Publish event.

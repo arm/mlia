@@ -4,16 +4,16 @@ from typing import List
 
 import pandas as pd
 import pytest
-from mlia.reporting import BytesCell
-from mlia.reporting import Cell
-from mlia.reporting import ClockCell
-from mlia.reporting import Column
-from mlia.reporting import CyclesCell
-from mlia.reporting import Format
-from mlia.reporting import NestedReport
-from mlia.reporting import ReportDataFrame
-from mlia.reporting import ReportItem
-from mlia.reporting import Table
+from mlia.core.reporting import BytesCell
+from mlia.core.reporting import Cell
+from mlia.core.reporting import ClockCell
+from mlia.core.reporting import Column
+from mlia.core.reporting import CyclesCell
+from mlia.core.reporting import Format
+from mlia.core.reporting import NestedReport
+from mlia.core.reporting import ReportDataFrame
+from mlia.core.reporting import ReportItem
+from mlia.core.reporting import Table
 
 
 @pytest.mark.parametrize(

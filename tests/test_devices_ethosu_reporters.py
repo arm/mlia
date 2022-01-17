@@ -1,6 +1,5 @@
 # Copyright 2021, Arm Ltd.
 """Tests for reports module."""
-# pylint: disable=too-many-arguments
 import sys
 from contextlib import ExitStack as doesnt_raise
 from pathlib import Path
@@ -11,17 +10,17 @@ from typing import List
 from typing import Literal
 
 import pytest
+from mlia.core.reporting import Table
 from mlia.devices.ethosu.config import EthosUConfiguration
-from mlia.devices.ethosu.metadata import NpuSupported
-from mlia.devices.ethosu.metadata import Operator
-from mlia.devices.ethosu.metrics import MemoryUsage
-from mlia.devices.ethosu.metrics import NPUCycles
-from mlia.devices.ethosu.metrics import PerformanceMetrics
+from mlia.devices.ethosu.performance import MemoryUsage
+from mlia.devices.ethosu.performance import NPUCycles
+from mlia.devices.ethosu.performance import PerformanceMetrics
 from mlia.devices.ethosu.reporters import produce_report
 from mlia.devices.ethosu.reporters import report_dataframe
 from mlia.devices.ethosu.reporters import report_operators
 from mlia.devices.ethosu.reporters import report_perf_metrics
-from mlia.reporting import Table
+from mlia.tools.vela_wrapper import NpuSupported
+from mlia.tools.vela_wrapper import Operator
 
 
 @pytest.mark.parametrize(

@@ -15,6 +15,20 @@ def test_inference_advisor_run() -> None:
     class SampleAdvisor(InferenceAdvisor):
         """Sample inference advisor."""
 
+        @classmethod
+        def name(cls) -> str:
+            """Return name of the advisor."""
+            return "sample_advisor"
+
+        @classmethod
+        def description(cls) -> str:
+            """Return description of the advisor."""
+            return "Sample advisor"
+
+        @classmethod
+        def info(cls) -> None:
+            """Print advisor info."""
+
         def configure(self, context: Context) -> WorkflowExecutor:
             """Configure advisor."""
             return executor_mock

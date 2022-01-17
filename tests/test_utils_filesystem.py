@@ -1,8 +1,13 @@
 # Copyright 2021, Arm Ltd.
 """Tests for the filesystem module."""
+import json
 from pathlib import Path
+from typing import Any
+from unittest.mock import MagicMock
 
+import pytest
 from mlia.utils.filesystem import get_mlia_resources
+from mlia.utils.filesystem import get_profile
 from mlia.utils.filesystem import get_profiles_data
 from mlia.utils.filesystem import get_profiles_file
 from mlia.utils.filesystem import get_supported_profile_names
@@ -32,9 +37,37 @@ def test_profiles_data() -> None:
     assert list(get_profiles_data().keys()) == ["U55-256", "U55-128", "U65-512"]
 
 
+def test_profiles_data_wrong_format(monkeypatch: Any, tmp_path: Path) -> None:
+    """Test if profile data has wrong format."""
+    wrong_profile_data = tmp_path / "bad.json"
+    with open(wrong_profile_data, "w") as file:
+        json.dump([], file)
+
+    monkeypatch.setattr(
+        "mlia.utils.filesystem.get_profiles_file",
+        MagicMock(return_value=wrong_profile_data),
+    )
+
+    with pytest.raises(Exception, match="Profiles data format is not valid"):
+        get_profiles_data()
+
+
 def test_get_supported_profile_names() -> None:
     """Test profile names getter."""
     assert list(get_supported_profile_names()) == ["U55-256", "U55-128", "U65-512"]
+
+
+def test_get_profile() -> None:
+    """Test getting profile data."""
+    assert get_profile("U55-256") == {
+        "device": "ethos-u55",
+        "mac": 256,
+        "system_config": "Ethos_U55_High_End_Embedded",
+        "memory_mode": "Shared_Sram",
+    }
+
+    with pytest.raises(Exception, match="Unable to find target profile unknown"):
+        get_profile("unknown")
 
 
 def test_temp_file() -> None:

@@ -12,7 +12,7 @@ from abc import abstractmethod
 from pathlib import Path
 from typing import Any
 from typing import List
-from typing import MutableMapping
+from typing import Mapping
 from typing import Optional
 
 from mlia.core.common import AdviceCategory
@@ -51,13 +51,31 @@ class Context(ABC):
 
     @property
     @abstractmethod
-    def advice_categories(self) -> List[AdviceCategory]:
-        """Return list of the advice categories."""
+    def advice_category(self) -> Optional[AdviceCategory]:
+        """Return advice category."""
 
     @property
     @abstractmethod
-    def config_parameters(self) -> MutableMapping[str, Any]:
+    def config_parameters(self) -> Optional[Mapping[str, Any]]:
         """Return configuration parameters."""
+
+    @abstractmethod
+    def update(
+        self,
+        *,
+        advice_category: AdviceCategory,
+        event_handlers: List[EventHandler],
+        config_parameters: Mapping[str, Any],
+    ) -> None:
+        """Update context parameters."""
+
+    def category_enabled(self, category: AdviceCategory) -> bool:
+        """Check if category enabled."""
+        return category == self.advice_category
+
+    def any_category_enabled(self, *categories: AdviceCategory) -> bool:
+        """Return true if any category is enabled."""
+        return self.advice_category in categories
 
     def register_event_handlers(self) -> None:
         """Register event handlers."""
@@ -70,8 +88,8 @@ class ExecutionContext(Context):  # pylint: disable=too-many-instance-attributes
     def __init__(
         self,
         *,
-        advice_categories: List[AdviceCategory],
-        config_parameters: MutableMapping[str, Any],
+        advice_category: Optional[AdviceCategory] = None,
+        config_parameters: Optional[Mapping[str, Any]] = None,
         working_dir: Optional[str] = None,
         event_handlers: Optional[List[EventHandler]] = None,
         event_publisher: Optional[EventPublisher] = None,
@@ -95,7 +113,7 @@ class ExecutionContext(Context):  # pylint: disable=too-many-instance-attributes
         :param models_dir: name of the directory inside working directory where
                temporary models will be stored
         """
-        self._advice_categories = advice_categories
+        self._advice_category = advice_category
         self._config_parameters = config_parameters
 
         self._working_dir_path = Path.cwd()
@@ -110,12 +128,12 @@ class ExecutionContext(Context):  # pylint: disable=too-many-instance-attributes
         self.models_dir = models_dir
 
     @property
-    def advice_categories(self) -> List[AdviceCategory]:
-        """Return list of requested advice categories."""
-        return self._advice_categories
+    def advice_category(self) -> Optional[AdviceCategory]:
+        """Return advice category."""
+        return self._advice_category
 
     @property
-    def config_parameters(self) -> MutableMapping[str, Any]:
+    def config_parameters(self) -> Optional[Mapping[str, Any]]:
         """Return configuration parameters."""
         return self._config_parameters
 
@@ -141,12 +159,27 @@ class ExecutionContext(Context):  # pylint: disable=too-many-instance-attributes
         """Return path to the logs directory."""
         return self._working_dir_path / self.logs_dir
 
+    def update(
+        self,
+        *,
+        advice_category: AdviceCategory,
+        event_handlers: List[EventHandler],
+        config_parameters: Mapping[str, Any],
+    ) -> None:
+        """Update context parameters."""
+        self._advice_category = advice_category
+        self._event_handlers = event_handlers
+        self._config_parameters = config_parameters
+
     def __str__(self) -> str:
         """Return string representation."""
-        categories = ",".join(cat.name for cat in self.advice_categories)
+        category = (
+            "<not set>" if self.advice_category is None else self.advice_category.name
+        )
+
         return (
             f"ExecutionContext: working_dir={self._working_dir_path}, "
-            f"advice_categories=[{categories}], "
+            f"advice_category={category}, "
             f"config_parameters={self.config_parameters}, "
             f"verbose={self.verbose}"
         )

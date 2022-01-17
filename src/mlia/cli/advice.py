@@ -14,9 +14,9 @@ from typing import TypedDict
 from typing import Union
 
 import pandas as pd
-from mlia.devices.ethosu.metadata import Operators
-from mlia.devices.ethosu.metrics import PerformanceMetrics
+from mlia.devices.ethosu.performance import PerformanceMetrics
 from mlia.nn.tensorflow.utils import is_keras_model
+from mlia.tools.vela_wrapper import Operators
 
 
 @dataclass

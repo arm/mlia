@@ -9,15 +9,19 @@ Each component of the workflow can generate events of specific type.
 Application can subscribe and react to those events.
 """
 import traceback
+import uuid
 from abc import ABC
 from abc import abstractmethod
 from contextlib import contextmanager
+from dataclasses import asdict
 from dataclasses import dataclass
+from dataclasses import field
 from functools import singledispatchmethod
 from typing import Any
 from typing import Dict
 from typing import Generator
 from typing import List
+from typing import Optional
 from typing import Tuple
 
 from mlia.core.common import DataItem
@@ -28,6 +32,65 @@ class Event:
     """Base class for the events.
 
     This class is used as a root node of the events class hierarchy.
+    """
+
+    event_id: str = field(init=False)
+
+    def __post_init__(self) -> None:
+        """Generate unique ID for the event."""
+        self.event_id = str(uuid.uuid4())
+
+    def compare_without_id(self, other: "Event") -> bool:
+        """Compare two events without event_id field."""
+        if not isinstance(other, Event) or self.__class__ != other.__class__:
+            return False
+
+        self_as_dict = asdict(self)
+        self_as_dict.pop("event_id")
+
+        other_as_dict = asdict(other)
+        other_as_dict.pop("event_id")
+
+        return self_as_dict == other_as_dict
+
+
+@dataclass
+class ChildEvent(Event):
+    """Child event.
+
+    This class could be used to link event with the parent event.
+    """
+
+    parent_event_id: str
+
+
+@dataclass
+class ActionStartedEvent(Event):
+    """Action started event.
+
+    This event is published when some action has been started.
+    """
+
+    action_type: str
+    params: Optional[Dict] = None
+
+
+@dataclass
+class SubActionEvent(ChildEvent):
+    """SubAction event.
+
+    This event could be used to represent some action during parent action.
+    """
+
+    action_type: str
+    params: Optional[Dict] = None
+
+
+@dataclass
+class ActionFinishedEvent(ChildEvent):
+    """Action finished event.
+
+    This event is published when some action has been finished.
     """
 
 
@@ -309,6 +372,19 @@ def stage(
     publisher.publish_event(finished)
 
 
+@contextmanager
+def action(
+    publisher: EventPublisher, action_type: str, params: Optional[Dict] = None
+) -> Generator[None, None, None]:
+    """Generate events before and after action."""
+    action_started = ActionStartedEvent(action_type, params)
+    action_finished = ActionFinishedEvent(action_started.event_id)
+
+    publisher.publish_event(action_started)
+    yield
+    publisher.publish_event(action_finished)
+
+
 class SystemEventsHandler(EventDispatcher):
     """System events handler."""
 
@@ -352,3 +428,9 @@ class SystemEventsHandler(EventDispatcher):
 
     def on_analyzed_data(self, event: AnalyzedDataEvent) -> None:
         """Handle AnalyzedData event."""
+
+    def on_action_started(self, event: ActionStartedEvent) -> None:
+        """Handle ActionStarted event."""
+
+    def on_action_finished(self, event: ActionFinishedEvent) -> None:
+        """Handle ActionFinished event."""

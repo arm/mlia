@@ -20,17 +20,9 @@ def test_estimate_performance(tmp_path: Path) -> None:
 
             return 2
 
-    def original_model(original: Path) -> Path:
-        """Return original model without optimization."""
-        return original
-
     def optimized_model(_original: Path) -> Path:
         """Return path to the 'optimized' model."""
         return tmp_path / "optimized.tflite"
 
-    results = estimate_performance(
-        model_path,
-        SampleEstimator(),
-        [original_model, optimized_model],
-    )
+    results = estimate_performance(model_path, SampleEstimator(), [optimized_model])
     assert results == [1, 2]

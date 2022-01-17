@@ -2,15 +2,18 @@
 """Performance estimation tests."""
 from pathlib import Path
 from typing import Any
+from typing import Union
 from unittest.mock import MagicMock
 
+import pandas as pd
 import pytest
-from ethosu.vela.errors import InputFileError
-from mlia.config import Context
+from mlia.core.context import Context
+from mlia.core.errors import ConfigurationError
 from mlia.devices.ethosu.config import EthosUConfiguration
-from mlia.devices.ethosu.metrics import PerformanceMetrics
 from mlia.devices.ethosu.performance import collect_performance_metrics
-from mlia.exceptions import ConfigurationError
+from mlia.devices.ethosu.performance import MemoryUsage
+from mlia.devices.ethosu.performance import NPUCycles
+from mlia.devices.ethosu.performance import PerformanceMetrics
 from mlia.nn.tensorflow.config import TFLiteModel
 
 
@@ -19,7 +22,7 @@ def test_collect_performance_metrics(
 ) -> None:
     """Test collect_performance_metrics function."""
     # Test empty path/model
-    with pytest.raises(InputFileError):
+    with pytest.raises(Exception, match="Model path is not provided"):
         performance_metrics = collect_performance_metrics(
             TFLiteModel(""), EthosUConfiguration(target="U55-256"), dummy_context
         )
@@ -60,3 +63,101 @@ def mock_performance_estimation(monkeypatch: Any) -> None:
         "mlia.tools.aiet_wrapper.estimate_performance",
         MagicMock(return_value=MagicMock()),
     )
+
+
+@pytest.mark.parametrize(
+    "metric, dataframe",
+    [
+        (
+            NPUCycles(1, 2, 3, 4, 5, 6),
+            pd.DataFrame.from_records(
+                [[1, 2, 3, 4, 5, 6]],
+                columns=[
+                    "NPU active cycles",
+                    "NPU idle cycles",
+                    "NPU total cycles",
+                    "NPU AXI0 RD data beat received",
+                    "NPU AXI0 WR data beat written",
+                    "NPU AXI1 RD data beat received",
+                ],
+            ),
+        ),
+        (
+            MemoryUsage(1, 2, 3, 4, 5),
+            pd.DataFrame.from_records(
+                [[1, 2, 3, 4, 5]],
+                columns=[
+                    "SRAM used (bytes)",
+                    "DRAM used (bytes)",
+                    "Unknown memory used (bytes)",
+                    "On chip flash used (bytes)",
+                    "Off chip flash used (bytes)",
+                ],
+            ),
+        ),
+        (
+            MemoryUsage(1024, 1024, 1024, 1024, 1024).in_kilobytes(),
+            pd.DataFrame.from_records(
+                [[1.0, 1.0, 1.0, 1.0, 1.0]],
+                columns=[
+                    "SRAM used (KiB)",
+                    "DRAM used (KiB)",
+                    "Unknown memory used (KiB)",
+                    "On chip flash used (KiB)",
+                    "Off chip flash used (KiB)",
+                ],
+            ),
+        ),
+        (
+            PerformanceMetrics(
+                EthosUConfiguration(target="U55-256"),
+                NPUCycles(1, 2, 3, 4, 5, 6),
+                MemoryUsage(1, 2, 3, 4, 5),
+            ),
+            pd.DataFrame.from_records(
+                [[1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 6]],
+                columns=[
+                    "SRAM used (bytes)",
+                    "DRAM used (bytes)",
+                    "Unknown memory used (bytes)",
+                    "On chip flash used (bytes)",
+                    "Off chip flash used (bytes)",
+                    "NPU active cycles",
+                    "NPU idle cycles",
+                    "NPU total cycles",
+                    "NPU AXI0 RD data beat received",
+                    "NPU AXI0 WR data beat written",
+                    "NPU AXI1 RD data beat received",
+                ],
+            ),
+        ),
+        (
+            PerformanceMetrics(
+                EthosUConfiguration(target="U55-256"),
+                NPUCycles(1, 2, 3, 4, 5, 6),
+                MemoryUsage(1024, 2 * 1024, 3 * 1024, 4 * 1024, 5 * 1024),
+            ).in_kilobytes(),
+            pd.DataFrame.from_records(
+                [[1.0, 2.0, 3.0, 4.0, 5.0, 1, 2, 3, 4, 5, 6]],
+                columns=[
+                    "SRAM used (KiB)",
+                    "DRAM used (KiB)",
+                    "Unknown memory used (KiB)",
+                    "On chip flash used (KiB)",
+                    "Off chip flash used (KiB)",
+                    "NPU active cycles",
+                    "NPU idle cycles",
+                    "NPU total cycles",
+                    "NPU AXI0 RD data beat received",
+                    "NPU AXI0 WR data beat written",
+                    "NPU AXI1 RD data beat received",
+                ],
+            ),
+        ),
+    ],
+)
+def test_object_to_dataframe_conversion(
+    metric: Union[MemoryUsage, NPUCycles, PerformanceMetrics], dataframe: pd.DataFrame
+) -> None:
+    """Test object to dataframe conversion."""
+    assert metric.to_df().equals(dataframe)

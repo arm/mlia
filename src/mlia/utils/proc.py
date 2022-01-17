@@ -64,10 +64,6 @@ class RunningCommand:
         """Kill the process."""
         self.process.kill()
 
-    def terminate(self) -> None:
-        """Terminate the process."""
-        self.process.terminate()
-
     def send_signal(self, signal_num: int) -> None:
         """Send signal to the process."""
         self.process.send_signal(signal_num)

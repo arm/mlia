@@ -77,6 +77,6 @@ class FactBasedAdviceProducer(ContextAwareAdviceProducer):
         """Get produced advice."""
         return self.advice
 
-    def add_advice(self, advice: Advice) -> None:
+    def add_advice(self, msgs: List[str]) -> None:
         """Add advice."""
-        self.advice.append(advice)
+        self.advice.append(Advice(msgs))

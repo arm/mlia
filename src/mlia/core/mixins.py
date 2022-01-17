@@ -23,6 +23,7 @@ class ParameterResolverMixin:
 
     def get_parameter(
         self,
+        section: str,
         name: str,
         expected: bool = True,
         expected_type: Optional[type] = None,
@@ -30,7 +31,18 @@ class ParameterResolverMixin:
     ) -> Any:
         """Get parameter value."""
         ctx = context or self.context
-        value = ctx.config_parameters.get(name)
+
+        if ctx.config_parameters is None:
+            raise Exception("Configuration parameters are not set")
+
+        section_params = ctx.config_parameters.get(section)
+        if section_params is None or not isinstance(section_params, dict):
+            raise Exception(
+                f"Parameter section {section} has wrong format, "
+                "expected to be a dictionary"
+            )
+
+        value = section_params.get(name)
 
         if not value and expected:
             raise Exception(f"Parameter {name} is not set")
@@ -39,10 +51,3 @@ class ParameterResolverMixin:
             raise Exception(f"Parameter {name} expected to have type {expected_type}")
 
         return value
-
-    def set_parameter(
-        self, name: str, value: Any, context: Optional[Context] = None
-    ) -> None:
-        """Set parameter value."""
-        ctx = context or self.context
-        ctx.config_parameters[name] = value

@@ -7,7 +7,7 @@ from typing import Tuple
 from typing import Union
 
 import tensorflow as tf
-from mlia.exceptions import ConfigurationError
+from mlia.core.errors import ConfigurationError
 from mlia.nn.tensorflow.config import KerasModel
 from mlia.nn.tensorflow.optimizations.clustering import Clusterer
 from mlia.nn.tensorflow.optimizations.clustering import ClusteringConfiguration
@@ -39,6 +39,10 @@ class OptimizationSettings(NamedTuple):
             )
             for opt_type, opt_target in optimizer_params
         ]
+
+    def __str__(self) -> str:
+        """Return string representation."""
+        return f"{self.optimization_type}: {self.optimization_target}"
 
 
 class MultiStageOptimizer(Optimizer):

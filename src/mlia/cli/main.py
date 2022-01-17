@@ -17,7 +17,6 @@ from mlia.cli.commands import operators
 from mlia.cli.commands import optimization
 from mlia.cli.commands import performance
 from mlia.cli.common import CommandInfo
-from mlia.cli.common import ExecutionContext
 from mlia.cli.logging import setup_logging
 from mlia.cli.options import add_custom_supported_operators_options
 from mlia.cli.options import add_debug_options
@@ -27,6 +26,8 @@ from mlia.cli.options import add_optional_tflite_model_options
 from mlia.cli.options import add_output_options
 from mlia.cli.options import add_target_options
 from mlia.cli.options import add_tflite_model_options
+from mlia.core.common import AdviceCategory
+from mlia.core.context import ExecutionContext
 
 
 logger = logging.getLogger(__name__)
@@ -137,6 +138,8 @@ def setup_context(
 ) -> Tuple[ExecutionContext, Dict]:
     """Set up context and resolve function parameters."""
     ctx = ExecutionContext(
+        advice_category=AdviceCategory.PERFORMANCE,
+        config_parameters={},
         working_dir=args.working_dir,
         verbose="verbose" in args and args.verbose,
     )

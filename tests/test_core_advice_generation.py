@@ -13,7 +13,7 @@ def test_advice_generation() -> None:
 
         def produce_advice(self, data_item: DataItem) -> None:
             """Process data."""
-            self.add_advice(Advice([f"Advice for {data_item}"]))
+            self.add_advice([f"Advice for {data_item}"])
 
     producer = SampleProducer()
     producer.produce_advice(123)

@@ -2,6 +2,7 @@
 """Tests for the module utils/proc."""
 # pylint: disable=no-self-use
 import time
+from typing import Any
 
 import pytest
 from mlia.utils.proc import CommandExecutor
@@ -39,3 +40,22 @@ class TestCommandExecutor:
 
         with pytest.raises(ExecutionFailed):
             executor.execute(["sleep", "-1"])
+
+    def test_stop(self) -> None:
+        """Test command termination."""
+        executor = CommandExecutor()
+
+        running_command = executor.submit(["sleep", "10"])
+        running_command.stop()
+
+        assert running_command.is_alive() is False
+
+    def test_wait(self, capsys: Any) -> None:
+        """Test wait completion functionality."""
+        executor = CommandExecutor()
+
+        running_command = executor.submit(["echo", "hello"])
+        running_command.wait(redirect_output=True)
+
+        out, _ = capsys.readouterr()
+        assert out == "hello\n"

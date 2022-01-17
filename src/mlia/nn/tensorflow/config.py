@@ -1,7 +1,6 @@
 # Copyright 2021, Arm Ltd.
 """Model configuration."""
 # pylint: disable=too-few-public-methods,too-many-instance-attributes
-# pylint: disable=too-many-arguments
 import logging
 from pathlib import Path
 from typing import cast
@@ -10,7 +9,7 @@ from typing import List
 from typing import Union
 
 import tensorflow as tf
-from mlia.config import Context
+from mlia.core.context import Context
 from mlia.nn.tensorflow.utils import convert_tf_to_tflite
 from mlia.nn.tensorflow.utils import convert_to_tflite
 from mlia.nn.tensorflow.utils import is_keras_model
@@ -105,30 +104,31 @@ class TfModel(ModelConfiguration):  # pylint: disable=abstract-method
         return TFLiteModel(tflite_model_path)
 
 
-def get_model(
-    model: str,
-) -> "ModelConfiguration":
+def get_model(model: Union[Path, str]) -> "ModelConfiguration":
     """Return the model object."""
     if is_tflite_model(model):
         return TFLiteModel(model)
+
     if is_keras_model(model):
         return KerasModel(model)
+
     if is_tf_model(model):
         return TfModel(model)
+
     raise Exception(
         "The input model format is not supported"
         "(supported formats: tflite, Keras, TF saved model)!"
     )
 
 
-def get_tflite_model(model: str, ctx: Context) -> "TFLiteModel":
+def get_tflite_model(model: Union[str, Path], ctx: Context) -> "TFLiteModel":
     """Convert input model to tflite and returns TFLiteModel object."""
     tflite_model_path = str(ctx.get_model_path("converted_model.tflite"))
     converted_model = get_model(model)
     return converted_model.convert_to_tflite(tflite_model_path, True)
 
 
-def get_keras_model(model: str, ctx: Context) -> "KerasModel":
+def get_keras_model(model: Union[str, Path], ctx: Context) -> "KerasModel":
     """Convert input model to Keras and returns KerasModel object."""
     keras_model_path = str(ctx.get_model_path("converted_model.h5"))
 

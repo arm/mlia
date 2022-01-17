@@ -20,28 +20,27 @@ from typing import Union
 
 import numpy as np
 import pandas as pd
-from mlia._typing import FileLike
-from mlia._typing import OutputFormat
-from mlia._typing import PathOrFileLike
 from mlia.cli.advice import Advice
+from mlia.core._typing import FileLike
+from mlia.core._typing import OutputFormat
+from mlia.core._typing import PathOrFileLike
+from mlia.core.reporting import BytesCell
+from mlia.core.reporting import Cell
+from mlia.core.reporting import ClockCell
+from mlia.core.reporting import Column
+from mlia.core.reporting import CompoundFormatter
+from mlia.core.reporting import CyclesCell
+from mlia.core.reporting import Format
+from mlia.core.reporting import NestedReport
+from mlia.core.reporting import Report
+from mlia.core.reporting import report_dataframe
+from mlia.core.reporting import ReportItem
+from mlia.core.reporting import SingleRow
+from mlia.core.reporting import Table
 from mlia.devices.ethosu.config import EthosUConfiguration
-from mlia.devices.ethosu.metadata import Operator
-from mlia.devices.ethosu.metadata import Operators
-from mlia.devices.ethosu.metrics import PerformanceMetrics
-from mlia.reporting import BytesCell
-from mlia.reporting import Cell
-from mlia.reporting import ClockCell
-from mlia.reporting import Column
-from mlia.reporting import CompoundFormatter
-from mlia.reporting import CyclesCell
-from mlia.reporting import Format
-from mlia.reporting import NestedReport
-from mlia.reporting import Report
-from mlia.reporting import report_dataframe
-from mlia.reporting import ReportItem
-from mlia.reporting import SingleRow
-from mlia.reporting import Table
-from mlia.tools.vela_wrapper import resolve_compiler_config
+from mlia.devices.ethosu.performance import PerformanceMetrics
+from mlia.tools.vela_wrapper import Operator
+from mlia.tools.vela_wrapper import Operators
 from mlia.utils.logging import LoggerWriter
 from mlia.utils.types import is_list_of
 
@@ -152,7 +151,7 @@ def report_device(device: EthosUConfiguration) -> Report:
 
 def report_device_details(device: EthosUConfiguration) -> Report:
     """Return table representation for the device."""
-    compiler_config = resolve_compiler_config(device.compiler_options)
+    compiler_config = device.resolved_compiler_config
 
     memory_settings = [
         ReportItem(
@@ -495,7 +494,7 @@ def find_appropriate_formatter(
         formatters = [find_appropriate_formatter(item) for item in data]
         formatter = CompoundFormatter(formatters)
     else:
-        raise Exception("Unable to find appropriate formatter")
+        raise Exception(f"Unable to find appropriate formatter for {data}")
 
     return formatter
 

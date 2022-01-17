@@ -340,26 +340,17 @@ class ReportDataFrame(Report):
 
         return [headers] + rows
 
-    def to_plain_text(  # pylint: disable=arguments-differ,too-many-arguments
-        self,
-        title: Optional[str] = None,
-        columns_name: Optional[str] = None,
-        showindex: bool = True,
-        space: Union[bool, str] = False,
-        notes: Optional[str] = None,
-        format_mapping: Optional[Dict[str, str]] = None,
-        **kwargs: Any,
-    ) -> str:
+    def to_plain_text(self, **kwargs: Any) -> str:
         """Convert to human readable format."""
         final_table = ""
         headers = "keys"
-        if columns_name:
+        if columns_name := kwargs.get("columns_name"):
             headers = [columns_name] + self.df.columns.tolist()
 
-        if title:
+        if title := kwargs.get("title"):
             final_table = final_table + title + ":\n"
 
-        if format_mapping:
+        if format_mapping := kwargs.get("format_mapping"):
             if isinstance(format_mapping, dict):
                 for field, format_value in format_mapping.items():
                     self.df[field] = self.df[field].apply(format_value.format)
@@ -373,21 +364,20 @@ class ReportDataFrame(Report):
             tablefmt="fancy_grid",
             numalign="left",
             stralign="left",
-            showindex=showindex,
+            showindex=kwargs.get("showindex", True),
         )
-        if space in (True, "top"):
+        if (space := kwargs.get("space", False)) in (True, "top"):
             final_table = "\n" + final_table
 
         if space in (True, "bottom"):
             final_table = final_table + "\n"
 
-        if notes:
+        if notes := kwargs.get("notes"):
             final_table = final_table + "\n" + notes
 
         return final_table
 
 
-# pylint: disable=too-many-arguments
 class Table(Report):
     """Table definition.
 
@@ -442,16 +432,14 @@ class Table(Report):
 
         return {self.alias: json_data}
 
-    def to_plain_text(  # pylint: disable=arguments-differ
-        self,
-        nested: bool = False,
-        show_title: bool = True,
-        show_headers: bool = True,
-        tablefmt: str = "fancy_grid",
-        space: Union[bool, str] = False,
-        **kwargs: Any,
-    ) -> str:
+    def to_plain_text(self, **kwargs: Any) -> str:
         """Produce report in human readable format."""
+        nested = kwargs.get("nested", False)
+        show_headers = kwargs.get("show_headers", True)
+        show_title = kwargs.get("show_title", True)
+        tablefmt = kwargs.get("tablefmt", "fancy_grid")
+        space = kwargs.get("space", False)
+
         headers = (
             [] if (nested or not show_headers) else [c.header for c in self.columns]
         )
@@ -459,7 +447,7 @@ class Table(Report):
         def item_to_plain_text(item: Any, col: Column) -> str:
             """Convert item to text."""
             if isinstance(item, Table):
-                return item.to_plain_text(True, **kwargs)
+                return item.to_plain_text(nested=True, **kwargs)
 
             if is_list_of(item, str):
                 as_text = "\n".join(item)
@@ -539,15 +527,7 @@ class Table(Report):
 class SingleRow(Table):
     """Table with a single row."""
 
-    def to_plain_text(
-        self,
-        nested: bool = False,
-        show_title: bool = True,
-        show_headers: bool = True,
-        tablefmt: str = "fancy_grid",
-        space: Union[bool, str] = False,
-        **kwargs: Any,
-    ) -> str:
+    def to_plain_text(self, **kwargs: Any) -> str:
         """Produce report in human readable format."""
         if len(self.rows) != 1:
             raise Exception("Table should have only one row")
@@ -562,7 +542,6 @@ class SingleRow(Table):
         return "\n".join([f"{self.name}:", indent(items, "  ")])
 
 
-# pylint: enable=too-many-arguments
 class CompoundReport(Report):
     """Compound report.
 
@@ -630,7 +609,7 @@ class CompoundReport(Report):
         return "\n".join(item.to_plain_text(**kwargs) for item in self.reports)
 
 
-class CompoundFormatter:  # pylint: disable=too-few-public-methods
+class CompoundFormatter:
     """Compound data formatter."""
 
     def __init__(self, formatters: List[Callable]) -> None:

@@ -17,14 +17,14 @@ import logging
 from typing import List
 from typing import Optional
 
-from mlia._typing import OutputFormat
-from mlia._typing import PathOrFileLike
 from mlia.cli.advice import AdviceGroup
 from mlia.cli.advice import AdvisorContext
 from mlia.cli.advice import OptimizationResults
 from mlia.cli.advice import produce_advice
-from mlia.cli.common import ExecutionContext
 from mlia.cli.options import parse_optimization_parameters
+from mlia.core._typing import OutputFormat
+from mlia.core._typing import PathOrFileLike
+from mlia.core.context import ExecutionContext
 from mlia.devices.ethosu.config import get_target
 from mlia.devices.ethosu.operators import generate_supported_operators_report
 from mlia.devices.ethosu.operators import supported_operators

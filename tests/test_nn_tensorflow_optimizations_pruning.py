@@ -1,6 +1,5 @@
 # Copyright 2021, Arm Ltd.
 """Test for module optimizations/pruning."""
-# pylint: disable=too-many-arguments,too-many-locals
 from pathlib import Path
 from typing import List
 from typing import Optional
@@ -42,7 +41,7 @@ def _test_sparsity(
 @pytest.mark.parametrize("target_sparsity", (0.5, 0.9))
 @pytest.mark.parametrize("mock_data", (False, True))
 @pytest.mark.parametrize("layers_to_prune", (["conv1"], ["conv1", "conv2"], None))
-def test_prune_simple_model_fully(
+def test_prune_simple_model_fully(  # pylint: disable=too-many-locals
     target_sparsity: float,
     mock_data: bool,
     layers_to_prune: Optional[List[str]],

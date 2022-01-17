@@ -20,7 +20,7 @@ def test_fact_extractor() -> None:
         """Sample extractor."""
 
         def analyze_data(self, data_item: DataItem) -> None:
-            return self.add_fact(SampleFact(f"Fact for {data_item}"))
+            self.add_fact(SampleFact(f"Fact for {data_item}"))
 
     extractor = SampleExtractor()
     extractor.analyze_data(42)

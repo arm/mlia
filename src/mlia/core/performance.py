@@ -36,7 +36,11 @@ def estimate_performance(
     :param model_transformations: list of the callables each of those
            returns object that represents optimized model
     """
-    return [
+    original_metrics = estimator.estimate(original_model)
+
+    optimized_metrics = [
         estimator.estimate(transform(original_model))
         for transform in model_transformations
     ]
+
+    return [original_metrics, *optimized_metrics]
