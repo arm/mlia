@@ -19,15 +19,14 @@ PACKAGE_DIR=$(mktemp -d -t mlia-XXXXXX)
 
 # ML Inference Advisor params
 MLIA_NAME="ML Inference Advisor"
-MLIA_VERSION="0.1.2"
+MLIA_VERSION="0.1.3"
 MLIA_WHEEL_FILE="mlia-$MLIA_VERSION-py3-none-any.whl"
 MLIA_URL="https://artifactory.eu02.arm.com:443/artifactory/ml-tooling.pypi-local/mlia/$MLIA_VERSION/$MLIA_WHEEL_FILE"
 
 # AI Evaluation Toolkit params
 AIET_NAME="AI Evaluation Toolkit"
-AIET_VERSION="21.12.1"
-AIET_WHEEL_FILE="aiet-$AIET_VERSION-py3-none-any.whl"
-AIET_URL="https://artifactory.eu02.arm.com:443/artifactory/ml-tooling.pypi-local/aiet/$AIET_VERSION/$AIET_WHEEL_FILE"
+AIET_WHEEL_FILE_PATTERN="aiet-*-py3-none-any.whl"
+AIET_WHEEL_FILE_RELATIVE_PATH="resources/aiet/package/"
 
 # Generic Inference Runner AIET application
 AIET_GENERIC_INFERENCE_RUNNER_NAME="Generic Inference Runner"
@@ -41,10 +40,9 @@ CS_300_FVP_DIRECTORY="FVP_Corstone_SSE-300"
 CS_300_FVP_DEFAULT_PATHS=("/opt/$CS_300_FVP_DIRECTORY" \
                           "$HOME/$CS_300_FVP_DIRECTORY" \
                           "$PWD/$CS_300_FVP_DIRECTORY")
-
 CS_300_FVP_MODELS_PATH="models/Linux64_GCC-6.4"
 CS_300_FVP_AIET_CONFIG_NAME="aiet-config.json"
-CS_300_FVP_AIET_CONFIG_RELATIVE_PATH="resources/aiet/system/cs-300"
+CS_300_FVP_AIET_CONFIG_RELATIVE_PATH="resources/aiet/systems/cs-300"
 CS_300_FVP_VALID_PATH=""
 CS_300_FVP_VERSION="11.16_26"
 CS_300_FVP_TAR_FILE="FVP_Corstone_SSE-300_$CS_300_FVP_VERSION.tgz"
@@ -147,7 +145,6 @@ check_fvp_path() {
 
 init_packages() {
     MLIA_PACKAGE="$PACKAGE_DIR/$MLIA_WHEEL_FILE"
-    AIET_PACKAGE="$PACKAGE_DIR/$AIET_WHEEL_FILE"
     CS_300_APP_PACKAGE="$PACKAGE_DIR/$AIET_GENERIC_INFERENCE_RUNNER_ARCHIVE"
 }
 
@@ -185,7 +182,6 @@ check_package() {
 }
 
 check_packages() {
-    check_package "$AIET_PACKAGE"
     check_package "$MLIA_PACKAGE"
     check_package "$CS_300_APP_PACKAGE"
 }
@@ -208,10 +204,14 @@ install_aiet() {
 }
 
 configure_aiet() {
+    # Copy the AIET configuration file to the FVP directory
+    verbose "Initializing the $CS_300_FVP_NAME instance at \"$CS_300_FVP_VALID_PATH\" ..."
+    cp -f "$CS_300_FVP_AIET_CONFIG" "$CS_300_FVP_VALID_PATH"
+
     # Install the AI Evaluation Toolkit systems and applications
-    verbose "Installing systems ..."
+    verbose "Installing the $AIET_NAME systems ..."
     aiet system install -s "$CS_300_FVP_VALID_PATH"
-    verbose "Installing applications ..."
+    verbose "Installing the $AIET_NAME applications ..."
     aiet application install -s "$CS_300_APP_PACKAGE"
 }
 
@@ -221,8 +221,11 @@ install_mlia() {
 }
 
 download_fvp() {
+    log "\nDownloading the $CS_300_FVP_NAME version $CS_300_FVP_VERSION to \"$PACKAGE_DIR\" ..."
+
     CS_300_FVP_PATH="$PACKAGE_DIR"
     wget -nv $CS_300_FVP_WEB_LINK -O "$CS_300_FVP_PATH/$CS_300_FVP_TAR_FILE"
+
     CS_300_FVP_DOWNLOADED="true"
 }
 
@@ -353,6 +356,8 @@ if [ -d "$VENV_PATH" ]; then
     usage
 fi
 
+verbose "Using directory \"$PACKAGE_DIR\" to download the packages ..."
+
 # Installation process
 log "\nInstalling the $MLIA_NAME and its dependencies ..."
 
@@ -377,9 +382,6 @@ log "\nUsing the local instance of the $CS_300_FVP_NAME version $CS_300_FVP_VERS
 log "\nDownloading the $MLIA_NAME version $MLIA_VERSION to \"$PACKAGE_DIR\" ..."
 wget -nv "$MLIA_URL" -O "$PACKAGE_DIR/$MLIA_WHEEL_FILE"
 
-log "\nDownloading the $AIET_NAME version $AIET_VERSION to \"$PACKAGE_DIR\" ..."
-wget -nv "$AIET_URL" -O "$PACKAGE_DIR/$AIET_WHEEL_FILE"
-
 log "\nDownloading the $AIET_GENERIC_INFERENCE_RUNNER_NAME version $AIET_GENERIC_INFERENCE_RUNNER_VERSION to \"$PACKAGE_DIR\" ..."
 wget -nv "$AIET_GENERIC_INFERENCE_RUNNER_URL" -O "$PACKAGE_DIR/$AIET_GENERIC_INFERENCE_RUNNER_ARCHIVE"
 
@@ -388,6 +390,22 @@ init_packages "$PACKAGE_DIR"
 check_packages
 
 # Installing components
+log "\nExtracting the $AIET_NAME from the $MLIA_NAME package ..."
+TEMP_DIR=$(mktemp -d -t mlia-XXXXXX)
+wheel unpack "$PACKAGE_DIR/$MLIA_WHEEL_FILE" -d "$TEMP_DIR"
+AIET_WHEEL_FILE_PATH="$TEMP_DIR/mlia-$MLIA_VERSION/mlia/$AIET_WHEEL_FILE_RELATIVE_PATH"
+# shellcheck disable=SC2206
+AIET_WHEEL_FILES=( $AIET_WHEEL_FILE_PATH/$AIET_WHEEL_FILE_PATTERN )
+AIET_PACKAGE="${AIET_WHEEL_FILES[0]}"
+check_package "$AIET_PACKAGE"
+
+log "\nExtracting the $CS_300_FVP_NAME configuration file ... "
+# Check that the configuration file for the AI Evaluation Toolkit system is included in
+# the Inference Advisor
+CS_300_FVP_AIET_CONFIG_PATH="$TEMP_DIR/mlia-$MLIA_VERSION/mlia/$CS_300_FVP_AIET_CONFIG_RELATIVE_PATH"
+CS_300_FVP_AIET_CONFIG="$CS_300_FVP_AIET_CONFIG_PATH/$CS_300_FVP_AIET_CONFIG_NAME"
+check_file "$CS_300_FVP_AIET_CONFIG"
+
 log "\nInstalling the $AIET_NAME ..."
 # The AI Evaluation Toolkit has to be installed first (before the Inference Advisor)
 # due to a less strict dependency from Vela than that the Inference Advisor, but without
@@ -395,37 +413,15 @@ log "\nInstalling the $AIET_NAME ..."
 # the configuration files included in the Inference Advisor
 install_aiet
 
-# Check the AIET installation
-AIET_PACKAGE_PATH=$(python3 -c "import os, aiet; print(os.path.dirname(aiet.__file__))")
-check_path "$AIET_PACKAGE_PATH"
-verbose "AIET package found at \"$AIET_PACKAGE_PATH\""
+log "\nConfiguring the $AIET_NAME ..."
+# Installing the AI Evaluation Toolkit systems and applications using the configuration file
+# included in the Inference Advisor
+configure_aiet
 
 log "\nInstalling the $MLIA_NAME ..."
 # The Inference Advisor has to be installed after the AI Evaluation Toolkit, since it has
 # a stronger dependency on Vela
 install_mlia
-
-# Get the Inference Advisor install path (i.e. its location in site-packages)
-MLIA_PACKAGE_PATH=$(python3 -c "import os, mlia; print(os.path.dirname(mlia.__file__))")
-check_path "$MLIA_PACKAGE_PATH"
-verbose "MLIA package found at \"$MLIA_PACKAGE_PATH\""
-
-verbose "Checking the $CS_300_FVP_NAME configuration file ... "
-# Check that the configuration file for the AI Evaluation Toolkit system is included in
-# the Inference Advisor
-CS_300_FVP_AIET_CONFIG_PATH="$MLIA_PACKAGE_PATH/$CS_300_FVP_AIET_CONFIG_RELATIVE_PATH"
-CS_300_FVP_AIET_CONFIG="$CS_300_FVP_AIET_CONFIG_PATH/$CS_300_FVP_AIET_CONFIG_NAME"
-check_file "$CS_300_FVP_AIET_CONFIG"
-
-# Prepare the FVP package for AIET
-log "\nInitializing the $CS_300_FVP_NAME instance at \"$CS_300_FVP_VALID_PATH\" ..."
-# Copy the AIET configuration file to the FVP directory
-cp -f "$CS_300_FVP_AIET_CONFIG" "$CS_300_FVP_VALID_PATH"
-
-log "\nConfiguring the $AIET_NAME ..."
-# Installing the AI Evaluation Toolkit systems and applications using the configuration file
-# included in the Inference Advisor
-configure_aiet
 
 log "\nInstallation complete"
 log "Please activate the virtual environment \"$VENV_PATH\" to start working with the $MLIA_NAME [source $VENV_PATH/bin/activate]"
