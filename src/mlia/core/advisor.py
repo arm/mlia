@@ -10,11 +10,6 @@ from mlia.core.workflow import WorkflowExecutor
 class InferenceAdvisor(NamedEntity):
     """Base class for the inference advisor."""
 
-    @classmethod
-    @abstractmethod
-    def info(cls) -> None:
-        """Print detailed information about advisor."""
-
     @abstractmethod
     def configure(self, context: Context) -> WorkflowExecutor:
         """Configure advisor execution."""

@@ -8,8 +8,6 @@ from abc import ABC
 from abc import abstractmethod
 from enum import Enum
 from typing import Any
-from typing import List
-from typing import TypedDict
 
 # This type is used as type alias for the items which are being passed around
 # in advisor workflow. There are no restrictions on the type of the
@@ -24,17 +22,19 @@ class AdviceCategory(Enum):
     Enumeration of advice categories supported by inference advisor.
     """
 
-    OPERATORS_COMPATIBILITY = 1
+    OPERATORS = 1
     PERFORMANCE = 2
     OPTIMIZATION = 3
     ALL = 4
 
+    @classmethod
+    def from_string(cls, value: str) -> "AdviceCategory":
+        """Resolve enum value from string value."""
+        category_names = [item.name for item in AdviceCategory]
+        if not value or value.upper() not in category_names:
+            raise Exception(f"Invalid advice category {value}")
 
-class Parameter(TypedDict, total=False):
-    """Parameter description."""
-
-    name: str
-    description: str
+        return AdviceCategory[value.upper()]
 
 
 class NamedEntity(ABC):
@@ -44,13 +44,3 @@ class NamedEntity(ABC):
     @abstractmethod
     def name(cls) -> str:
         """Return name of the entity."""
-
-    @classmethod
-    @abstractmethod
-    def description(cls) -> str:
-        """Return description of the entity."""
-
-    @classmethod
-    def input_parameters(cls) -> List[Parameter]:
-        """Return input parameters description."""
-        return []

@@ -14,6 +14,7 @@ from typing import Any
 from typing import List
 from typing import Mapping
 from typing import Optional
+from typing import Union
 
 from mlia.core.common import AdviceCategory
 from mlia.core.events import DefaultEventPublisher
@@ -48,7 +49,7 @@ class Context(ABC):
 
     @property
     @abstractmethod
-    def event_handlers(self) -> List[EventHandler]:
+    def event_handlers(self) -> Optional[List[EventHandler]]:
         """Return list of the event_handlers."""
 
     @property
@@ -97,7 +98,7 @@ class ExecutionContext(Context):  # pylint: disable=too-many-instance-attributes
         *,
         advice_category: Optional[AdviceCategory] = None,
         config_parameters: Optional[Mapping[str, Any]] = None,
-        working_dir: Optional[str] = None,
+        working_dir: Optional[Union[str, Path]] = None,
         event_handlers: Optional[List[EventHandler]] = None,
         event_publisher: Optional[EventPublisher] = None,
         verbose: bool = False,
@@ -107,7 +108,7 @@ class ExecutionContext(Context):  # pylint: disable=too-many-instance-attributes
     ) -> None:
         """Init execution context.
 
-        :param advice_categories: list of the requested advice categories
+        :param advice_category: requested advice category
         :param config_parameters: dictionary like object with input parameters
         :param working_dir: path to the directory that will be used as a place
                to store temporary files, logs, models. If not provided then
@@ -131,7 +132,7 @@ class ExecutionContext(Context):  # pylint: disable=too-many-instance-attributes
             self._working_dir_path = Path(working_dir)
             self._working_dir_path.mkdir(exist_ok=True)
 
-        self._event_handlers = event_handlers or []
+        self._event_handlers = event_handlers
         self._event_publisher = event_publisher or DefaultEventPublisher()
         self.verbose = verbose
         self.logs_dir = logs_dir
@@ -143,15 +144,30 @@ class ExecutionContext(Context):  # pylint: disable=too-many-instance-attributes
         """Return advice category."""
         return self._advice_category
 
+    @advice_category.setter
+    def advice_category(self, advice_category: AdviceCategory) -> None:
+        """Setter for the advice category."""
+        self._advice_category = advice_category
+
     @property
     def config_parameters(self) -> Optional[Mapping[str, Any]]:
         """Return configuration parameters."""
         return self._config_parameters
 
+    @config_parameters.setter
+    def config_parameters(self, config_parameters: Optional[Mapping[str, Any]]) -> None:
+        """Setter for the configuration parameters."""
+        self._config_parameters = config_parameters
+
     @property
-    def event_handlers(self) -> List[EventHandler]:
+    def event_handlers(self) -> Optional[List[EventHandler]]:
         """Return list of the event handlers."""
         return self._event_handlers
+
+    @event_handlers.setter
+    def event_handlers(self, event_handlers: List[EventHandler]) -> None:
+        """Setter for the event handlers."""
+        self._event_handlers = event_handlers
 
     @property
     def event_publisher(self) -> EventPublisher:

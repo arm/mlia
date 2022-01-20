@@ -10,7 +10,7 @@ from mlia.core.events import DefaultEventPublisher
 def test_execution_context(tmpdir: str) -> None:
     """Test execution context."""
     publisher = DefaultEventPublisher()
-    category = AdviceCategory.OPERATORS_COMPATIBILITY
+    category = AdviceCategory.OPERATORS
 
     context = ExecutionContext(
         advice_category=category,
@@ -34,7 +34,7 @@ def test_execution_context(tmpdir: str) -> None:
     assert str(context) == (
         f"ExecutionContext: "
         f"working_dir={Path(tmpdir)}, "
-        "advice_category=OPERATORS_COMPATIBILITY, "
+        "advice_category=OPERATORS, "
         "config_parameters={'param': 'value'}, "
         "verbose=True"
     )
@@ -42,7 +42,7 @@ def test_execution_context(tmpdir: str) -> None:
     context_with_default_params = ExecutionContext()
     assert context_with_default_params.advice_category is None
     assert context_with_default_params.config_parameters is None
-    assert context_with_default_params.event_handlers == []
+    assert context_with_default_params.event_handlers is None
     assert isinstance(
         context_with_default_params.event_publisher, DefaultEventPublisher
     )

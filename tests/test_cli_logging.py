@@ -1,15 +1,11 @@
 # Copyright 2021, Arm Ltd.
 """Tests for the module cli.logging."""
-# pylint: disable=too-many-arguments,too-many-locals
+# pylint: disable=too-many-locals
 import logging
-import sys
-from contextlib import ExitStack as does_not_raise
 from pathlib import Path
 from typing import Any
-from typing import Optional
 
 import pytest
-from mlia.cli.logging import create_log_handler
 from mlia.cli.logging import setup_logging
 
 from tests.utils.logging import clear_loggers
@@ -22,65 +18,6 @@ def teardown_function() -> None:
     in this module.
     """
     clear_loggers()
-
-
-@pytest.mark.parametrize(
-    "file_path, stream, log_level, log_format, log_filter, delay, "
-    "expected_error, expected_class",
-    [
-        (
-            "test.log",
-            None,
-            logging.INFO,
-            "%(name)s - %(message)s",
-            None,
-            True,
-            does_not_raise(),
-            logging.FileHandler,
-        ),
-        (
-            None,
-            sys.stdout,
-            logging.INFO,
-            "%(name)s - %(message)s",
-            None,
-            None,
-            does_not_raise(),
-            logging.StreamHandler,
-        ),
-        (
-            None,
-            None,
-            logging.INFO,
-            "%(name)s - %(message)s",
-            None,
-            None,
-            pytest.raises(Exception, match="Unable to create logging handler"),
-            None,
-        ),
-    ],
-)
-def test_create_log_handler(
-    file_path: Optional[Path],
-    stream: Optional[Any],
-    log_level: Optional[int],
-    log_format: Optional[str],
-    log_filter: Optional[logging.Filter],
-    delay: bool,
-    expected_error: Any,
-    expected_class: type,
-) -> None:
-    """Test function test_create_log_handler."""
-    with expected_error:
-        handler = create_log_handler(
-            file_path=file_path,
-            stream=stream,
-            log_level=log_level,
-            log_format=log_format,
-            log_filter=log_filter,
-            delay=delay,
-        )
-        assert isinstance(handler, expected_class)
 
 
 @pytest.mark.parametrize(

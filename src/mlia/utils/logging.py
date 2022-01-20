@@ -5,7 +5,12 @@ from contextlib import contextmanager
 from contextlib import ExitStack
 from contextlib import redirect_stderr
 from contextlib import redirect_stdout
+from pathlib import Path
+from typing import Any
+from typing import Callable
 from typing import Generator
+from typing import List
+from typing import Optional
 
 
 class LoggerWriter:
@@ -40,3 +45,75 @@ def redirect_output(
         exit_stack.enter_context(redirect_stderr(stderr_to_log))  # type: ignore
 
         yield
+
+
+class LogFilter(logging.Filter):
+    """Configurable log filter."""
+
+    def __init__(self, log_record_filter: Callable[[logging.LogRecord], bool]) -> None:
+        """Init log filter instance."""
+        super().__init__()
+        self.log_record_filter = log_record_filter
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        """Filter log messages."""
+        return self.log_record_filter(record)
+
+    @classmethod
+    def equals(cls, log_level: int) -> "LogFilter":
+        """Return log filter that filters messages by log level."""
+
+        def filter_by_level(log_record: logging.LogRecord) -> bool:
+            return log_record.levelno == log_level
+
+        return cls(filter_by_level)
+
+    @classmethod
+    def skip(cls, log_level: int) -> "LogFilter":
+        """Return log filter that skips messages with particular level."""
+
+        def skip_by_level(log_record: logging.LogRecord) -> bool:
+            return log_record.levelno != log_level
+
+        return cls(skip_by_level)
+
+
+def create_log_handler(
+    *,
+    file_path: Optional[Path] = None,
+    stream: Optional[Any] = None,
+    log_level: Optional[int] = None,
+    log_format: Optional[str] = None,
+    log_filter: Optional[logging.Filter] = None,
+    delay: bool = True,
+) -> logging.Handler:
+    """Create logger handler."""
+    handler: Optional[logging.Handler] = None
+
+    if file_path is not None:
+        handler = logging.FileHandler(file_path, delay=delay)
+    elif stream is not None:
+        handler = logging.StreamHandler(stream)
+
+    if handler is None:
+        raise Exception("Unable to create logging handler")
+
+    if log_level:
+        handler.setLevel(log_level)
+
+    if log_format:
+        handler.setFormatter(logging.Formatter(log_format))
+
+    if log_filter:
+        handler.addFilter(log_filter)
+
+    return handler
+
+
+def attach_handlers(
+    handlers: List[logging.Handler], loggers: List[logging.Logger]
+) -> None:
+    """Attach handlers to the loggers."""
+    for handler in handlers:
+        for logger in loggers:
+            logger.addHandler(handler)

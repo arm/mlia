@@ -1,29 +1,13 @@
 # Copyright 2021, Arm Ltd.
 """Reports module."""
-import csv
 import itertools
-import json
-import logging
-from contextlib import contextmanager
-from contextlib import ExitStack
-from functools import partial
-from pathlib import Path
 from typing import Any
 from typing import Callable
-from typing import cast
-from typing import Generator
 from typing import List
-from typing import Optional
-from typing import TextIO
 from typing import Tuple
 from typing import Union
 
-import numpy as np
-import pandas as pd
-from mlia.cli.advice import Advice
-from mlia.core._typing import FileLike
-from mlia.core._typing import OutputFormat
-from mlia.core._typing import PathOrFileLike
+from mlia.core.advice_generation import Advice
 from mlia.core.reporting import BytesCell
 from mlia.core.reporting import Cell
 from mlia.core.reporting import ClockCell
@@ -33,7 +17,6 @@ from mlia.core.reporting import CyclesCell
 from mlia.core.reporting import Format
 from mlia.core.reporting import NestedReport
 from mlia.core.reporting import Report
-from mlia.core.reporting import report_dataframe
 from mlia.core.reporting import ReportItem
 from mlia.core.reporting import SingleRow
 from mlia.core.reporting import Table
@@ -41,11 +24,7 @@ from mlia.devices.ethosu.config import EthosUConfiguration
 from mlia.devices.ethosu.performance import PerformanceMetrics
 from mlia.tools.vela_wrapper import Operator
 from mlia.tools.vela_wrapper import Operators
-from mlia.utils.logging import LoggerWriter
 from mlia.utils.types import is_list_of
-
-
-logger = logging.getLogger(__name__)
 
 
 def report_operators_stat(operators: Operators) -> Report:
@@ -124,29 +103,6 @@ def report_operators(ops: List[Operator]) -> Report:
     ]
 
     return Table(columns, rows, name="Operators", alias="operators")
-
-
-def report_device(device: EthosUConfiguration) -> Report:
-    """Return table representation for the device."""
-    columns = [
-        Column("IP class", alias="ip_class", fmt=Format(wrap_width=30)),
-        Column("MAC", alias="mac"),
-        Column("Accelerator config", alias="accelerator_config"),
-        Column("System config", alias="system_config"),
-        Column("Memory mode", alias="memory_mode"),
-    ]
-
-    rows = [
-        (
-            device.ip_class,
-            device.mac,
-            device.compiler_options.accelerator_config,
-            device.compiler_options.system_config,
-            device.compiler_options.memory_mode,
-        )
-    ]
-
-    return Table(columns, rows, name="Device information", alias="device")
 
 
 def report_device_details(device: EthosUConfiguration) -> Report:
@@ -399,171 +355,33 @@ def report_advice(advice: List[Advice]) -> Report:
             Column("#", only_for=["plain_text"]),
             Column("Advice", alias="advice_message"),
         ],
-        rows=[(i + 1, a.advice_msgs) for i, a in enumerate(advice)],
+        rows=[(i + 1, a.messages) for i, a in enumerate(advice)],
         name="Advice",
         alias="advice",
     )
-
-
-class CustomJSONEncoder(json.JSONEncoder):
-    """Custom JSON encoder."""
-
-    def default(self, o: Any) -> Any:
-        """Support numpy types."""
-        if isinstance(o, np.integer):
-            return int(o)
-
-        if isinstance(o, np.floating):
-            return float(o)
-
-        return json.JSONEncoder.default(self, o)
-
-
-def json_reporter(report: Report, output: FileLike, **kwargs: Any) -> None:
-    """Produce report in json format."""
-    json_str = json.dumps(report.to_json(**kwargs), indent=4, cls=CustomJSONEncoder)
-    print(json_str, file=output)
-
-
-def text_reporter(report: Report, output: FileLike, **kwargs: Any) -> None:
-    """Produce report in text format."""
-    print(report.to_plain_text(**kwargs), file=output)
-
-
-def csv_reporter(report: Report, output: FileLike, **kwargs: Any) -> None:
-    """Produce report in csv format."""
-    csv_writer = csv.writer(output)
-    csv_writer.writerows(report.to_csv(**kwargs))
-
-
-def produce_report(
-    data: Any,
-    formatter: Optional[Callable[[Any], Report]] = None,
-    fmt: OutputFormat = "plain_text",
-    output: Optional[PathOrFileLike] = None,
-    **kwargs: Any,
-) -> None:
-    """Produce report based on provided data."""
-    # check if provided format value is supported
-    formats = {"json": json_reporter, "plain_text": text_reporter, "csv": csv_reporter}
-    if fmt not in formats:
-        raise Exception(f"Unknown format {fmt}")
-
-    if not formatter:
-        # if no formatter provided try to find one based on the type of data
-        formatter = find_appropriate_formatter(data)
-
-    if output is None:
-        output = cast(TextIO, LoggerWriter(logger, logging.INFO))
-
-    with ExitStack() as exit_stack:
-        if isinstance(output, (str, Path)):
-            # open file and add it to the ExitStack context manager
-            # in that case it will be automatically closed
-            stream = exit_stack.enter_context(open(output, "w"))
-        else:
-            stream = output
-
-        # convert data into serializible form
-        formatted_data = formatter(data)
-        # find handler for the format
-        format_handler = formats[fmt]
-        # produce report in requested format
-        format_handler(formatted_data, stream, **kwargs)
 
 
 def find_appropriate_formatter(
     data: Any,
 ) -> Callable[[Any], Report]:
     """Find appropriate formatter for the provided data."""
-    formatter: Optional[Callable[[Any], Report]] = None
-
     if isinstance(data, PerformanceMetrics) or is_list_of(data, PerformanceMetrics, 2):
-        formatter = report_perf_metrics
-    elif is_list_of(data, Advice):
-        formatter = report_advice
-    elif is_list_of(data, Operator):
-        formatter = report_operators
-    elif isinstance(data, Operators):
-        formatter = report_operators_stat
-    elif isinstance(data, EthosUConfiguration):
-        formatter = report_device_details
-    elif isinstance(data, pd.DataFrame):
-        formatter = report_dataframe
-    elif isinstance(data, (list, tuple)):
+        return report_perf_metrics
+
+    if is_list_of(data, Advice):
+        return report_advice
+
+    if is_list_of(data, Operator):
+        return report_operators
+
+    if isinstance(data, Operators):
+        return report_operators_stat
+
+    if isinstance(data, EthosUConfiguration):
+        return report_device_details
+
+    if isinstance(data, (list, tuple)):
         formatters = [find_appropriate_formatter(item) for item in data]
-        formatter = CompoundFormatter(formatters)
-    else:
-        raise Exception(f"Unable to find appropriate formatter for {data}")
+        return CompoundFormatter(formatters)
 
-    return formatter
-
-
-class Reporter:
-    """Reporter class."""
-
-    def __init__(
-        self,
-        output_format: OutputFormat = "plain_text",
-        print_as_submitted: bool = True,
-    ) -> None:
-        """Init reporter instance."""
-        self.output_format = output_format
-        self.print_as_submitted = print_as_submitted
-        self.data: List[Tuple[Any, Callable[[Any], Report]]] = []
-
-    def submit(self, data_item: Any, **kwargs: Any) -> None:
-        """Submit data for the report."""
-        if self.print_as_submitted:
-            produce_report(data_item, fmt="plain_text", **kwargs)
-
-        formatter = _apply_format_parameters(
-            find_appropriate_formatter(data_item), self.output_format, **kwargs
-        )
-        self.data.append((data_item, formatter))
-
-    def generate_report(self, output: Optional[PathOrFileLike]) -> None:
-        """Generate report."""
-        already_printed = (
-            self.print_as_submitted
-            and self.output_format == "plain_text"
-            and output is None
-        )
-        if not self.data or already_printed:
-            return
-
-        data, formatters = zip(*self.data)
-        produce_report(
-            data,
-            formatter=CompoundFormatter(formatters),
-            fmt=self.output_format,
-            output=output,
-        )
-
-
-@contextmanager
-def get_reporter(
-    output_format: OutputFormat, output: Optional[PathOrFileLike]
-) -> Generator[Reporter, None, None]:
-    """Get reporter and generate report."""
-    reporter = Reporter(output_format)
-
-    yield reporter
-
-    reporter.generate_report(output)
-
-
-def _apply_format_parameters(
-    formatter: Callable[[Any], Report], output_format: OutputFormat, **kwargs: Any
-) -> Callable[[Any], Report]:
-    """Wrap report method."""
-
-    def wrapper(data: Any) -> Report:
-        report = formatter(data)
-        method_name = f"to_{output_format}"
-        method = getattr(report, method_name)
-        setattr(report, method_name, partial(method, **kwargs))
-
-        return report
-
-    return wrapper
+    raise Exception(f"Unable to find appropriate formatter for {data}")

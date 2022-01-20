@@ -11,10 +11,22 @@ from mlia.core.context import Context
 from mlia.core.errors import ConfigurationError
 from mlia.devices.ethosu.config import EthosUConfiguration
 from mlia.devices.ethosu.performance import collect_performance_metrics
+from mlia.devices.ethosu.performance import MemorySizeType
 from mlia.devices.ethosu.performance import MemoryUsage
 from mlia.devices.ethosu.performance import NPUCycles
 from mlia.devices.ethosu.performance import PerformanceMetrics
 from mlia.nn.tensorflow.config import TFLiteModel
+
+
+def test_memory_usage_conversion() -> None:
+    """Test MemoryUsage objects conversion."""
+    memory_usage_in_kb = MemoryUsage(1, 2, 3, 4, 5, MemorySizeType.KILOBYTES)
+    assert memory_usage_in_kb.in_kilobytes() == memory_usage_in_kb
+
+    memory_usage_in_bytes = MemoryUsage(
+        1 * 1024, 2 * 1024, 3 * 1024, 4 * 1024, 5 * 1024
+    )
+    assert memory_usage_in_bytes.in_kilobytes() == memory_usage_in_kb
 
 
 def test_collect_performance_metrics(

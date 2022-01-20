@@ -194,10 +194,9 @@ class VelaPerformanceEstimator(
         self, model: Union[Path, ModelConfiguration]
     ) -> vela.PerformanceMetrics:
         """Estimate performance."""
-        if isinstance(model, ModelConfiguration):
-            model_path = Path(model.model_path)
-        else:
-            model_path = model
+        model_path = (
+            Path(model.model_path) if isinstance(model, ModelConfiguration) else model
+        )
 
         return vela.estimate_performance(model_path, self.device.compiler_options)
 
@@ -216,10 +215,9 @@ class AIETPerformanceEstimator(
         self, model: Union[Path, ModelConfiguration]
     ) -> aiet.PerformanceMetrics:
         """Estimate performance."""
-        if isinstance(model, ModelConfiguration):
-            model_path = Path(model.model_path)
-        else:
-            model_path = model
+        model_path = (
+            Path(model.model_path) if isinstance(model, ModelConfiguration) else model
+        )
 
         optimized_model_path = self.context.get_model_path(
             f"{model_path.stem}_vela.tflite"
@@ -261,18 +259,25 @@ class EthosUPerformanceEstimator(
 
     def estimate(self, model: Union[Path, ModelConfiguration]) -> PerformanceMetrics:
         """Estimate performance."""
-        if isinstance(model, ModelConfiguration):
-            model_path = Path(model.model_path)
-        else:
-            model_path = model
+        model_path = (
+            Path(model.model_path) if isinstance(model, ModelConfiguration) else model
+        )
 
         tflite_model = get_tflite_model(model_path, self.context)
 
         vela_estimator = VelaPerformanceEstimator(self.context, self.device)
+
+        logger.info("Getting the memory usage metrics ...")
         vela_perf_metrics = vela_estimator.estimate(tflite_model)
+        logger.info("Done\n")
 
         aiet_estimator = AIETPerformanceEstimator(self.context, self.device)
+        logger.info("Getting the performance metrics ...")
+        logger.info(
+            "WARNING: This task may require several minutes (press ctrl-c to interrupt)"
+        )
         aiet_perf_metrics = aiet_estimator.estimate(tflite_model)
+        logger.info("Done\n")
 
         memory_usage = MemoryUsage(
             vela_perf_metrics.sram_memory_area_size,

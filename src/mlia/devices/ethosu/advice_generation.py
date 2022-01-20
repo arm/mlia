@@ -25,7 +25,7 @@ class EthosUAdviceProducer(FactBasedAdviceProducer):
         """Produce advice."""
 
     @produce_advice.register
-    @advice_category(AdviceCategory.OPERATORS_COMPATIBILITY, AdviceCategory.ALL)
+    @advice_category(AdviceCategory.OPERATORS, AdviceCategory.ALL)
     def handle_cpu_only_ops(self, data_item: HasCPUOnlyOperators) -> None:
         """Advice for CPU only operators."""
         cpu_only_ops = ",".join(sorted(set(data_item.cpu_only_ops)))
@@ -43,7 +43,7 @@ class EthosUAdviceProducer(FactBasedAdviceProducer):
         )
 
     @produce_advice.register
-    @advice_category(AdviceCategory.OPERATORS_COMPATIBILITY, AdviceCategory.ALL)
+    @advice_category(AdviceCategory.OPERATORS, AdviceCategory.ALL)
     def handle_unsupported_operators(
         self, data_item: HasUnsupportedOnNPUOperators
     ) -> None:
@@ -59,7 +59,7 @@ class EthosUAdviceProducer(FactBasedAdviceProducer):
         )
 
     @produce_advice.register
-    @advice_category(AdviceCategory.OPERATORS_COMPATIBILITY, AdviceCategory.ALL)
+    @advice_category(AdviceCategory.OPERATORS, AdviceCategory.ALL)
     def handle_all_operators_supported(
         self, data_item: AllOperatorsSupportedOnNPU  # pylint: disable=unused-argument
     ) -> None:
@@ -106,7 +106,7 @@ class EthosUAdviceProducer(FactBasedAdviceProducer):
         ]
 
         opts = ", ".join(str(s) for s in optim_details.opt_type)
-        msgs = [f"With the selected optimization ({opts})", *improved, *degraded]
+        messages = [f"With the selected optimization ({opts})", *improved, *degraded]
 
         if improved:
             if next_optimization_target := self.get_next_optimization_targets(
@@ -116,23 +116,31 @@ class EthosUAdviceProducer(FactBasedAdviceProducer):
                     str(item) for item in next_optimization_target
                 )
 
-                msgs.append(
+                messages.append(
                     "You can try to push the optimization target higher "
                     f"(e.g. {next_optimization_target_as_str}) "
                     "to check if those results can be further improved."
                 )
-                msgs += self.context.action_resolver.apply_optimizations(
+                messages += self.context.action_resolver.apply_optimizations(
                     opt_settings=next_optimization_target
                 )
 
         elif degraded:
-            msgs.append(
+            messages.append(
                 "The performance seems to have degraded after "
                 "applying the selected optimizations, "
                 "try exploring different optimization types/targets."
             )
 
-        self.add_advice(msgs)
+        self.add_advice(messages)
+
+        self.add_advice(
+            [
+                "The applied tooling techniques have an impact "
+                "on accuracy. Additional hyperparameter tuning may be required "
+                "after any optimization."
+            ]
+        )
 
     @staticmethod
     def get_next_optimization_targets(
@@ -165,31 +173,27 @@ class EthosUStaticAdviceProducer(ContextAwareAdviceProducer):
 
     def get_advice(self) -> Union[Advice, List[Advice]]:
         """Return predefined advice based on category."""
-        advice: List[Advice] = []
+        if self.context.advice_category is None:
+            return []
 
-        if self.context.category_enabled(AdviceCategory.PERFORMANCE):
-            advice.append(
+        advice_per_category = {
+            AdviceCategory.PERFORMANCE: [
                 Advice(
                     [
                         "You can improve the inference time by using only operators "
                         "that are supported by the NPU.",
                     ]
                     + self.context.action_resolver.check_operator_compatibility()
-                )
-            )
-
-            advice.append(
+                ),
                 Advice(
                     [
                         "Check if you can improve the performance by applying "
                         "tooling techniques to your model."
                     ]
                     + self.context.action_resolver.apply_optimizations()
-                )
-            )
-
-        if self.context.category_enabled(AdviceCategory.OPTIMIZATION):
-            advice.append(
+                ),
+            ],
+            AdviceCategory.OPTIMIZATION: [
                 Advice(
                     [
                         "For better performance, make sure that all the operators "
@@ -197,17 +201,7 @@ class EthosUStaticAdviceProducer(ContextAwareAdviceProducer):
                     ]
                     + self.context.action_resolver.operator_compatibility_details()
                 )
-            )
+            ],
+        }
 
-        if self.context.category_enabled(AdviceCategory.ALL):
-            advice.append(
-                Advice(
-                    [
-                        "The applied tooling techniques have an impact "
-                        "on accuracy. Additional hyperparameter tuning may be required "
-                        "after any optimization."
-                    ]
-                )
-            )
-
-        return advice
+        return advice_per_category.get(self.context.advice_category, [])

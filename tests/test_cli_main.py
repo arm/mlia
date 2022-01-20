@@ -1,6 +1,6 @@
 # Copyright 2021, Arm Ltd.
 """Tests for main module."""
-# pylint: disable=too-many-arguments,too-many-locals
+# pylint: disable=too-many-locals
 import argparse
 import json
 import logging
@@ -10,7 +10,6 @@ from typing import Any
 from typing import Callable
 from typing import List
 from unittest.mock import ANY
-from unittest.mock import call
 from unittest.mock import MagicMock
 
 import pytest
@@ -21,15 +20,10 @@ from mlia.devices.ethosu.config import EthosUConfiguration
 from mlia.devices.ethosu.performance import MemoryUsage
 from mlia.devices.ethosu.performance import NPUCycles
 from mlia.devices.ethosu.performance import PerformanceMetrics
-from mlia.nn.tensorflow.optimizations.select import OptimizationSettings
 from mlia.tools.vela_wrapper import Operators
 from mlia.utils.proc import working_directory
 
 from tests.utils.logging import clear_loggers
-
-
-# temporary disable all tests in this module
-pytestmark = pytest.mark.skip
 
 
 def teardown_function() -> None:
@@ -223,15 +217,15 @@ def mock_performance_estimation(monkeypatch: Any, verbose: bool = False) -> None
         logger.setLevel(logging.INFO)
         logger.addHandler(logging.StreamHandler(sys.stdout))
         logger.info("Mocking performance estimation")
-    perf_metrics = PerformanceMetrics(
-        EthosUConfiguration(target="U55-256"),
-        NPUCycles(0, 0, 0, 0, 0, 0),
-        MemoryUsage(0, 0, 0, 0, 0),
-    )
 
+    metrics = PerformanceMetrics(
+        EthosUConfiguration(target="U55-256"),
+        NPUCycles(1, 2, 3, 4, 5, 6),
+        MemoryUsage(1, 2, 3, 4, 5),
+    )
     monkeypatch.setattr(
-        "mlia.devices.ethosu.performance.ethosu_performance_metrics",
-        MagicMock(return_value=perf_metrics),
+        "mlia.devices.ethosu.data_collection.EthosUPerformanceEstimator.estimate",
+        MagicMock(return_value=metrics),
     )
 
 
@@ -271,23 +265,13 @@ def test_optimization_command(
 
     assert exit_code == 0
 
-    assert (tmp_path / "models/original_model.tflite").is_file()
-    assert (tmp_path / "models/optimized_model.tflite").is_file()
-
 
 @pytest.mark.parametrize(
-    "extra_params, expected_exit_code, expected_opt_settings",
+    "extra_params, expected_exit_code",
     [
         (
             ["--optimization-type", "pruning", "--optimization-target", "0.5"],
             0,
-            [
-                OptimizationSettings(
-                    optimization_type="pruning",
-                    optimization_target=0.5,
-                    layers_to_optimize=None,
-                )
-            ],
         ),
         (
             [
@@ -297,18 +281,6 @@ def test_optimization_command(
                 "0.5,32",
             ],
             0,
-            [
-                OptimizationSettings(
-                    optimization_type="pruning",
-                    optimization_target=0.5,
-                    layers_to_optimize=None,
-                ),
-                OptimizationSettings(
-                    optimization_type="clustering",
-                    optimization_target=32,
-                    layers_to_optimize=None,
-                ),
-            ],
         ),
         (
             [
@@ -318,18 +290,6 @@ def test_optimization_command(
                 "0.5, 32 ",
             ],
             0,
-            [
-                OptimizationSettings(
-                    optimization_type="pruning",
-                    optimization_target=0.5,
-                    layers_to_optimize=None,
-                ),
-                OptimizationSettings(
-                    optimization_type="clustering",
-                    optimization_target=32,
-                    layers_to_optimize=None,
-                ),
-            ],
         ),
         (
             [
@@ -339,7 +299,6 @@ def test_optimization_command(
                 "0.5",
             ],
             1,
-            None,
         ),
     ],
 )
@@ -349,15 +308,12 @@ def test_all_tests_command(
     monkeypatch: Any,
     extra_params: List[str],
     expected_exit_code: int,
-    expected_opt_settings: List[OptimizationSettings],
 ) -> None:
     """Test all_tests command."""
     model = test_models_path / "simple_model.h5"
     target = "U55-256"
 
-    mock_optimize_and_compare(monkeypatch)
-    mock_operators_compatibility(monkeypatch)
-    get_optimizer_mock = mock_get_optimizer(monkeypatch)
+    mock_performance_estimation(monkeypatch)
 
     args = [
         "--working-dir",
@@ -371,10 +327,6 @@ def test_all_tests_command(
 
     exit_code = main(args)
     assert exit_code == expected_exit_code
-
-    if expected_exit_code == 0:
-        get_optimizer_mock.assert_called_once()
-        get_optimizer_mock.assert_has_calls([call(ANY, expected_opt_settings)])
 
 
 @pytest.mark.parametrize(

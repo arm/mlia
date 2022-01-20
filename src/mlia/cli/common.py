@@ -1,25 +1,19 @@
 # Copyright 2021, Arm Ltd.
 """CLI common module."""
 import argparse
+from dataclasses import dataclass
 from typing import Callable
 from typing import List
 
 
+@dataclass
 class CommandInfo:
     """Command description."""
 
-    def __init__(
-        self,
-        func: Callable,
-        aliases: List[str],
-        opt_groups: List[Callable[[argparse.ArgumentParser], None]],
-        is_default: bool = False,
-    ) -> None:
-        """Init command."""
-        self.func = func
-        self.aliases = aliases
-        self.opt_groups = opt_groups
-        self.is_default = is_default
+    func: Callable
+    aliases: List[str]
+    opt_groups: List[Callable[[argparse.ArgumentParser], None]]
+    is_default: bool = False
 
     @property
     def command_name(self) -> str:

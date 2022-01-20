@@ -67,7 +67,7 @@ class ExecutionParams:
     deploy_params: List[str]
 
 
-class AIETLogWriter(OutputConsumer):  # pylint: disable=too-few-public-methods
+class AIETLogWriter(OutputConsumer):
     """Redirect AIET command output to the logger."""
 
     def feed(self, line: str) -> None:

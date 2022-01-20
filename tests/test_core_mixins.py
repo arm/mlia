@@ -34,7 +34,7 @@ class TestParameterResolverMixin:
                 self.context = dummy_context
 
                 self.context.update(
-                    advice_category=AdviceCategory.OPERATORS_COMPATIBILITY,
+                    advice_category=AdviceCategory.OPERATORS,
                     event_handlers=[],
                     config_parameters={"section": {"param": 123}},
                 )
@@ -81,7 +81,7 @@ class TestParameterResolverMixin:
                 """Init sample object."""
                 self.context = dummy_context
                 self.context.update(
-                    advice_category=AdviceCategory.OPERATORS_COMPATIBILITY,
+                    advice_category=AdviceCategory.OPERATORS,
                     event_handlers=[],
                     config_parameters={"section": ["param"]},
                 )

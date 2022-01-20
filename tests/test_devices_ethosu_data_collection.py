@@ -2,13 +2,12 @@
 """Tests for the data collection module for Ethos-U."""
 from pathlib import Path
 from typing import Any
-from typing import List
 from unittest.mock import MagicMock
 
 import pytest
-from mlia.core.common import Parameter
 from mlia.core.context import Context
 from mlia.core.data_collection import DataCollector
+from mlia.core.errors import FunctionalityNotSupportedError
 from mlia.devices.ethosu.config import EthosUConfiguration
 from mlia.devices.ethosu.data_collection import EthosUOperatorCompatibility
 from mlia.devices.ethosu.data_collection import EthosUOptimizationPerformance
@@ -22,45 +21,28 @@ from mlia.tools.vela_wrapper import Operators
 
 
 @pytest.mark.parametrize(
-    "collector, expected_name, expected_description, expected_input_parameters",
+    "collector, expected_name",
     [
         (
             EthosUOperatorCompatibility,
             "ethos_u_operator_compatibility",
-            "Check model operators for the compatibility with the Ethos-U device",
-            [],
         ),
         (
             EthosUPerformance,
             "ethos_u_performance",
-            "Estimate model inference on Ethos-U device",
-            [],
         ),
         (
             EthosUOptimizationPerformance,
             "ethos_u_model_optimizations",
-            (
-                "Apply various model optimizations and estimate impact "
-                "on the performance"
-            ),
-            [
-                Parameter(
-                    name="optimizations", description="list of optimizations to explore"
-                ),
-            ],
         ),
     ],
 )
 def test_collectors_metadata(
     collector: DataCollector,
     expected_name: str,
-    expected_description: str,
-    expected_input_parameters: List[Parameter],
 ) -> None:
     """Test collectors metadata."""
     assert collector.name() == expected_name
-    assert collector.description() == expected_description
-    assert collector.input_parameters() == expected_input_parameters
 
 
 def test_operator_compatibility_collector(
@@ -127,7 +109,22 @@ def test_optimization_performance_collector(
         device,
         [],
     )
-    assert collector_no_optimizations.collect_data() is None
+    with pytest.raises(FunctionalityNotSupportedError):
+        collector_no_optimizations.collect_data()
+
+    tflite_model = test_models_path / "simple_3_layers_model.tflite"
+    collector_tflite = EthosUOptimizationPerformance(
+        tflite_model,
+        device,
+        [
+            [
+                {"optimization_type": "pruning", "optimization_target": 0.5},
+            ]
+        ],
+    )
+    collector_tflite.set_context(dummy_context)
+    with pytest.raises(FunctionalityNotSupportedError):
+        collector_tflite.collect_data()
 
     with pytest.raises(
         Exception, match="Optimization parameters expected to be a list"

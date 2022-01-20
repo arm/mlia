@@ -1,6 +1,6 @@
 # Copyright 2021, Arm Ltd.
 """Model configuration."""
-# pylint: disable=too-few-public-methods,too-many-instance-attributes
+# pylint: disable=too-many-instance-attributes
 import logging
 from pathlib import Path
 from typing import cast
@@ -52,10 +52,10 @@ class KerasModel(ModelConfiguration):
         self, tflite_model_path: Union[str, Path], quantized: bool = False
     ) -> "TFLiteModel":
         """Convert model to TFLite format."""
-        logger.info("Converting Keras to TFLite...")
+        logger.info("Converting Keras to TFLite ...")
 
         converted_model = convert_to_tflite(self.get_keras_model(), quantized)
-        logger.info("Done")
+        logger.info("Done\n")
 
         save_tflite_model(converted_model, tflite_model_path)
         logger.info(
@@ -76,10 +76,6 @@ class TFLiteModel(ModelConfiguration):  # pylint: disable=abstract-method
         """Get model's input details."""
         interpreter = tf.lite.Interpreter(model_path=self.model_path)
         return cast(List[Dict], interpreter.get_input_details())
-
-    def get_tflite_model(self) -> tf.lite.Interpreter:
-        """Return associated tflite model."""
-        tf.lite.Interpreter(model_path=self.model_path)
 
     def convert_to_tflite(
         self, tflite_model_path: Union[str, Path], quantized: bool = False

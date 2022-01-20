@@ -1,25 +1,33 @@
 # Copyright 2021, Arm Ltd.
 """Tests for cli.commands module."""
-# pylint: disable=no-self-use,too-many-arguments
 from pathlib import Path
 from typing import Any
+from unittest.mock import MagicMock
 
 import pytest
+from mlia.cli.commands import operators
 from mlia.cli.commands import optimization
 from mlia.cli.commands import performance
 from mlia.core.context import ExecutionContext
-
-from tests.test_cli_main import mock_performance_estimation
-
-
-# temporary disable all tests in this module
-pytestmark = pytest.mark.skip
+from mlia.devices.ethosu.config import EthosUConfiguration
+from mlia.devices.ethosu.performance import MemoryUsage
+from mlia.devices.ethosu.performance import NPUCycles
+from mlia.devices.ethosu.performance import PerformanceMetrics
 
 
-def test_performance_unknown_target(dummy_context: ExecutionContext) -> None:
+def test_operators_expected_parameters(dummy_context: ExecutionContext) -> None:
+    """Test operators command wrong parameters."""
+    with pytest.raises(Exception, match="Model is not provided"):
+        operators(dummy_context, "U55-256")
+
+
+def test_performance_unknown_target(
+    dummy_context: ExecutionContext, test_models_path: Path
+) -> None:
     """Test that command should fail if unknown target passed."""
-    with pytest.raises(Exception, match="Unsupported target: unknown"):
-        performance(dummy_context, model="some_model.tflite", target="unknown")
+    model = test_models_path / "simple_3_layers_model.tflite"
+    with pytest.raises(Exception, match="Unable to find target profile unknown"):
+        performance(dummy_context, model=str(model), target="unknown")
 
 
 @pytest.mark.parametrize(
@@ -53,13 +61,14 @@ def test_performance_unknown_target(dummy_context: ExecutionContext) -> None:
             "unknown",
             "clustering",
             "16",
-            pytest.raises(Exception, match="Unsupported target: unknown"),
+            pytest.raises(Exception, match="Unable to find target profile unknown"),
         ],
     ],
 )
 def test_opt_expected_parameters(
     dummy_context: ExecutionContext,
     target: str,
+    monkeypatch: Any,
     optimization_type: str,
     optimization_target: str,
     expected_error: Any,
@@ -67,6 +76,8 @@ def test_opt_expected_parameters(
 ) -> None:
     """Test that command should fail if no or unknown optimization type provided."""
     model = test_models_path / "simple_model.h5"
+
+    mock_performance_estimation(monkeypatch)
 
     with expected_error:
         optimization(
@@ -87,12 +98,11 @@ def test_opt_expected_parameters(
     ],
 )
 def test_opt_valid_optimization_target(
-    dummy_context: ExecutionContext,
     target: str,
+    dummy_context: ExecutionContext,
     optimization_type: str,
     optimization_target: str,
     monkeypatch: Any,
-    tmp_path: Path,
     test_models_path: Path,
 ) -> None:
     """Test that command should not fail with valid optimization targets."""
@@ -108,5 +118,15 @@ def test_opt_valid_optimization_target(
         optimization_target=optimization_target,
     )
 
-    assert (tmp_path / "models/original_model.tflite").is_file()
-    assert (tmp_path / "models/optimized_model.tflite").is_file()
+
+def mock_performance_estimation(monkeypatch: Any) -> None:
+    """Mock performance estimation."""
+    metrics = PerformanceMetrics(
+        EthosUConfiguration("U55-256"),
+        NPUCycles(1, 2, 3, 4, 5, 6),
+        MemoryUsage(1, 2, 3, 4, 5),
+    )
+    monkeypatch.setattr(
+        "mlia.devices.ethosu.data_collection.EthosUPerformanceEstimator.estimate",
+        MagicMock(return_value=metrics),
+    )

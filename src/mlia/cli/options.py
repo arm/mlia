@@ -1,24 +1,34 @@
 # Copyright 2021, Arm Ltd.
 """Module for the CLI options."""
 import argparse
-import os
 from typing import Any
+from typing import Dict
 from typing import List
-from typing import Tuple
+from typing import Optional
 
 from mlia.utils.filesystem import get_supported_profile_names
+from mlia.utils.types import is_number
 
 
 def add_target_options(parser: argparse.ArgumentParser) -> None:
     """Add target specific options."""
+    target_profiles = get_supported_profile_names()
+
+    default_target = None
+    default_help = ""
+    if target_profiles:
+        default_target = target_profiles[0]
+        default_help = " (default: %(default)s)"
+
     target_group = parser.add_argument_group("target options")
     target_group.add_argument(
         "--target",
-        choices=get_supported_profile_names(),
-        help="""Target profile that will set the default device options
-                such as device type, mac value, memory mode, etc..
-                For the values associated with each target profile,
-                see: resources/profiles.json.""",
+        choices=target_profiles,
+        default=default_target,
+        help="Target profile that will set the default device options"
+        "such as device type, mac value, memory mode, etc."
+        "For the values associated with each target profile,"
+        f"see: resources/profiles.json{default_help}.",
     )
 
 
@@ -59,33 +69,14 @@ def add_output_options(parser: argparse.ArgumentParser) -> None:
     output_group = parser.add_argument_group("output options")
     output_group.add_argument(
         "--output",
-        action=OutputFormatAction,
         help=(
             "Name of the file where report will be saved. "
             "The report is always displayed the standard output "
             "formatted as plain text. "
-            "Valid file extensions(formats) are {.txt,.json,.csv}, "
+            "Valid file extensions(formats) are {.txt, .json, .csv}, "
             "anything else will be formatted as plain text."
         ),
     )
-
-
-class OutputFormatAction(argparse.Action):  # pylint: disable=too-few-public-methods
-    """Argparse action for --output option."""
-
-    def __call__(
-        self,
-        parser: argparse.ArgumentParser,
-        namespace: argparse.Namespace,
-        values: Any,
-        option_string: str = None,
-    ) -> None:
-        """Add the output file, and derive the format from file extension."""
-        output_formats = {".txt": "plain_text", ".json": "json", ".csv": "csv"}
-        setattr(namespace, self.dest, values)
-        file_ext = os.path.splitext(values)[1]
-        if file_ext in output_formats:
-            setattr(namespace, "output_format", output_formats[file_ext])
 
 
 def add_debug_options(parser: argparse.ArgumentParser) -> None:
@@ -102,31 +93,6 @@ def add_keras_model_options(parser: argparse.ArgumentParser) -> None:
     model_group.add_argument("model", help="Keras model")
 
 
-def add_quantize_option(parser: argparse.ArgumentParser) -> None:
-    """Add quantization if needed."""
-    quantization_group = parser.add_argument_group(
-        "quantization_opts", "Quantization options"
-    )
-    quantization_group.add_argument(
-        "--quantized",
-        default=False,
-        action="store_true",
-        help="""Quantizes model to int8 if provided.
-        Leaves it as fp32 if otherwise.""",
-    )
-
-
-def add_out_path(parser: argparse.ArgumentParser) -> None:
-    """Add option for output path instead of temporary directory."""
-    out_path_group = parser.add_argument_group("out path")
-    out_path_group.add_argument(
-        "--out-path",
-        help="""Add the folder where you want to save the files created
-        (if none specified, they will be saved in the current directory)""",
-        default=None,
-    )
-
-
 def add_custom_supported_operators_options(parser: argparse.ArgumentParser) -> None:
     """Add custom options for the command 'operators'."""
     parser.add_argument(
@@ -141,8 +107,11 @@ def add_custom_supported_operators_options(parser: argparse.ArgumentParser) -> N
 
 
 def parse_optimization_parameters(
-    optimization_type: str, optimization_target: str, sep: str = ","
-) -> List[Tuple[str, float]]:
+    optimization_type: str,
+    optimization_target: str,
+    sep: str = ",",
+    layers_to_optimize: Optional[List[str]] = None,
+) -> List[Dict[str, Any]]:
     """Parse provided optimization parameters."""
     if not optimization_type:
         raise Exception("Optimization type is not provided")
@@ -156,9 +125,53 @@ def parse_optimization_parameters(
     if len(opt_types) != len(opt_targets):
         raise Exception("Wrong number of optimization targets and types")
 
+    non_numeric_targets = [
+        opt_target for opt_target in opt_targets if not is_number(opt_target)
+    ]
+    if len(non_numeric_targets) > 0:
+        raise Exception("Non numeric value for the optimization target")
+
     optimizer_params = [
-        (opt_type.strip(), float(opt_target))
+        {
+            "optimization_type": opt_type.strip(),
+            "optimization_target": float(opt_target),
+            "layers_to_optimize": layers_to_optimize,
+        }
         for opt_type, opt_target in zip(opt_types, opt_targets)
     ]
 
     return optimizer_params
+
+
+def get_target_opts(device_args: Optional[Dict]) -> List[str]:
+    """Get non default values passed as parameters for the target."""
+    if not device_args:
+        return []
+
+    dummy_parser = argparse.ArgumentParser()
+    add_target_options(dummy_parser)
+    args = dummy_parser.parse_args([])
+
+    params_name = {
+        action.dest: param_name
+        for param_name, action in dummy_parser._option_string_actions.items()  # pylint: disable=protected-access
+    }
+
+    non_default = [
+        arg_name
+        for arg_name, arg_value in device_args.items()
+        if arg_name in args and vars(args)[arg_name] != arg_value
+    ]
+
+    def construct_param(name: str, value: Any) -> List[str]:
+        """Construct parameter."""
+        if isinstance(value, list):
+            return [str(item) for v in value for item in [name, v]]
+
+        return [name, str(value)]
+
+    return [
+        item
+        for name in non_default
+        for item in construct_param(params_name[name], device_args[name])
+    ]

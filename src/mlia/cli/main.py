@@ -17,6 +17,7 @@ from mlia.cli.commands import operators
 from mlia.cli.commands import optimization
 from mlia.cli.commands import performance
 from mlia.cli.common import CommandInfo
+from mlia.cli.helpers import CLIActionResolver
 from mlia.cli.logging import setup_logging
 from mlia.cli.options import add_custom_supported_operators_options
 from mlia.cli.options import add_debug_options
@@ -41,8 +42,8 @@ Supported targets:
  - Ethos-U55 <op compatibility, perf estimation, model opt>
  - Ethos-U65 <op compatibility, perf estimation, model opt>
 
-ARM {datetime.datetime.now():%Y} Copyright Reserved
-"""
+ARM {datetime.datetime.now():%Y} Copyright reserved
+""".strip()
 
 
 def get_commands() -> List[CommandInfo]:
@@ -139,6 +140,7 @@ def setup_context(
     ctx = ExecutionContext(
         working_dir=args.working_dir,
         verbose="verbose" in args and args.verbose,
+        action_resolver=CLIActionResolver(vars(args)),
     )
 
     # these parameters should not be passed into command function

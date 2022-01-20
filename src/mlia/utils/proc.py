@@ -29,7 +29,7 @@ class ExecutionFailed(Exception):
         self.stderr = stderr
 
 
-class OutputConsumer(ABC):  # pylint: disable=too-few-public-methods
+class OutputConsumer(ABC):
     """Base class for the output consumers."""
 
     @abstractmethod

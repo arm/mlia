@@ -120,6 +120,18 @@ def test_perf_metrics_diff() -> None:
                 )
             ],
         ],
+        [
+            OptimizationPerformanceMetrics(
+                PerformanceMetrics(
+                    EthosUConfiguration("U55-256"),
+                    NPUCycles(1, 2, 3, 4, 5, 6),
+                    # memory metrics are in kilobytes
+                    MemoryUsage(*[i * 1024 for i in range(1, 6)]),  # type: ignore
+                ),
+                [],
+            ),
+            [],
+        ],
     ],
 )
 def test_ethos_u_data_analyzer(

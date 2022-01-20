@@ -1,23 +1,40 @@
 # Copyright 2021, Arm Ltd.
 """Reporting module."""
+import csv
+import json
+import logging
 from abc import ABC
 from abc import abstractmethod
 from collections import defaultdict
+from contextlib import contextmanager
+from contextlib import ExitStack
 from dataclasses import dataclass
+from functools import partial
+from pathlib import Path
 from textwrap import fill
 from textwrap import indent
 from typing import Any
 from typing import Callable
+from typing import cast
 from typing import Collection
 from typing import Dict
+from typing import Generator
 from typing import Iterable
 from typing import List
 from typing import Optional
+from typing import TextIO
+from typing import Tuple
 from typing import Union
 
-import pandas as pd
+import numpy as np
+from mlia.core._typing import FileLike
+from mlia.core._typing import OutputFormat
+from mlia.core._typing import PathOrFileLike
+from mlia.utils.logging import LoggerWriter
 from mlia.utils.types import is_list_of
 from tabulate import tabulate
+
+logger = logging.getLogger(__name__)
 
 
 class Report(ABC):
@@ -112,7 +129,6 @@ class Cell:
         return self.value
 
 
-# pylint: disable=too-few-public-methods
 class CountAwareCell(Cell):
     """Count aware cell."""
 
@@ -200,7 +216,6 @@ class Column:
         return not self.only_for or fmt in self.only_for
 
 
-# pylint: enable=too-few-public-methods
 class NestedReport(Report):
     """Report with nested items."""
 
@@ -221,20 +236,29 @@ class NestedReport(Report):
             _level: int,
         ) -> None:
             """Collect item values into a dictionary.."""
-            if item.value is not None:
-                if isinstance(item.value, Cell):
-                    out_dis = item.value.to_csv()
-                    result[f"{item.alias}_value"] = out_dis["value"]
-                    result[f"{item.alias}_unit"] = out_dis["unit"]
-                else:
-                    result[f"{item.alias}"] = item.raw_value
+            if item.value is None:
+                return
+
+            if not isinstance(item.value, Cell):
+                result[item.alias] = item.raw_value
+                return
+
+            csv_value = item.value.to_csv()
+            if isinstance(csv_value, dict):
+                csv_value = {
+                    f"{item.alias}_{key}": value for key, value in csv_value.items()
+                }
+            else:
+                csv_value = {item.alias: csv_value}
+
+            result.update(csv_value)
 
         self._traverse(self.items, collect_item_values)
 
         # make list out of the result dictionary
         # first element - keys of the dictionary as headers
         # second element - list of the dictionary values
-        return list(zip(*result.items()))
+        return list(zip(*result.items()))  # type: ignore
 
     def to_json(self, **kwargs: Any) -> Any:
         """Convert to json serializible format."""
@@ -320,64 +344,6 @@ class NestedReport(Report):
             prev = item
 
 
-class ReportDataFrame(Report):
-    """Report wrapper for pandas dataframe."""
-
-    df: pd.DataFrame
-
-    def __init__(self, df: pd.DataFrame):
-        """Init ReportDataFrame."""
-        self.df = df.copy()
-
-    def to_json(self, **kwargs: Any) -> Any:
-        """Convert to json serializible format."""
-        return self.df.to_dict()
-
-    def to_csv(self, **kwargs: Any) -> List[Any]:
-        """Convert to csv serializible format."""
-        rows: List = self.df.values.tolist()
-        headers: List = self.df.columns.tolist()
-
-        return [headers] + rows
-
-    def to_plain_text(self, **kwargs: Any) -> str:
-        """Convert to human readable format."""
-        final_table = ""
-        headers = "keys"
-        if columns_name := kwargs.get("columns_name"):
-            headers = [columns_name] + self.df.columns.tolist()
-
-        if title := kwargs.get("title"):
-            final_table = final_table + title + ":\n"
-
-        if format_mapping := kwargs.get("format_mapping"):
-            if isinstance(format_mapping, dict):
-                for field, format_value in format_mapping.items():
-                    self.df[field] = self.df[field].apply(format_value.format)
-
-            if callable(format_mapping):
-                self.df = self.df.applymap(format_mapping)
-
-        final_table = final_table + tabulate(
-            self.df,
-            headers=headers,
-            tablefmt="fancy_grid",
-            numalign="left",
-            stralign="left",
-            showindex=kwargs.get("showindex", True),
-        )
-        if (space := kwargs.get("space", False)) in (True, "top"):
-            final_table = "\n" + final_table
-
-        if space in (True, "bottom"):
-            final_table = final_table + "\n"
-
-        if notes := kwargs.get("notes"):
-            final_table = final_table + "\n" + notes
-
-        return final_table
-
-
 class Table(Report):
     """Table definition.
 
@@ -454,9 +420,8 @@ class Table(Report):
             else:
                 as_text = str(item)
 
-            if col.fmt:
-                if col.fmt.wrap_width:
-                    as_text = fill(as_text, col.fmt.wrap_width)
+            if col.fmt and col.fmt.wrap_width:
+                as_text = fill(as_text, col.fmt.wrap_width)
 
             return as_text
 
@@ -622,6 +587,161 @@ class CompoundFormatter:
         return CompoundReport(reports)
 
 
-def report_dataframe(df: pd.DataFrame) -> Report:
-    """Wrap pandas dataframe into Report type."""
-    return ReportDataFrame(df)
+class CustomJSONEncoder(json.JSONEncoder):
+    """Custom JSON encoder."""
+
+    def default(self, o: Any) -> Any:
+        """Support numpy types."""
+        if isinstance(o, np.integer):
+            return int(o)
+
+        if isinstance(o, np.floating):
+            return float(o)
+
+        return json.JSONEncoder.default(self, o)
+
+
+def json_reporter(report: Report, output: FileLike, **kwargs: Any) -> None:
+    """Produce report in json format."""
+    json_str = json.dumps(report.to_json(**kwargs), indent=4, cls=CustomJSONEncoder)
+    print(json_str, file=output)
+
+
+def text_reporter(report: Report, output: FileLike, **kwargs: Any) -> None:
+    """Produce report in text format."""
+    print(report.to_plain_text(**kwargs), file=output)
+
+
+def csv_reporter(report: Report, output: FileLike, **kwargs: Any) -> None:
+    """Produce report in csv format."""
+    csv_writer = csv.writer(output)
+    csv_writer.writerows(report.to_csv(**kwargs))
+
+
+def produce_report(
+    data: Any,
+    formatter: Callable[[Any], Report],
+    fmt: OutputFormat = "plain_text",
+    output: Optional[PathOrFileLike] = None,
+    **kwargs: Any,
+) -> None:
+    """Produce report based on provided data."""
+    # check if provided format value is supported
+    formats = {"json": json_reporter, "plain_text": text_reporter, "csv": csv_reporter}
+    if fmt not in formats:
+        raise Exception(f"Unknown format {fmt}")
+
+    if output is None:
+        output = cast(TextIO, LoggerWriter(logger, logging.INFO))
+
+    with ExitStack() as exit_stack:
+        if isinstance(output, (str, Path)):
+            # open file and add it to the ExitStack context manager
+            # in that case it will be automatically closed
+            stream = exit_stack.enter_context(open(output, "w"))
+        else:
+            stream = output
+
+        # convert data into serializable form
+        formatted_data = formatter(data)
+        # find handler for the format
+        format_handler = formats[fmt]
+        # produce report in requested format
+        format_handler(formatted_data, stream, **kwargs)
+
+
+class Reporter:
+    """Reporter class."""
+
+    def __init__(
+        self,
+        formatter_resolver: Callable[[Any], Callable[[Any], Report]],
+        output_format: OutputFormat = "plain_text",
+        print_as_submitted: bool = True,
+    ) -> None:
+        """Init reporter instance."""
+        self.formatter_resolver = formatter_resolver
+        self.output_format = output_format
+        self.print_as_submitted = print_as_submitted
+
+        self.data: List[Tuple[Any, Callable[[Any], Report]]] = []
+        self.delayed: List[Tuple[Any, Callable[[Any], Report]]] = []
+
+    def submit(self, data_item: Any, delay_print: bool = False, **kwargs: Any) -> None:
+        """Submit data for the report."""
+        if self.print_as_submitted and not delay_print:
+            produce_report(
+                data_item,
+                self.formatter_resolver(data_item),
+                fmt="plain_text",
+                **kwargs,
+            )
+
+        formatter = _apply_format_parameters(
+            self.formatter_resolver(data_item), self.output_format, **kwargs
+        )
+        self.data.append((data_item, formatter))
+
+        if delay_print:
+            self.delayed.append((data_item, formatter))
+
+    def print_delayed(self) -> None:
+        """Print delayed reports."""
+        if not self.delayed:
+            return
+
+        data, formatters = zip(*self.delayed)
+        produce_report(
+            data,
+            formatter=CompoundFormatter(formatters),
+            fmt="plain_text",
+        )
+        self.delayed = []
+
+    def generate_report(self, output: Optional[PathOrFileLike]) -> None:
+        """Generate report."""
+        already_printed = (
+            self.print_as_submitted
+            and self.output_format == "plain_text"
+            and output is None
+        )
+        if not self.data or already_printed:
+            return
+
+        data, formatters = zip(*self.data)
+        produce_report(
+            data,
+            formatter=CompoundFormatter(formatters),
+            fmt=self.output_format,
+            output=output,
+        )
+
+
+@contextmanager
+def get_reporter(
+    output_format: OutputFormat,
+    output: Optional[PathOrFileLike],
+    formatter_resolver: Callable[[Any], Callable[[Any], Report]],
+) -> Generator[Reporter, None, None]:
+    """Get reporter and generate report."""
+    reporter = Reporter(formatter_resolver, output_format)
+
+    yield reporter
+
+    reporter.generate_report(output)
+
+
+def _apply_format_parameters(
+    formatter: Callable[[Any], Report], output_format: OutputFormat, **kwargs: Any
+) -> Callable[[Any], Report]:
+    """Wrap report method."""
+
+    def wrapper(data: Any) -> Report:
+        report = formatter(data)
+        method_name = f"to_{output_format}"
+        method = getattr(report, method_name)
+        setattr(report, method_name, partial(method, **kwargs))
+
+        return report
+
+    return wrapper

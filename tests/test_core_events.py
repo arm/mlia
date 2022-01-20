@@ -86,13 +86,13 @@ def test_debug_event_handler(capsys: Any) -> None:
     publisher.register_event_handler(DebugEventHandler())
     publisher.register_event_handler(DebugEventHandler(with_stacktrace=True))
 
-    msgs = ["Sample event 1", "Sample event 2"]
-    for msg in msgs:
-        publisher.publish_event(SampleEvent(msg))
+    messages = ["Sample event 1", "Sample event 2"]
+    for message in messages:
+        publisher.publish_event(SampleEvent(message))
 
     captured = capsys.readouterr()
-    for msg in msgs:
-        assert msg in captured.out
+    for message in messages:
+        assert message in captured.out
 
     assert "traceback.print_stack" in captured.err
 

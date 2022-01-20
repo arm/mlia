@@ -11,55 +11,27 @@ be configured. Function 'setup_logging' from module
 >>> from mlia.cli.logging import setup_logging
 >>> setup_logging(verbose=True)
 >>> import mlia.cli.commands as mlia
->>> mlia.all_tests("path/to/model", target="U55-256")
+>>> mlia.all_tests(target="U55-256", "path/to/model")
 """
 import logging
 from typing import List
 from typing import Optional
 
-from mlia.cli.advice import AdviceGroup
-from mlia.cli.advice import AdvisorContext
-from mlia.cli.advice import OptimizationResults
-from mlia.cli.advice import produce_advice
+from mlia.api import ExecutionContext
+from mlia.api import get_advice
+from mlia.api import PathOrFileLike
 from mlia.cli.options import parse_optimization_parameters
-from mlia.core._typing import OutputFormat
-from mlia.core._typing import PathOrFileLike
-from mlia.core.context import ExecutionContext
-from mlia.devices.ethosu.config import get_target
 from mlia.devices.ethosu.operators import generate_supported_operators_report
-from mlia.devices.ethosu.operators import supported_operators
-from mlia.devices.ethosu.performance import collect_performance_metrics
-from mlia.devices.ethosu.reporters import get_reporter
-from mlia.nn.tensorflow.config import get_keras_model
-from mlia.nn.tensorflow.config import get_tflite_model
-from mlia.nn.tensorflow.optimizations.select import get_optimizer
-from mlia.nn.tensorflow.optimizations.select import OptimizationSettings
-from mlia.use_cases import compare_metrics
-from mlia.use_cases import optimize_and_compare
 
 logger = logging.getLogger(__name__)
 
 
-MODEL_ANALYSIS_MSG = """
-=== Model Analysis =========================================================
-"""
-
-ADV_GENERATION_MSG = """
-=== Advice Generation ======================================================
-"""
-
-REPORT_GENERATION_MSG = """
-=== Report Generation ======================================================
-"""
-
-
-def all_tests(  # pylint: disable=too-many-arguments, too-many-locals
+def all_tests(
     ctx: ExecutionContext,
     target: str,
     model: str,
-    optimization_type: str,
-    optimization_target: str,
-    output_format: OutputFormat = "plain_text",
+    optimization_type: str = "pruning,clustering",
+    optimization_target: str = "0.5,32",
     output: Optional[PathOrFileLike] = None,
 ) -> None:
     """Generate a full report on the input model.
@@ -82,8 +54,6 @@ def all_tests(  # pylint: disable=too-many-arguments, too-many-locals
            by comma, e.g. 'pruning,clustering'
     :param optimization_target: list of the corresponding targets for
            the provided optimization techniques, e.g. '0.5,32'
-    :param output_format: format of the report produced during the command
-           execution
     :param output: path to the file where the report will be saved
 
     Example:
@@ -93,74 +63,31 @@ def all_tests(  # pylint: disable=too-many-arguments, too-many-locals
         >>> from mlia.cli.logging import setup_logging
         >>> setup_logging()
         >>> from mlia.cli.commands import all_tests
-        >>> all_tests("model.h5", "pruning,clustering", "0.5,32",
-                       output_format="json", output="report.json",
-                       working_dir="mlia_output", target="U55-256")
+        >>> all_tests(target="U55-256",
+                      "model.h5",
+                      "pruning,clustering",
+                      "0.5,32",
+                      output="report.json")
     """
-    keras_model = get_keras_model(model, ctx)
-    device = get_target(target=target)
+    opt_params = parse_optimization_parameters(
+        optimization_type,
+        optimization_target,
+    )
 
-    with get_reporter(output_format, output) as reporter:
-        reporter.submit(device)
-
-        logger.info(MODEL_ANALYSIS_MSG)
-
-        converted_model_path = ctx.get_model_path("converted_model.tflite")
-        tflite_model = keras_model.convert_to_tflite(
-            converted_model_path, quantized=True
-        )
-        operators_info = supported_operators(tflite_model, device)
-
-        logger.info("Evaluating performance ...\n")
-
-        opt_params = parse_optimization_parameters(
-            optimization_type, optimization_target
-        )
-        opt_settings = OptimizationSettings.create_from(opt_params)
-
-        optimizer = get_optimizer(keras_model, opt_settings)
-        original, optimized = optimize_and_compare(optimizer, device, ctx)
-
-        reporter.submit([operators_info.ops, operators_info], space="top")
-
-        reporter.submit(
-            [original, optimized],
-            columns_name="Metrics",
-            title="Performance metrics",
-            space=True,
-            notes="IMPORTANT: The performance figures above refer to NPU only",
-        )
-
-        logger.info(ADV_GENERATION_MSG)
-
-        adv_ctx = AdvisorContext(
-            operators=operators_info,
-            optimization_results=OptimizationResults(
-                perf_metrics=compare_metrics(original, optimized),
-                optimizations=opt_params,
-            ),
-            target=target,
-            model=model,
-        )
-        advice = produce_advice(adv_ctx, AdviceGroup.COMMON)
-
-        reporter.submit(
-            advice,
-            show_title=False,
-            show_headers=False,
-            space="between",
-            tablefmt="plain",
-        )
-        if output is not None:
-            logger.info(REPORT_GENERATION_MSG)
-            logger.info("Report(s) and advice list saved to: %s", output)
+    get_advice(
+        target,
+        model,
+        "all",
+        optimization_targets=opt_params,
+        output=output,
+        context=ctx,
+    )
 
 
-def operators(  # pylint: disable=too-many-arguments
+def operators(
     ctx: ExecutionContext,
     target: str,
     model: Optional[str] = None,
-    output_format: OutputFormat = "plain_text",
     output: Optional[PathOrFileLike] = None,
     supported_ops_report: bool = False,
 ) -> None:
@@ -174,8 +101,6 @@ def operators(  # pylint: disable=too-many-arguments
     :param target: target profile identifier. Will load appropriate parameters
             from the profile.json file based on this argument.
     :param model: path to the model, which can be TFLite or Keras
-    :param output_format: format of the report produced during the command
-           execution
     :param output: path to the file where the report will be saved
     :param supported_ops_report: if True then generates supported operators
            report in current directory and exits
@@ -187,7 +112,7 @@ def operators(  # pylint: disable=too-many-arguments
         >>> from mlia.cli.logging import setup_logging
         >>> setup_logging()
         >>> from mlia.cli.commands import operators
-        >>> operators("model.tflite", target="U55-256")
+        >>> operators(target="U55-256", "model.tflite")
     """
     if supported_ops_report:
         generate_supported_operators_report()
@@ -197,39 +122,19 @@ def operators(  # pylint: disable=too-many-arguments
     if not model:
         raise Exception("Model is not provided")
 
-    tflite_model = get_tflite_model(model, ctx)
-    device = get_target(target=target)
-
-    with get_reporter(output_format, output) as reporter:
-        reporter.submit(device)
-
-        logger.info(MODEL_ANALYSIS_MSG)
-
-        operators_info = supported_operators(tflite_model, device)
-        reporter.submit([operators_info.ops, operators_info], space="top")
-
-        logger.info(ADV_GENERATION_MSG)
-
-        adv_ctx = AdvisorContext(operators=operators_info, target=target, model=model)
-        advice = produce_advice(adv_ctx, AdviceGroup.OPERATORS_COMPATIBILITY)
-
-        reporter.submit(
-            advice,
-            show_title=False,
-            show_headers=False,
-            space="between",
-            tablefmt="plain",
-        )
-        if output is not None:
-            logger.info(REPORT_GENERATION_MSG)
-            logger.info("Report(s) and advice list saved to: %s", output)
+    get_advice(
+        target,
+        model,
+        "operators",
+        output=output,
+        context=ctx,
+    )
 
 
 def performance(
     ctx: ExecutionContext,
     target: str,
     model: str,
-    output_format: OutputFormat = "plain_text",
     output: Optional[PathOrFileLike] = None,
 ) -> None:
     """Print the model's performance stats.
@@ -242,8 +147,6 @@ def performance(
     :param target: target profile identifier. Will load appropriate parameters
             from the profile.json file based on this argument.
     :param model: path to the model, which can be TFLite or Keras
-    :param output_format: format of the report produced during the command
-           execution
     :param output: path to the file where the report will be saved
 
     Example:
@@ -253,45 +156,24 @@ def performance(
         >>> from mlia.cli.logging import setup_logging
         >>> setup_logging()
         >>> from mlia.cli.commands import performance
-        >>> performance("model.tflite", target="U55-256")
+        >>> performance(target="U55-256", "model.tflite")
     """
-    tflite_model = get_tflite_model(model, ctx)
-    device = get_target(target=target)
-
-    with get_reporter(output_format, output) as reporter:
-        reporter.submit(device)
-
-        logger.info(MODEL_ANALYSIS_MSG)
-
-        perf_metrics = collect_performance_metrics(tflite_model, device, ctx)
-        reporter.submit(perf_metrics, space="top")
-
-        logger.info(ADV_GENERATION_MSG)
-
-        adv_ctx = AdvisorContext(perf_metrics=perf_metrics, target=target, model=model)
-        advice = produce_advice(adv_ctx, AdviceGroup.PERFORMANCE)
-
-        reporter.submit(
-            advice,
-            show_title=False,
-            show_headers=False,
-            space="between",
-            tablefmt="plain",
-        )
-
-        if output is not None:
-            logger.info(REPORT_GENERATION_MSG)
-            logger.info("Report(s) and advice list saved to: %s", output)
+    get_advice(
+        target,
+        model,
+        "performance",
+        output=output,
+        context=ctx,
+    )
 
 
-def optimization(  # pylint: disable=too-many-arguments, too-many-locals
+def optimization(
     ctx: ExecutionContext,
     target: str,
     model: str,
     optimization_type: str,
     optimization_target: str,
     layers_to_optimize: Optional[List[str]] = None,
-    output_format: OutputFormat = "plain_text",
     output: Optional[PathOrFileLike] = None,
 ) -> None:
     """Show the performance improvements (if any) after applying the optimizations.
@@ -310,8 +192,6 @@ def optimization(  # pylint: disable=too-many-arguments, too-many-locals
            the provided optimization techniques, e.g. '0.5,32'
     :param layers_to_optimize: list of the layers of the model which should be
            optimized, if None then all layers are used
-    :param output_format: format of the report produced during the command
-           execution
     :param output: path to the file where the report will be saved
 
     Example:
@@ -321,58 +201,19 @@ def optimization(  # pylint: disable=too-many-arguments, too-many-locals
         >>> from mlia.cli.logging import setup_logging
         >>> setup_logging()
         >>> from mlia.cli.commands import optimization
-        >>> optimization("model.tflite", target="U55-256")
+        >>> optimization(target="U55-256", "model.tflite", "pruning", "0.5")
     """
-    keras_model = get_keras_model(model, ctx)
-    device = get_target(target=target)
+    opt_params = parse_optimization_parameters(
+        optimization_type,
+        optimization_target,
+        layers_to_optimize=layers_to_optimize,
+    )
 
-    with get_reporter(output_format, output) as reporter:
-        reporter.submit(device)
-
-        logger.info(MODEL_ANALYSIS_MSG)
-
-        opt_params = parse_optimization_parameters(
-            optimization_type, optimization_target
-        )
-        opt_settings = OptimizationSettings.create_from(opt_params, layers_to_optimize)
-
-        optimizer = get_optimizer(keras_model, opt_settings)
-        original, optimized = optimize_and_compare(optimizer, device, ctx)
-
-        reporter.submit(
-            [original, optimized],
-            columns_name="Metrics",
-            title="Performance metrics",
-            space=True,
-            notes=(
-                "IMPORTANT: The applied tooling techniques have an impact "
-                "on accuracy. Additional hyperparameter tuning may be required "
-                "after any optimization."
-            ),
-        )
-
-        logger.info(ADV_GENERATION_MSG)
-
-        optimization_results = OptimizationResults(
-            perf_metrics=compare_metrics(original, optimized),
-            optimizations=opt_params,
-        )
-
-        adv_ctx = AdvisorContext(
-            optimization_results=optimization_results,
-            target=target,
-            model=model,
-        )
-        advice = produce_advice(adv_ctx, AdviceGroup.OPTIMIZATION)
-
-        reporter.submit(
-            advice,
-            show_title=False,
-            show_headers=False,
-            space="between",
-            tablefmt="plain",
-        )
-
-        if output is not None:
-            logger.info(REPORT_GENERATION_MSG)
-            logger.info("Report(s) and advice list saved to: %s", output)
+    get_advice(
+        target,
+        model,
+        "optimization",
+        optimization_targets=opt_params,
+        output=output,
+        context=ctx,
+    )

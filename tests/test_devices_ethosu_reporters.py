@@ -1,5 +1,6 @@
 # Copyright 2021, Arm Ltd.
 """Tests for reports module."""
+import json
 import sys
 from contextlib import ExitStack as doesnt_raise
 from pathlib import Path
@@ -10,17 +11,20 @@ from typing import List
 from typing import Literal
 
 import pytest
+from mlia.core.reporting import get_reporter
+from mlia.core.reporting import produce_report
+from mlia.core.reporting import Reporter
 from mlia.core.reporting import Table
 from mlia.devices.ethosu.config import EthosUConfiguration
 from mlia.devices.ethosu.performance import MemoryUsage
 from mlia.devices.ethosu.performance import NPUCycles
 from mlia.devices.ethosu.performance import PerformanceMetrics
-from mlia.devices.ethosu.reporters import produce_report
-from mlia.devices.ethosu.reporters import report_dataframe
+from mlia.devices.ethosu.reporters import find_appropriate_formatter
 from mlia.devices.ethosu.reporters import report_operators
 from mlia.devices.ethosu.reporters import report_perf_metrics
 from mlia.tools.vela_wrapper import NpuSupported
 from mlia.tools.vela_wrapper import Operator
+from mlia.tools.vela_wrapper import Operators
 
 
 @pytest.mark.parametrize(
@@ -28,7 +32,7 @@ from mlia.tools.vela_wrapper import Operator
     [
         (
             [Operator("test_operator", "test_type", NpuSupported(False, []))],
-            [report_operators, None],
+            [report_operators],
         ),
         (
             PerformanceMetrics(
@@ -36,28 +40,7 @@ from mlia.tools.vela_wrapper import Operator
                 NPUCycles(0, 0, 0, 0, 0, 0),
                 MemoryUsage(0, 0, 0, 0, 0),
             ),
-            [report_perf_metrics, None],
-        ),
-        (
-            PerformanceMetrics(
-                EthosUConfiguration(target="U55-256"),
-                NPUCycles(0, 0, 0, 0, 0, 0),
-                MemoryUsage(0, 0, 0, 0, 0),
-            ).to_df(),
-            [report_dataframe, None],
-        ),
-        (
-            [
-                (
-                    [Operator("test_operator", "test_type", NpuSupported(False, []))],
-                    PerformanceMetrics(
-                        EthosUConfiguration(target="U55-256"),
-                        NPUCycles(0, 0, 0, 0, 0, 0),
-                        MemoryUsage(0, 0, 0, 0, 0),
-                    ),
-                )
-            ],
-            [None],
+            [report_perf_metrics],
         ),
     ],
 )
@@ -127,11 +110,23 @@ def test_report(
     [
         (
             [
-                Operator("npu_supported", "test_type", NpuSupported(True, [])),
+                Operator(
+                    "npu_supported",
+                    "test_type",
+                    NpuSupported(True, []),
+                ),
                 Operator(
                     "cpu_only",
                     "test_type",
-                    NpuSupported(False, [("CPU only operator", "")]),
+                    NpuSupported(
+                        False,
+                        [
+                            (
+                                "CPU only operator",
+                                "",
+                            ),
+                        ],
+                    ),
                 ),
                 Operator(
                     "npu_unsupported",
@@ -218,3 +213,40 @@ def test_report_operators(
 
     csv_list = report.to_csv()
     assert csv_list == expected_csv_list
+
+
+def test_get_reporter(tmp_path: Path) -> None:
+    """Test reporter functionality."""
+    ops = Operators(
+        [
+            Operator(
+                "npu_supported",
+                "op_type",
+                NpuSupported(True, []),
+            ),
+        ]
+    )
+
+    output = tmp_path / "output.json"
+    with get_reporter("json", output, find_appropriate_formatter) as reporter:
+        assert isinstance(reporter, Reporter)
+
+        with pytest.raises(
+            Exception, match="Unable to find appropriate formatter for some_data"
+        ):
+            reporter.submit("some_data")
+
+        reporter.submit(ops)
+
+    with open(output) as file:
+        json_data = json.load(file)
+
+        assert json_data == {
+            "operators_stats": [
+                {
+                    "npu_unsupported_ratio": 0.0,
+                    "num_of_npu_supported_operators": 1,
+                    "num_of_operators": 1,
+                }
+            ]
+        }

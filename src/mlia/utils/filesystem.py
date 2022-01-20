@@ -9,7 +9,7 @@ from tempfile import mkstemp
 from typing import Any
 from typing import Dict
 from typing import Generator
-from typing import Iterable
+from typing import List
 from typing import Optional
 
 
@@ -50,9 +50,9 @@ def get_profile(target: str) -> Dict[str, Any]:
     return profiles[target]
 
 
-def get_supported_profile_names() -> Iterable[str]:
+def get_supported_profile_names() -> List[str]:
     """Get the supported EthosU profile names."""
-    return get_profiles_data().keys()
+    return list(get_profiles_data().keys())
 
 
 @contextmanager
@@ -60,6 +60,7 @@ def temp_file(suffix: Optional[str] = None) -> Generator[str, None, None]:
     """Create temp file and remove it after."""
     _, tmp_file = mkstemp(suffix=suffix)
 
-    yield tmp_file
-
-    os.remove(tmp_file)
+    try:
+        yield tmp_file
+    finally:
+        os.remove(tmp_file)

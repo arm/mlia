@@ -1,6 +1,8 @@
 # Copyright 2021, Arm Ltd.
 """Tests for config module."""
+from contextlib import ExitStack as does_not_raise
 from pathlib import Path
+from typing import Any
 
 import pytest
 from mlia.nn.tensorflow.config import get_model
@@ -12,7 +14,7 @@ from mlia.nn.tensorflow.config import TfModel
 def test_convert_keras_to_tflite(test_models_path: Path, tmp_path: Path) -> None:
     """Test Keras to TFLite conversion."""
     model = test_models_path / "simple_model.h5"
-    keras_model = KerasModel(str(model))
+    keras_model = KerasModel(model)
 
     tflite_model_path = tmp_path / "test.tflite"
     keras_model.convert_to_tflite(tflite_model_path)
@@ -34,17 +36,29 @@ def test_convert_tf_to_tflite(test_models_path: Path, tmp_path: Path) -> None:
 
 
 @pytest.mark.parametrize(
-    "model_path, expected_type",
+    "model_path, expected_type, expected_error",
     [
-        ("test.tflite", TFLiteModel),
-        ("test.h5", KerasModel),
-        ("test.hdf5", KerasModel),
+        ("test.tflite", TFLiteModel, does_not_raise()),
+        ("test.h5", KerasModel, does_not_raise()),
+        ("test.hdf5", KerasModel, does_not_raise()),
+        (
+            "test.model",
+            None,
+            pytest.raises(
+                Exception,
+                match="The input model format is not supported"
+                r"\(supported formats: tflite, Keras, TF saved model\)!",
+            ),
+        ),
     ],
 )
-def test_get_model_file(model_path: str, expected_type: type) -> None:
+def test_get_model_file(
+    model_path: str, expected_type: type, expected_error: Any
+) -> None:
     """Test TFLite model type."""
-    model = get_model(model_path)
-    assert isinstance(model, expected_type)
+    with expected_error:
+        model = get_model(model_path)
+        assert isinstance(model, expected_type)
 
 
 @pytest.mark.parametrize(

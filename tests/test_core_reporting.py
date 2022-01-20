@@ -2,7 +2,6 @@
 """Tests for reporting module."""
 from typing import List
 
-import pandas as pd
 import pytest
 from mlia.core.reporting import BytesCell
 from mlia.core.reporting import Cell
@@ -11,8 +10,8 @@ from mlia.core.reporting import Column
 from mlia.core.reporting import CyclesCell
 from mlia.core.reporting import Format
 from mlia.core.reporting import NestedReport
-from mlia.core.reporting import ReportDataFrame
 from mlia.core.reporting import ReportItem
+from mlia.core.reporting import SingleRow
 from mlia.core.reporting import Table
 
 
@@ -38,8 +37,39 @@ def test_predefined_cell_types(cell: Cell, expected_repr: str) -> None:
     assert str(cell) == expected_repr
 
 
-@pytest.mark.parametrize("with_notes", [True, False])
-def test_table_representation(with_notes: bool) -> None:
+@pytest.mark.parametrize(
+    "with_notes, expected_text_report",
+    [
+        [
+            True,
+            """
+Sample table:
+╒════════════╤════════════╤════════════╕
+│ Header 1   │ Header 2   │ Header 3   │
+╞════════════╪════════════╪════════════╡
+│ 1          │ 2          │ 3          │
+├────────────┼────────────┼────────────┤
+│ 4          │ 5          │ 123,123    │
+╘════════════╧════════════╧════════════╛
+Sample notes
+    """.strip(),
+        ],
+        [
+            False,
+            """
+Sample table:
+╒════════════╤════════════╤════════════╕
+│ Header 1   │ Header 2   │ Header 3   │
+╞════════════╪════════════╪════════════╡
+│ 1          │ 2          │ 3          │
+├────────────┼────────────┼────────────┤
+│ 4          │ 5          │ 123,123    │
+╘════════════╧════════════╧════════════╛
+    """.strip(),
+        ],
+    ],
+)
+def test_table_representation(with_notes: bool, expected_text_report: str) -> None:
     """Test table report representation."""
 
     def sample_table(with_notes: bool) -> Table:
@@ -71,131 +101,7 @@ def test_table_representation(with_notes: bool) -> None:
     }
 
     text_report = table.to_plain_text()
-    if with_notes:
-        expected_text_report = """
-Sample table:
-╒════════════╤════════════╤════════════╕
-│ Header 1   │ Header 2   │ Header 3   │
-╞════════════╪════════════╪════════════╡
-│ 1          │ 2          │ 3          │
-├────────────┼────────────┼────────────┤
-│ 4          │ 5          │ 123,123    │
-╘════════════╧════════════╧════════════╛
-Sample notes
-    """.strip()
-    else:
-        expected_text_report = """
-Sample table:
-╒════════════╤════════════╤════════════╕
-│ Header 1   │ Header 2   │ Header 3   │
-╞════════════╪════════════╪════════════╡
-│ 1          │ 2          │ 3          │
-├────────────┼────────────┼────────────┤
-│ 4          │ 5          │ 123,123    │
-╘════════════╧════════════╧════════════╛
-    """.strip()
     assert text_report == expected_text_report
-
-
-@pytest.mark.parametrize(
-    "with_index, title, columns_name, notes, expected_text_report",
-    [
-        (
-            True,
-            "Sample table",
-            "Sample index column",
-            "",
-            """
-Sample table:
-╒═══════════════════════╤════════════╤════════════╤════════════╕
-│ Sample index column   │ Header 1   │ Header 2   │ Header 3   │
-╞═══════════════════════╪════════════╪════════════╪════════════╡
-│ 0                     │ 1          │ 2          │ 3          │
-├───────────────────────┼────────────┼────────────┼────────────┤
-│ 1                     │ 4          │ 5.56       │ 123,123    │
-╘═══════════════════════╧════════════╧════════════╧════════════╛
-    """.strip(),
-        ),
-        (
-            False,
-            "Sample table",
-            "",
-            "",
-            """
-Sample table:
-╒════════════╤════════════╤════════════╕
-│ Header 1   │ Header 2   │ Header 3   │
-╞════════════╪════════════╪════════════╡
-│ 1          │ 2          │ 3          │
-├────────────┼────────────┼────────────┤
-│ 4          │ 5.56       │ 123,123    │
-╘════════════╧════════════╧════════════╛
-    """.strip(),
-        ),
-        (
-            False,
-            "Sample table",
-            "",
-            "Sample note",
-            """
-Sample table:
-╒════════════╤════════════╤════════════╕
-│ Header 1   │ Header 2   │ Header 3   │
-╞════════════╪════════════╪════════════╡
-│ 1          │ 2          │ 3          │
-├────────────┼────────────┼────────────┤
-│ 4          │ 5.56       │ 123,123    │
-╘════════════╧════════════╧════════════╛
-Sample note
-    """.strip(),
-        ),
-    ],
-)
-def test_reportdataframe_representation(
-    with_index: bool,
-    title: str,
-    columns_name: str,
-    notes: str,
-    expected_text_report: str,
-) -> None:
-    """Test dataframe report representation."""
-
-    def sample_df() -> pd.DataFrame:
-        sample_dict = {
-            "Header 1": [1, 4],
-            "Header 2": [2, 5.55555],
-            "Header 3": [3, 123123],
-        }
-
-        df = pd.DataFrame.from_dict(sample_dict)
-
-        return df
-
-    df = sample_df()
-    csv_repr = ReportDataFrame(df).to_csv()
-    expected_csv_repr = [
-        ["Header 1", "Header 2", "Header 3"],
-        [1, 2, 3],
-        [4, 5.55555, 123123],
-    ]
-    assert csv_repr == expected_csv_repr
-
-    json_repr = ReportDataFrame(df).to_json()
-    expected_json_repr = {
-        "Header 1": {0: 1, 1: 4},
-        "Header 2": {0: 2.0, 1: 5.55555},
-        "Header 3": {0: 3, 1: 123123},
-    }
-    assert json_repr == expected_json_repr
-
-    df.loc[:, "Header 2"] = df["Header 2"].map("{:.2f}".format)
-    df.loc[:, "Header 3"] = df["Header 3"].map("{:,d}".format)
-
-    text_report = ReportDataFrame(df).to_plain_text(
-        title=title, columns_name=columns_name, notes=notes, showindex=with_index
-    )
-
-    assert expected_text_report == text_report
 
 
 def test_csv_nested_table_representation() -> None:
@@ -289,6 +195,168 @@ Sample report:
                 ("item_value", "nested_item_value"),
             ],
         ),
+        (
+            NestedReport(
+                "Sample report",
+                "sample_report",
+                [
+                    ReportItem(
+                        "Item",
+                        "item",
+                        "item_value",
+                        [ReportItem("Nested item", "nested_item", BytesCell(10))],
+                    ),
+                ],
+            ),
+            """
+Sample report:
+  Item                                                      item_value
+    Nested item                                               10 bytes
+""".strip(),
+            {
+                "sample_report": {
+                    "item": {"nested_item": {"unit": "bytes", "value": 10}},
+                },
+            },
+            [
+                ("item", "nested_item_value", "nested_item_unit"),
+                ("item_value", 10, "bytes"),
+            ],
+        ),
+        (
+            NestedReport(
+                "Sample report",
+                "sample_report",
+                [
+                    ReportItem(
+                        "Item",
+                        "item",
+                        "item_value",
+                        [
+                            ReportItem(
+                                "Nested item",
+                                "nested_item",
+                                Cell(
+                                    10, fmt=Format(str_fmt=lambda x: f"{x} cell value")
+                                ),
+                            )
+                        ],
+                    ),
+                ],
+            ),
+            """
+Sample report:
+  Item                                                      item_value
+    Nested item                                          10 cell value
+""".strip(),
+            {
+                "sample_report": {
+                    "item": {"nested_item": 10},
+                },
+            },
+            [
+                ("item", "nested_item"),
+                ("item_value", 10),
+            ],
+        ),
+        (
+            NestedReport(
+                "Sample report",
+                "sample_report",
+                [
+                    ReportItem(
+                        "Item",
+                        "item",
+                        "item_value",
+                        [
+                            ReportItem(
+                                "Nested item",
+                                "nested_item",
+                                Cell(
+                                    10, fmt=Format(str_fmt=lambda x: f"{x} cell value")
+                                ),
+                            )
+                        ],
+                    ),
+                ],
+            ),
+            """
+Sample report:
+  Item                                                      item_value
+    Nested item                                          10 cell value
+""".strip(),
+            {
+                "sample_report": {
+                    "item": {"nested_item": 10},
+                },
+            },
+            [
+                ("item", "nested_item"),
+                ("item_value", 10),
+            ],
+        ),
+        (
+            NestedReport(
+                "Sample report",
+                "sample_report",
+                [
+                    ReportItem(
+                        "Item",
+                        "item",
+                        "item_value",
+                        [
+                            ReportItem("Nested item", "nested_item", Cell(10)),
+                        ],
+                    ),
+                ],
+            ),
+            """
+Sample report:
+  Item                                                      item_value
+    Nested item                                                     10
+""".strip(),
+            {
+                "sample_report": {
+                    "item": {"nested_item": 10},
+                },
+            },
+            [
+                ("item", "nested_item"),
+                ("item_value", 10),
+            ],
+        ),
+        (
+            NestedReport(
+                "Sample report",
+                "sample_report",
+                [
+                    ReportItem(
+                        "Item",
+                        "item",
+                        "item_value",
+                        [
+                            ReportItem(
+                                "Nested item", "nested_item", Cell(10, fmt=Format())
+                            ),
+                        ],
+                    ),
+                ],
+            ),
+            """
+Sample report:
+  Item                                                      item_value
+    Nested item                                                     10
+""".strip(),
+            {
+                "sample_report": {
+                    "item": {"nested_item": 10},
+                },
+            },
+            [
+                ("item", "nested_item"),
+                ("item_value", 10),
+            ],
+        ),
     ],
 )
 def test_nested_report_representation(
@@ -306,3 +374,37 @@ def test_nested_report_representation(
 
     csv_data = report.to_csv()
     assert csv_data == expected_csv_data
+
+
+def test_single_row_representation() -> None:
+    """Test representation of the SingleRow."""
+    single_row = SingleRow(
+        columns=[
+            Column("column1", "column1"),
+        ],
+        rows=[("value1", "value2")],
+        name="Single row example",
+        alias="simple_row_example",
+    )
+
+    expected_text = """
+Single row example:
+  column1                                               value1
+""".strip()
+    assert single_row.to_plain_text() == expected_text
+    assert single_row.to_csv() == [["column1"], ["value1"]]
+    assert single_row.to_json() == {"simple_row_example": [{"column1": "value1"}]}
+
+    with pytest.raises(Exception, match="Table should have only one row"):
+        wrong_single_row = SingleRow(
+            columns=[
+                Column("column1", "column1"),
+            ],
+            rows=[
+                ("value1", "value2"),
+                ("value1", "value2"),
+            ],
+            name="Single row example",
+            alias="simple_row_example",
+        )
+        wrong_single_row.to_plain_text()

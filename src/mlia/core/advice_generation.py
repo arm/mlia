@@ -19,7 +19,7 @@ from mlia.core.mixins import ContextMixin
 class Advice:
     """Base class for the advice."""
 
-    msgs: List[str]
+    messages: List[str]
 
 
 @dataclass
@@ -81,9 +81,9 @@ class FactBasedAdviceProducer(ContextAwareAdviceProducer):
         """Get produced advice."""
         return self.advice
 
-    def add_advice(self, msgs: List[str]) -> None:
+    def add_advice(self, messages: List[str]) -> None:
         """Add advice."""
-        self.advice.append(Advice(msgs))
+        self.advice.append(Advice(messages))
 
 
 def advice_category(*categories: AdviceCategory) -> Callable:

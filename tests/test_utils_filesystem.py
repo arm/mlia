@@ -1,5 +1,6 @@
 # Copyright 2021, Arm Ltd.
 """Tests for the filesystem module."""
+import contextlib
 import json
 from pathlib import Path
 from typing import Any
@@ -70,10 +71,15 @@ def test_get_profile() -> None:
         get_profile("unknown")
 
 
-def test_temp_file() -> None:
+@pytest.mark.parametrize("raise_exception", [True, False])
+def test_temp_file(raise_exception: bool) -> None:
     """Test temp_file context manager."""
-    with temp_file() as tmp:
-        tmp_path = Path(tmp)
-        assert tmp_path.is_file()
+    with contextlib.suppress(Exception):
+        with temp_file() as tmp:
+            tmp_path = Path(tmp)
+            assert tmp_path.is_file()
+
+            if raise_exception:
+                raise Exception("Error!")
 
     assert not tmp_path.exists()

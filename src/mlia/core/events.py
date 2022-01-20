@@ -140,6 +140,18 @@ class DataCollectionStageStartedEvent(SystemEvent):
 
 
 @dataclass
+class DataCollectorSkippedEvent(SystemEvent):
+    """Data collector skipped event.
+
+    This event is published when particular data collector can
+    not provide data for the provided parameters.
+    """
+
+    data_collector: str
+    reason: str
+
+
+@dataclass
 class DataCollectionStageFinishedEvent(SystemEvent):
     """Data collection stage finished.
 
@@ -309,13 +321,18 @@ class EventPublisher(ABC):
         :param event_handler: instance of the event handler
         """
 
-    def register_event_handlers(self, event_handlers: List[EventHandler]) -> None:
+    def register_event_handlers(
+        self, event_handlers: Optional[List[EventHandler]]
+    ) -> None:
         """Register event handlers.
 
         Can be used for batch registration of the event handlers:
 
         :param event_handlers: list of the event handler instances
         """
+        if not event_handlers:
+            return
+
         for handler in event_handlers:
             self.register_event_handler(handler)
 
@@ -406,6 +423,9 @@ class SystemEventsHandler(EventDispatcher):
         self, event: DataCollectionStageFinishedEvent
     ) -> None:
         """Handle DataCollectionStageFinished event."""
+
+    def on_data_collector_skipped(self, event: DataCollectorSkippedEvent) -> None:
+        """Handle DataCollectorSkipped event."""
 
     def on_data_analysis_stage_started(
         self, event: DataAnalysisStageStartedEvent

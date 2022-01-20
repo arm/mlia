@@ -22,6 +22,7 @@ from mlia.core.common import DataItem
 from mlia.core.context import Context
 from mlia.core.data_analysis import DataAnalyzer
 from mlia.core.data_collection import DataCollector
+from mlia.core.errors import FunctionalityNotSupportedError
 from mlia.core.events import AdviceStageFinishedEvent
 from mlia.core.events import AdviceStageStartedEvent
 from mlia.core.events import AnalyzedDataEvent
@@ -30,6 +31,7 @@ from mlia.core.events import DataAnalysisStageFinishedEvent
 from mlia.core.events import DataAnalysisStageStartedEvent
 from mlia.core.events import DataCollectionStageFinishedEvent
 from mlia.core.events import DataCollectionStageStartedEvent
+from mlia.core.events import DataCollectorSkippedEvent
 from mlia.core.events import Event
 from mlia.core.events import ExecutionFailedEvent
 from mlia.core.events import ExecutionFinishedEvent
@@ -135,10 +137,12 @@ class DefaultWorkflowExecutor(WorkflowExecutor):
         """
         collected_data = []
         for collector in self.collectors:
-            data_item = collector.collect_data()
-            if data_item is not None:
-                collected_data.append(data_item)
-                self.publish(CollectedDataEvent(data_item))
+            try:
+                if (data_item := collector.collect_data()) is not None:
+                    collected_data.append(data_item)
+                    self.publish(CollectedDataEvent(data_item))
+            except FunctionalityNotSupportedError as err:
+                self.publish(DataCollectorSkippedEvent(collector.name(), str(err)))
 
         return collected_data
 

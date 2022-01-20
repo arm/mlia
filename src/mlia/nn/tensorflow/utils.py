@@ -112,15 +112,6 @@ def save_tflite_model(
         file.write(model)
 
 
-def deep_clone_model(model: tf.keras.Model) -> tf.keras.Model:
-    """Create a clone of a model, this ensures separation between optimizations."""
-    # Check if custom objects are required (i.e. QAT)
-    cloned_model = tf.keras.models.clone_model(model)
-    cloned_model.set_weights(model.get_weights())
-
-    return cloned_model
-
-
 def is_tflite_model(model: Union[Path, str]) -> bool:
     """Check if model type is supported by TFLite API.
 
