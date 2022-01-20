@@ -230,15 +230,17 @@ download_fvp() {
 }
 
 install_fvp() {
+    local FVP_INSTALL_PATH=$1
     CORSTONE_PACKAGE="$CS_300_FVP_PATH/$CS_300_FVP_TAR_FILE"
-    tar xzf "$CORSTONE_PACKAGE" -C "$CS_300_FVP_PATH"
-    "$CS_300_FVP_PATH/FVP_Corstone_SSE-300.sh" -q --i-agree-to-the-contained-eula -d "$CS_300_FVP_PATH" --nointeractive
-    CS_300_FVP_VALID_PATH="$CS_300_FVP_PATH/$CS_300_FVP_MODELS_PATH"
+    tar xzf "$CORSTONE_PACKAGE" -C "$FVP_INSTALL_PATH"
+    "$FVP_INSTALL_PATH/FVP_Corstone_SSE-300.sh" -q --i-agree-to-the-contained-eula -d "$FVP_INSTALL_PATH" --nointeractive
+    CS_300_FVP_VALID_PATH="$FVP_INSTALL_PATH/$CS_300_FVP_MODELS_PATH"
 }
 
 print_manual_fvp_installation_instructions() {
-    echo "For downloading the FVP: wget -nv $CS_300_FVP_WEB_LINK -O $PACKAGE_DIR/$CS_300_FVP_TAR_FILE"
-    echo "For installing the FVP, please run the install_new.sh with the command line for example like this: install_new.sh -f your_fvp_path -e name_of_your_env"
+    log "\nFor downloading the FVP: wget $CS_300_FVP_WEB_LINK -O $PACKAGE_DIR/$CS_300_FVP_TAR_FILE"
+    log "\nFor installing the FVP, please untar the FVP archive, run the install script FVP_Corstone_SSE-300.sh and follow the instructions."
+    log "Then, run the mlia_install.sh with the command line for example like this like this: mlia_install.sh -f your_fvp_path -e name_of_your_venv"
 }
 
 download_maybe() {
@@ -254,7 +256,7 @@ download_maybe() {
                     [yY]*)
                             download_fvp
                             break;;
-                    [nN]*)
+                    [nN]* | "")
                             print_manual_fvp_installation_instructions
                             echo "Nothing downloaded. Exiting ..."
                             exit 0;;
@@ -372,7 +374,8 @@ if [ -z "$CS_300_FVP_VALID_PATH" ]; then
     download_maybe
     log "\nSuccessfully downloaded from developer.arm.com: the $CS_300_FVP_NAME version $CS_300_FVP_VERSION to \"$CS_300_FVP_PATH\" ..."
     if [ "$CS_300_FVP_DOWNLOADED" == "true" ]; then
-        install_fvp
+        mkdir -p "$PWD/$CS_300_FVP_DIRECTORY"
+        install_fvp "$PWD/$CS_300_FVP_DIRECTORY"
     fi
 fi
 

@@ -8,7 +8,6 @@ import json
 import os
 import shutil
 import subprocess
-import sys
 import tempfile
 from pathlib import Path
 from typing import Any
@@ -185,7 +184,7 @@ class TestInstallScript:
         install_dir_path: Path,
         tmp_path: Path,
         commands: List,
-        flag_download: str = "",
+        flag_download: str = None,
     ) -> None:
         """Run an install script use case."""
         install_dir_path.mkdir()
@@ -198,7 +197,9 @@ class TestInstallScript:
             test_path = install_dir_path.resolve()
             venv = f"e2e_venv_{test_path.name}"
             extra_input = (
-                f"{flag_download}\n" if flag_download in ["Y", "y", "N", "n"] else None
+                f"{flag_download}\n"
+                if flag_download in ["Y", "y", "N", "n", ""]
+                else None
             )
 
             command = [
@@ -230,6 +231,18 @@ class TestInstallScript:
                 assert result.returncode == 0
                 print(result.stdout.decode())
 
+    def check_output(
+        self, capsys: Any, expected_messages: Optional[List[str]] = None
+    ) -> None:
+        """Check the output and capture errors."""
+        out, err = capsys.readouterr()
+        print(out)
+        print(err)
+
+        if expected_messages:
+            messages_not_found = [msg for msg in expected_messages if msg not in out]
+            assert not messages_not_found, "Output checking is failed"
+
     command_list = [
         "mlia --version",
         "mlia --help",
@@ -254,10 +267,7 @@ class TestInstallScript:
             "mlia_install.sh", [], install_dir_path, tmp_path, []
         )
 
-        out, err = capsys.readouterr()
-        sys.stdout.write(out)
-        sys.stderr.write(err)
-        assert out.find("Timed out so nothing will be downloaded") != -1
+        self.check_output(capsys, ["Timed out so nothing will be downloaded"])
 
     def test_install_new_script_use_specific_fvp_path(
         self,
@@ -282,10 +292,7 @@ class TestInstallScript:
             self.command_list,
         )
 
-        out, err = capsys.readouterr()
-        sys.stdout.write(out)
-        sys.stderr.write(err)
-        assert out.find("Using the local instance of the FVP") != -1
+        self.check_output(capsys, ["Using the local instance of the FVP"])
 
     @pytest.mark.parametrize(
         "flag_yn, pass_install_directory, test_dir, cap_str",
@@ -294,10 +301,11 @@ class TestInstallScript:
                 "Y",
                 False,
                 "dist6",
-                "Successfully downloaded from developer.arm.com",
+                ["Successfully downloaded from developer.arm.com"],
             ],
-            ["Y", True, "dist7", "Successfully downloaded from developer.arm.com"],
-            ["N", False, "dist8", "Nothing downloaded. Exiting"],
+            ["Y", True, "dist7", ["Successfully downloaded from developer.arm.com"]],
+            ["N", False, "dist8", ["Nothing downloaded. Exiting"]],
+            ["", False, "dist9", ["Nothing downloaded. Exiting"]],
         ],
     )
     def test_install_new_script_download_fvp(
@@ -306,7 +314,7 @@ class TestInstallScript:
         flag_yn: str,
         pass_install_directory: bool,
         test_dir: str,
-        cap_str: str,
+        cap_str: List[str],
         capsys: Any,
     ) -> None:
         """Test MLIA mlia_install script can download and install FVP."""
@@ -324,10 +332,7 @@ class TestInstallScript:
             flag_yn,
         )
 
-        out, err = capsys.readouterr()
-        sys.stdout.write(out)
-        sys.stderr.write(err)
-        assert out.find(cap_str) != -1
+        self.check_output(capsys, cap_str)
 
     @pytest.mark.parametrize(
         "model_name",
