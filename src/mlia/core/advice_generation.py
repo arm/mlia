@@ -3,9 +3,13 @@
 from abc import ABC
 from abc import abstractmethod
 from dataclasses import dataclass
+from functools import wraps
+from typing import Any
+from typing import Callable
 from typing import List
 from typing import Union
 
+from mlia.core.common import AdviceCategory
 from mlia.core.common import DataItem
 from mlia.core.events import SystemEvent
 from mlia.core.mixins import ContextMixin
@@ -80,3 +84,22 @@ class FactBasedAdviceProducer(ContextAwareAdviceProducer):
     def add_advice(self, msgs: List[str]) -> None:
         """Add advice."""
         self.advice.append(Advice(msgs))
+
+
+def advice_category(*categories: AdviceCategory) -> Callable:
+    """Filter advice generation handler by advice category."""
+
+    def wrapper(handler: Callable) -> Callable:
+        """Wrap data handler."""
+
+        @wraps(handler)
+        def check_category(self: Any, *args: Any, **kwargs: Any) -> Any:
+            """Check if handler can produce advice for the requested category."""
+            if not self.context.any_category_enabled(*categories):
+                return
+
+            handler(self, *args, **kwargs)
+
+        return check_category
+
+    return wrapper

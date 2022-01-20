@@ -27,7 +27,7 @@ class AdviceCategory(Enum):
     OPERATORS_COMPATIBILITY = 1
     PERFORMANCE = 2
     OPTIMIZATION = 3
-    COMMON = 4
+    ALL = 4
 
 
 class Parameter(TypedDict, total=False):

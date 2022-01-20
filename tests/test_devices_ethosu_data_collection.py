@@ -122,6 +122,22 @@ def test_optimization_performance_collector(
     assert opt == [OptimizationSettings("pruning", 0.5, None)]
     assert isinstance(metrics, PerformanceMetrics)
 
+    collector_no_optimizations = EthosUOptimizationPerformance(
+        model,
+        device,
+        [],
+    )
+    assert collector_no_optimizations.collect_data() is None
+
+    with pytest.raises(
+        Exception, match="Optimization parameters expected to be a list"
+    ):
+        collector_bad_config = EthosUOptimizationPerformance(
+            model, device, {"optimization_type": "pruning"}  # type: ignore
+        )
+        collector.set_context(dummy_context)
+        collector_bad_config.collect_data()
+
 
 def mock_performance_estimation(monkeypatch: Any, device: EthosUConfiguration) -> None:
     """Mock performance estimation."""

@@ -126,12 +126,13 @@ class EthosUOptimizationPerformance(ContextAwareDataCollector):
         if not self.optimizations:
             return None
 
+        opt_settings = self._parse_optimization_params(self.optimizations)
+
         try:
             keras_model = get_keras_model(self.model, self.context)
         except NotImplementedError:
             return None
 
-        opt_settings = self._parse_optimization_params(self.optimizations)
         optimizers = [OptimizeModel(self.context, opts) for opts in opt_settings]
 
         estimator = EthosUPerformanceEstimator(self.context, self.device)

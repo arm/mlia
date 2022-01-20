@@ -26,7 +26,6 @@ from mlia.cli.options import add_optional_tflite_model_options
 from mlia.cli.options import add_output_options
 from mlia.cli.options import add_target_options
 from mlia.cli.options import add_tflite_model_options
-from mlia.core.common import AdviceCategory
 from mlia.core.context import ExecutionContext
 
 
@@ -138,8 +137,6 @@ def setup_context(
 ) -> Tuple[ExecutionContext, Dict]:
     """Set up context and resolve function parameters."""
     ctx = ExecutionContext(
-        advice_category=AdviceCategory.PERFORMANCE,
-        config_parameters={},
         working_dir=args.working_dir,
         verbose="verbose" in args and args.verbose,
     )

@@ -1,5 +1,6 @@
 # Copyright 2021, Arm Ltd.
 """Module for optimization selection."""
+import math
 from typing import List
 from typing import NamedTuple
 from typing import Optional
@@ -43,6 +44,27 @@ class OptimizationSettings(NamedTuple):
     def __str__(self) -> str:
         """Return string representation."""
         return f"{self.optimization_type}: {self.optimization_target}"
+
+    def next_target(self) -> "OptimizationSettings":
+        """Return next optimization target."""
+        if self.optimization_type == "pruning":
+            next_target = round(min(self.optimization_target + 0.1, 0.9), 2)
+            return OptimizationSettings(
+                self.optimization_type, next_target, self.layers_to_optimize
+            )
+
+        if self.optimization_type == "clustering":
+            # return next lowest power of two for clustering
+            next_target = math.log(self.optimization_target, 2)
+            if next_target.is_integer():
+                next_target -= 1
+
+            next_target = max(int(2 ** int(next_target)), 4)
+            return OptimizationSettings(
+                self.optimization_type, next_target, self.layers_to_optimize
+            )
+
+        raise Exception(f"Unknown optimization type {self.optimization_type}")
 
 
 class MultiStageOptimizer(Optimizer):

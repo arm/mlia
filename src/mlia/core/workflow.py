@@ -1,7 +1,7 @@
 # Copyright 2021, Arm Ltd.
 """Module for executors.
 
-This module contains implementation of workflow
+This module contains implementation of the workflow
 executors.
 """
 import itertools

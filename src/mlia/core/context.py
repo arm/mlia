@@ -19,6 +19,8 @@ from mlia.core.common import AdviceCategory
 from mlia.core.events import DefaultEventPublisher
 from mlia.core.events import EventHandler
 from mlia.core.events import EventPublisher
+from mlia.core.helpers import ActionResolver
+from mlia.core.helpers import APIActionResolver
 
 logger = logging.getLogger(__name__)
 
@@ -59,6 +61,11 @@ class Context(ABC):
     def config_parameters(self) -> Optional[Mapping[str, Any]]:
         """Return configuration parameters."""
 
+    @property
+    @abstractmethod
+    def action_resolver(self) -> ActionResolver:
+        """Return action resolver."""
+
     @abstractmethod
     def update(
         self,
@@ -96,6 +103,7 @@ class ExecutionContext(Context):  # pylint: disable=too-many-instance-attributes
         verbose: bool = False,
         logs_dir: str = "logs",
         models_dir: str = "models",
+        action_resolver: Optional[ActionResolver] = None,
     ) -> None:
         """Init execution context.
 
@@ -112,6 +120,8 @@ class ExecutionContext(Context):  # pylint: disable=too-many-instance-attributes
                log files will be stored
         :param models_dir: name of the directory inside working directory where
                temporary models will be stored
+        :param action_resolver: instance of the action resolver that could make
+               advice actionable
         """
         self._advice_category = advice_category
         self._config_parameters = config_parameters
@@ -126,6 +136,7 @@ class ExecutionContext(Context):  # pylint: disable=too-many-instance-attributes
         self.verbose = verbose
         self.logs_dir = logs_dir
         self.models_dir = models_dir
+        self._action_resolver = action_resolver or APIActionResolver()
 
     @property
     def advice_category(self) -> Optional[AdviceCategory]:
@@ -146,6 +157,11 @@ class ExecutionContext(Context):  # pylint: disable=too-many-instance-attributes
     def event_publisher(self) -> EventPublisher:
         """Return event publisher."""
         return self._event_publisher
+
+    @property
+    def action_resolver(self) -> ActionResolver:
+        """Return action resolver."""
+        return self._action_resolver
 
     def get_model_path(self, model_filename: str) -> Path:
         """Return path for the model."""
