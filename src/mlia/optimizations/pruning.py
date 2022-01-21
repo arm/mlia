@@ -61,7 +61,7 @@ class Pruner(Optimizer):
         self.optimizer_configuration = optimizer_configuration
 
         if not optimizer_configuration.has_training_data():
-            mock_x_train, mock_y_train = self._mock_train_data(1)
+            mock_x_train, mock_y_train = self._mock_train_data()
 
             self.optimizer_configuration.x_train = mock_x_train
             self.optimizer_configuration.y_train = mock_y_train
@@ -70,14 +70,14 @@ class Pruner(Optimizer):
         """Return string representation of the optimization config."""
         return str(self.optimizer_configuration)
 
-    def _mock_train_data(self, num_imgs: int) -> Tuple[np.array, np.array]:
+    def _mock_train_data(self) -> Tuple[np.array, np.array]:
         # get rid of the batch_size dimension in input and output shape
         input_shape = tuple(x for x in self.model.input_shape if x is not None)
         output_shape = tuple(x for x in self.model.output_shape if x is not None)
 
         return (
             np.random.rand(*input_shape),
-            np.random.randint(0, output_shape[-1], (num_imgs)),
+            np.random.randint(0, output_shape[-1], (output_shape[:-1])),
         )
 
     def _setup_pruning_params(self) -> dict:
