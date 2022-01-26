@@ -238,9 +238,9 @@ install_fvp() {
 }
 
 print_manual_fvp_installation_instructions() {
-    log "\nFor downloading the FVP: wget $CS_300_FVP_WEB_LINK -O $PACKAGE_DIR/$CS_300_FVP_TAR_FILE"
+    log "\nFor downloading the FVP, use for example: wget $CS_300_FVP_WEB_LINK -O $PACKAGE_DIR/$CS_300_FVP_TAR_FILE"
     log "\nFor installing the FVP, please untar the FVP archive, run the install script FVP_Corstone_SSE-300.sh and follow the instructions."
-    log "Then, run the mlia_install.sh with the command line for example like this like this: mlia_install.sh -f your_fvp_path -e name_of_your_venv"
+    log "Then, run mlia_install.sh again specifying the FVP path with the '-f' option. For example: mlia_install.sh -f your_fvp_path -e name_of_your_venv"
 }
 
 download_maybe() {
@@ -248,8 +248,9 @@ download_maybe() {
     local TMOUT=10
 
     while true; do
+            log ""
             if ! read -p "$MS" -r; then
-                    echo "Timed out so nothing will be downloaded. Exiting ..."
+                    log "Timed out so nothing will be downloaded. Exiting ..."
                     exit 0
             fi
             case $REPLY in
@@ -258,10 +259,10 @@ download_maybe() {
                             break;;
                     [nN]* | "")
                             print_manual_fvp_installation_instructions
-                            echo "Nothing downloaded. Exiting ..."
+                            log "\nNothing downloaded. Exiting ..."
                             exit 0;;
                     *)
-                            echo "Sorry, try again" >&2
+                            log "Sorry, try again" >&2
             esac
     done
 }
