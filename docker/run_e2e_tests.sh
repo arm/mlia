@@ -42,13 +42,14 @@ echo "Installing the ML Inference Advisor from the local directory ..."
 # in order to test installation script we must produce MLIA wheel
 # to make things easier wheel should have fixed version
 # (the same version as mentioned in install.sh)
-FIXED_WHEEL_VERSION=0.1.1
+FIXED_WHEEL_VERSION=0.1.3
 SETUPTOOLS_SCM_PRETEND_VERSION="$FIXED_WHEEL_VERSION" python setup.py -q bdist_wheel
 WHEEL_PATH="dist/mlia-$FIXED_WHEEL_VERSION-py3-none-any.whl"
 pip install "$WHEEL_PATH"
 
 echo "Extracting the AIET artifacts ..."
 cat "$MLIA_E2E_CONFIG"/systems/*.tar.gz | tar -xzf - -i -C "$MLIA_E2E_CONFIG"/systems
+cp -f src/mlia/resources/aiet/systems/cs-300/aiet-config.json "$MLIA_E2E_CONFIG"/systems/fvp_corstone_sse-300_ethos-u
 cat "$MLIA_E2E_CONFIG"/applications/*.tar.gz | tar -xzf - -i -C "$MLIA_E2E_CONFIG"/applications
 
 echo "Running E2E tests ..."
