@@ -1,3 +1,3 @@
 This directory contains the Generic Inference Runner application packages for the IPSS-ML middleware (AIET)
 
-TODO Get the inference runner builds and put them here
+Each package should contain its own aiet-config.json file

@@ -328,7 +328,7 @@ class TestInstallScript:
             install_dir_option,
             install_dir_path,
             tmp_path,
-            self.command_list,
+            self.command_list if flag_yn == "Y" else [],
             flag_yn,
         )
 

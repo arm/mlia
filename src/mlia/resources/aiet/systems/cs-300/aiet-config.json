@@ -14,7 +14,7 @@
     "lock": true,
     "commands": {
       "run": [
-        "FVP_Corstone_SSE-300_Ethos-U55 -a {software.variables:eval_app} -C mps3_board.telnetterminal0.start_telnet=0 -C mps3_board.uart0.out_file='-' -C mps3_board.uart0.shutdown_on_eot=1 -C mps3_board.visualisation.disable-visualisation=1 --stat"
+        "FVP_Corstone_SSE-300_Ethos-U55 -a {software.variables:eval_app} {user_params:input_file}@0x90000000 -C mps3_board.telnetterminal0.start_telnet=0 -C mps3_board.uart0.out_file='-' -C mps3_board.uart0.shutdown_on_eot=1 -C mps3_board.visualisation.disable-visualisation=1 --stat"
       ]
     }
   },
@@ -33,11 +33,17 @@
     "lock": true,
     "commands": {
       "run": [
-        "FVP_Corstone_SSE-300_Ethos-U55 -a {software.variables:eval_app} -C {user_params:mac} -C mps3_board.telnetterminal0.start_telnet=0 -C mps3_board.uart0.out_file='-' -C mps3_board.uart0.shutdown_on_eot=1 -C mps3_board.visualisation.disable-visualisation=1 --stat"
+        "FVP_Corstone_SSE-300_Ethos-U55 -a {software.variables:eval_app} {user_params:input_file}@0x90000000 -C {user_params:mac} -C mps3_board.telnetterminal0.start_telnet=0 -C mps3_board.uart0.out_file='-' -C mps3_board.uart0.shutdown_on_eot=1 -C mps3_board.visualisation.disable-visualisation=1 --stat"
       ]
     },
     "user_params": {
-      "shared": [
+      "run": [
+        {
+          "name": "--data",
+          "description": "Full file name for a custom model. Model must be in tflite format compiled with Vela.",
+          "values": [],
+          "alias": "input_file"
+        },
         {
           "name": "ethosu.num_macs=",
           "description": "Arm Ethos-U55 configuration - the number represents MACs per cycle.",
@@ -47,7 +53,7 @@
             "128",
             "256"
           ],
-          "default_value": "128",
+          "default_value": "256",
           "alias": "mac"
         }
       ]
@@ -68,11 +74,17 @@
     "lock": true,
     "commands": {
       "run": [
-        "FVP_Corstone_SSE-300_Ethos-U65 -a {software.variables:eval_app} -C {user_params:mac} -C mps3_board.telnetterminal0.start_telnet=0 -C mps3_board.uart0.out_file='-' -C mps3_board.uart0.shutdown_on_eot=1 -C mps3_board.visualisation.disable-visualisation=1 --stat"
+        "FVP_Corstone_SSE-300_Ethos-U65 -a {software.variables:eval_app} {user_params:input_file}@0x90000000 -C {user_params:mac} -C mps3_board.telnetterminal0.start_telnet=0 -C mps3_board.uart0.out_file='-' -C mps3_board.uart0.shutdown_on_eot=1 -C mps3_board.visualisation.disable-visualisation=1 --stat"
       ]
     },
     "user_params": {
-      "shared": [
+      "run": [
+        {
+          "name": "--data",
+          "description": "Full file name for a custom model. Model must be in tflite format compiled with Vela.",
+          "values": [],
+          "alias": "input_file"
+        },
         {
           "name": "ethosu.num_macs=",
           "description": "Arm Ethos-U65 configuration - the number represents MACs per cycle.",
@@ -80,7 +92,7 @@
             "256",
             "512"
           ],
-          "default_value": "128",
+          "default_value": "512",
           "alias": "mac"
         }
       ]

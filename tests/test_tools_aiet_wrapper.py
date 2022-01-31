@@ -314,13 +314,13 @@ def test_save_random_input(
         (
             EthosU55(mac=32),
             ("CS-300: Cortex-M55+Ethos-U55", True),
-            ("generic_inference", True),
+            ("Generic Inference Runner: Ethos-U55 SRAM", True),
             does_not_raise(),
         ),
         (
             EthosU55(mac=32),
             ("CS-300: Cortex-M55+Ethos-U55", False),
-            ("generic_inference", False),
+            ("Generic Inference Runner: Ethos-U55 SRAM", False),
             pytest.raises(
                 Exception,
                 match=r"System CS-300: Cortex-M55\+Ethos-U55 is not installed",
@@ -329,23 +329,23 @@ def test_save_random_input(
         (
             EthosU55(mac=32),
             ("CS-300: Cortex-M55+Ethos-U55", True),
-            ("generic_inference", False),
+            ("Generic Inference Runner: Ethos-U55 SRAM", False),
             pytest.raises(
                 Exception,
-                match=r"Application generic_inference for the system "
-                r"CS-300: Cortex-M55\+Ethos-U55 is not installed",
+                match=r"Application Generic Inference Runner: Ethos-U55 SRAM "
+                r"for the system CS-300: Cortex-M55\+Ethos-U55 is not installed",
             ),
         ),
         (
             EthosU65(mac=512),
             ("CS-300: Cortex-M55+Ethos-U65", True),
-            ("generic_inference", True),
+            ("Generic Inference Runner: Ethos-U65 Dedicated SRAM", True),
             does_not_raise(),
         ),
         (
             EthosU65(mac=512),
             ("CS-300: Cortex-M55+Ethos-U65", False),
-            ("generic_inference", False),
+            ("Generic Inference Runner: Ethos-U65 Dedicated SRAM", False),
             pytest.raises(
                 Exception,
                 match=r"System CS-300: Cortex-M55\+Ethos-U65 is not installed",
@@ -354,11 +354,11 @@ def test_save_random_input(
         (
             EthosU65(mac=512),
             ("CS-300: Cortex-M55+Ethos-U65", True),
-            ("generic_inference", False),
+            ("Generic Inference Runner: Ethos-U65 Dedicated SRAM", False),
             pytest.raises(
                 Exception,
-                match=r"Application generic_inference for the system "
-                r"CS-300: Cortex-M55\+Ethos-U65 is not installed",
+                match=r"Application Generic Inference Runner: Ethos-U65 Dedicated SRAM "
+                r"for the system CS-300: Cortex-M55\+Ethos-U65 is not installed",
             ),
         ),
         (

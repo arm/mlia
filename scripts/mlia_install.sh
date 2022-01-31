@@ -19,7 +19,7 @@ PACKAGE_DIR=$(mktemp -d -t mlia-XXXXXX)
 
 # ML Inference Advisor params
 MLIA_NAME="ML Inference Advisor"
-MLIA_VERSION="0.1.3"
+MLIA_VERSION="0.1.4"
 MLIA_WHEEL_FILE="mlia-$MLIA_VERSION-py3-none-any.whl"
 MLIA_URL="https://artifactory.eu02.arm.com:443/artifactory/ml-tooling.pypi-local/mlia/$MLIA_VERSION/$MLIA_WHEEL_FILE"
 
@@ -28,11 +28,8 @@ AIET_NAME="AI Evaluation Toolkit"
 AIET_WHEEL_FILE_PATTERN="aiet-*-py3-none-any.whl"
 AIET_WHEEL_FILE_RELATIVE_PATH="resources/aiet/package/"
 
-# Generic Inference Runner AIET application
-AIET_GENERIC_INFERENCE_RUNNER_NAME="Generic Inference Runner"
-AIET_GENERIC_INFERENCE_RUNNER_VERSION="0.1.1"
-AIET_GENERIC_INFERENCE_RUNNER_ARCHIVE="ethosu_generic_inference_runner_aiet-$AIET_GENERIC_INFERENCE_RUNNER_VERSION.tar.gz"
-AIET_GENERIC_INFERENCE_RUNNER_URL="https://artifactory.eu02.arm.com:443/artifactory/ml-tooling.pypi-local/mlia/generic_inference_runner/$AIET_GENERIC_INFERENCE_RUNNER_VERSION/$AIET_GENERIC_INFERENCE_RUNNER_ARCHIVE"
+# AI Evaluation Toolkit application params
+AIET_APPLICATIONS_RELATIVE_PATH="resources/aiet/applications"
 
 # FVP Corstone-300 Ecosystem params
 CS_300_FVP_NAME="FVP Corstone-300 Ecosystem"
@@ -143,11 +140,6 @@ check_fvp_path() {
     done
 }
 
-init_packages() {
-    MLIA_PACKAGE="$PACKAGE_DIR/$MLIA_WHEEL_FILE"
-    CS_300_APP_PACKAGE="$PACKAGE_DIR/$AIET_GENERIC_INFERENCE_RUNNER_ARCHIVE"
-}
-
 check_path() {
     if [ -z "$1" ]; then
         error "No path specified to check"
@@ -181,11 +173,6 @@ check_package() {
     check_file "$1"
 }
 
-check_packages() {
-    check_package "$MLIA_PACKAGE"
-    check_package "$CS_300_APP_PACKAGE"
-}
-
 create_and_init_virtual_env() {
     # Create the virtual environment
     python3 -m venv "$1"
@@ -212,7 +199,9 @@ configure_aiet() {
     verbose "Installing the $AIET_NAME systems ..."
     aiet system install -s "$CS_300_FVP_VALID_PATH"
     verbose "Installing the $AIET_NAME applications ..."
-    aiet application install -s "$CS_300_APP_PACKAGE"
+    AIET_APPLICATIONS_TEMP_DIR="$MLIA_TEMP_PACKAGE_DIR/$AIET_APPLICATIONS_RELATIVE_PATH"
+    find "$AIET_APPLICATIONS_TEMP_DIR" -mindepth 1 -maxdepth 1 -type f -name "*.tar.gz" \
+      -exec sh -c 'aiet application install -s ${0}' {} \;
 }
 
 install_mlia() {
@@ -250,7 +239,7 @@ download_maybe() {
     while true; do
             log ""
             if ! read -p "$MS" -r; then
-                    log "Timed out so nothing will be downloaded. Exiting ..."
+                    log "\nTimed out so nothing will be downloaded. Exiting ..."
                     exit 0
             fi
             case $REPLY in
@@ -274,7 +263,7 @@ This script creates a virtual environment and installs the required packages:
   - $MLIA_NAME
   - $AIET_NAME
   - $CS_300_FVP_NAME
-  - Ethos-U55/65 Generic Inference Runner
+  - Ethos-U55/65 Inference Runner applications
 
 Usage: $0 [-v] [-f fvp_path] [-d package_dir] -e venv_dir
 
@@ -382,22 +371,16 @@ fi
 
 log "\nUsing the local instance of the $CS_300_FVP_NAME version $CS_300_FVP_VERSION at \"$CS_300_FVP_VALID_PATH\" ..."
 
-# Downloading components
 log "\nDownloading the $MLIA_NAME version $MLIA_VERSION to \"$PACKAGE_DIR\" ..."
-wget -nv "$MLIA_URL" -O "$PACKAGE_DIR/$MLIA_WHEEL_FILE"
+MLIA_PACKAGE="$PACKAGE_DIR/$MLIA_WHEEL_FILE"
+wget -nv "$MLIA_URL" -O "$MLIA_PACKAGE"
+check_package "$MLIA_PACKAGE"
 
-log "\nDownloading the $AIET_GENERIC_INFERENCE_RUNNER_NAME version $AIET_GENERIC_INFERENCE_RUNNER_VERSION to \"$PACKAGE_DIR\" ..."
-wget -nv "$AIET_GENERIC_INFERENCE_RUNNER_URL" -O "$PACKAGE_DIR/$AIET_GENERIC_INFERENCE_RUNNER_ARCHIVE"
-
-verbose "Checking packages ..."
-init_packages "$PACKAGE_DIR"
-check_packages
-
-# Installing components
 log "\nExtracting the $AIET_NAME from the $MLIA_NAME package ..."
 TEMP_DIR=$(mktemp -d -t mlia-XXXXXX)
 wheel unpack "$PACKAGE_DIR/$MLIA_WHEEL_FILE" -d "$TEMP_DIR"
-AIET_WHEEL_FILE_PATH="$TEMP_DIR/mlia-$MLIA_VERSION/mlia/$AIET_WHEEL_FILE_RELATIVE_PATH"
+MLIA_TEMP_PACKAGE_DIR="$TEMP_DIR/mlia-$MLIA_VERSION/mlia"
+AIET_WHEEL_FILE_PATH="$MLIA_TEMP_PACKAGE_DIR/$AIET_WHEEL_FILE_RELATIVE_PATH"
 # shellcheck disable=SC2206
 AIET_WHEEL_FILES=( $AIET_WHEEL_FILE_PATH/$AIET_WHEEL_FILE_PATTERN )
 AIET_PACKAGE="${AIET_WHEEL_FILES[0]}"
@@ -406,7 +389,7 @@ check_package "$AIET_PACKAGE"
 log "\nExtracting the $CS_300_FVP_NAME configuration file ... "
 # Check that the configuration file for the AI Evaluation Toolkit system is included in
 # the Inference Advisor
-CS_300_FVP_AIET_CONFIG_PATH="$TEMP_DIR/mlia-$MLIA_VERSION/mlia/$CS_300_FVP_AIET_CONFIG_RELATIVE_PATH"
+CS_300_FVP_AIET_CONFIG_PATH="$MLIA_TEMP_PACKAGE_DIR/$CS_300_FVP_AIET_CONFIG_RELATIVE_PATH"
 CS_300_FVP_AIET_CONFIG="$CS_300_FVP_AIET_CONFIG_PATH/$CS_300_FVP_AIET_CONFIG_NAME"
 check_file "$CS_300_FVP_AIET_CONFIG"
 

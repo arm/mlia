@@ -204,9 +204,10 @@ def save_random_input(
 class GenericInferenceRunner(ABC):
     """Abstract class for generic inference runner."""
 
-    def __init__(self, aiet_runner: AIETRunner):
+    def __init__(self, aiet_runner: AIETRunner, system_name: str):
         """Init generic inference runner instance."""
         self.aiet_runner = aiet_runner
+        self.system_name = system_name
         self.running_inference: Optional[RunningCommand] = None
         self.context_stack = ExitStack()
 
@@ -240,14 +241,20 @@ class GenericInferenceRunner(ABC):
         """Get execution params for the provided device."""
 
     @property
-    def application(self) -> str:
-        """Return AIET application name."""
-        return "generic_inference"
-
-    @property
-    @abstractmethod
     def system(self) -> str:
         """Return AIET system name."""
+        return self.system_name
+
+    @property
+    def application(self) -> str:
+        """Return AIET application name."""
+        if self.system_name == "CS-300: Cortex-M55+Ethos-U55":
+            return "Generic Inference Runner: Ethos-U55 SRAM"
+
+        if self.system_name == "CS-300: Cortex-M55+Ethos-U65":
+            return "Generic Inference Runner: Ethos-U65 Dedicated SRAM"
+
+        raise Exception(f"System {self.system_name} is not installed")
 
     def __enter__(self) -> "GenericInferenceRunner":
         """Enter context."""
@@ -276,24 +283,18 @@ class GenericInferenceRunnerEthosU(GenericInferenceRunner):
 
     def __init__(self, system_name: str, aietrunner: AIETRunner):
         """Init generic inference runner instance."""
-        self.system_name = system_name
-        super().__init__(aietrunner)
-
-    @property
-    def system(self) -> str:
-        """Return AIET system name."""
-        return self.system_name
+        super().__init__(aietrunner, system_name)
 
     def get_execution_params(
         self, device: EthosUConfiguration, model: TFLiteModel
     ) -> ExecutionParams:
         """Get execution params for Ethos-U55/65."""
-        application_params = [f"input_file={Path(model.model_path).absolute()}"]
-        system_params = [f"mac={device.mac}"]
+        system_params = [
+            f"mac={device.mac}",
+            f"input_file={Path(model.model_path).absolute()}",
+        ]
 
-        return ExecutionParams(
-            self.application, self.system, application_params, system_params, []
-        )
+        return ExecutionParams(self.application, self.system, [], system_params, [])
 
 
 def get_generic_runner(
