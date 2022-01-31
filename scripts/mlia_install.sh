@@ -183,7 +183,7 @@ create_and_init_virtual_env() {
     source "$1/bin/activate"
 
     # Update setuptools in the virtual environment
-    pip install -U pip setuptools
+    pip $PIP_OPTIONS install -U pip setuptools
 }
 
 install_aiet() {
@@ -272,11 +272,11 @@ Options:
   -h Print this help message and exit
   -v [optional] Enable verbose output
   -f [optional] Path to a local instance of the $CS_300_FVP_NAME
-     If not specified, the script will check in the following locations in that order:
+     If not specified, the script will check in the following locations in this order:
       1. /opt/FVP_Corstone_SSE-300
       2. $HOME/FVP_Corstone_SSE-300
       3. $PWD/FVP_Corstone_SSE-300
-  -d [optional] Path to the directory where to download the install packages
+  -d [optional] Path to the directory where to download the packages to install
   -e The name of the virtual environment directory
   "
 
