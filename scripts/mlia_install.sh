@@ -19,7 +19,7 @@ PACKAGE_DIR=$(mktemp -d -t mlia-XXXXXX)
 
 # ML Inference Advisor params
 MLIA_NAME="ML Inference Advisor"
-MLIA_VERSION="0.1.4"
+MLIA_VERSION="0.1.5"
 MLIA_WHEEL_FILE="mlia-$MLIA_VERSION-py3-none-any.whl"
 MLIA_URL="https://artifactory.eu02.arm.com:443/artifactory/ml-tooling.pypi-local/mlia/$MLIA_VERSION/$MLIA_WHEEL_FILE"
 
@@ -45,6 +45,7 @@ CS_300_FVP_VERSION="11.16_26"
 CS_300_FVP_TAR_FILE="FVP_Corstone_SSE-300_$CS_300_FVP_VERSION.tgz"
 CS_300_FVP_WEB_LINK="https://developer.arm.com/-/media/Arm%20Developer%20Community/Downloads/OSS/FVP/Corstone-300/$CS_300_FVP_TAR_FILE"
 CS_300_FVP_DOWNLOADED="false"
+
 # Name of the virtual environment directory
 VENV_PATH=
 

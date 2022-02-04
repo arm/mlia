@@ -42,7 +42,7 @@ echo "Installing the ML Inference Advisor from the local directory ..."
 # in order to test installation script we must produce MLIA wheel
 # to make things easier wheel should have fixed version
 # (the same version as mentioned in install.sh)
-FIXED_WHEEL_VERSION=0.1.4
+FIXED_WHEEL_VERSION=0.1.5
 SETUPTOOLS_SCM_PRETEND_VERSION="$FIXED_WHEEL_VERSION" python setup.py -q bdist_wheel
 WHEEL_PATH="dist/mlia-$FIXED_WHEEL_VERSION-py3-none-any.whl"
 pip install "$WHEEL_PATH"
