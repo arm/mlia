@@ -61,7 +61,7 @@ class EthosUAdviceProducer(FactBasedAdviceProducer):
     @produce_advice.register
     @advice_category(AdviceCategory.OPERATORS, AdviceCategory.ALL)
     def handle_all_operators_supported(
-        self, data_item: AllOperatorsSupportedOnNPU  # pylint: disable=unused-argument
+        self, _data_item: AllOperatorsSupportedOnNPU
     ) -> None:
         """Advice if all operators supported."""
         self.add_advice(

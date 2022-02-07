@@ -1,7 +1,6 @@
 # Copyright 2021, Arm Ltd.
 """Performance estimation tests."""
 from pathlib import Path
-from typing import Any
 from typing import Union
 from unittest.mock import MagicMock
 
@@ -30,7 +29,7 @@ def test_memory_usage_conversion() -> None:
 
 
 def test_collect_performance_metrics(
-    dummy_context: Context, test_models_path: Path, monkeypatch: Any
+    dummy_context: Context, test_models_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Test collect_performance_metrics function."""
     # Test empty path/model
@@ -69,7 +68,7 @@ def test_collect_performance_metrics(
     assert isinstance(performance_metrics, PerformanceMetrics)
 
 
-def mock_performance_estimation(monkeypatch: Any) -> None:
+def mock_performance_estimation(monkeypatch: pytest.MonkeyPatch) -> None:
     """Mock performance estimation."""
     monkeypatch.setattr(
         "mlia.tools.aiet_wrapper.estimate_performance",

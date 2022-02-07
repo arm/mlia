@@ -3,7 +3,6 @@
 import contextlib
 import json
 from pathlib import Path
-from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
@@ -38,7 +37,9 @@ def test_profiles_data() -> None:
     assert list(get_profiles_data().keys()) == ["U55-256", "U55-128", "U65-512"]
 
 
-def test_profiles_data_wrong_format(monkeypatch: Any, tmp_path: Path) -> None:
+def test_profiles_data_wrong_format(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     """Test if profile data has wrong format."""
     wrong_profile_data = tmp_path / "bad.json"
     with open(wrong_profile_data, "w") as file:

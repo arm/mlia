@@ -44,7 +44,44 @@ def get_advice(
     output: Optional[PathOrFileLike] = None,
     context: Optional[ExecutionContext] = None,
 ) -> None:
-    """Get advice."""
+    """Get the advice.
+
+    This function represents an entry point to the library API.
+
+    Based on provided parameters it will collect and analyze the data
+    and produce the advice.
+
+    :param target: target profile identifier
+    :param model: path to the NN model
+    :param category: category of the advice. MLIA supports four categories:
+           "all", "operators", "performance", "optimization". If not provided
+           category "all" is used by default.
+    :param optimization_targets: optional model optimization targets that
+           could be used for generating advice in categories
+           "all" and "optimization."
+    :param working_dir: path to the directory that will be used for storing
+           intermediate files during execution (e.g. converted models)
+    :param output: path to the report file. If provided MLIA will save
+           report in this location. Format of the report automatically
+           detected based on file extension.
+    :param context: optional parameter which represents execution context,
+           could be used for advanced use cases
+
+
+    Examples:
+        NB: Before launching MLIA, the logging functionality should be configured!
+
+        Getting the advice for the provided target profile and the model
+
+        >>> get_advice("U55-256", "path/to/the/model")
+
+        Getting the advice for the category "performance" and save result report in file
+        "report.json"
+
+        >>> get_advice("U55-256", "path/to/the/model", "performance",
+                       output="report.json")
+
+    """
     advice_category = AdviceCategory.from_string(category)
     config_parameters = _get_config_parameters(target, model, optimization_targets)
     event_handlers = _get_event_handlers(output)

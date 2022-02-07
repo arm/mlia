@@ -8,10 +8,12 @@ Before running them from scripts 'logging' module should
 be configured. Function 'setup_logging' from module
 'mli.cli.logging' could be used for that, e.g.
 
+>>> from mlia.api import ExecutionContext
 >>> from mlia.cli.logging import setup_logging
 >>> setup_logging(verbose=True)
 >>> import mlia.cli.commands as mlia
->>> mlia.all_tests(target="U55-256", "path/to/model")
+>>> mlia.all_tests(ExecutionContext(working_dir="mlia_output"), "U55-256",
+                   "path/to/model")
 """
 import logging
 from typing import List
@@ -60,14 +62,13 @@ def all_tests(
         Run command for the target profile U55-256 with two model optimizations
         and save report in json format locally in the file report.json
 
+        >>> from mlia.api import ExecutionContext
         >>> from mlia.cli.logging import setup_logging
         >>> setup_logging()
         >>> from mlia.cli.commands import all_tests
-        >>> all_tests(target="U55-256",
-                      "model.h5",
-                      "pruning,clustering",
-                      "0.5,32",
-                      output="report.json")
+        >>> all_tests(ExecutionContext(working_dir="mlia_output"), "U55-256",
+                      "model.h5", "pruning,clustering", "0.5,32",
+                       output="report.json")
     """
     opt_params = parse_optimization_parameters(
         optimization_type,
@@ -109,10 +110,12 @@ def operators(
         Run command for the target profile U55-256 and the provided TFLite model and
         print report on the standard output
 
+        >>> from mlia.api import ExecutionContext
         >>> from mlia.cli.logging import setup_logging
         >>> setup_logging()
         >>> from mlia.cli.commands import operators
-        >>> operators(target="U55-256", "model.tflite")
+        >>> operators(ExecutionContext(working_dir="mlia_output"), "U55-256",
+                      "model.tflite")
     """
     if supported_ops_report:
         generate_supported_operators_report()
@@ -153,10 +156,12 @@ def performance(
         Run command for the target profile U55-256 and the provided TFLite model and
         print report on the standard output
 
+        >>> from mlia.api import ExecutionContext
         >>> from mlia.cli.logging import setup_logging
         >>> setup_logging()
         >>> from mlia.cli.commands import performance
-        >>> performance(target="U55-256", "model.tflite")
+        >>> performance(ExecutionContext(working_dir="mlia_output"), "U55-256",
+                        "model.tflite")
     """
     get_advice(
         target,
@@ -201,7 +206,8 @@ def optimization(
         >>> from mlia.cli.logging import setup_logging
         >>> setup_logging()
         >>> from mlia.cli.commands import optimization
-        >>> optimization(target="U55-256", "model.tflite", "pruning", "0.5")
+        >>> optimization(ExecutionContext(working_dir="mlia_output"), target="U55-256",
+                         "model.tflite", "pruning", "0.5")
     """
     opt_params = parse_optimization_parameters(
         optimization_type,

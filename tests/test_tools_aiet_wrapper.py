@@ -374,7 +374,7 @@ def test_estimate_performance(
     application: Tuple[str, bool],
     test_models_path: Path,
     expected_error: Any,
-    monkeypatch: Any,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Test getting performance estimations."""
     system_name, system_installed = system
@@ -423,7 +423,7 @@ def test_estimate_performance(
 
 
 def test_estimate_performance_invalid_output(
-    test_models_path: Path, monkeypatch: Any
+    test_models_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Test estimation could not be done if inference produces unexpected output."""
     mock_aiet_runner = MagicMock()

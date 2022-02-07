@@ -3,7 +3,6 @@
 # pylint: disable=no-self-use
 import signal
 import time
-from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
@@ -54,7 +53,7 @@ class TestCommandExecutor:
         if wait:
             assert running_command.is_alive() is False
 
-    def test_unable_to_stop(self, monkeypatch: Any) -> None:
+    def test_unable_to_stop(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test when command could not be stopped."""
         running_command_mock = MagicMock()
         running_command_mock.poll.return_value = None
@@ -72,7 +71,7 @@ class TestCommandExecutor:
 
         running_command_mock.send_signal.assert_called_once_with(signal.SIGINT)
 
-    def test_stop_after_several_attempts(self, monkeypatch: Any) -> None:
+    def test_stop_after_several_attempts(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test when command could be stopped after several attempts."""
         running_command_mock = MagicMock()
         running_command_mock.poll.side_effect = [None, 0]
@@ -104,7 +103,7 @@ class TestCommandExecutor:
         "redirect_output, expected_output", [[True, "hello\n"], [False, ""]]
     )
     def test_wait(
-        self, capsys: Any, redirect_output: bool, expected_output: str
+        self, capsys: pytest.CaptureFixture, redirect_output: bool, expected_output: str
     ) -> None:
         """Test wait completion functionality."""
         executor = CommandExecutor()

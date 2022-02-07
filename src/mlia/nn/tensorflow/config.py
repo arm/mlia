@@ -39,7 +39,7 @@ class ModelConfiguration:
 
 
 class KerasModel(ModelConfiguration):
-    """Keras model congiguration.
+    """Keras model configuration.
 
     Supports all models supported by keras API: saved model, H5, HDF5
     """
@@ -65,7 +65,7 @@ class KerasModel(ModelConfiguration):
         return TFLiteModel(tflite_model_path)
 
     def convert_to_keras(self, keras_model_path: Union[str, Path]) -> "KerasModel":
-        """Do nothing."""
+        """Convert model to Keras format."""
         return self
 
 
@@ -80,7 +80,7 @@ class TFLiteModel(ModelConfiguration):  # pylint: disable=abstract-method
     def convert_to_tflite(
         self, tflite_model_path: Union[str, Path], quantized: bool = False
     ) -> "TFLiteModel":
-        """Do nothing."""
+        """Convert model to TFLite format."""
         return self
 
 
@@ -119,14 +119,15 @@ def get_model(model: Union[Path, str]) -> "ModelConfiguration":
 
 def get_tflite_model(model: Union[str, Path], ctx: Context) -> "TFLiteModel":
     """Convert input model to tflite and returns TFLiteModel object."""
-    tflite_model_path = str(ctx.get_model_path("converted_model.tflite"))
+    tflite_model_path = ctx.get_model_path("converted_model.tflite")
     converted_model = get_model(model)
+
     return converted_model.convert_to_tflite(tflite_model_path, True)
 
 
 def get_keras_model(model: Union[str, Path], ctx: Context) -> "KerasModel":
     """Convert input model to Keras and returns KerasModel object."""
-    keras_model_path = str(ctx.get_model_path("converted_model.h5"))
-
+    keras_model_path = ctx.get_model_path("converted_model.h5")
     converted_model = get_model(model)
+
     return converted_model.convert_to_keras(keras_model_path)

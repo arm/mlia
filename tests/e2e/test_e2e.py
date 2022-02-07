@@ -1,7 +1,7 @@
 # Copyright 2021, Arm Ltd.
 """End to end tests for MLIA CLI."""
 # pylint: disable=no-self-use,superfluous-parens
-# pylint: disable=too-many-arguments,too-many-locals,subprocess-run-check
+# pylint: disable=too-many-locals,subprocess-run-check
 import argparse
 import itertools
 import json

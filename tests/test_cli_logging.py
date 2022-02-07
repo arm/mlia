@@ -3,7 +3,6 @@
 # pylint: disable=too-many-locals
 import logging
 from pathlib import Path
-from typing import Any
 
 import pytest
 from mlia.cli.logging import setup_logging
@@ -53,7 +52,7 @@ mlia.cli - DEBUG - cli debug
 )
 def test_setup_logging(
     tmp_path: Path,
-    capfd: Any,
+    capfd: pytest.CaptureFixture,
     logs_dir: str,
     verbose: bool,
     expected_output: str,

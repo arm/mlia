@@ -1,6 +1,6 @@
 # Copyright 2021, Arm Ltd.
 """Test for module utils/tflite_metrics."""
-# pylint: disable=no-self-use,redefined-outer-name
+# pylint: disable=no-self-use
 import os
 import tempfile
 from math import isclose
@@ -48,8 +48,8 @@ def _sparse_binary_keras_model() -> tf.keras.Model:
     return keras_model
 
 
-@pytest.fixture(scope="class")
-def tflite_file() -> Generator:
+@pytest.fixture(scope="class", name="tflite_file")
+def fixture_tflite_file() -> Generator:
     """Generate temporary tflite file for tests."""
     converter = tf.lite.TFLiteConverter.from_keras_model(_sparse_binary_keras_model())
     tflite_model = converter.convert()
@@ -59,8 +59,8 @@ def tflite_file() -> Generator:
         yield file
 
 
-@pytest.fixture(scope="function")
-def metrics(tflite_file: str) -> TFLiteMetrics:
+@pytest.fixture(scope="function", name="metrics")
+def fixture_metrics(tflite_file: str) -> TFLiteMetrics:
     """Generate metrics file for a given tflite model."""
     return TFLiteMetrics(tflite_file)
 

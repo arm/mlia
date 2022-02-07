@@ -111,7 +111,7 @@ def test_get_target() -> None:
     ],
 )
 def test_ethosu_configuration(
-    monkeypatch: Any, profile_data: Dict[str, Any], expected_error: Any
+    monkeypatch: pytest.MonkeyPatch, profile_data: Dict[str, Any], expected_error: Any
 ) -> None:
     """Test creating Ethos-U configuration."""
     monkeypatch.setattr(

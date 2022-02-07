@@ -274,7 +274,7 @@ class GenericInferenceRunner(ABC):
         """Enter context."""
         return self
 
-    def __exit__(self, exc_type: Any, exc_value: Any, traceback: Any) -> None:
+    def __exit__(self, *_args: Any) -> None:
         """Exit context."""
         self.stop()
 

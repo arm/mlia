@@ -33,27 +33,27 @@ def test_execution_context(tmpdir: str) -> None:
     assert context.verbose is True
     assert str(context) == (
         f"ExecutionContext: "
-        f"working_dir={Path(tmpdir)}, "
+        f"working_dir={tmpdir}, "
         "advice_category=OPERATORS, "
         "config_parameters={'param': 'value'}, "
         "verbose=True"
     )
 
-    context_with_default_params = ExecutionContext()
+    context_with_default_params = ExecutionContext(working_dir=tmpdir)
     assert context_with_default_params.advice_category is None
     assert context_with_default_params.config_parameters is None
     assert context_with_default_params.event_handlers is None
     assert isinstance(
         context_with_default_params.event_publisher, DefaultEventPublisher
     )
-    assert context_with_default_params.logs_path == Path.cwd() / "logs"
+    assert context_with_default_params.logs_path == Path(tmpdir) / "logs"
 
     default_model_path = context_with_default_params.get_model_path("sample.model")
-    expected_default_model_path = Path.cwd() / "models/sample.model"
+    expected_default_model_path = Path(tmpdir) / "models/sample.model"
     assert default_model_path == expected_default_model_path
 
     expected_str = (
-        f"ExecutionContext: working_dir={Path.cwd()}, "
+        f"ExecutionContext: working_dir={tmpdir}, "
         "advice_category=<not set>, "
         "config_parameters=None, "
         "verbose=False"

@@ -1,7 +1,6 @@
 # Copyright 2022, Arm Ltd.
 """Tests for the API functions."""
 from pathlib import Path
-from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
@@ -74,7 +73,7 @@ def test_get_advice_wrong_category(test_models_path: Path) -> None:
 )
 def test_get_advice(
     test_models_path: Path,
-    monkeypatch: Any,
+    monkeypatch: pytest.MonkeyPatch,
     category: str,
     context: ExecutionContext,
     expected_category: AdviceCategory,

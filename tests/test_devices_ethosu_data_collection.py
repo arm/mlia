@@ -1,7 +1,6 @@
 # Copyright 2022, Arm Ltd.
 """Tests for the data collection module for Ethos-U."""
 from pathlib import Path
-from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
@@ -60,7 +59,7 @@ def test_operator_compatibility_collector(
 
 
 def test_performance_collector(
-    monkeypatch: Any, test_models_path: Path, dummy_context: Context
+    monkeypatch: pytest.MonkeyPatch, test_models_path: Path, dummy_context: Context
 ) -> None:
     """Test performance data collector."""
     model = test_models_path / "simple_3_layers_model.tflite"
@@ -76,7 +75,7 @@ def test_performance_collector(
 
 
 def test_optimization_performance_collector(
-    monkeypatch: Any, test_models_path: Path, dummy_context: Context
+    monkeypatch: pytest.MonkeyPatch, test_models_path: Path, dummy_context: Context
 ) -> None:
     """Test optimization performance data collector."""
     model = test_models_path / "simple_model.h5"
@@ -136,7 +135,9 @@ def test_optimization_performance_collector(
         collector_bad_config.collect_data()
 
 
-def mock_performance_estimation(monkeypatch: Any, device: EthosUConfiguration) -> None:
+def mock_performance_estimation(
+    monkeypatch: pytest.MonkeyPatch, device: EthosUConfiguration
+) -> None:
     """Mock performance estimation."""
     metrics = PerformanceMetrics(
         device,

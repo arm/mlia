@@ -35,7 +35,7 @@ def teardown_function() -> None:
     clear_loggers()
 
 
-def test_option_version(capfd: Any) -> None:
+def test_option_version(capfd: pytest.CaptureFixture) -> None:
     """Test --version."""
     with pytest.raises(SystemExit) as ex:
         main(["--version"])
@@ -81,7 +81,7 @@ def test_command_info() -> None:
     assert ci_non_default.command_help == "Activate super power"
 
 
-def test_default_command(monkeypatch: Any, tmp_path: Path) -> None:
+def test_default_command(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """Test adding default command."""
 
     def mock_command(
@@ -171,7 +171,7 @@ def test_operators_command_gen_supported_report(
     ],
 )
 def test_performance_command(
-    args: List[str], test_models_path: Path, monkeypatch: Any
+    args: List[str], test_models_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Test performance command."""
     model = test_models_path / "simple_3_layers_model.tflite"
@@ -181,7 +181,7 @@ def test_performance_command(
     assert exit_code == 0
 
 
-def mock_optimize_and_compare(monkeypatch: Any) -> None:
+def mock_optimize_and_compare(monkeypatch: pytest.MonkeyPatch) -> None:
     """Mock optimize_and_compare function."""
     perf_metrics = PerformanceMetrics(
         EthosUConfiguration(target="U55-256"),
@@ -195,14 +195,14 @@ def mock_optimize_and_compare(monkeypatch: Any) -> None:
     )
 
 
-def mock_operators_compatibility(monkeypatch: Any) -> None:
+def mock_operators_compatibility(monkeypatch: pytest.MonkeyPatch) -> None:
     """Mock supported operators check."""
     monkeypatch.setattr(
         "mlia.cli.commands.supported_operators", MagicMock(return_value=Operators([]))
     )
 
 
-def mock_get_optimizer(monkeypatch: Any) -> MagicMock:
+def mock_get_optimizer(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
     """Mock get_optimizer function."""
     mock = MagicMock()
     monkeypatch.setattr("mlia.cli.commands.get_optimizer", mock)
@@ -210,7 +210,9 @@ def mock_get_optimizer(monkeypatch: Any) -> MagicMock:
     return mock
 
 
-def mock_performance_estimation(monkeypatch: Any, verbose: bool = False) -> None:
+def mock_performance_estimation(
+    monkeypatch: pytest.MonkeyPatch, verbose: bool = False
+) -> None:
     """Mock performance estimation."""
     if verbose:
         logger = logging.getLogger("mlia.mock.perf")
@@ -241,7 +243,7 @@ def test_optimization_command(
     target: str,
     optimization_type: str,
     optimization_target: str,
-    monkeypatch: Any,
+    monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
     """Test keras_to_flite command."""
@@ -305,7 +307,7 @@ def test_optimization_command(
 def test_all_tests_command(
     tmp_path: Path,
     test_models_path: Path,
-    monkeypatch: Any,
+    monkeypatch: pytest.MonkeyPatch,
     extra_params: List[str],
     expected_exit_code: int,
 ) -> None:
@@ -341,7 +343,7 @@ def test_all_tests_command(
 )
 def test_all_tests_command_output(
     tmp_path: Path,
-    monkeypatch: Any,
+    monkeypatch: pytest.MonkeyPatch,
     outfile: str,
     test_models_path: Path,
 ) -> None:
@@ -486,8 +488,8 @@ def test_perf_ops_opt_all_command_verbose(
     expected_exit_code: int,
     test_models_path: Path,
     model_name: str,
-    monkeypatch: Any,
-    capfd: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    capfd: pytest.CaptureFixture,
 ) -> None:
     """Test all four commands in verbose mode."""
     model = test_models_path / model_name

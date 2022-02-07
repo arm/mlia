@@ -278,9 +278,7 @@ class EventDispatcherMetaclass(type):
         new_class = super().__new__(cls, clsname, bases, namespace)
 
         @singledispatchmethod
-        def dispatcher(
-            self: Any, event: Event  # pylint: disable=unused-argument
-        ) -> Any:
+        def dispatcher(_self: Any, _event: Event) -> Any:
             """Event dispatcher."""
 
         # get all class methods which starts with particular prefix

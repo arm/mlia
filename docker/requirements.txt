@@ -1,3 +1,5 @@
+# Copyright 2021, Arm Ltd.
+
 tensorflow~=2.6.0
 tensorflow-model-optimization==0.6
 ethos-u-vela~=3.2.0

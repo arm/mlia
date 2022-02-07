@@ -104,7 +104,8 @@ lists the performance improvements.
                         value, memory mode, etc.. For
                         the values associated with
                         each profile, see:
-                        resources/profiles.json [required].
+                        resources/profiles.json
+                        (default: U55-256).
   * options:
     * U55-256
     * U55-128
@@ -158,7 +159,8 @@ Prints the model's operator list.
                         value, memory mode, etc.. For
                         the values associated with
                         each profile, see:
-                        resources/profiles.json [required].
+                        resources/profiles.json
+                        (default: U55-256).
   * options:
     * U55-256
     * U55-128
@@ -198,7 +200,8 @@ Prints the model's performance statistics.
                         value, memory mode, etc.. For
                         the values associated with
                         each profile, see:
-                        resources/profiles.json [required].
+                        resources/profiles.json
+                        (default: U55-256).
   * options:
     * U55-256
     * U55-128
@@ -242,7 +245,8 @@ Shows the performance improvements after applying optimizations to the model.
                         value, memory mode, etc.. For
                         the values associated with
                         each profile, see:
-                        resources/profiles.json [required].
+                        resources/profiles.json
+                        (default: U55-256).
   * options:
     * U55-256
     * U55-128

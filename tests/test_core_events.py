@@ -1,10 +1,10 @@
 # Copyright 2021, Arm Ltd.
 """Tests for the module events."""
 from dataclasses import dataclass
-from typing import Any
 from unittest.mock import call
 from unittest.mock import MagicMock
 
+import pytest
 from mlia.core.events import action
 from mlia.core.events import ActionFinishedEvent
 from mlia.core.events import ActionStartedEvent
@@ -79,7 +79,7 @@ def test_action_context_manager() -> None:
     assert action_finished.parent_event_id == action_started.event_id
 
 
-def test_debug_event_handler(capsys: Any) -> None:
+def test_debug_event_handler(capsys: pytest.CaptureFixture) -> None:
     """Test debugging event handler."""
     publisher = DefaultEventPublisher()
 
@@ -97,7 +97,7 @@ def test_debug_event_handler(capsys: Any) -> None:
     assert "traceback.print_stack" in captured.err
 
 
-def test_event_dispatcher(capsys: Any) -> None:
+def test_event_dispatcher(capsys: pytest.CaptureFixture) -> None:
     """Test event dispatcher."""
 
     class SampleEventHandler(EventDispatcher):
@@ -117,7 +117,7 @@ def test_event_dispatcher(capsys: Any) -> None:
     assert captured.out.strip() == "Got sample event"
 
 
-def test_system_events_handler(capsys: Any) -> None:
+def test_system_events_handler(capsys: pytest.CaptureFixture) -> None:
     """Test system events handler."""
 
     class CustomSystemEventHandler(SystemEventsHandler):

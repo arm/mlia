@@ -4,15 +4,6 @@ from typing import Tuple
 
 import numpy as np
 import tensorflow as tf
-from mlia.core.context import ExecutionContext
-
-
-class DummyContext(ExecutionContext):
-    """Dummy context for testing purposes."""
-
-    def __init__(self, tmpdir: str) -> None:
-        """Init context."""
-        super().__init__(working_dir=tmpdir)
 
 
 def get_dataset() -> Tuple[np.array, np.array]:

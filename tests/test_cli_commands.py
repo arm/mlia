@@ -68,7 +68,7 @@ def test_performance_unknown_target(
 def test_opt_expected_parameters(
     dummy_context: ExecutionContext,
     target: str,
-    monkeypatch: Any,
+    monkeypatch: pytest.MonkeyPatch,
     optimization_type: str,
     optimization_target: str,
     expected_error: Any,
@@ -102,7 +102,7 @@ def test_opt_valid_optimization_target(
     dummy_context: ExecutionContext,
     optimization_type: str,
     optimization_target: str,
-    monkeypatch: Any,
+    monkeypatch: pytest.MonkeyPatch,
     test_models_path: Path,
 ) -> None:
     """Test that command should not fail with valid optimization targets."""
@@ -119,7 +119,7 @@ def test_opt_valid_optimization_target(
     )
 
 
-def mock_performance_estimation(monkeypatch: Any) -> None:
+def mock_performance_estimation(monkeypatch: pytest.MonkeyPatch) -> None:
     """Mock performance estimation."""
     metrics = PerformanceMetrics(
         EthosUConfiguration("U55-256"),

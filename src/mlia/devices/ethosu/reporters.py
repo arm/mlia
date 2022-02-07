@@ -361,9 +361,7 @@ def report_advice(advice: List[Advice]) -> Report:
     )
 
 
-def find_appropriate_formatter(
-    data: Any,
-) -> Callable[[Any], Report]:
+def find_appropriate_formatter(data: Any) -> Callable[[Any], Report]:
     """Find appropriate formatter for the provided data."""
     if isinstance(data, PerformanceMetrics) or is_list_of(data, PerformanceMetrics, 2):
         return report_perf_metrics
