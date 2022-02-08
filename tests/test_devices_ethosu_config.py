@@ -51,7 +51,7 @@ def test_get_target() -> None:
     assert u65_device.ip_class == "ethos-u65"
     assert u65_device.mac == 512
     assert u65_device.compiler_options.accelerator_config == "ethos-u65-512"
-    assert u65_device.compiler_options.memory_mode == "Shared_Sram"
+    assert u65_device.compiler_options.memory_mode == "Dedicated_Sram"
     assert u65_device.compiler_options.config_files == str(get_vela_config())
 
 

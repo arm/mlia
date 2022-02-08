@@ -41,8 +41,7 @@ class CommandExecution(NamedTuple):
     def __str__(self) -> str:
         """Return string representation."""
         command = self._get_param("command")
-        device = self._get_param("device")
-        mac = self._get_param("mac")
+        target = self._get_param("target")
 
         model_path = Path(self._get_param("model"))
         model = model_path.name
@@ -55,7 +54,7 @@ class CommandExecution(NamedTuple):
             else ""
         )
 
-        return f"command {command}: device={device} mac={mac} model={model}{opts}"
+        return f"command {command}: {target=} {model=}{opts}"
 
     def _get_param(self, param: str, default: Optional[str] = "unknown") -> Any:
         return getattr(self.parsed_args, param, default)
@@ -232,7 +231,9 @@ class TestInstallScript:
                 print(result.stdout.decode())
 
     def check_output(
-        self, capsys: Any, expected_messages: Optional[List[str]] = None
+        self,
+        capsys: pytest.CaptureFixture,
+        expected_messages: Optional[List[str]] = None,
     ) -> None:
         """Check the output and capture errors."""
         out, err = capsys.readouterr()
@@ -257,7 +258,7 @@ class TestInstallScript:
     def test_install_new_script_use_default_fvp_paths_download_timeout(
         self,
         tmp_path: Path,
-        capsys: Any,
+        capsys: pytest.CaptureFixture,
     ) -> None:
         """Test MLIA mlia_install script using the default FVP paths."""
         test_dir = "dist1"
@@ -272,7 +273,7 @@ class TestInstallScript:
     def test_install_new_script_use_specific_fvp_path(
         self,
         tmp_path: Path,
-        capsys: Any,
+        capsys: pytest.CaptureFixture,
     ) -> None:
         """Test MLIA install_new script using a specific FVP path."""
         config_dir_path = get_config_dir()
@@ -315,7 +316,7 @@ class TestInstallScript:
         pass_install_directory: bool,
         test_dir: str,
         cap_str: List[str],
-        capsys: Any,
+        capsys: pytest.CaptureFixture,
     ) -> None:
         """Test MLIA mlia_install script can download and install FVP."""
         install_dir_path = tmp_path / test_dir

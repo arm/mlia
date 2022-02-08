@@ -226,7 +226,9 @@ class VelaCompiler:  # pylint: disable=too-many-instance-attributes
         compiler_options = self._compiler_options()
         scheduler_options = self._scheduler_options()
 
-        with redirect_output(logger):
+        with redirect_output(
+            logger, stdout_level=logging.DEBUG, stderr_level=logging.DEBUG
+        ):
             compiler_driver(
                 nng, arch, compiler_options, scheduler_options, network_type
             )
@@ -274,7 +276,9 @@ class VelaCompiler:  # pylint: disable=too-many-instance-attributes
         """Read tflite model."""
         model_path = str(model) if isinstance(model, Path) else model
 
-        with redirect_output(logger, stdout_level=logging.DEBUG):
+        with redirect_output(
+            logger, stdout_level=logging.DEBUG, stderr_level=logging.DEBUG
+        ):
             return read_model(model_path, ModelReaderOptions())  # type: ignore
 
     def _architecture_features(self) -> ArchitectureFeatures:
