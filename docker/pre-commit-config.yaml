@@ -29,7 +29,7 @@ repos:
 
     - id: check-added-large-files
       args: ['--maxkb=200', "--enforce-all"]
-      exclude: src/mlia/resources/*
+      exclude: src/mlia/resources
 
 - repo: https://github.com/Lucas-C/pre-commit-hooks
   rev: v1.1.9
