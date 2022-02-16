@@ -1,0 +1,74 @@
+# Copyright 2022, Arm Ltd.
+
+[build-system]
+requires = [
+    "setuptools>=42",
+    "wheel",
+    "setuptools_scm[toml]>=6.2"
+]
+build-backend = "setuptools.build_meta"
+
+# Enable setuptools_scm
+[tool.setuptools_scm]
+
+[tool.pytest.ini_options]
+testpaths = "tests"
+markers = [
+    "e2e",       # e2e tests
+    "install",   # installation tests
+    "command",   # command tests
+    "model_gen"  # model generation tests
+]
+junit_logging = "all"
+
+[tool.pylint.messages_control]
+min-similarity-lines = 10
+min-public-methods = 1
+max-line-length = 88
+max-args = 8
+
+# Provide basic compatibility with black
+disable = [
+  "wrong-import-order",
+  # config for non-conflict with black
+  # (https://black.readthedocs.io/en/stable/compatible_configs.html#pylint)
+  "bad-continuation",              # C0330
+  "bad-whitespace"                 # C0326
+]
+
+enable = [
+  "dangerous-default-value",       # W0102
+  # black will reflow code lines, but won't touch comments, error on those
+  "line-too-long"                  # C0301
+]
+
+[tool.mypy]
+# Suppresses error messages about imports that cannot be resolved
+ignore_missing_imports = true
+# Shows a warning when encountering any code inferred to be unreachable or redundant after performing type analysis
+warn_unreachable = true
+# Shows errors for missing return statements on some execution paths
+warn_no_return = true
+# Shows a warning when returning a value with type Any from a function declared with a non- Any return type
+warn_return_any = true
+# Warns about unneeded # type: ignore comments
+warn_unused_ignores = true
+# Warns about casting an expression to its inferred type
+warn_redundant_casts = true
+# Disallows calling functions without type annotations from functions with type annotations
+disallow_untyped_calls = true
+# Disallows defining functions without type annotations or with incomplete type annotations
+disallow_untyped_defs = true
+# Disallows defining functions with incomplete type annotations
+disallow_incomplete_defs = true
+# Reports an error whenever a function with type annotations is decorated with a decorator without annotations
+disallow_untyped_decorators = true
+# Type-checks the interior of functions without type annotations
+check_untyped_defs = true
+
+[[tool.mypy.overrides]]
+module = [
+    "tabulate",
+    "pkg_resources"
+]
+ignore_missing_imports = true

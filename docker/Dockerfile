@@ -46,10 +46,6 @@ RUN /home/foo/v/bin/pip install -r /home/foo/requirements-dev.txt
 COPY requirements.txt /home/foo/
 RUN /home/foo/v/bin/pip install -r /home/foo/requirements.txt
 
-RUN mkdir /home/foo/.pip
-COPY pip.conf /home/foo/.pip/pip.conf
-COPY pydistutils.cfg /home/foo/.pydistutils.cfg
-
 # Pre-install the pre-commit hooks.  This requires some hoop jumping
 # because pre-commit insists on running in a git repo even if the
 # actual command running does not necessarily require the .git repo.

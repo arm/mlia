@@ -1,8 +1,6 @@
 # Copyright 2021, Arm Ltd.
 from ubuntu:20.04
 
-# libsndfile1 is needed for app "automatic_speech_recognition" build for Corstone-300
-# python3-venv, make are needed for the Corstone-300 apps build scripts
 RUN apt-get update && apt-get install -y \
     git \
     locales \
@@ -10,12 +8,8 @@ RUN apt-get update && apt-get install -y \
     python3-dev \
     python3-pip \
     python3-venv \
-    curl \
-    make \
-    libsndfile1 \
     wget \
     unzip \
-    xxd \
   && rm -rf /var/lib/apt/lists/*
 
 RUN locale-gen en_US.UTF-8
@@ -33,22 +27,9 @@ USER foo
 ENV PATH="/home/foo/.local/bin:${PATH}"
 WORKDIR /home/foo
 
-# armclang ver. 6.15 is needed for building eval apps for Corstone-300
-RUN curl -L https://developer.arm.com/-/media/Files/downloads/compiler/DS500-BN-00026-r5p0-17rel0.tgz | tar -zx
-RUN ./install_x86_64.sh -d .local --i-agree-to-the-contained-eula --no-interactive
-RUN rm install_x86_64.sh
-
-# cmake version 3.15 or higher is needed for building eval apps for Corstone-300
-RUN curl -L -o cmake-3.17.0-Linux-x86_64.sh https://github.com/Kitware/CMake/releases/download/v3.17.0/cmake-3.17.0-Linux-x86_64.sh
-RUN echo "cf82affa1d497eae372c2412129a2f043f6868517c8a88a7f52d3751d1812eaf cmake-3.17.0-Linux-x86_64.sh" | sha256sum -c
-RUN bash cmake-3.17.0-Linux-x86_64.sh --prefix=/home/foo/.local --skip-license
-RUN rm cmake-3.17.0-Linux-x86_64.sh
-
 RUN pip3 install virtualenv
 RUN virtualenv --quiet --clear --python python3.8 "/home/foo/v"
-RUN /home/foo/v/bin/pip install --upgrade pip setuptools wheel
-# Pillow for temporarily handling the change introduced by the application in aiet
-RUN /home/foo/v/bin/pip install Pillow
+RUN /home/foo/v/bin/pip install --upgrade pip setuptools wheel build
 
 COPY requirements-dev.txt /home/foo/
 RUN /home/foo/v/bin/pip install -r /home/foo/requirements-dev.txt

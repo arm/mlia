@@ -38,13 +38,12 @@ if [[ -n "$AIET_ARTIFACT_PATH" ]]; then
   pip install "$AIET_ARTIFACT_PATH"
 fi
 
-echo "Installing the ML Inference Advisor from the local directory ..."
-# in order to test installation script we must produce MLIA wheel
-# to make things easier wheel should have fixed version
-# (the same version as mentioned in install.sh)
+echo "Building MLIA wheel ..."
 FIXED_WHEEL_VERSION=0.1.6
-SETUPTOOLS_SCM_PRETEND_VERSION="$FIXED_WHEEL_VERSION" python setup.py -q bdist_wheel
+SETUPTOOLS_SCM_PRETEND_VERSION="$FIXED_WHEEL_VERSION" python -m build --wheel
+
 WHEEL_PATH="dist/mlia-$FIXED_WHEEL_VERSION-py3-none-any.whl"
+echo "Installing MLIA from $WHEEL_PATH ..."
 pip install "$WHEEL_PATH"
 
 echo "Extracting the AIET artifacts ..."

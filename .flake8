@@ -1,0 +1,7 @@
+[flake8]
+# ignored errors
+#   E501 line too long
+#   W503 line break before binary operator
+ignore = E501, W503
+max-complexity = 10
+select = B,C,E,F,W,T4
