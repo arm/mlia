@@ -55,8 +55,7 @@ docker run --rm \
        --pid=host \
        -v "$execdir:/workspace" \
        "$tag" \
-       ./self-check-helper.sh \
-       /workspace \
+       python3 runner.py run_checks /workspace \
        & DOCKER_PID=$!
 
 wait $DOCKER_PID

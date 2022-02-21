@@ -57,6 +57,4 @@ RUN cd /home/foo/fake-repo && git init
 RUN cd /home/foo/fake-repo && /home/foo/v/bin/pre-commit install-hooks -c foo.yaml
 RUN rm -rf /home/foo/fake-repo
 
-COPY self-check-helper.sh .
-COPY run_gen_docs.sh .
-COPY utils.sh .
+COPY runner.py .

@@ -37,5 +37,4 @@ RUN /home/foo/v/bin/pip install -r /home/foo/requirements-dev.txt
 COPY requirements.txt /home/foo/
 RUN /home/foo/v/bin/pip install -r /home/foo/requirements.txt
 
-COPY run_e2e_tests.sh .
-COPY utils.sh .
+COPY runner.py .

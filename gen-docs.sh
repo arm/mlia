@@ -22,5 +22,4 @@ docker run --rm \
        --pid=host \
        -v "$execdir:/workspace" \
        "$tag" \
-       ./run_gen_docs.sh \
-       /workspace
+       python3 runner.py gen_docs /workspace
