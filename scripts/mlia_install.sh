@@ -19,7 +19,7 @@ PACKAGE_DIR=$(mktemp -d -t mlia-XXXXXX)
 
 # ML Inference Advisor params
 MLIA_NAME="ML Inference Advisor"
-MLIA_VERSION="0.1.6"
+MLIA_VERSION="0.2.0"
 MLIA_WHEEL_FILE="mlia-$MLIA_VERSION-py3-none-any.whl"
 MLIA_URL="https://artifactory.eu02.arm.com:443/artifactory/ml-tooling.pypi-local/mlia/$MLIA_VERSION/$MLIA_WHEEL_FILE"
 
