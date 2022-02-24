@@ -1,4 +1,4 @@
-# Copyright 2022, Arm Ltd.
+# Copyright (C) 2021-2022, Arm Ltd.
 """Module for various helper classes."""
 # pylint: disable=no-self-use, unused-argument
 from typing import Any

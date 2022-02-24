@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Copyright 2021, Arm Ltd.
+# Copyright (C) 2021-2022, Arm Ltd.
 
 # Top level driver script to sanity check the tooling and scripts in
 # this repository.

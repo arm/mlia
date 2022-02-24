@@ -1,4 +1,4 @@
-# Copyright 2021, Arm Ltd.
+# Copyright (C) 2021-2022, Arm Ltd.
 """Tests for main module."""
 # pylint: disable=too-many-locals
 import argparse

@@ -1,4 +1,4 @@
-# Copyright 2021, Arm Ltd.
+# Copyright (C) 2021-2022, Arm Ltd.
 """Module for data collection.
 
 This module contains base classes for the first stage

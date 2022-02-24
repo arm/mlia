@@ -1,4 +1,4 @@
-# Copyright 2021, Arm Ltd.
+# Copyright (C) 2021-2022, Arm Ltd.
 """Ethos-U IA module events."""
 from dataclasses import dataclass
 from pathlib import Path

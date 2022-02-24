@@ -1,4 +1,4 @@
-# Copyright 2021, Arm Ltd.
+# Copyright (C) 2021-2022, Arm Ltd.
 """Module for the events and related functionality.
 
 This module represents one of the main component of the workflow -

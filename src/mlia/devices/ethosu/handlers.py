@@ -1,4 +1,4 @@
-# Copyright 2022, Arm Ltd.
+# Copyright (C) 2021-2022, Arm Ltd.
 """Event handler."""
 import logging
 from pathlib import Path

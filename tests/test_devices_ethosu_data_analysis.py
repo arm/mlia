@@ -1,4 +1,4 @@
-# Copyright 2022, Arm Ltd.
+# Copyright (C) 2021-2022, Arm Ltd.
 """Tests for Ethos-U data analysis module."""
 from typing import List
 

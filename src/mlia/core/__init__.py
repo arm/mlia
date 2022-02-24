@@ -1,4 +1,4 @@
-# Copyright 2021, Arm Ltd.
+# Copyright (C) 2021-2022, Arm Ltd.
 """Core module.
 
 Core module contains main components that are used in inference advisor workflow:

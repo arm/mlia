@@ -1,4 +1,4 @@
-# Copyright 2021, Arm Ltd.
+# Copyright (C) 2021-2022, Arm Ltd.
 """Test for module utils/tflite_metrics."""
 # pylint: disable=no-self-use
 import os

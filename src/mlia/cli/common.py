@@ -1,4 +1,4 @@
-# Copyright 2021, Arm Ltd.
+# Copyright (C) 2021-2022, Arm Ltd.
 """CLI common module."""
 import argparse
 from dataclasses import dataclass

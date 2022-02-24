@@ -1,4 +1,4 @@
-# Copyright 2021, Arm Ltd.
+# Copyright (C) 2021-2022, Arm Ltd.
 """
 Contains class Pruner to prune a model to a specified sparsity.
 

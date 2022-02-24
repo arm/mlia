@@ -1,4 +1,4 @@
-# Copyright 2021, Arm Ltd.
+# Copyright (C) 2021-2022, Arm Ltd.
 
 # Execution environment for self check and tests of this repository.
 # The self check and test entry point is check-me.sh in the top level

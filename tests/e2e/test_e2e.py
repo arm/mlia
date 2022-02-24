@@ -1,4 +1,4 @@
-# Copyright 2021, Arm Ltd.
+# Copyright (C) 2021-2022, Arm Ltd.
 """End to end tests for MLIA CLI."""
 # pylint: disable=no-self-use,superfluous-parens
 # pylint: disable=too-many-locals,subprocess-run-check

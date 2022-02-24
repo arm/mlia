@@ -1,4 +1,4 @@
-# Copyright 2021, Arm Ltd.
+# Copyright (C) 2021-2022, Arm Ltd.
 """Common items for the optimizations module."""
 from abc import ABC
 from abc import abstractmethod

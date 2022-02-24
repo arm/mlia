@@ -1,4 +1,4 @@
-# Copyright 2021, Arm Ltd.
+# Copyright (C) 2021-2022, Arm Ltd.
 """Module for performance estimation."""
 from abc import abstractmethod
 from typing import Callable

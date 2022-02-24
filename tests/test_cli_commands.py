@@ -1,4 +1,4 @@
-# Copyright 2021, Arm Ltd.
+# Copyright (C) 2021-2022, Arm Ltd.
 """Tests for cli.commands module."""
 from pathlib import Path
 from typing import Any

@@ -1,4 +1,4 @@
-# Copyright 2021, Arm Ltd.
+# Copyright (C) 2021-2022, Arm Ltd.
 """Collection of useful functions for optimizations."""
 import logging
 from pathlib import Path

@@ -1,4 +1,4 @@
-# Copyright 2022, Arm Ltd.
+# Copyright (C) 2021-2022, Arm Ltd.
 """Extract dependencies from setup.cfg."""
 from configparser import ConfigParser
 from pathlib import Path
@@ -22,6 +22,6 @@ if __name__ == "__main__":
         with open(output, "w") as file:
             print(f"Updating {file.name}")
 
-            file.write("# Copyright 2021, Arm Ltd.\n")
+            file.write("# Copyright (C) 2021-2022, Arm Ltd.\n")
             file.write(deps)
             file.write("\n")

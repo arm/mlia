@@ -1,4 +1,4 @@
-# Copyright 2021, Arm Ltd.
+# Copyright (C) 2021-2022, Arm Ltd.
 """Tests for the module utils/proc."""
 # pylint: disable=no-self-use
 import signal

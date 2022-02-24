@@ -15,7 +15,7 @@
 """The configuration file for sphinx."""
 # pylint: skip-file
 project = "mlia"
-copyright = "Copyright 2021, Arm Ltd."
+copyright = "Copyright (C) 2021-2022, Arm Ltd."
 author = "ml-tooling-mlia"
 
 # The full version, including alpha/beta/rc tags

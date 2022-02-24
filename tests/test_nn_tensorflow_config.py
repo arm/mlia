@@ -1,4 +1,4 @@
-# Copyright 2021, Arm Ltd.
+# Copyright (C) 2021-2022, Arm Ltd.
 """Tests for config module."""
 from contextlib import ExitStack as does_not_raise
 from pathlib import Path

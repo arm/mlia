@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Copyright 2021, Arm Ltd.
+# Copyright (C) 2021-2022, Arm Ltd.
 
 # Helper script to run sanity checks and tests on this project.  The
 # top level entry point script is check-me.sh in the top level

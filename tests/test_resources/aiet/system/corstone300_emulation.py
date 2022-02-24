@@ -1,3 +1,4 @@
+# Copyright (C) 2021-2022, Arm Ltd.
 """Script for the emulation of Corstone-300 inference output."""
 import random
 from functools import partial

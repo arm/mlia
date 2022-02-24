@@ -1,4 +1,4 @@
-# Copyright 2022, Arm Ltd.
+# Copyright (C) 2021-2022, Arm Ltd.
 """Tests for the helper classes."""
 from mlia.core.helpers import APIActionResolver
 

@@ -1,4 +1,4 @@
-# Copyright 2021, Arm Ltd.
+# Copyright (C) 2021-2022, Arm Ltd.
 """Test for module optimizations/clustering."""
 from pathlib import Path
 from typing import List

@@ -1,4 +1,4 @@
-# Copyright 2021, Arm Ltd.
+# Copyright (C) 2021-2022, Arm Ltd.
 """Ethos-U advice generation."""
 from functools import singledispatchmethod
 from typing import List
