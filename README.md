@@ -123,7 +123,7 @@ To get help on a specific command, use:
 mlia [command] --help
 ```
 
-Most commands accept the name of the target profile name as input parameter.
+Most commands accept the name of the target profile as input parameter.
 There are a number of predefined profiles with following attributes:
 
 ```
@@ -169,10 +169,9 @@ mlia operators --target-profile ethos-u55-256 ~/models/mobilenet_v1_1.0_224_quan
 
 ##### Output options
 
-* --output: Name of the file where the report will be saved.
-  The report is also displayed the standard output, as plain text.
-  Valid file extensions (formats) are {.txt,.json,.csv},
-  anything else will be formatted as plain text.
+* --output: Name of the file where the report will be saved. The report format
+  is automatically detected based on the file extension. Supported formats are:
+  csv, json.
 
 ##### Optional arguments
 
@@ -212,10 +211,9 @@ mlia performance ~/models/mobilenet_v1_1.0_224_quant.tflite \
 
 ##### Output options
 
-* --output: Name of the file where the report will be saved.
-  The report is also displayed the standard output, as plain text.
-  Valid file extensions (formats) are {.txt,.json,.csv},
-  anything else will be formatted as plain text.
+* --output: Name of the file where the report will be saved. The report format
+  is automatically detected based on the file extension. Supported formats are:
+  csv, json.
 
 ##### Debug options
 
@@ -323,10 +321,9 @@ mlia all_tests --output ./report.json ~/models/ds_cnn_l.h5
 
 ##### Output options
 
-* --output: Name of the file where the report will be saved.
-  The report is also displayed the standard output, as plain text.
-  Valid file extensions (formats) are {.txt,.json,.csv},
-  anything else will be formatted as plain text.
+* --output: Name of the file where the report will be saved. The report format
+  is automatically detected based on the file extension. Supported formats are:
+  csv, json.
 
 ##### Debug options
 
