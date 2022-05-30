@@ -1,0 +1,73 @@
+[
+  {
+    "name": "vela",
+    "description": "Neural network model compiler for Arm Ethos-U NPUs",
+    "supported_systems": [
+      {
+        "name": "Corstone-300: Cortex-M55+Ethos-U55"
+      },
+      {
+        "name": "Corstone-310: Cortex-M85+Ethos-U55"
+      },
+      {
+        "name": "Corstone-300: Cortex-M55+Ethos-U65",
+        "variables": {
+          "accelerator_config_prefix": "ethos-u65",
+          "system_config": "Ethos_U65_High_End",
+          "shared_sram": "U65_Shared_Sram"
+        },
+        "user_params": {
+          "run": [
+            {
+              "description": "MACs per cycle",
+              "values": [
+                "256",
+                "512"
+              ],
+              "default_value": "512",
+              "alias": "mac"
+            }
+          ]
+        }
+      }
+    ],
+    "variables": {
+      "accelerator_config_prefix": "ethos-u55",
+      "system_config": "Ethos_U55_High_End_Embedded",
+      "shared_sram": "U55_Shared_Sram"
+    },
+    "commands": {
+      "run": [
+        "run_vela {user_params:input} {user_params:output} --config {tool.config_dir}/vela.ini --accelerator-config {variables:accelerator_config_prefix}-{user_params:mac} --system-config {variables:system_config} --memory-mode {variables:shared_sram} --optimise Performance"
+      ]
+    },
+    "user_params": {
+      "run": [
+        {
+          "description": "MACs per cycle",
+          "values": [
+            "32",
+            "64",
+            "128",
+            "256"
+          ],
+          "default_value": "128",
+          "alias": "mac"
+        },
+        {
+          "name": "--input-model",
+          "description": "Path to the TFLite model",
+          "values": [],
+          "alias": "input"
+        },
+        {
+          "name": "--output-model",
+          "description": "Path to the output model file of the vela-optimisation step. The vela output is saved in the parent directory.",
+          "values": [],
+          "default_value": "output_model.tflite",
+          "alias": "output"
+        }
+      ]
+    }
+  }
+]

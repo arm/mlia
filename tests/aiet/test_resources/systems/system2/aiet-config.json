@@ -1,0 +1,32 @@
+[
+  {
+    "name": "System 2",
+    "description": "This is system 2",
+    "build_dir": "build",
+    "data_transfer": {
+      "protocol": "ssh",
+      "username": "root",
+      "password": "root",
+      "hostname": "localhost",
+      "port": "8021"
+    },
+    "commands": {
+      "clean": [
+        "echo 'clean'"
+      ],
+      "build": [
+        "echo 'build'"
+      ],
+      "run": [
+        "echo 'run'"
+      ],
+      "post_run": [
+        "echo 'post_run'"
+      ]
+    },
+    "user_params": {
+      "build": [],
+      "run": []
+    }
+  }
+]

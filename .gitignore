@@ -1,0 +1,15 @@
+# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-License-Identifier: Apache-2.0
+*.pyc
+*~
+\.coverage
+\.eggs
+build
+dist
+src/*.egg-info
+.vscode
+venv
+e2e_config
+mlia_output
+report
+.ipynb_checkpoints

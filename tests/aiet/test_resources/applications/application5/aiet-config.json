@@ -1,0 +1,160 @@
+[
+  {
+    "name": "application_5",
+    "description": "This is application 5",
+    "build_dir": "default_build_dir",
+    "supported_systems": [
+      {
+        "name": "System 1",
+        "lock": false
+      },
+      {
+        "name": "System 2"
+      }
+    ],
+    "variables": {
+      "var1": "value1",
+      "var2": "value2"
+    },
+    "lock": true,
+    "commands": {
+      "build": [
+        "default build command"
+      ],
+      "run": [
+        "default run command"
+      ]
+    },
+    "user_params": {
+      "build": [],
+      "run": []
+    }
+  },
+  {
+    "name": "application_5A",
+    "description": "This is application 5A",
+    "supported_systems": [
+      {
+        "name": "System 1",
+        "build_dir": "build_5A",
+        "variables": {
+          "var1": "new value1"
+        }
+      },
+      {
+        "name": "System 2",
+        "variables": {
+          "var2": "new value2"
+        },
+        "lock": true,
+        "commands": {
+          "run": [
+            "run command on system 2"
+          ]
+        }
+      }
+    ],
+    "variables": {
+      "var1": "value1",
+      "var2": "value2"
+    },
+    "build_dir": "build",
+    "commands": {
+      "build": [
+        "default build command"
+      ],
+      "run": [
+        "default run command"
+      ]
+    },
+    "user_params": {
+      "build": [],
+      "run": []
+    }
+  },
+  {
+    "name": "application_5B",
+    "description": "This is application 5B",
+    "supported_systems": [
+      {
+        "name": "System 1",
+        "build_dir": "build_5B",
+        "variables": {
+          "var1": "value for var1 System1",
+          "var2": "value for var2 System1"
+        },
+        "user_params": {
+          "build": [
+            {
+              "name": "--param_5B",
+              "description": "Sample command param",
+              "values": [
+                "value1",
+                "value2",
+                "value3"
+              ],
+              "default_value": "value1",
+              "alias": "param1"
+            }
+          ]
+        }
+      },
+      {
+        "name": "System 2",
+        "variables": {
+          "var1": "value for var1 System2",
+          "var2": "value for var2 System2"
+        },
+        "commands": {
+          "build": [
+            "build command on system 2 with {variables:var1} {user_params:param1}"
+          ],
+          "run": [
+            "run command on system 2"
+          ]
+        },
+        "user_params": {
+          "run": []
+        }
+      }
+    ],
+    "build_dir": "build",
+    "commands": {
+      "build": [
+        "default build command with {variables:var1}"
+      ],
+      "run": [
+        "default run command with {variables:var2}"
+      ]
+    },
+    "user_params": {
+      "build": [
+        {
+          "name": "--param",
+          "description": "Sample command param",
+          "values": [
+            "value1",
+            "value2",
+            "value3"
+          ],
+          "default_value": "value1",
+          "alias": "param1"
+        }
+      ],
+      "run": [],
+      "non_used_command": [
+        {
+          "name": "--not-used",
+          "description": "Not used param anywhere",
+          "values": [
+            "value1",
+            "value2",
+            "value3"
+          ],
+          "default_value": "value1",
+          "alias": "param1"
+        }
+      ]
+    }
+  }
+]

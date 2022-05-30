@@ -1,0 +1,26 @@
+[
+  {
+    "name": "tool_2",
+    "description": "This is tool 2 with no supported systems",
+    "build_dir": "build",
+    "supported_systems": [],
+    "commands": {
+      "clean": [
+        "echo 'clean'"
+      ],
+      "build": [
+        "echo 'build'"
+      ],
+      "run": [
+        "echo 'run'"
+      ],
+      "post_run": [
+        "echo 'post_run'"
+      ]
+    },
+    "user_params": {
+      "build": [],
+      "run": []
+    }
+  }
+]
