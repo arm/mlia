@@ -7,7 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 ## Introduction
 
 This tool is used to help AI developers design and optimize neural network
-models for efficient inference on Arm® targets by enabling performance analysis
+models for efficient inference on Arm® targets (e.g. Cortex®-M55 and
+Ethos™-U55/Ethos™-U65, Cortex®-M85 and Ethos™-U55) by enabling performance analysis
 and providing actionable advice early in the model development cycle. The final
 advice can cover the operator list, performance analysis and suggestions for
 model inference run on certain hardware before/after applying model optimization
@@ -27,15 +28,16 @@ typical setup for MLIA requires:
 
 ## Backend installation
 
-### Generic case using Corstone™-300 as an example
-
 The ML Inference Advisor is designed to support multiple performance
 estimators (backends) that could generate performance analysis for individual
-types of hardware. In this guide, we use the backend for
-Ethos™-U (Corstone™-300) as an example.
+types of hardware.
 
-The install command can automatically download the necessary components and
-dependencies, install them and configure them properly.
+The `backend` command is used to manage the installation of new backends.
+The `install` sub-command can be used to either
+
+* install a backend installed locally already (option `--path`) or
+* (if available) automatically download the necessary components and
+  dependencies, install them and configure them properly (option `--download`).
 
 The usage is:
 
@@ -56,28 +58,42 @@ optional arguments:
 * --download: Download and install a backend
 * --noninteractive: Non interactive mode with automatic confirmation of every action
 
-Some examples of the installation process are:
+Example:
 
 ```bash
-# reply 'y' or 'n' when prompted to download and install a Corstone-300
+# Use this command to see what backends can be downloaded.
 mlia backend install --download
-# for downloading and installing a specific backend
-mlia backend install Corstone-300 --download
-# for installing backend from the path of your downloaded backend
-mlia backend install --path your_local_path_for_the_installed_backend
+```
+
+After a successful installation of the backend(s), start using mlia in your
+virtual environment.
+
+*Please note*: Backends cannot be removed once installed.
+Consider creating a new environment and reinstall backends when needed.
+
+### Using Corstone™-300
+
+To install Corstone™-300 as a backend for Ethos™-U both options (`--download`
+and `--path`) can be used:
+
+```bash
+# To download and install Corstone-300 automatically
+mlia backend install --download Corstone-300
+# To point MLIA to an already locally installed version of Corstone-300
+mlia backend install --path YOUR_LOCAL_PATH_TO_CORSTONE_300
 ```
 
 Please note: Corstone™-300 used in the example above is available only
 on the Linux® platform.
 
-After a successful installation of the backend(s), start using mlia in your
-virtual environment. Please note: backends cannot be removed once installed.
-Consider creating new environment and reinstall backends when needed.
-
 ### Using Corstone™-310
 
-For instructions on installing Corstone™-310, please refer to
-<https://github.com/ARM-software/open-iot-sdk>
+Corstone™-310 is available as Arm® Virtual Hardware (AVH).
+
+* For access to AVH for Corstone™-310 please refer to:
+  <https://developer.arm.com/Processors/Corstone-310>
+* Please use the examples of MLIA using Corstone™-310 here to get started:
+  <https://github.com/ARM-software/open-iot-sdk>
 
 ## Usage
 
@@ -88,8 +104,12 @@ typing the following command:
 mlia [command] [arguments]
 ```
 
-where [command] is to be substituted by one of the supported options, discussed in
-the next section.
+Choices of commands:
+
+* ["operators"](#operators-ops): show the model's operator list
+* ["optimization"](#model-optimization-opt): run the specified optimizations
+* ["performance"](#performance-perf): measure the performance of inference on hardware
+* ["all_tests"](#all-tests-all): have a full report
 
 To get a list of all available options, use:
 
@@ -102,13 +122,6 @@ To get help on a specific command, use:
 ```bash
 mlia [command] --help
 ```
-
-Choices of commands: you can use ["operators"](#operators-ops) command for the
-model's operator list, run the specified optimizations using
-["model optimization"](#model-optimization-opt) command, or measure the
-performance of inference on hardware using ["performance"](#performance-perf)
-command. In the end, you can use ["all tests"](#all-tests-all) command to
-have a full report.
 
 Most commands accept the name of the target profile name as input parameter.
 There are a number of predefined profiles with following attributes:
@@ -131,27 +144,28 @@ There are a number of predefined profiles with following attributes:
 
 Prints the model's operator list.
 
+#### *Example*
+
+```bash
+# List operator compatibility for a specific target profile
+mlia operators --target-profile ethos-u55-256 ~/models/mobilenet_v1_1.0_224_quant.tflite
+```
+
 #### *Arguments*
 
-##### Optional arguments
+##### TFLite model options
 
-* -h/--help: Show the general help document and exit.
-* --supported-ops-report: Generate the SUPPORTED_OPS.md file in the current working
-  directory and exit.
+* model: Input model in TFLite format [required].
 
 ##### Target profile options
 
 * --target-profile: Target profile that will set the target options such as
-  target, mac value, memory mode, etc ...
+  target, MAC value, memory mode, etc ...
   * default: ethos-u55-256
   * options:
     * ethos-u55-256
     * ethos-u55-128
     * ethos-u65-512
-
-##### TFLite model options
-
-* model: Input model in TFLite format [required].
 
 ##### Output options
 
@@ -160,33 +174,41 @@ Prints the model's operator list.
   Valid file extensions (formats) are {.txt,.json,.csv},
   anything else will be formatted as plain text.
 
+##### Optional arguments
+
+* -h/--help: Show the general help document and exit.
+* --supported-ops-report: Generate the SUPPORTED_OPS.md file in the current working
+  directory and exit.
+
 ### **Performance** (perf)
 
 #### *Description*
 
 Prints the model's performance statistics.
 
+#### *Example*
+
+```bash
+# Explicitly specify backend(s) to use with --evaluate-on
+mlia performance ~/models/mobilenet_v1_1.0_224_quant.tflite \
+--evaluate-on "Vela" "Corstone-310"
+```
+
 #### *Arguments*
 
-##### optional arguments
+##### TFLite model options
 
-* -h/--help: Show the general help document and exit.
-* --supported-ops-report: Generate the SUPPORTED_OPS.md file in the current
-  working directory and exit.
+* model: Input model in TFLite format [required].
 
 ##### Target profile options
 
 * --target-profile: Target profile that will set the target options such as
-  target, mac value, memory mode, etc ...
+  target, MAC value, memory mode, etc ...
   * default: ethos-u55-256
   * options:
     * ethos-u55-256
     * ethos-u55-128
     * ethos-u65-512
-
-##### TFLite model options
-
-* model: Input model in TFLite format [required].
 
 ##### Output options
 
@@ -199,29 +221,29 @@ Prints the model's performance statistics.
 
 * --verbose: Produce verbose output (for debugging purposes).
 
-### **Model optimization** (opt)
-
-#### *Description*
-
-Shows the performance improvements after applying optimizations to the model.
-
-#### *Arguments*
-
 ##### optional arguments
 
 * -h/--help: Show the general help document and exit.
 * --supported-ops-report: Generate the SUPPORTED_OPS.md file in the current
   working directory and exit.
 
-##### Target profile options
+### **Model optimization** (opt)
 
-* --target-profile: Target profile that will set the target options such as
-  target, mac value, memory mode, etc ...
-  * default: ethos-u55-256
-  * options:
-    * ethos-u55-256
-    * ethos-u55-128
-    * ethos-u65-512
+#### *Description*
+
+Shows the performance improvements after applying optimizations to the model.
+
+#### *Example*
+
+```bash
+# Custom optimization parameters: pruning=0.6, clustering=16
+mlia optimization \
+--optimization-type pruning,clustering \
+--optimization-target 0.6,16 \
+~/models/ds_cnn_l.h5
+```
+
+#### *Arguments*
 
 ##### Keras™ model options
 
@@ -240,9 +262,25 @@ Shows the performance improvements after applying optimizations to the model.
   Example: conv1 conv2 conv3
   * default: every layer
 
+##### Target profile options
+
+* --target-profile: Target profile that will set the target options such as
+  target, MAC value, memory mode, etc ...
+  * default: ethos-u55-256
+  * options:
+    * ethos-u55-256
+    * ethos-u55-128
+    * ethos-u65-512
+
 ##### Debug options
 
 * --verbose: Produce verbose output (for debugging purposes).
+
+##### optional arguments
+
+* -h/--help: Show the general help document and exit.
+* --supported-ops-report: Generate the SUPPORTED_OPS.md file in the current
+  working directory and exit.
 
 ### **All tests** (all)
 
@@ -251,21 +289,14 @@ Shows the performance improvements after applying optimizations to the model.
 Generates a full report on the input model's operator list,
 runs the specified optimizations and lists the performance improvements.
 
+#### *Example*
+
+```bash
+# Create full report and save it as JSON file
+mlia all_tests --output ./report.json ~/models/ds_cnn_l.h5
+```
+
 #### *Arguments*
-
-##### Optional arguments
-
-* -h/--help: show this help message and exit
-
-##### Target profile options
-
-* --target-profile: Target profile that will set the target options such as
-  target, mac value, memory mode, etc ...
-  * default: ethos-u55-256
-  * options:
-    * ethos-u55-256
-    * ethos-u55-128
-    * ethos-u65-512
 
 ##### Keras™ model options
 
@@ -280,6 +311,16 @@ runs the specified optimizations and lists the performance improvements.
   number of clusters (positive integer))
   * default: 0.5, 32
 
+##### Target profile options
+
+* --target-profile: Target profile that will set the target options such as
+  target, MAC value, memory mode, etc ...
+  * default: ethos-u55-256
+  * options:
+    * ethos-u55-256
+    * ethos-u55-128
+    * ethos-u65-512
+
 ##### Output options
 
 * --output: Name of the file where the report will be saved.
@@ -291,11 +332,16 @@ runs the specified optimizations and lists the performance improvements.
 
 * --verbose: Produce verbose output (for debugging purposes).
 
+##### Optional arguments
+
+* -h/--help: show this help message and exit
+
 ## Resources
 
 Additional useful information:
 
 * [Corstone™-300](https://developer.arm.com/Processors/Corstone-300)
+* [Corstone™-310](https://developer.arm.com/Processors/Corstone-310)
 
 ## License
 
