@@ -71,7 +71,7 @@ def convert_to_tflite(model: tf.keras.Model, quantized: bool = False) -> Interpr
     if quantized:
         converter.optimizations = [tf.lite.Optimize.DEFAULT]
         converter.representative_dataset = representative_dataset(model)
-        converter.target_spec.supported_ops = [tf.lite.OpsSet.TFLITE_BUILTINS_INT8]
+        converter.target_spec.supported_ops = [tf.lite.OpsSet.TFLITE_BUILTINS]
         converter.inference_input_type = tf.int8
         converter.inference_output_type = tf.int8
 
@@ -91,7 +91,7 @@ def convert_tf_to_tflite(model: str, quantized: bool = False) -> Interpreter:
     if quantized:
         converter.optimizations = [tf.lite.Optimize.DEFAULT]
         converter.representative_dataset = representative_tf_dataset(model)
-        converter.target_spec.supported_ops = [tf.lite.OpsSet.TFLITE_BUILTINS_INT8]
+        converter.target_spec.supported_ops = [tf.lite.OpsSet.TFLITE_BUILTINS]
         converter.inference_input_type = tf.int8
         converter.inference_output_type = tf.int8
 
