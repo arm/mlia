@@ -23,6 +23,7 @@ from mlia.devices.ethosu.data_collection import EthosUOperatorCompatibility
 from mlia.devices.ethosu.data_collection import EthosUOptimizationPerformance
 from mlia.devices.ethosu.data_collection import EthosUPerformance
 from mlia.devices.ethosu.events import EthosUAdvisorStartedEvent
+from mlia.nn.tensorflow.utils import is_tflite_model
 
 
 class EthosUInferenceAdvisor(InferenceAdvisor, ParameterResolverMixin):
@@ -63,25 +64,30 @@ class EthosUInferenceAdvisor(InferenceAdvisor, ParameterResolverMixin):
         """Get collectors."""
         collectors: List[DataCollector] = []
 
-        if context.any_category_enabled(
-            AdviceCategory.OPERATORS,
-            AdviceCategory.ALL,
-        ):
+        if AdviceCategory.OPERATORS in context.advice_category:
             collectors.append(EthosUOperatorCompatibility(model, device))
 
-        if context.category_enabled(AdviceCategory.PERFORMANCE):
-            collectors.append(EthosUPerformance(model, device, backends))
-
-        if context.any_category_enabled(
-            AdviceCategory.OPTIMIZATION,
-            AdviceCategory.ALL,
-        ):
-            optimization_settings = self._get_optimization_settings(context)
-            collectors.append(
-                EthosUOptimizationPerformance(
-                    model, device, optimization_settings, backends
+        # Performance and optimization are mutually exclusive.
+        # Decide which one to use (taking into account the model format).
+        if is_tflite_model(model):
+            # TFLite models do not support optimization (only performance)!
+            if context.advice_category == AdviceCategory.OPTIMIZATION:
+                raise Exception(
+                    "Command 'optimization' is not supported for TFLite files."
                 )
-            )
+            if AdviceCategory.PERFORMANCE in context.advice_category:
+                collectors.append(EthosUPerformance(model, device, backends))
+        else:
+            # Keras/SavedModel: Prefer optimization
+            if AdviceCategory.OPTIMIZATION in context.advice_category:
+                optimization_settings = self._get_optimization_settings(context)
+                collectors.append(
+                    EthosUOptimizationPerformance(
+                        model, device, optimization_settings, backends
+                    )
+                )
+            elif AdviceCategory.PERFORMANCE in context.advice_category:
+                collectors.append(EthosUPerformance(model, device, backends))
 
         return collectors
 

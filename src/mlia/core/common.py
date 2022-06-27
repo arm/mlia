@@ -7,7 +7,8 @@ core module.
 """
 from abc import ABC
 from abc import abstractmethod
-from enum import Enum
+from enum import auto
+from enum import Flag
 from typing import Any
 
 # This type is used as type alias for the items which are being passed around
@@ -17,16 +18,16 @@ from typing import Any
 DataItem = Any
 
 
-class AdviceCategory(Enum):
+class AdviceCategory(Flag):
     """Advice category.
 
     Enumeration of advice categories supported by ML Inference Advisor.
     """
 
-    OPERATORS = 1
-    PERFORMANCE = 2
-    OPTIMIZATION = 3
-    ALL = 4
+    OPERATORS = auto()
+    PERFORMANCE = auto()
+    OPTIMIZATION = auto()
+    ALL = OPERATORS | PERFORMANCE | OPTIMIZATION
 
     @classmethod
     def from_string(cls, value: str) -> "AdviceCategory":

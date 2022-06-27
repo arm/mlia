@@ -2,7 +2,6 @@
 # SPDX-License-Identifier: Apache-2.0
 """Tests for Ethos-U advice generation."""
 from typing import List
-from typing import Optional
 
 import pytest
 
@@ -387,7 +386,7 @@ def test_ethosu_advice_producer(
     "advice_category, action_resolver, expected_advice",
     [
         [
-            None,
+            AdviceCategory.ALL,
             None,
             [],
         ],
@@ -467,7 +466,7 @@ def test_ethosu_advice_producer(
 )
 def test_ethosu_static_advice_producer(
     tmpdir: str,
-    advice_category: Optional[AdviceCategory],
+    advice_category: AdviceCategory,
     action_resolver: ActionResolver,
     expected_advice: List[Advice],
 ) -> None:

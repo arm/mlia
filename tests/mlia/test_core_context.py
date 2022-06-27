@@ -41,7 +41,7 @@ def test_execution_context(tmpdir: str) -> None:
     )
 
     context_with_default_params = ExecutionContext(working_dir=tmpdir)
-    assert context_with_default_params.advice_category is None
+    assert context_with_default_params.advice_category is AdviceCategory.ALL
     assert context_with_default_params.config_parameters is None
     assert context_with_default_params.event_handlers is None
     assert isinstance(
@@ -55,7 +55,7 @@ def test_execution_context(tmpdir: str) -> None:
 
     expected_str = (
         f"ExecutionContext: working_dir={tmpdir}, "
-        "advice_category=<not set>, "
+        "advice_category=ALL, "
         "config_parameters=None, "
         "verbose=False"
     )

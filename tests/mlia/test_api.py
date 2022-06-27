@@ -55,7 +55,7 @@ def test_get_advice_wrong_category(test_keras_model: Path) -> None:
         [
             "all",
             ExecutionContext(advice_category=AdviceCategory.PERFORMANCE),
-            AdviceCategory.PERFORMANCE,
+            AdviceCategory.ALL,
         ],
         [
             "all",

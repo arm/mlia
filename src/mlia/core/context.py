@@ -55,7 +55,7 @@ class Context(ABC):
 
     @property
     @abstractmethod
-    def advice_category(self) -> Optional[AdviceCategory]:
+    def advice_category(self) -> AdviceCategory:
         """Return advice category."""
 
     @property
@@ -97,7 +97,7 @@ class ExecutionContext(Context):
     def __init__(
         self,
         *,
-        advice_category: Optional[AdviceCategory] = None,
+        advice_category: AdviceCategory = AdviceCategory.ALL,
         config_parameters: Optional[Mapping[str, Any]] = None,
         working_dir: Optional[Union[str, Path]] = None,
         event_handlers: Optional[List[EventHandler]] = None,
@@ -141,7 +141,7 @@ class ExecutionContext(Context):
         self._action_resolver = action_resolver or APIActionResolver()
 
     @property
-    def advice_category(self) -> Optional[AdviceCategory]:
+    def advice_category(self) -> AdviceCategory:
         """Return advice category."""
         return self._advice_category
 

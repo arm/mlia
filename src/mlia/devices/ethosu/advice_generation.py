@@ -175,9 +175,6 @@ class EthosUStaticAdviceProducer(ContextAwareAdviceProducer):
 
     def get_advice(self) -> Union[Advice, List[Advice]]:
         """Return predefined advice based on category."""
-        if self.context.advice_category is None:
-            return []
-
         advice_per_category = {
             AdviceCategory.PERFORMANCE: [
                 Advice(

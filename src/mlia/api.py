@@ -93,8 +93,7 @@ def get_advice(
     event_handlers = _get_event_handlers(output)
 
     if context is not None:
-        if context.advice_category is None:
-            context.advice_category = advice_category
+        context.advice_category = advice_category
 
         if context.config_parameters is None:
             context.config_parameters = config_parameters
