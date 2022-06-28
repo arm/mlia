@@ -23,6 +23,6 @@ def test_memory_usage_conversion() -> None:
 def mock_performance_estimation(monkeypatch: pytest.MonkeyPatch) -> None:
     """Mock performance estimation."""
     monkeypatch.setattr(
-        "mlia.tools.aiet_wrapper.estimate_performance",
+        "mlia.backend.manager.estimate_performance",
         MagicMock(return_value=MagicMock()),
     )

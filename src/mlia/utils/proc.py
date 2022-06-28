@@ -8,7 +8,6 @@ import time
 from abc import ABC
 from abc import abstractmethod
 from contextlib import contextmanager
-from contextlib import suppress
 from pathlib import Path
 from typing import Any
 from typing import Generator
@@ -23,7 +22,7 @@ class OutputConsumer(ABC):
 
     @abstractmethod
     def feed(self, line: str) -> None:
-        """Feed new line to the consumerr."""
+        """Feed new line to the consumer."""
 
 
 class RunningCommand:
@@ -32,7 +31,7 @@ class RunningCommand:
     def __init__(self, process: subprocess.Popen) -> None:
         """Init running command instance."""
         self.process = process
-        self._output_consumers: Optional[List[OutputConsumer]] = None
+        self.output_consumers: List[OutputConsumer] = []
 
     def is_alive(self) -> bool:
         """Return true if process is still alive."""
@@ -57,25 +56,14 @@ class RunningCommand:
         """Send signal to the process."""
         self.process.send_signal(signal_num)
 
-    @property
-    def output_consumers(self) -> Optional[List[OutputConsumer]]:
-        """Property output_consumers."""
-        return self._output_consumers
-
-    @output_consumers.setter
-    def output_consumers(self, output_consumers: List[OutputConsumer]) -> None:
-        """Set output consumers."""
-        self._output_consumers = output_consumers
-
     def consume_output(self) -> None:
         """Pass program's output to the consumers."""
-        if self.process is None or self.output_consumers is None:
+        if self.process is None or not self.output_consumers:
             return
 
         for line in self.stdout():
             for consumer in self.output_consumers:
-                with suppress():
-                    consumer.feed(line)
+                consumer.feed(line)
 
     def stop(
         self, wait: bool = True, num_of_attempts: int = 5, interval: float = 0.5

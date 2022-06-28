@@ -12,7 +12,8 @@ from typing import Iterable
 from typing import List
 from typing import Optional
 
-import mlia.tools.aiet_wrapper as aiet
+import mlia.backend.manager as backend_manager
+from mlia.backend.fs import get_backend_resources
 from mlia.tools.metadata.common import DownloadAndInstall
 from mlia.tools.metadata.common import Installation
 from mlia.tools.metadata.common import InstallationType
@@ -41,8 +42,8 @@ PathChecker = Callable[[Path], Optional[BackendInfo]]
 BackendInstaller = Callable[[bool, Path], Path]
 
 
-class AIETMetadata:
-    """AIET installation metadata."""
+class BackendMetadata:
+    """Backend installation metadata."""
 
     def __init__(
         self,
@@ -55,7 +56,7 @@ class AIETMetadata:
         supported_platforms: Optional[List[str]] = None,
     ) -> None:
         """
-        Initialize AIETMetaData.
+        Initialize BackendMetadata.
 
         Members expected_systems and expected_apps are filled automatically.
         """
@@ -67,15 +68,15 @@ class AIETMetadata:
         self.download_artifact = download_artifact
         self.supported_platforms = supported_platforms
 
-        self.expected_systems = aiet.get_all_system_names(name)
-        self.expected_apps = aiet.get_all_application_names(name)
+        self.expected_systems = backend_manager.get_all_system_names(name)
+        self.expected_apps = backend_manager.get_all_application_names(name)
 
     @property
     def expected_resources(self) -> Iterable[Path]:
         """Return list of expected resources."""
         resources = [self.system_config, *self.apps_resources]
 
-        return (get_mlia_resources() / resource for resource in resources)
+        return (get_backend_resources() / resource for resource in resources)
 
     @property
     def supported_platform(self) -> bool:
@@ -86,49 +87,49 @@ class AIETMetadata:
         return platform.system() in self.supported_platforms
 
 
-class AIETBasedInstallation(Installation):
-    """Backend installation based on AIET functionality."""
+class BackendInstallation(Installation):
+    """Backend installation."""
 
     def __init__(
         self,
-        aiet_runner: aiet.AIETRunner,
-        metadata: AIETMetadata,
+        backend_runner: backend_manager.BackendRunner,
+        metadata: BackendMetadata,
         path_checker: PathChecker,
         backend_installer: Optional[BackendInstaller],
     ) -> None:
-        """Init the tool installation."""
-        self.aiet_runner = aiet_runner
+        """Init the backend installation."""
+        self.backend_runner = backend_runner
         self.metadata = metadata
         self.path_checker = path_checker
         self.backend_installer = backend_installer
 
     @property
     def name(self) -> str:
-        """Return name of the tool."""
+        """Return name of the backend."""
         return self.metadata.name
 
     @property
     def description(self) -> str:
-        """Return description of the tool."""
+        """Return description of the backend."""
         return self.metadata.description
 
     @property
     def already_installed(self) -> bool:
-        """Return true if tool already installed."""
-        return self.aiet_runner.all_installed(
+        """Return true if backend already installed."""
+        return self.backend_runner.all_installed(
             self.metadata.expected_systems, self.metadata.expected_apps
         )
 
     @property
     def could_be_installed(self) -> bool:
-        """Return true if tool could be installed."""
+        """Return true if backend could be installed."""
         if not self.metadata.supported_platform:
             return False
 
         return all_paths_valid(self.metadata.expected_resources)
 
     def supports(self, install_type: InstallationType) -> bool:
-        """Return true if tools supported type of the installation."""
+        """Return true if backends supported type of the installation."""
         if isinstance(install_type, DownloadAndInstall):
             return self.metadata.download_artifact is not None
 
@@ -138,7 +139,7 @@ class AIETBasedInstallation(Installation):
         return False  # type: ignore
 
     def install(self, install_type: InstallationType) -> None:
-        """Install the tool."""
+        """Install the backend."""
         if isinstance(install_type, DownloadAndInstall):
             download_artifact = self.metadata.download_artifact
             assert download_artifact is not None, "No artifact provided"
@@ -153,7 +154,7 @@ class AIETBasedInstallation(Installation):
             raise Exception(f"Unable to install {install_type}")
 
     def install_from(self, backend_info: BackendInfo) -> None:
-        """Install tool from the directory."""
+        """Install backend from the directory."""
         mlia_resources = get_mlia_resources()
 
         with temp_directory() as tmpdir:
@@ -169,15 +170,15 @@ class AIETBasedInstallation(Installation):
 
             copy_all(*resources_to_copy, dest=fvp_dist_dir)
 
-            self.aiet_runner.install_system(fvp_dist_dir)
+            self.backend_runner.install_system(fvp_dist_dir)
 
         for app in self.metadata.apps_resources:
-            self.aiet_runner.install_application(mlia_resources / app)
+            self.backend_runner.install_application(mlia_resources / app)
 
     def download_and_install(
         self, download_artifact: DownloadArtifact, eula_agrement: bool
     ) -> None:
-        """Download and install the tool."""
+        """Download and install the backend."""
         with temp_directory() as tmpdir:
             try:
                 downloaded_to = download_artifact.download_to(tmpdir)
@@ -307,10 +308,10 @@ class Corstone300Installer:
 
 def get_corstone_300_installation() -> Installation:
     """Get Corstone-300 installation."""
-    corstone_300 = AIETBasedInstallation(
-        aiet_runner=aiet.get_aiet_runner(),
+    corstone_300 = BackendInstallation(
+        backend_runner=backend_manager.BackendRunner(),
         # pylint: disable=line-too-long
-        metadata=AIETMetadata(
+        metadata=BackendMetadata(
             name="Corstone-300",
             description="Corstone-300 FVP",
             system_config="aiet/systems/corstone-300/aiet-config.json",
@@ -356,10 +357,10 @@ def get_corstone_300_installation() -> Installation:
 
 def get_corstone_310_installation() -> Installation:
     """Get Corstone-310 installation."""
-    corstone_310 = AIETBasedInstallation(
-        aiet_runner=aiet.get_aiet_runner(),
+    corstone_310 = BackendInstallation(
+        backend_runner=backend_manager.BackendRunner(),
         # pylint: disable=line-too-long
-        metadata=AIETMetadata(
+        metadata=BackendMetadata(
             name="Corstone-310",
             description="Corstone-310 FVP",
             system_config="aiet/systems/corstone-310/aiet-config.json",

@@ -10,7 +10,7 @@ from typing import Optional
 from typing import Tuple
 from typing import Union
 
-import mlia.tools.aiet_wrapper as aiet
+import mlia.backend.manager as backend_manager
 import mlia.tools.vela_wrapper as vela
 from mlia.core.context import Context
 from mlia.core.performance import PerformanceEstimator
@@ -147,15 +147,15 @@ class VelaPerformanceEstimator(
         return memory_usage
 
 
-class AIETPerformanceEstimator(
+class CorstonePerformanceEstimator(
     PerformanceEstimator[Union[Path, ModelConfiguration], NPUCycles]
 ):
-    """AIET based performance estimator."""
+    """Corstone-based performance estimator."""
 
     def __init__(
         self, context: Context, device: EthosUConfiguration, backend: str
     ) -> None:
-        """Init AIET based performance estimator."""
+        """Init Corstone-based performance estimator."""
         self.context = context
         self.device = device
         self.backend = backend
@@ -179,24 +179,24 @@ class AIETPerformanceEstimator(
             model_path, self.device.compiler_options, optimized_model_path
         )
 
-        model_info = aiet.ModelInfo(model_path=optimized_model_path)
-        device_info = aiet.DeviceInfo(
+        model_info = backend_manager.ModelInfo(model_path=optimized_model_path)
+        device_info = backend_manager.DeviceInfo(
             device_type=self.device.target,  # type: ignore
             mac=self.device.mac,
             memory_mode=self.device.compiler_options.memory_mode,  # type: ignore
         )
 
-        aiet_perf_metrics = aiet.estimate_performance(
+        corstone_perf_metrics = backend_manager.estimate_performance(
             model_info, device_info, self.backend
         )
 
         npu_cycles = NPUCycles(
-            aiet_perf_metrics.npu_active_cycles,
-            aiet_perf_metrics.npu_idle_cycles,
-            aiet_perf_metrics.npu_total_cycles,
-            aiet_perf_metrics.npu_axi0_rd_data_beat_received,
-            aiet_perf_metrics.npu_axi0_wr_data_beat_written,
-            aiet_perf_metrics.npu_axi1_rd_data_beat_received,
+            corstone_perf_metrics.npu_active_cycles,
+            corstone_perf_metrics.npu_idle_cycles,
+            corstone_perf_metrics.npu_total_cycles,
+            corstone_perf_metrics.npu_axi0_rd_data_beat_received,
+            corstone_perf_metrics.npu_axi0_wr_data_beat_written,
+            corstone_perf_metrics.npu_axi1_rd_data_beat_received,
         )
 
         logger.info("Done\n")
@@ -220,10 +220,11 @@ class EthosUPerformanceEstimator(
         if backends is None:
             backends = ["Vela"]  # Only Vela is always available as default
         for backend in backends:
-            if backend != "Vela" and not aiet.is_supported(backend):
+            if backend != "Vela" and not backend_manager.is_supported(backend):
                 raise ValueError(
                     f"Unsupported backend '{backend}'. "
-                    f"Only 'Vela' and {aiet.supported_backends()} are supported."
+                    f"Only 'Vela' and {backend_manager.supported_backends()} "
+                    "are supported."
                 )
         self.backends = set(backends)
 
@@ -242,11 +243,11 @@ class EthosUPerformanceEstimator(
             if backend == "Vela":
                 vela_estimator = VelaPerformanceEstimator(self.context, self.device)
                 memory_usage = vela_estimator.estimate(tflite_model)
-            elif backend in aiet.supported_backends():
-                aiet_estimator = AIETPerformanceEstimator(
+            elif backend in backend_manager.supported_backends():
+                corstone_estimator = CorstonePerformanceEstimator(
                     self.context, self.device, backend
                 )
-                npu_cycles = aiet_estimator.estimate(tflite_model)
+                npu_cycles = corstone_estimator.estimate(tflite_model)
             else:
                 logger.warning(
                     "Backend '%s' is not supported for Ethos-U performance "

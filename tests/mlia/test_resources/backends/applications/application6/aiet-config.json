@@ -1,0 +1,42 @@
+[
+  {
+    "name": "application_6",
+    "description": "This is application 6",
+    "supported_systems": [
+      {
+        "name": "System 6"
+      }
+    ],
+    "build_dir": "build",
+    "commands": {
+      "clean": [
+        "echo 'clean'"
+      ],
+      "build": [
+        "echo 'build'"
+      ],
+      "run": [
+        "echo 'run {user_params:param1}'"
+      ],
+      "post_run": [
+        "echo 'post_run'"
+      ]
+    },
+    "user_params": {
+      "build": [],
+      "run": [
+        {
+          "name": "--param1",
+          "description": "Test parameter",
+          "values": [
+            "value1",
+            "value2",
+            "value3"
+          ],
+          "default_value": "value3",
+          "alias": "param1"
+        }
+      ]
+    }
+  }
+]

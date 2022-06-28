@@ -5,7 +5,7 @@ import logging
 from functools import lru_cache
 from typing import List
 
-import mlia.tools.aiet_wrapper as aiet
+import mlia.backend.manager as backend_manager
 from mlia.tools.metadata.common import DefaultInstallationManager
 from mlia.tools.metadata.common import InstallationManager
 from mlia.tools.metadata.corstone import get_corstone_installations
@@ -25,12 +25,12 @@ def get_available_backends() -> List[str]:
     """Return list of the available backends."""
     available_backends = ["Vela"]
 
-    # Add backends using AIET
+    # Add backends using backend manager
     manager = get_installation_manager()
     available_backends.extend(
         (
             backend
-            for backend in aiet.supported_backends()
+            for backend in backend_manager.supported_backends()
             if manager.backend_installed(backend)
         )
     )

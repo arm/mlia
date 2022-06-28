@@ -9,13 +9,13 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from mlia.tools.aiet_wrapper import AIETRunner
+from mlia.backend.manager import BackendRunner
 from mlia.tools.metadata.common import DownloadAndInstall
 from mlia.tools.metadata.common import InstallFromPath
-from mlia.tools.metadata.corstone import AIETBasedInstallation
-from mlia.tools.metadata.corstone import AIETMetadata
 from mlia.tools.metadata.corstone import BackendInfo
+from mlia.tools.metadata.corstone import BackendInstallation
 from mlia.tools.metadata.corstone import BackendInstaller
+from mlia.tools.metadata.corstone import BackendMetadata
 from mlia.tools.metadata.corstone import CompoundPathChecker
 from mlia.tools.metadata.corstone import Corstone300Installer
 from mlia.tools.metadata.corstone import get_corstone_installations
@@ -40,8 +40,8 @@ def fixture_test_mlia_resources(
     return mlia_resources
 
 
-def get_aiet_based_installation(  # pylint: disable=too-many-arguments
-    aiet_runner_mock: MagicMock = MagicMock(),
+def get_backend_installation(  # pylint: disable=too-many-arguments
+    backend_runner_mock: MagicMock = MagicMock(),
     name: str = "test_name",
     description: str = "test_description",
     download_artifact: Optional[MagicMock] = None,
@@ -50,11 +50,11 @@ def get_aiet_based_installation(  # pylint: disable=too-many-arguments
     system_config: Optional[str] = None,
     backend_installer: BackendInstaller = MagicMock(),
     supported_platforms: Optional[List[str]] = None,
-) -> AIETBasedInstallation:
-    """Get AIET based installation."""
-    return AIETBasedInstallation(
-        aiet_runner=aiet_runner_mock,
-        metadata=AIETMetadata(
+) -> BackendInstallation:
+    """Get backend installation."""
+    return BackendInstallation(
+        backend_runner=backend_runner_mock,
+        metadata=BackendMetadata(
             name=name,
             description=description,
             system_config=system_config or "",
@@ -90,10 +90,10 @@ def test_could_be_installed_depends_on_platform(
     monkeypatch.setattr(
         "mlia.tools.metadata.corstone.all_paths_valid", MagicMock(return_value=True)
     )
-    aiet_runner_mock = MagicMock(spec=AIETRunner)
+    backend_runner_mock = MagicMock(spec=BackendRunner)
 
-    installation = get_aiet_based_installation(
-        aiet_runner_mock,
+    installation = get_backend_installation(
+        backend_runner_mock,
         supported_platforms=supported_platforms,
     )
     assert installation.could_be_installed == expected_result
@@ -103,53 +103,53 @@ def test_get_corstone_installations() -> None:
     """Test function get_corstone_installation."""
     installs = get_corstone_installations()
     assert len(installs) == 2
-    assert all(isinstance(install, AIETBasedInstallation) for install in installs)
+    assert all(isinstance(install, BackendInstallation) for install in installs)
 
 
-def test_aiet_based_installation_metadata_resolving() -> None:
-    """Test AIET based installation metadata resolving."""
-    aiet_runner_mock = MagicMock(spec=AIETRunner)
-    installation = get_aiet_based_installation(aiet_runner_mock)
+def test_backend_installation_metadata_resolving() -> None:
+    """Test backend installation metadata resolving."""
+    backend_runner_mock = MagicMock(spec=BackendRunner)
+    installation = get_backend_installation(backend_runner_mock)
 
     assert installation.name == "test_name"
     assert installation.description == "test_description"
 
-    aiet_runner_mock.all_installed.return_value = False
+    backend_runner_mock.all_installed.return_value = False
     assert installation.already_installed is False
 
     assert installation.could_be_installed is True
 
 
-def test_aiet_based_installation_supported_install_types(tmp_path: Path) -> None:
+def test_backend_installation_supported_install_types(tmp_path: Path) -> None:
     """Test supported installation types."""
-    installation_no_download_artifact = get_aiet_based_installation()
+    installation_no_download_artifact = get_backend_installation()
     assert installation_no_download_artifact.supports(DownloadAndInstall()) is False
 
-    installation_with_download_artifact = get_aiet_based_installation(
+    installation_with_download_artifact = get_backend_installation(
         download_artifact=MagicMock()
     )
     assert installation_with_download_artifact.supports(DownloadAndInstall()) is True
 
     path_checker_mock = MagicMock(return_value=BackendInfo(tmp_path))
-    installation_can_install_from_dir = get_aiet_based_installation(
+    installation_can_install_from_dir = get_backend_installation(
         path_checker=path_checker_mock
     )
     assert installation_can_install_from_dir.supports(InstallFromPath(tmp_path)) is True
 
-    any_installation = get_aiet_based_installation()
+    any_installation = get_backend_installation()
     assert any_installation.supports("unknown_install_type") is False  # type: ignore
 
 
-def test_aiet_based_installation_install_wrong_type() -> None:
+def test_backend_installation_install_wrong_type() -> None:
     """Test that operation should fail if wrong install type provided."""
     with pytest.raises(Exception, match="Unable to install wrong_install_type"):
-        aiet_runner_mock = MagicMock(spec=AIETRunner)
-        installation = get_aiet_based_installation(aiet_runner_mock)
+        backend_runner_mock = MagicMock(spec=BackendRunner)
+        installation = get_backend_installation(backend_runner_mock)
 
         installation.install("wrong_install_type")  # type: ignore
 
 
-def test_aiet_based_installation_install_from_path(
+def test_backend_installation_install_from_path(
     tmp_path: Path, test_mlia_resources: Path
 ) -> None:
     """Test installation from the path."""
@@ -164,9 +164,9 @@ def test_aiet_based_installation_install_from_path(
 
     path_checker_mock = MagicMock(return_value=BackendInfo(dist_dir))
 
-    aiet_runner_mock = MagicMock(spec=AIETRunner)
-    installation = get_aiet_based_installation(
-        aiet_runner_mock=aiet_runner_mock,
+    backend_runner_mock = MagicMock(spec=BackendRunner)
+    installation = get_backend_installation(
+        backend_runner_mock=backend_runner_mock,
         path_checker=path_checker_mock,
         apps_resources=[sample_app.name],
         system_config="example_config.json",
@@ -175,12 +175,12 @@ def test_aiet_based_installation_install_from_path(
     assert installation.supports(InstallFromPath(dist_dir)) is True
     installation.install(InstallFromPath(dist_dir))
 
-    aiet_runner_mock.install_system.assert_called_once()
-    aiet_runner_mock.install_application.assert_called_once_with(sample_app)
+    backend_runner_mock.install_system.assert_called_once()
+    backend_runner_mock.install_application.assert_called_once_with(sample_app)
 
 
 @pytest.mark.parametrize("copy_source", [True, False])
-def test_aiet_based_installation_install_from_static_path(
+def test_backend_installation_install_from_static_path(
     tmp_path: Path, test_mlia_resources: Path, copy_source: bool
 ) -> None:
     """Test installation from the predefined path."""
@@ -204,7 +204,7 @@ def test_aiet_based_installation_install_from_static_path(
     nested_file = predefined_location_dir / "nested_file.txt"
     nested_file.touch()
 
-    aiet_runner_mock = MagicMock(spec=AIETRunner)
+    backend_runner_mock = MagicMock(spec=BackendRunner)
 
     def check_install_dir(install_dir: Path) -> None:
         """Check content of the install dir."""
@@ -220,10 +220,10 @@ def test_aiet_based_installation_install_from_static_path(
 
         assert install_dir / "custom_config.json" in files
 
-    aiet_runner_mock.install_system.side_effect = check_install_dir
+    backend_runner_mock.install_system.side_effect = check_install_dir
 
-    installation = get_aiet_based_installation(
-        aiet_runner_mock=aiet_runner_mock,
+    installation = get_backend_installation(
+        backend_runner_mock=backend_runner_mock,
         path_checker=StaticPathChecker(
             predefined_location,
             ["file.txt"],
@@ -237,8 +237,8 @@ def test_aiet_based_installation_install_from_static_path(
     assert installation.supports(InstallFromPath(predefined_location)) is True
     installation.install(InstallFromPath(predefined_location))
 
-    aiet_runner_mock.install_system.assert_called_once()
-    aiet_runner_mock.install_application.assert_called_once_with(sample_app)
+    backend_runner_mock.install_system.assert_called_once()
+    backend_runner_mock.install_application.assert_called_once_with(sample_app)
 
 
 def create_sample_fvp_archive(tmp_path: Path) -> Path:
@@ -259,7 +259,7 @@ def create_sample_fvp_archive(tmp_path: Path) -> Path:
     return fvp_archive
 
 
-def test_aiet_based_installation_download_and_install(
+def test_backend_installation_download_and_install(
     test_mlia_resources: Path, tmp_path: Path
 ) -> None:
     """Test downloading and installation process."""
@@ -277,9 +277,9 @@ def test_aiet_based_installation_download_and_install(
         """Sample installer."""
         return dist_dir
 
-    aiet_runner_mock = MagicMock(spec=AIETRunner)
-    installation = get_aiet_based_installation(
-        aiet_runner_mock,
+    backend_runner_mock = MagicMock(spec=BackendRunner)
+    installation = get_backend_installation(
+        backend_runner_mock,
         download_artifact=download_artifact_mock,
         backend_installer=installer,
         path_checker=path_checker,
@@ -288,7 +288,7 @@ def test_aiet_based_installation_download_and_install(
 
     installation.install(DownloadAndInstall())
 
-    aiet_runner_mock.install_system.assert_called_once()
+    backend_runner_mock.install_system.assert_called_once()
 
 
 @pytest.mark.parametrize(

@@ -1,8 +1,7 @@
 SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
 SPDX-License-Identifier: Apache-2.0
 
-This directory contains the configuration files of the systems for the AIET
-middleware.
+This directory contains the configuration files of the system backends.
 
 Supported systems:
 

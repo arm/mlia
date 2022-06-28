@@ -32,7 +32,7 @@ def teardown_function() -> None:
         (
             None,
             True,
-            """mlia.tools.aiet_wrapper - aiet debug
+            """mlia.backend.manager - backends debug
 cli info
 mlia.cli - cli debug
 """,
@@ -41,11 +41,11 @@ mlia.cli - cli debug
         (
             "logs",
             True,
-            """mlia.tools.aiet_wrapper - aiet debug
+            """mlia.backend.manager - backends debug
 cli info
 mlia.cli - cli debug
 """,
-            """mlia.tools.aiet_wrapper - DEBUG - aiet debug
+            """mlia.backend.manager - DEBUG - backends debug
 mlia.cli - DEBUG - cli debug
 """,
         ),
@@ -64,8 +64,8 @@ def test_setup_logging(
 
     setup_logging(logs_dir_path, verbose)
 
-    aiet_logger = logging.getLogger("mlia.tools.aiet_wrapper")
-    aiet_logger.debug("aiet debug")
+    backend_logger = logging.getLogger("mlia.backend.manager")
+    backend_logger.debug("backends debug")
 
     cli_logger = logging.getLogger("mlia.cli")
     cli_logger.info("cli info")
