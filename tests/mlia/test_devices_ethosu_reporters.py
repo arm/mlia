@@ -238,7 +238,7 @@ def test_report_operators(
     Const mem area                                                Axi1
     Arena mem area                                                Axi0
     Cache mem area                                                Axi0
-    Arena cache size                               4,294,967,296 bytes
+    Arena cache size                                   2,096,768 bytes
 
   System config                            Ethos_U55_High_End_Embedded
     Accelerator clock                                   500,000,000 Hz
@@ -282,7 +282,7 @@ def test_report_operators(
                         "const_mem_area": "Axi1",
                         "arena_mem_area": "Axi0",
                         "cache_mem_area": "Axi0",
-                        "arena_cache_size": {"value": 4294967296, "unit": "bytes"},
+                        "arena_cache_size": {"value": 2096768, "unit": "bytes"},
                     },
                     "system_config": {
                         "accelerator_clock": {"value": 500000000.0, "unit": "Hz"},
@@ -355,7 +355,7 @@ def test_report_operators(
                     "Axi1",
                     "Axi0",
                     "Axi0",
-                    4294967296,
+                    2096768,
                     "bytes",
                     "Ethos_U55_High_End_Embedded",
                     500000000.0,
