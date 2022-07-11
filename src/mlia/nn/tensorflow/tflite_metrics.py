@@ -31,13 +31,13 @@ DEFAULT_IGNORE_LIST = [
 ]
 
 
-def calculate_num_unique_weights(weights: np.array) -> int:
+def calculate_num_unique_weights(weights: np.ndarray) -> int:
     """Calculate the number of unique weights in the given weights."""
     num_unique_weights = len(np.unique(weights))
     return num_unique_weights
 
 
-def calculate_num_unique_weights_per_axis(weights: np.array, axis: int) -> List[int]:
+def calculate_num_unique_weights_per_axis(weights: np.ndarray, axis: int) -> List[int]:
     """Calculate unique weights per quantization axis."""
     # Make quantized dimension the first dimension
     weights_trans = np.swapaxes(weights, 0, axis)
@@ -57,7 +57,7 @@ class SparsityAccumulator:
         self.total_non_zero_weights: int = 0
         self.total_weights: int = 0
 
-    def __call__(self, weights: np.array) -> None:
+    def __call__(self, weights: np.ndarray) -> None:
         """Update the accumulator with the given weights."""
         non_zero_weights = np.count_nonzero(weights)
         self.total_non_zero_weights += non_zero_weights
@@ -69,7 +69,7 @@ class SparsityAccumulator:
 
 
 def calculate_sparsity(
-    weights: np.array, accumulator: Optional[SparsityAccumulator] = None
+    weights: np.ndarray, accumulator: Optional[SparsityAccumulator] = None
 ) -> float:
     """
     Calculate the sparsity for the given weights.

@@ -31,7 +31,7 @@ def _dummy_keras_model() -> tf.keras.Model:
 
 
 def _sparse_binary_keras_model() -> tf.keras.Model:
-    def get_sparse_weights(shape: List[int]) -> np.array:
+    def get_sparse_weights(shape: List[int]) -> np.ndarray:
         weights = np.zeros(shape)
         with np.nditer(weights, op_flags=["writeonly"]) as weight_iterator:
             for idx, value in enumerate(weight_iterator):

@@ -7,7 +7,7 @@ import numpy as np
 import tensorflow as tf
 
 
-def get_dataset() -> Tuple[np.array, np.array]:
+def get_dataset() -> Tuple[np.ndarray, np.ndarray]:
     """Return sample dataset."""
     mnist = tf.keras.datasets.mnist
     (x_train, y_train), _ = mnist.load_data()
