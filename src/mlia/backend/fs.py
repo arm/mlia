@@ -4,7 +4,6 @@
 import re
 import shutil
 from pathlib import Path
-from typing import Any
 from typing import Literal
 from typing import Optional
 
@@ -30,7 +29,7 @@ def get_backends_path(name: ResourceType) -> Path:
     if resource_path.is_dir():
         return resource_path
 
-    raise ResourceWarning("Resource '{}' not found.".format(name))
+    raise ResourceWarning(f"Resource '{name}' not found.")
 
 
 def copy_directory_content(source: Path, destination: Path) -> None:
@@ -51,10 +50,10 @@ def remove_resource(resource_directory: str, resource_type: ResourceType) -> Non
 
     resource_location = resources / resource_directory
     if not resource_location.exists():
-        raise Exception("Resource {} does not exist".format(resource_directory))
+        raise Exception(f"Resource {resource_directory} does not exist")
 
     if not resource_location.is_dir():
-        raise Exception("Wrong resource {}".format(resource_directory))
+        raise Exception(f"Wrong resource {resource_directory}")
 
     shutil.rmtree(resource_location)
 
@@ -74,40 +73,13 @@ def recreate_directory(directory_path: Optional[Path]) -> None:
 
     if directory_path.exists() and not directory_path.is_dir():
         raise Exception(
-            "Path {} does exist and it is not a directory".format(str(directory_path))
+            f"Path {str(directory_path)} does exist and it is not a directory."
         )
 
     if directory_path.is_dir():
         remove_directory(directory_path)
 
     directory_path.mkdir()
-
-
-def read_file(file_path: Path, mode: Optional[str] = None) -> Any:
-    """Read file as string or bytearray."""
-    if file_path.is_file():
-        if mode is not None:
-            # Ignore pylint warning because mode can be 'binary' as well which
-            # is not compatible with specifying encodings.
-            with open(file_path, mode) as file:  # pylint: disable=unspecified-encoding
-                return file.read()
-        else:
-            with open(file_path, encoding="utf-8") as file:
-                return file.read()
-
-    if mode == "rb":
-        return b""
-    return ""
-
-
-def read_file_as_string(file_path: Path) -> str:
-    """Read file as string."""
-    return str(read_file(file_path))
-
-
-def read_file_as_bytearray(file_path: Path) -> bytearray:
-    """Read a file as bytearray."""
-    return bytearray(read_file(file_path, mode="rb"))
 
 
 def valid_for_filename(value: str, replacement: str = "") -> str:

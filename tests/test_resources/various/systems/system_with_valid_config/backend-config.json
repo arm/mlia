@@ -1,0 +1,12 @@
+[
+  {
+    "name": "Test system",
+    "description": "This is a test system",
+    "commands": {
+      "run": []
+    },
+    "user_params": {
+      "run": []
+    }
+  }
+]

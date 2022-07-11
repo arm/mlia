@@ -125,7 +125,7 @@ class Cell:
         """Return cell value."""
         if self.fmt:
             if isinstance(self.fmt.str_fmt, str):
-                return "{:{fmt}}".format(self.value, fmt=self.fmt.str_fmt)
+                return f"{self.value:{self.fmt.str_fmt}}"
 
             if callable(self.fmt.str_fmt):
                 return self.fmt.str_fmt(self.value)

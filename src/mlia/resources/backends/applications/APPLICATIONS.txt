@@ -1,0 +1,7 @@
+SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+SPDX-License-Identifier: Apache-2.0
+
+This directory contains the application packages for the Generic Inference
+Runner.
+
+Each package should contain its own backend-config.json file.

@@ -13,7 +13,6 @@ from typing import List
 from typing import Optional
 
 import mlia.backend.manager as backend_manager
-from mlia.backend.fs import get_backend_resources
 from mlia.tools.metadata.common import DownloadAndInstall
 from mlia.tools.metadata.common import Installation
 from mlia.tools.metadata.common import InstallationType
@@ -24,7 +23,7 @@ from mlia.utils.filesystem import all_paths_valid
 from mlia.utils.filesystem import copy_all
 from mlia.utils.filesystem import get_mlia_resources
 from mlia.utils.filesystem import temp_directory
-from mlia.utils.proc import working_directory
+from mlia.utils.filesystem import working_directory
 
 logger = logging.getLogger(__name__)
 
@@ -76,7 +75,7 @@ class BackendMetadata:
         """Return list of expected resources."""
         resources = [self.system_config, *self.apps_resources]
 
-        return (get_backend_resources() / resource for resource in resources)
+        return (get_mlia_resources() / resource for resource in resources)
 
     @property
     def supported_platform(self) -> bool:
@@ -314,12 +313,8 @@ def get_corstone_300_installation() -> Installation:
         metadata=BackendMetadata(
             name="Corstone-300",
             description="Corstone-300 FVP",
-            system_config="aiet/systems/corstone-300/aiet-config.json",
-            apps_resources=[
-                "aiet/applications/inference_runner-sse-300-22.05.01-ethos-U55-Shared_Sram-TA",
-                "aiet/applications/inference_runner-sse-300-22.05.01-ethos-U55-Sram_Only-TA",
-                "aiet/applications/inference_runner-sse-300-22.05.01-ethos-U65-Dedicated_Sram-TA",
-            ],
+            system_config="backend_configs/systems/corstone-300/backend-config.json",
+            apps_resources=[],
             fvp_dir_name="corstone_300",
             download_artifact=DownloadArtifact(
                 name="Corstone-300 FVP",
@@ -346,7 +341,9 @@ def get_corstone_300_installation() -> Installation:
                     "VHT_Corstone_SSE-300_Ethos-U65",
                 ],
                 copy_source=False,
-                system_config="aiet/systems/corstone-300-vht/aiet-config.json",
+                system_config=(
+                    "backends_configs/systems/corstone-300-vht/backend-config.json"
+                ),
             ),
         ),
         backend_installer=Corstone300Installer(),
@@ -363,11 +360,8 @@ def get_corstone_310_installation() -> Installation:
         metadata=BackendMetadata(
             name="Corstone-310",
             description="Corstone-310 FVP",
-            system_config="aiet/systems/corstone-310/aiet-config.json",
-            apps_resources=[
-                "aiet/applications/inference_runner-sse-310-22.05.01-ethos-U55-Shared_Sram-TA",
-                "aiet/applications/inference_runner-sse-310-22.05.01-ethos-U55-Sram_Only-TA",
-            ],
+            system_config="backend_configs/systems/corstone-310/backend-config.json",
+            apps_resources=[],
             fvp_dir_name="corstone_310",
             download_artifact=None,
             supported_platforms=["Linux"],
@@ -386,7 +380,9 @@ def get_corstone_310_installation() -> Installation:
                     "VHT_Corstone_SSE-310",
                 ],
                 copy_source=False,
-                system_config="aiet/systems/corstone-310-vht/aiet-config.json",
+                system_config=(
+                    "backend_configs/systems/corstone-310-vht/backend-config.json"
+                ),
             ),
         ),
         backend_installer=None,

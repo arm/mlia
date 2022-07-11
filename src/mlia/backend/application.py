@@ -11,10 +11,9 @@ from typing import Optional
 
 from mlia.backend.common import Backend
 from mlia.backend.common import ConfigurationException
-from mlia.backend.common import DataPaths
 from mlia.backend.common import get_backend_configs
 from mlia.backend.common import get_backend_directories
-from mlia.backend.common import load_application_or_tool_configs
+from mlia.backend.common import load_application_configs
 from mlia.backend.common import load_config
 from mlia.backend.common import remove_backend
 from mlia.backend.config import ApplicationConfig
@@ -75,7 +74,7 @@ def install_application(source_path: Path) -> None:
     if already_installed:
         names = {application.name for application in already_installed}
         raise ConfigurationException(
-            "Applications [{}] are already installed".format(",".join(names))
+            f"Applications [{','.join(names)}] are already installed."
         )
 
     create_destination_and_install(source, get_backends_path("applications"))
@@ -105,7 +104,6 @@ class Application(Backend):
         super().__init__(config)
 
         self.supported_systems = config.get("supported_systems", [])
-        self.deploy_data = config.get("deploy_data", [])
 
     def __eq__(self, other: object) -> bool:
         """Overload operator ==."""
@@ -121,21 +119,6 @@ class Application(Backend):
     def can_run_on(self, system_name: str) -> bool:
         """Check if the application can run on the system passed as argument."""
         return system_name in self.supported_systems
-
-    def get_deploy_data(self) -> List[DataPaths]:
-        """Validate and return data specified in the config file."""
-        if self.config_location is None:
-            raise ConfigurationException(
-                "Unable to get application {} config location".format(self.name)
-            )
-
-        deploy_data = []
-        for item in self.deploy_data:
-            src, dst = item
-            src_full_path = self.config_location / src
-            assert src_full_path.exists(), "{} does not exists".format(src_full_path)
-            deploy_data.append(DataPaths(src_full_path, dst))
-        return deploy_data
 
     def get_details(self) -> Dict[str, Any]:
         """Return dictionary with information about the Application instance."""
@@ -180,7 +163,7 @@ def load_applications(config: ExtendedApplicationConfig) -> List[Application]:
     supported systems. For each supported system this function will return separate
     Application instance with appropriate configuration.
     """
-    configs = load_application_or_tool_configs(config, ApplicationConfig)
+    configs = load_application_configs(config, ApplicationConfig)
     applications = [Application(cfg) for cfg in configs]
     for application in applications:
         application.remove_unused_params()

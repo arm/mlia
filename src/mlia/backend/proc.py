@@ -5,7 +5,6 @@
 This module contains all classes and functions for dealing with Linux
 processes.
 """
-import csv
 import datetime
 import logging
 import shlex
@@ -14,17 +13,17 @@ import time
 from pathlib import Path
 from typing import Any
 from typing import List
-from typing import NamedTuple
 from typing import Optional
 from typing import Tuple
 
-import psutil
 from sh import Command
 from sh import CommandNotFound
 from sh import ErrorReturnCode
 from sh import RunningCommand
 
 from mlia.backend.fs import valid_for_filename
+
+logger = logging.getLogger(__name__)
 
 
 class CommandFailedException(Exception):
@@ -50,7 +49,7 @@ class ShellCommand:
         _bg: bool = True,
         _out: Any = None,
         _err: Any = None,
-        _search_paths: Optional[List[Path]] = None
+        _search_paths: Optional[List[Path]] = None,
     ) -> RunningCommand:
         """Run the shell command with the given arguments.
 
@@ -86,7 +85,7 @@ class ShellCommand:
         """Construct and returns the paths of stdout/stderr files."""
         timestamp = datetime.datetime.now().timestamp()
         base_path = Path(base_log_path)
-        base = base_path / "{}_{}".format(valid_for_filename(cmd, "_"), timestamp)
+        base = base_path / f"{valid_for_filename(cmd, '_')}_{timestamp}"
         stdout = base.with_suffix(".out")
         stderr = base.with_suffix(".err")
         try:
@@ -164,7 +163,7 @@ def run_and_wait(
     except Exception as error:
         is_running = running_cmd is not None and running_cmd.is_alive()
         if terminate_on_error and is_running:
-            print("Terminating ...")
+            logger.debug("Terminating ...")
             terminate_command(running_cmd)
 
         raise error
@@ -184,85 +183,13 @@ def terminate_command(
                 time.sleep(wait_period)
                 if not running_cmd.is_alive():
                     return
-            print(
-                "Unable to terminate process {}. Sending SIGTERM...".format(
-                    running_cmd.process.pid
-                )
+            logger.error(
+                "Unable to terminate process %i. Sending SIGTERM...",
+                running_cmd.process.pid,
             )
             running_cmd.process.signal_group(signal.SIGTERM)
     except ProcessLookupError:
         pass
-
-
-def terminate_external_process(
-    process: psutil.Process,
-    wait_period: float = 0.5,
-    number_of_attempts: int = 20,
-    wait_for_termination: float = 5.0,
-) -> None:
-    """Terminate external process."""
-    try:
-        process.terminate()
-        for _ in range(number_of_attempts):
-            if not process.is_running():
-                return
-            time.sleep(wait_period)
-
-        if process.is_running():
-            process.terminate()
-            time.sleep(wait_for_termination)
-    except psutil.Error:
-        print("Unable to terminate process")
-
-
-class ProcessInfo(NamedTuple):
-    """Process information."""
-
-    name: str
-    executable: str
-    cwd: str
-    pid: int
-
-
-def save_process_info(pid: int, pid_file: Path) -> None:
-    """Save process information to file."""
-    try:
-        parent = psutil.Process(pid)
-        children = parent.children(recursive=True)
-        family = [parent] + children
-
-        with open(pid_file, "w", encoding="utf-8") as file:
-            csv_writer = csv.writer(file)
-            for member in family:
-                process_info = ProcessInfo(
-                    name=member.name(),
-                    executable=member.exe(),
-                    cwd=member.cwd(),
-                    pid=member.pid,
-                )
-                csv_writer.writerow(process_info)
-    except psutil.NoSuchProcess:
-        # if process does not exist or finishes before
-        # function call then nothing could be saved
-        # just ignore this exception and exit
-        pass
-
-
-def read_process_info(pid_file: Path) -> List[ProcessInfo]:
-    """Read information about previous system processes."""
-    if not pid_file.is_file():
-        return []
-
-    result = []
-    with open(pid_file, encoding="utf-8") as file:
-        csv_reader = csv.reader(file)
-        for row in csv_reader:
-            name, executable, cwd, pid = row
-            result.append(
-                ProcessInfo(name=name, executable=executable, cwd=cwd, pid=int(pid))
-            )
-
-    return result
 
 
 def print_command_stdout(command: RunningCommand) -> None:

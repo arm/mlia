@@ -194,9 +194,7 @@ class TFLiteMetrics:
 
             aggregation_func = cluster_hist
         else:
-            raise NotImplementedError(
-                "ReportClusterMode '{}' not implemented.".format(mode)
-            )
+            raise NotImplementedError(f"ReportClusterMode '{mode}' not implemented.")
         uniques = {
             name: aggregation_func(details)
             for name, details in self.filtered_details.items()
@@ -217,10 +215,10 @@ class TFLiteMetrics:
         verbose: bool = False,
     ) -> None:
         """Print a summary of all the model information."""
-        print("Model file: {}".format(self.tflite_file))
+        print(f"Model file: {self.tflite_file}")
         print("#" * 80)
         print(" " * 28 + "### TFLITE SUMMARY ###")
-        print("File: {}".format(os.path.abspath(self.tflite_file)))
+        print(f"File: {os.path.abspath(self.tflite_file)}")
         print("Input(s):")
         self._print_in_outs(self.interpreter.get_input_details(), verbose)
         print("Output(s):")
@@ -242,11 +240,11 @@ class TFLiteMetrics:
             ]
             if report_sparsity:
                 sparsity = calculate_sparsity(weights, sparsity_accumulator)
-                row.append("{:.2f}".format(sparsity))
+                row.append(f"{sparsity:.2f}")
             rows.append(row)
             if verbose:
                 # Print cluster centroids
-                print("{} cluster centroids:".format(name))
+                print(f"{name} cluster centroids:")
                 # Types need to be ignored for this function call because
                 # np.unique does not have type annotation while the
                 # current context does.
@@ -259,9 +257,9 @@ class TFLiteMetrics:
             sparsity_accumulator.total_weights
         )
         if report_sparsity:
-            summary_row[header.index("Sparsity")] = "{:.2f}".format(
-                sparsity_accumulator.sparsity()
-            )
+            summary_row[
+                header.index("Sparsity")
+            ] = f"{sparsity_accumulator.sparsity():.2f}"
         rows.append(summary_row)
         # Report detailed cluster info
         if report_cluster_mode is not None:
@@ -272,7 +270,7 @@ class TFLiteMetrics:
     def _print_cluster_details(
         self, report_cluster_mode: ReportClusterMode, max_num_clusters: int
     ) -> None:
-        print("{}:\n{}".format(report_cluster_mode.name, report_cluster_mode.value))
+        print(f"{report_cluster_mode.name}:\n{report_cluster_mode.value}")
         num_clusters = self.num_unique_weights(report_cluster_mode)
         if (
             report_cluster_mode == ReportClusterMode.NUM_CLUSTERS_HISTOGRAM
@@ -283,11 +281,9 @@ class TFLiteMetrics:
             # histogram for unclustered layers.
             for name, value in num_clusters.items():
                 if len(value) > max_num_clusters:
-                    num_clusters[name] = "More than {} unique values.".format(
-                        max_num_clusters
-                    )
+                    num_clusters[name] = f"More than {max_num_clusters} unique values."
         for name, nums in num_clusters.items():
-            print("- {}: {}".format(self._prettify_name(name), nums))
+            print(f"- {self._prettify_name(name)}: {nums}")
 
     @staticmethod
     def _print_in_outs(ios: List[dict], verbose: bool = False) -> None:
@@ -296,9 +292,6 @@ class TFLiteMetrics:
                 pprint(item)
             else:
                 print(
-                    "- {} ({}): {}".format(
-                        item["name"],
-                        np.dtype(item["dtype"]).name,
-                        item["shape"],
-                    )
+                    f"- {item['name']} ({np.dtype(item['dtype']).name}): "
+                    f"{item['shape']}"
                 )

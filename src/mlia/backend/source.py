@@ -63,11 +63,11 @@ class DirectorySource(Source):
     def install_into(self, destination: Path) -> None:
         """Install source into destination directory."""
         if not destination.is_dir():
-            raise ConfigurationException("Wrong destination {}".format(destination))
+            raise ConfigurationException(f"Wrong destination {destination}.")
 
         if not self.directory_path.is_dir():
             raise ConfigurationException(
-                "Directory {} does not exist".format(self.directory_path)
+                f"Directory {self.directory_path} does not exist."
             )
 
         copy_directory_content(self.directory_path, destination)
@@ -112,7 +112,7 @@ class TarArchiveSource(Source):
                             "Archive has no top level directory"
                         ) from error_no_config
 
-                    config_path = "{}/{}".format(top_level_dir, BACKEND_CONFIG_FILE)
+                    config_path = f"{top_level_dir}/{BACKEND_CONFIG_FILE}"
 
                     config_entry = archive.getmember(config_path)
                     self._has_top_level_folder = True
@@ -149,7 +149,7 @@ class TarArchiveSource(Source):
     def install_into(self, destination: Path) -> None:
         """Install source into destination directory."""
         if not destination.is_dir():
-            raise ConfigurationException("Wrong destination {}".format(destination))
+            raise ConfigurationException(f"Wrong destination {destination}.")
 
         with self._open(self.archive_path) as archive:
             archive.extractall(destination)
@@ -157,14 +157,12 @@ class TarArchiveSource(Source):
     def _open(self, archive_path: Path) -> TarFile:
         """Open archive file."""
         if not archive_path.is_file():
-            raise ConfigurationException("File {} does not exist".format(archive_path))
+            raise ConfigurationException(f"File {archive_path} does not exist.")
 
         if archive_path.name.endswith("tar.gz") or archive_path.name.endswith("tgz"):
             mode = "r:gz"
         else:
-            raise ConfigurationException(
-                "Unsupported archive type {}".format(archive_path)
-            )
+            raise ConfigurationException(f"Unsupported archive type {archive_path}.")
 
         # The returned TarFile object can be used as a context manager (using
         # 'with') by the calling instance.
@@ -181,7 +179,7 @@ def get_source(source_path: Path) -> Union[TarArchiveSource, DirectorySource]:
     if source_path.is_dir():
         return DirectorySource(source_path)
 
-    raise ConfigurationException("Unable to read {}".format(source_path))
+    raise ConfigurationException(f"Unable to read {source_path}.")
 
 
 def create_destination_and_install(source: Source, resource_path: Path) -> None:
@@ -197,7 +195,7 @@ def create_destination_and_install(source: Source, resource_path: Path) -> None:
     if create_destination:
         name = source.name()
         if not name:
-            raise ConfigurationException("Unable to get source name")
+            raise ConfigurationException("Unable to get source name.")
 
         destination = resource_path / name
         destination.mkdir()

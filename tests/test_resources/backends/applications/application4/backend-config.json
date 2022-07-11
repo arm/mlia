@@ -1,0 +1,35 @@
+[
+  {
+    "name": "application_4",
+    "description": "This is application 4",
+    "variables": {
+      "build_dir": "build"
+    },
+    "supported_systems": [
+      {
+        "name": "System 4"
+      }
+    ],
+    "commands": {
+      "run": [
+        "cp {application.config_dir}/hello_app.txt {system.config_dir}",
+        "echo '{user_params:0}' > {system.config_dir}/params.txt",
+        "cat hello_app.txt"
+      ]
+    },
+    "user_params": {
+      "run": [
+        {
+          "name": "--app",
+          "description": "Sample command param",
+          "values": [
+            "application1",
+            "application2",
+            "application3"
+          ],
+          "default_value": "application1"
+        }
+      ]
+    }
+  }
+]

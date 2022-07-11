@@ -33,7 +33,7 @@ from mlia.backend.fs import remove_resource
 from mlia.backend.fs import ResourceType
 
 
-BACKEND_CONFIG_FILE: Final[str] = "aiet-config.json"
+BACKEND_CONFIG_FILE: Final[str] = "backend-config.json"
 
 
 class ConfigurationException(Exception):
@@ -126,10 +126,6 @@ class Backend(ABC):
         self.description = config.get("description", "")
         self.config_location = config.get("config_location")
         self.variables = config.get("variables", {})
-        self.build_dir = config.get("build_dir")
-        self.lock = config.get("lock", False)
-        if self.build_dir:
-            self.build_dir = self._substitute_variables(self.build_dir)
         self.annotations = config.get("annotations", {})
 
         self._parse_commands_and_params(config)
@@ -145,7 +141,7 @@ class Backend(ABC):
 
         command = self.commands.get(command_name)
         if not command:
-            raise AttributeError("Unknown command: '{}'".format(command_name))
+            raise AttributeError(f"Unknown command: '{command_name}'")
 
         # Iterate over all available parameters until we have a match.
         for param in command.params:
@@ -209,7 +205,7 @@ class Backend(ABC):
         def var_value(match: Match) -> str:
             var_name = match["var_name"]
             if var_name not in self.variables:
-                raise ConfigurationException("Unknown variable {}".format(var_name))
+                raise ConfigurationException(f"Unknown variable {var_name}")
 
             return self.variables[var_name]
 
@@ -312,7 +308,7 @@ class Backend(ABC):
         command = self.commands.get(command_name)
         if not command:
             raise ConfigurationException(
-                "Command '{}' could not be found.".format(command_name)
+                f"Command '{command_name}' could not be found."
             )
 
         commands_to_run = []
@@ -394,7 +390,7 @@ class Command:
 
         if repeated_aliases:
             raise ConfigurationException(
-                "Non unique aliases {}".format(", ".join(repeated_aliases))
+                f"Non-unique aliases {', '.join(repeated_aliases)}"
             )
 
         both_name_and_alias = [
@@ -404,9 +400,8 @@ class Command:
         ]
         if both_name_and_alias:
             raise ConfigurationException(
-                "Aliases {} could not be used as parameter name".format(
-                    ", ".join(both_name_and_alias)
-                )
+                f"Aliases {', '.join(both_name_and_alias)} could not be used "
+                "as parameter name."
             )
 
     def get_details(self) -> Dict:
@@ -449,12 +444,12 @@ def resolve_all_parameters(
     return str_val
 
 
-def load_application_or_tool_configs(
+def load_application_configs(
     config: Any,
     config_type: Type[Any],
     is_system_required: bool = True,
 ) -> Any:
-    """Get one config for each system supported by the application/tool.
+    """Get one config for each system supported by the application.
 
     The configuration could contain different parameters/commands for different
     supported systems. For each supported system this function will return separate
@@ -501,15 +496,13 @@ def load_application_or_tool_configs(
             if params_default and params_tool:
                 if any(not p.get("alias") for p in params_default):
                     raise ConfigurationException(
-                        "Default parameters for command {} should have aliases".format(
-                            command_name
-                        )
+                        f"Default parameters for command {command_name} "
+                        "should have aliases"
                     )
                 if any(not p.get("alias") for p in params_tool):
                     raise ConfigurationException(
-                        "{} parameters for command {} should have aliases".format(
-                            system_name, command_name
-                        )
+                        f"{system_name} parameters for command {command_name} "
+                        "should have aliases."
                     )
 
                 merged_by_alias = {
@@ -519,8 +512,6 @@ def load_application_or_tool_configs(
                 params[command_name] = list(merged_by_alias.values())
 
         merged_config["user_params"] = params
-        merged_config["build_dir"] = system.get("build_dir", config.get("build_dir"))
-        merged_config["lock"] = system.get("lock", config.get("lock", False))
         merged_config["variables"] = {
             **config.get("variables", {}),
             **system.get("variables", {}),

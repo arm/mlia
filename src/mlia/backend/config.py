@@ -4,9 +4,7 @@
 from pathlib import Path
 from typing import Dict
 from typing import List
-from typing import Literal
 from typing import Optional
-from typing import Tuple
 from typing import TypedDict
 from typing import Union
 
@@ -29,9 +27,7 @@ class ExecutionConfig(TypedDict, total=False):
 
     commands: Dict[str, List[str]]
     user_params: UserParamsConfig
-    build_dir: str
     variables: Dict[str, str]
-    lock: bool
 
 
 class NamedExecutionConfig(ExecutionConfig):
@@ -53,39 +49,17 @@ class ApplicationConfig(BaseBackendConfig, total=False):
     """Application configuration."""
 
     supported_systems: List[str]
-    deploy_data: List[Tuple[str, str]]
 
 
 class ExtendedApplicationConfig(BaseBackendConfig, total=False):
     """Extended application configuration."""
 
     supported_systems: List[NamedExecutionConfig]
-    deploy_data: List[Tuple[str, str]]
-
-
-class ProtocolConfig(TypedDict, total=False):
-    """Protocol config."""
-
-    protocol: Literal["local", "ssh"]
-
-
-class SSHConfig(ProtocolConfig, total=False):
-    """SSH configuration."""
-
-    username: str
-    password: str
-    hostname: str
-    port: str
-
-
-class LocalProtocolConfig(ProtocolConfig, total=False):
-    """Local protocol config."""
 
 
 class SystemConfig(BaseBackendConfig, total=False):
     """System configuration."""
 
-    data_transfer: Union[SSHConfig, LocalProtocolConfig]
     reporting: Dict[str, Dict]
 
 

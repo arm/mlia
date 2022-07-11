@@ -34,8 +34,7 @@ max-attributes=10
 
 # Provide basic compatibility with black
 disable = [
-  "wrong-import-order",
-  "consider-using-f-string" # C0209
+  "wrong-import-order"
 ]
 
 enable = [
@@ -71,8 +70,6 @@ check_untyped_defs = true
 [[tool.mypy.overrides]]
 module = [
     "pkg_resources",
-    "paramiko",
     "requests",
-    "filelock"
 ]
 ignore_missing_imports = true

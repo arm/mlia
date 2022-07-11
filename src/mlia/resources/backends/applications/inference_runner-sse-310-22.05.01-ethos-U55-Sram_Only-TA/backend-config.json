@@ -1,0 +1,14 @@
+[
+  {
+    "name": "Generic Inference Runner: Ethos-U55 SRAM",
+    "description": "This application allows running inferences using custom NN TFLite models on Ethos-U. No data pre-/post-processing is executed.",
+    "supported_systems": [
+      {
+        "name": "Corstone-310: Cortex-M85+Ethos-U55"
+      }
+    ],
+    "variables": {
+      "eval_app": "{software.config_dir}/ethos-u-inference_runner.axf"
+    }
+  }
+]

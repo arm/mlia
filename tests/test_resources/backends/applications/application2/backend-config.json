@@ -1,0 +1,29 @@
+[
+  {
+    "name": "application_2",
+    "description": "This is application 2",
+    "supported_systems": [
+      {
+        "name": "System 2"
+      }
+    ],
+    "commands": {
+      "clean": [
+        "echo 'clean'"
+      ],
+      "build": [
+        "echo 'build'"
+      ],
+      "run": [
+        "echo 'run'"
+      ],
+      "post_run": [
+        "echo 'post_run'"
+      ]
+    },
+    "user_params": {
+      "build": [],
+      "run": []
+    }
+  }
+]

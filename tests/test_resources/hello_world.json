@@ -1,0 +1,53 @@
+[
+    {
+        "name": "Hello world",
+        "description": "Dummy application that displays 'Hello world!'",
+        "supported_systems": [
+            "Dummy System"
+        ],
+        "deploy_data": [
+            [
+                "src",
+                "/tmp/"
+            ],
+            [
+                "README",
+                "/tmp/README.md"
+            ]
+        ],
+        "commands": {
+            "clean": [],
+            "build": [],
+            "run": [
+                "echo 'Hello world!'",
+                "ls -l /tmp"
+            ],
+            "post_run": []
+        },
+        "user_params": {
+            "run": [
+                {
+                    "name": "--choice-param",
+                    "values": [
+                        "dummy_value_1",
+                        "dummy_value_2"
+                    ],
+                    "default_value": "dummy_value_1",
+                    "description": "Choice param"
+                },
+                {
+                    "name": "--open-param",
+                    "values": [],
+                    "default_value": "dummy_value_4",
+                    "description": "Open param"
+                },
+                {
+                    "name": "--enable-flag",
+                    "default_value": "dummy_value_4",
+                    "description": "Flag param"
+                }
+            ],
+            "build": []
+        }
+    }
+]

@@ -122,3 +122,21 @@ def copy_all(*paths: Path, dest: Path) -> None:
 
         if path.is_dir():
             shutil.copytree(path, dest, dirs_exist_ok=True)
+
+
+@contextmanager
+def working_directory(
+    working_dir: Path, create_dir: bool = False
+) -> Generator[Path, None, None]:
+    """Temporary change working directory."""
+    current_working_dir = Path.cwd()
+
+    if create_dir:
+        working_dir.mkdir()
+
+    os.chdir(working_dir)
+
+    try:
+        yield working_dir
+    finally:
+        os.chdir(current_working_dir)
