@@ -1,0 +1,111 @@
+# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-License-Identifier: Apache-2.0
+# Pre-commit checks
+#
+# General policy:
+
+# - tools that *fix* issues are preferred to tools that only *gripe*
+#   about issues, both can coexist, but when the conflict we
+#   selectivly reconfigure the griper not the fixer.
+#
+
+repos:
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v4.2.0
+  hooks:
+    - id: check-yaml
+
+    - id: end-of-file-fixer
+
+    - id: trailing-whitespace
+
+    - id: mixed-line-ending
+      args: ['--fix=lf']
+      description: Forces to replace line ending by the UNIX 'lf' character.
+
+    - id: detect-private-key
+
+    - id: check-executables-have-shebangs
+
+    - id: check-added-large-files
+      args: ['--maxkb=300', "--enforce-all"]
+      exclude: src/mlia/resources
+
+- repo: https://github.com/Lucas-C/pre-commit-hooks
+  rev: v1.1.13
+  hooks:
+    - id: remove-tabs
+      args: [--whitespaces-count, '8']
+
+- repo: https://github.com/asottile/reorder_python_imports
+  rev: v3.0.1
+  hooks:
+    - id: reorder-python-imports
+      args: ["--application-directories", ".:src"]
+
+- repo: https://github.com/psf/black
+  rev: 22.3.0
+  hooks:
+    - id: black
+
+- repo: https://github.com/PyCQA/flake8
+  rev: '4.0.1'
+  hooks:
+    - id: flake8
+
+- repo: https://github.com/PyCQA/pydocstyle
+  rev: 6.1.1
+  hooks:
+    - id: pydocstyle
+
+- repo: https://github.com/markdownlint/markdownlint
+  rev: v0.11.0
+  hooks:
+    - id: markdownlint
+      args: ["-r", "~MD024,~MD002"]
+
+- repo: https://github.com/ryanrhee/shellcheck-py
+  rev: v0.8.0.4
+  hooks:
+    - id: shellcheck
+      args: [-f, gcc, -x]
+
+- repo: https://github.com/fsfe/reuse-tool
+  rev: v1.0.0
+  hooks:
+    - id: reuse
+
+- repo: https://github.com/PrincetonUniversity/blocklint
+  rev: v0.2.3
+  hooks:
+    - id: blocklint
+      exclude: setup.cfg
+
+- repo: local
+  hooks:
+    - id: mypy
+      name: mypy
+      entry: mypy
+      language: python
+      types: [python]
+      require_serial: true
+      additional_dependencies: []
+
+- repo: local
+  hooks:
+    - id: pylint
+      name: pylint
+      entry: pylint
+      language: system
+      types: [python]
+
+- repo: local
+  hooks:
+    - id: pytest-cov
+      name: pytest coverage
+      stages: [push]
+      language: system
+      entry: pytest --cov=mlia --cov-report term-missing --cov-fail-under=95 tests
+      types: [python]
+      pass_filenames: false
+      verbose: true
