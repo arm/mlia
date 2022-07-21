@@ -95,6 +95,15 @@ Corstone™-310 is available as Arm® Virtual Hardware (AVH).
 * Please use the examples of MLIA using Corstone™-310 here to get started:
   <https://github.com/ARM-software/open-iot-sdk>
 
+### Using TOSA checker
+
+TOSA compatibility checker is available in MLIA as an external dependency.
+Please, install it into the same environment as MLIA using next command:
+
+```bash
+pip install mlia[tosa]
+```
+
 ## Usage
 
 After the initial setup, you can start the program by opening your terminal and
@@ -124,7 +133,7 @@ mlia [command] --help
 ```
 
 Most commands accept the name of the target profile as input parameter.
-There are a number of predefined profiles with following attributes:
+There are a number of predefined profiles for Ethos™-U with following attributes:
 
 ```
 +--------------------------------------------------------------------+
@@ -137,6 +146,8 @@ There are a number of predefined profiles with following attributes:
 | ethos-u65-512 | 512 | Ethos_U65_High_End          | Dedicated_Sram |
 +--------------------------------------------------------------------+
 ```
+
+Target profile "tosa" could be used for TOSA compatibility checks.
 
 ### **Operators** (ops)
 
@@ -166,6 +177,7 @@ mlia operators --target-profile ethos-u55-256 ~/models/mobilenet_v1_1.0_224_quan
     * ethos-u55-256
     * ethos-u55-128
     * ethos-u65-512
+    * tosa
 
 ##### Output options
 
@@ -318,6 +330,7 @@ mlia all_tests --output ./report.json ~/models/ds_cnn_l.h5
     * ethos-u55-256
     * ethos-u55-128
     * ethos-u65-512
+    * tosa
 
 ##### Output options
 
