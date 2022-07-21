@@ -11,6 +11,7 @@ from pathlib import Path
 from tempfile import mkstemp
 from tempfile import TemporaryDirectory
 from typing import Any
+from typing import cast
 from typing import Dict
 from typing import Generator
 from typing import Iterable
@@ -32,12 +33,12 @@ def get_vela_config() -> Path:
 
 
 def get_profiles_file() -> Path:
-    """Get the Ethos-U profiles file."""
+    """Get the profiles file."""
     return get_mlia_resources() / "profiles.json"
 
 
 def get_profiles_data() -> Dict[str, Dict[str, Any]]:
-    """Get the Ethos-U profile values as a dictionary."""
+    """Get the profile values as a dictionary."""
     with open(get_profiles_file(), encoding="utf-8") as json_file:
         profiles = json.load(json_file)
 
@@ -47,19 +48,28 @@ def get_profiles_data() -> Dict[str, Dict[str, Any]]:
         return profiles
 
 
-def get_profile(target: str) -> Dict[str, Any]:
+def get_profile(target_profile: str) -> Dict[str, Any]:
     """Get settings for the provided target profile."""
+    if not target_profile:
+        raise Exception("Target profile is not provided")
+
     profiles = get_profiles_data()
 
-    if target not in profiles:
-        raise Exception(f"Unable to find target profile {target}")
-
-    return profiles[target]
+    try:
+        return profiles[target_profile]
+    except KeyError as err:
+        raise Exception(f"Unable to find target profile {target_profile}") from err
 
 
 def get_supported_profile_names() -> List[str]:
     """Get the supported Ethos-U profile names."""
     return list(get_profiles_data().keys())
+
+
+def get_target(target_profile: str) -> str:
+    """Return target for the provided target_profile."""
+    profile_data = get_profile(target_profile)
+    return cast(str, profile_data["target"])
 
 
 @contextmanager

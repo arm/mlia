@@ -87,7 +87,7 @@ class DefaultWorkflowExecutor(WorkflowExecutor):
         collectors: Sequence[DataCollector],
         analyzers: Sequence[DataAnalyzer],
         producers: Sequence[AdviceProducer],
-        before_start_events: Optional[Sequence[Event]] = None,
+        startup_events: Optional[Sequence[Event]] = None,
     ):
         """Init default workflow executor.
 
@@ -95,14 +95,14 @@ class DefaultWorkflowExecutor(WorkflowExecutor):
         :param collectors: List of the data collectors
         :param analyzers: List of the data analyzers
         :param producers: List of the advice producers
-        :param before_start_events: Optional list of the custom events that
+        :param startup_events: Optional list of the custom events that
                should be published before start of the worfkow execution.
         """
         self.context = context
         self.collectors = collectors
         self.analyzers = analyzers
         self.producers = producers
-        self.before_start_events = before_start_events
+        self.startup_events = startup_events
 
     def run(self) -> None:
         """Run the workflow."""
@@ -125,7 +125,7 @@ class DefaultWorkflowExecutor(WorkflowExecutor):
 
     def before_start(self) -> None:
         """Run actions before start of the workflow execution."""
-        events = self.before_start_events or []
+        events = self.startup_events or []
         for event in events:
             self.publish(event)
 

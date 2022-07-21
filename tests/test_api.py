@@ -7,14 +7,16 @@ from unittest.mock import MagicMock
 import pytest
 
 from mlia.api import get_advice
+from mlia.api import get_advisor
 from mlia.core.common import AdviceCategory
 from mlia.core.context import Context
 from mlia.core.context import ExecutionContext
+from mlia.devices.ethosu.advisor import EthosUInferenceAdvisor
 
 
 def test_get_advice_no_target_provided(test_keras_model: Path) -> None:
     """Test getting advice when no target provided."""
-    with pytest.raises(Exception, match="Target is not provided"):
+    with pytest.raises(Exception, match="Target profile is not provided"):
         get_advice(None, test_keras_model, "all")  # type: ignore
 
 
@@ -78,7 +80,7 @@ def test_get_advice(
 ) -> None:
     """Test getting advice with valid parameters."""
     advisor_mock = MagicMock()
-    monkeypatch.setattr("mlia.api._get_advisor", MagicMock(return_value=advisor_mock))
+    monkeypatch.setattr("mlia.api.get_advisor", MagicMock(return_value=advisor_mock))
 
     get_advice(
         "ethos-u55-256",
@@ -92,5 +94,12 @@ def test_get_advice(
     assert isinstance(context, Context)
     assert context.advice_category == expected_category
 
-    assert context.event_handlers is not None
-    assert context.config_parameters is not None
+
+def test_get_advisor(
+    test_keras_model: Path,
+) -> None:
+    """Test function for getting the advisor."""
+    ethos_u55_advisor = get_advisor(
+        ExecutionContext(), "ethos-u55-256", str(test_keras_model)
+    )
+    assert isinstance(ethos_u55_advisor, EthosUInferenceAdvisor)

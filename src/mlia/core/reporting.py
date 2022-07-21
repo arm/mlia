@@ -760,3 +760,14 @@ def _apply_format_parameters(
         return report
 
     return wrapper
+
+
+def resolve_output_format(output: Optional[PathOrFileLike]) -> OutputFormat:
+    """Resolve output format based on the output name."""
+    if isinstance(output, (str, Path)):
+        format_from_filename = Path(output).suffix.lstrip(".")
+
+        if format_from_filename in ["json", "csv"]:
+            return cast(OutputFormat, format_from_filename)
+
+    return "plain_text"

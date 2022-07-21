@@ -374,7 +374,7 @@ def report_advice(advice: List[Advice]) -> Report:
     )
 
 
-def find_appropriate_formatter(data: Any) -> Callable[[Any], Report]:
+def ethos_u_formatters(data: Any) -> Callable[[Any], Report]:
     """Find appropriate formatter for the provided data."""
     if isinstance(data, PerformanceMetrics) or is_list_of(data, PerformanceMetrics, 2):
         return report_perf_metrics
@@ -392,7 +392,7 @@ def find_appropriate_formatter(data: Any) -> Callable[[Any], Report]:
         return report_device_details
 
     if isinstance(data, (list, tuple)):
-        formatters = [find_appropriate_formatter(item) for item in data]
+        formatters = [ethos_u_formatters(item) for item in data]
         return CompoundFormatter(formatters)
 
     raise Exception(f"Unable to find appropriate formatter for {data}")

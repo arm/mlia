@@ -18,7 +18,7 @@ from mlia.core.events import EventHandler
 from mlia.core.events import ExecutionFinishedEvent
 from mlia.core.events import ExecutionStartedEvent
 from mlia.core.events import stage
-from mlia.core.events import SystemEventsHandler
+from mlia.core.handlers import SystemEventsHandler
 
 
 @dataclass

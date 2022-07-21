@@ -22,7 +22,7 @@ from mlia.devices.ethosu.config import EthosUConfiguration
 from mlia.devices.ethosu.performance import MemoryUsage
 from mlia.devices.ethosu.performance import NPUCycles
 from mlia.devices.ethosu.performance import PerformanceMetrics
-from mlia.devices.ethosu.reporters import find_appropriate_formatter
+from mlia.devices.ethosu.reporters import ethos_u_formatters
 from mlia.devices.ethosu.reporters import report_device_details
 from mlia.devices.ethosu.reporters import report_operators
 from mlia.devices.ethosu.reporters import report_perf_metrics
@@ -410,7 +410,7 @@ def test_get_reporter(tmp_path: Path) -> None:
     )
 
     output = tmp_path / "output.json"
-    with get_reporter("json", output, find_appropriate_formatter) as reporter:
+    with get_reporter("json", output, ethos_u_formatters) as reporter:
         assert isinstance(reporter, Reporter)
 
         with pytest.raises(
