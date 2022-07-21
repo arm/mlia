@@ -16,9 +16,13 @@ from mlia.utils.filesystem import get_supported_profile_names
 from mlia.utils.types import is_number
 
 
-def add_target_options(parser: argparse.ArgumentParser) -> None:
+def add_target_options(
+    parser: argparse.ArgumentParser, profiles_to_skip: Optional[List[str]] = None
+) -> None:
     """Add target specific options."""
     target_profiles = get_supported_profile_names()
+    if profiles_to_skip:
+        target_profiles = [tp for tp in target_profiles if tp not in profiles_to_skip]
 
     default_target_profile = None
     default_help = ""

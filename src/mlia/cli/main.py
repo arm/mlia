@@ -4,6 +4,7 @@
 import argparse
 import logging
 import sys
+from functools import partial
 from inspect import signature
 from pathlib import Path
 from typing import Dict
@@ -44,6 +45,7 @@ Supported targets:
 
  - Ethos-U55 <op compatibility, perf estimation, model opt>
  - Ethos-U65 <op compatibility, perf estimation, model opt>
+ - TOSA      <op compatibility>
 
 """.strip()
 
@@ -79,7 +81,7 @@ def get_commands() -> List[CommandInfo]:
             performance,
             ["perf"],
             [
-                add_target_options,
+                partial(add_target_options, profiles_to_skip=["tosa"]),
                 add_tflite_model_options,
                 add_output_options,
                 add_debug_options,
@@ -90,7 +92,7 @@ def get_commands() -> List[CommandInfo]:
             optimization,
             ["opt"],
             [
-                add_target_options,
+                partial(add_target_options, profiles_to_skip=["tosa"]),
                 add_keras_model_options,
                 add_multi_optimization_options,
                 add_output_options,
