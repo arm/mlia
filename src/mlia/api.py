@@ -15,6 +15,7 @@ from mlia.core.advisor import InferenceAdvisor
 from mlia.core.common import AdviceCategory
 from mlia.core.context import ExecutionContext
 from mlia.devices.ethosu.advisor import configure_and_get_ethosu_advisor
+from mlia.devices.tosa.advisor import configure_and_get_tosa_advisor
 from mlia.utils.filesystem import get_target
 
 
@@ -104,6 +105,7 @@ def get_advisor(
     target_factories = {
         "ethos-u55": configure_and_get_ethosu_advisor,
         "ethos-u65": configure_and_get_ethosu_advisor,
+        "tosa": configure_and_get_tosa_advisor,
     }
 
     try:

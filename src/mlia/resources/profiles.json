@@ -16,5 +16,8 @@
         "mac": 512,
         "system_config": "Ethos_U65_High_End",
         "memory_mode": "Dedicated_Sram"
+    },
+    "tosa": {
+        "target": "tosa"
     }
 }

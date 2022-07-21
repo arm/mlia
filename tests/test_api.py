@@ -12,6 +12,7 @@ from mlia.core.common import AdviceCategory
 from mlia.core.context import Context
 from mlia.core.context import ExecutionContext
 from mlia.devices.ethosu.advisor import EthosUInferenceAdvisor
+from mlia.devices.tosa.advisor import TOSAInferenceAdvisor
 
 
 def test_get_advice_no_target_provided(test_keras_model: Path) -> None:
@@ -103,3 +104,6 @@ def test_get_advisor(
         ExecutionContext(), "ethos-u55-256", str(test_keras_model)
     )
     assert isinstance(ethos_u55_advisor, EthosUInferenceAdvisor)
+
+    tosa_advisor = get_advisor(ExecutionContext(), "tosa", str(test_keras_model))
+    assert isinstance(tosa_advisor, TOSAInferenceAdvisor)
