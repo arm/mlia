@@ -1,9 +1,14 @@
 # SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
-"""Module for Corstone based FVPs."""
+"""Module for Corstone based FVPs.
+
+The import of subprocess module raises a B404 bandit error. MLIA usage of
+subprocess is needed and can be considered safe hence disabling the security
+check.
+"""
 import logging
 import platform
-import subprocess
+import subprocess  # nosec
 import tarfile
 from dataclasses import dataclass
 from pathlib import Path
@@ -24,6 +29,7 @@ from mlia.utils.filesystem import copy_all
 from mlia.utils.filesystem import get_mlia_resources
 from mlia.utils.filesystem import temp_directory
 from mlia.utils.filesystem import working_directory
+
 
 logger = logging.getLogger(__name__)
 
@@ -296,7 +302,11 @@ class Corstone300Installer:
                         "--i-agree-to-the-contained-eula",
                     ]
 
-                subprocess.check_call(fvp_install_cmd)
+                # The following line raises a B603 error for bandit. In this
+                # specific case, the input is pretty much static and cannot be
+                # changed byt the user hence disabling the security check for
+                # this instance
+                subprocess.check_call(fvp_install_cmd)  # nosec
             except subprocess.CalledProcessError as err:
                 raise Exception(
                     "Error occurred during Corstone-300 installation"

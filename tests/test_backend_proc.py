@@ -22,26 +22,13 @@ from mlia.backend.proc import terminate_command
 class TestShellCommand:
     """Sample class for collecting tests."""
 
-    def test_shellcommand_default_value(self) -> None:
-        """Test the instantiation of the class ShellCommand with no parameter."""
-        shell_command = ShellCommand()
-        assert shell_command.base_log_path == "/tmp"
-
-    @pytest.mark.parametrize(
-        "base_log_path,expected", [("/test", "/test"), ("/asd", "/asd")]
-    )
-    def test_shellcommand_with_param(self, base_log_path: str, expected: str) -> None:
-        """Test init ShellCommand with different parameters."""
-        shell_command = ShellCommand(base_log_path)
-        assert shell_command.base_log_path == expected
-
     def test_run_ls(self, monkeypatch: Any) -> None:
         """Test a simple ls command."""
         mock_command = mock.MagicMock()
         monkeypatch.setattr(Command, "bake", mock_command)
 
         mock_get_stdout_stderr_paths = mock.MagicMock()
-        mock_get_stdout_stderr_paths.return_value = ("/tmp/std.out", "/tmp/std.err")
+        mock_get_stdout_stderr_paths.return_value = ("/path/std.out", "/path/std.err")
         monkeypatch.setattr(
             ShellCommand, "get_stdout_stderr_paths", mock_get_stdout_stderr_paths
         )
@@ -50,7 +37,11 @@ class TestShellCommand:
         shell_command.run("ls", "-l")
         assert mock_command.mock_calls[0] == mock.call(("-l",))
         assert mock_command.mock_calls[1] == mock.call()(
-            _bg=True, _err="/tmp/std.err", _out="/tmp/std.out", _tee=True, _bg_exc=False
+            _bg=True,
+            _err="/path/std.err",
+            _out="/path/std.out",
+            _tee=True,
+            _bg_exc=False,
         )
 
     def test_run_command_not_found(self) -> None:
@@ -59,22 +50,14 @@ class TestShellCommand:
         with pytest.raises(CommandNotFound):
             shell_command.run("lsl", "-l")
 
-    def test_get_stdout_stderr_paths_valid_path(self) -> None:
+    def test_get_stdout_stderr_paths(self) -> None:
         """Test the method to get files to store stdout and stderr."""
-        valid_path = "/tmp"
-        shell_command = ShellCommand(valid_path)
-        out, err = shell_command.get_stdout_stderr_paths(valid_path, "cmd")
+        shell_command = ShellCommand()
+        out, err = shell_command.get_stdout_stderr_paths("cmd")
         assert out.exists() and out.is_file()
         assert err.exists() and err.is_file()
         assert "cmd" in out.name
         assert "cmd" in err.name
-
-    def test_get_stdout_stderr_paths_not_invalid_path(self) -> None:
-        """Test the method to get output files with an invalid path."""
-        invalid_path = "/invalid/foo/bar"
-        shell_command = ShellCommand(invalid_path)
-        with pytest.raises(FileNotFoundError):
-            shell_command.get_stdout_stderr_paths(invalid_path, "cmd")
 
 
 @mock.patch("builtins.print")
@@ -198,6 +181,9 @@ class TestRunAndWait:
 def test_parse_command() -> None:
     """Test parse_command function."""
     assert parse_command("1.sh") == ["bash", "1.sh"]
-    assert parse_command("1.sh", shell="sh") == ["sh", "1.sh"]
+    # The following line raises a B604  bandit error. In our case we specify
+    # what shell to use instead of using the default one. It is a safe use
+    # we are ignoring this instance.
+    assert parse_command("1.sh", shell="sh") == ["sh", "1.sh"]  # nosec
     assert parse_command("command") == ["command"]
     assert parse_command("command 123 --param=1") == ["command", "123", "--param=1"]

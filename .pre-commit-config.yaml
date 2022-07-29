@@ -81,6 +81,12 @@ repos:
     - id: blocklint
       exclude: setup.cfg
 
+- repo: https://github.com/PyCQA/bandit
+  rev: '1.7.4'
+  hooks:
+    - id: bandit
+      args: ["--skip", "B101"]
+
 - repo: local
   hooks:
     - id: mypy

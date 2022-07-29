@@ -9,6 +9,7 @@ import datetime
 import logging
 import shlex
 import signal
+import tempfile
 import time
 from pathlib import Path
 from typing import Any
@@ -32,13 +33,6 @@ class CommandFailedException(Exception):
 
 class ShellCommand:
     """Wrapper class for shell commands."""
-
-    def __init__(self, base_log_path: str = "/tmp") -> None:
-        """Initialise the class.
-
-        base_log_path: it is the base directory where logs will be stored
-        """
-        self.base_log_path = base_log_path
 
     def run(
         self,
@@ -73,18 +67,15 @@ class ShellCommand:
 
         out, err = _out, _err
         if not _out and not _err:
-            out, err = [
-                str(item)
-                for item in self.get_stdout_stderr_paths(self.base_log_path, cmd)
-            ]
+            out, err = [str(item) for item in self.get_stdout_stderr_paths(cmd)]
 
         return command(_out=out, _err=err, _tee=_tee, _bg=_bg, _bg_exc=False)
 
     @classmethod
-    def get_stdout_stderr_paths(cls, base_log_path: str, cmd: str) -> Tuple[Path, Path]:
+    def get_stdout_stderr_paths(cls, cmd: str) -> Tuple[Path, Path]:
         """Construct and returns the paths of stdout/stderr files."""
         timestamp = datetime.datetime.now().timestamp()
-        base_path = Path(base_log_path)
+        base_path = Path(tempfile.mkdtemp(prefix="mlia-", suffix=f"{timestamp}"))
         base = base_path / f"{valid_for_filename(cmd, '_')}_{timestamp}"
         stdout = base.with_suffix(".out")
         stderr = base.with_suffix(".err")
@@ -106,15 +97,6 @@ def parse_command(command: str, shell: str = "bash") -> List[str]:
         cmd = shell
 
     return [cmd] + args
-
-
-def get_stdout_stderr_paths(
-    command: str, base_log_path: str = "/tmp"
-) -> Tuple[Path, Path]:
-    """Construct and returns the paths of stdout/stderr files."""
-    cmd, *_ = parse_command(command)
-
-    return ShellCommand.get_stdout_stderr_paths(base_log_path, cmd)
 
 
 def execute_command(  # pylint: disable=invalid-name
