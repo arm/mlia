@@ -104,6 +104,11 @@ Please, install it into the same environment as MLIA using next command:
 pip install mlia[tosa]
 ```
 
+TOSA checker resources:
+
+* Source code: <https://review.mlplatform.org/tosa/tosa_checker>
+* PyPi package <https://pypi.org/project/tosa-checker/>
+
 ## Usage
 
 After the initial setup, you can start the program by opening your terminal and
@@ -352,6 +357,7 @@ Additional useful information:
 
 * [Corstone™-300](https://developer.arm.com/Processors/Corstone-300)
 * [Corstone™-310](https://developer.arm.com/Processors/Corstone-310)
+* [TOSA Checker](https://review.mlplatform.org/tosa/tosa_checker)
 
 ## License
 
