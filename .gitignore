@@ -13,3 +13,4 @@ e2e_config
 mlia_output
 report
 .ipynb_checkpoints
+.tox
