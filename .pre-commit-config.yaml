@@ -104,14 +104,3 @@ repos:
       entry: pylint
       language: system
       types: [python]
-
-- repo: local
-  hooks:
-    - id: pytest-cov
-      name: pytest coverage
-      stages: [push]
-      language: system
-      entry: pytest --cov=mlia --cov-report term-missing --cov-fail-under=95 tests
-      types: [python]
-      pass_filenames: false
-      verbose: true
