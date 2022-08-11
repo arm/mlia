@@ -106,7 +106,7 @@ pip install mlia[tosa]
 
 TOSA checker resources:
 
-* Source code: <https://review.mlplatform.org/tosa/tosa_checker>
+* Source code: <https://review.mlplatform.org/admin/repos/tosa/tosa_checker>
 * PyPi package <https://pypi.org/project/tosa-checker/>
 
 ## Usage
@@ -236,6 +236,15 @@ mlia performance ~/models/mobilenet_v1_1.0_224_quant.tflite \
 
 * --verbose: Produce verbose output (for debugging purposes).
 
+##### Evaluation options
+
+* --evaluate-on: Backends to use for evaluation.
+  * default: Vela
+  * options:
+    * Vela
+    * Corstone-300
+    * Corstone-310
+
 ##### optional arguments
 
 * -h/--help: Show the general help document and exit.
@@ -273,9 +282,6 @@ mlia optimization \
 * --optimization-target: Target for optimization (for pruning this is sparsity
   between (0,1), for clustering this is the number of clusters
   (positive integer)) [required].
-* --layers-to-optimize: Name of the layers to optimize (separated by space).
-  Example: conv1 conv2 conv3
-  * default: every layer
 
 ##### Target profile options
 
@@ -286,6 +292,15 @@ mlia optimization \
     * ethos-u55-256
     * ethos-u55-128
     * ethos-u65-512
+
+##### Evaluation options
+
+* --evaluate-on: Backends to use for evaluation.
+  * default: Vela
+  * options:
+    * Vela
+    * Corstone-300
+    * Corstone-310
 
 ##### Debug options
 
@@ -357,7 +372,7 @@ Additional useful information:
 
 * [Corstone™-300](https://developer.arm.com/Processors/Corstone-300)
 * [Corstone™-310](https://developer.arm.com/Processors/Corstone-310)
-* [TOSA Checker](https://review.mlplatform.org/tosa/tosa_checker)
+* [TOSA Checker](https://review.mlplatform.org/admin/repos/tosa/tosa_checker)
 
 ## License
 
