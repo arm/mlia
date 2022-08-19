@@ -71,6 +71,25 @@ virtual environment.
 *Please note*: Backends cannot be removed once installed.
 Consider creating a new environment and reinstall backends when needed.
 
+### Backend compatibility table
+
+Not all backends work on any platform. Please refer to the compatibility table
+below:
+
+```
++---------------------------------------------------------------------------+
+| Backend      | Linux                  | Windows        | Python           |
++============================================================================
+| Corstone-300 | x86_64                 | Not compatible | Python>=3.8      |
++----------------------------------------------------------------------------
+| Corstone-310 | x86_64                 | Not compatible | Python>=3.8      |
++----------------------------------------------------------------------------
+| TOSA checker | x86_64 (manylinux2014) | Not compatible | 3.7<=Python<=3.9 |
++----------------------------------------------------------------------------
+| Vela         | x86_64                 | Windows 10     | Python~=3.7      |
++---------------------------------------------------------------------------+
+```
+
 ### Using Corstone™-300
 
 To install Corstone™-300 as a backend for Ethos™-U both options (`--download`
@@ -387,3 +406,4 @@ Keras™ is a trademark by François Chollet.
 Linux® is the registered trademark of Linus Torvalds in the U.S. and elsewhere.
 Python® is a registered trademark of the PSF.
 Ubuntu® is a registered trademark of Canonical.
+Microsoft and Windows are trademarks of the Microsoft group of companies.
