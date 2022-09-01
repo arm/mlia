@@ -46,6 +46,7 @@ def test_profiles_data() -> None:
         "ethos-u55-256",
         "ethos-u55-128",
         "ethos-u65-512",
+        "ethos-u65-256",
         "tosa",
     ]
 
@@ -73,6 +74,7 @@ def test_get_supported_profile_names() -> None:
         "ethos-u55-256",
         "ethos-u55-128",
         "ethos-u65-512",
+        "ethos-u65-256",
         "tosa",
     ]
 

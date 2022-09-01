@@ -17,6 +17,12 @@
         "system_config": "Ethos_U65_High_End",
         "memory_mode": "Dedicated_Sram"
     },
+    "ethos-u65-256": {
+        "target": "ethos-u65",
+        "mac": 256,
+        "system_config": "Ethos_U65_High_End",
+        "memory_mode": "Dedicated_Sram"
+    },
     "tosa": {
         "target": "tosa"
     }

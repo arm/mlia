@@ -168,6 +168,8 @@ There are a number of predefined profiles for Ethos™-U with following attribut
 | ethos-u55-128 | 128 | Ethos_U55_High_End_Embedded | Shared_Sram    |
 +---------------------------------------------------------------------
 | ethos-u65-512 | 512 | Ethos_U65_High_End          | Dedicated_Sram |
++---------------------------------------------------------------------
+| ethos-u65-256 | 256 | Ethos_U65_High_End          | Dedicated_Sram |
 +--------------------------------------------------------------------+
 ```
 
@@ -201,6 +203,7 @@ mlia operators --target-profile ethos-u55-256 ~/models/mobilenet_v1_1.0_224_quan
     * ethos-u55-256
     * ethos-u55-128
     * ethos-u65-512
+    * ethos-u65-256
     * tosa
 
 ##### Output options
@@ -244,6 +247,7 @@ mlia performance ~/models/mobilenet_v1_1.0_224_quant.tflite \
     * ethos-u55-256
     * ethos-u55-128
     * ethos-u65-512
+    * ethos-u65-256
 
 ##### Output options
 
@@ -311,6 +315,7 @@ mlia optimization \
     * ethos-u55-256
     * ethos-u55-128
     * ethos-u65-512
+    * ethos-u65-256
 
 ##### Evaluation options
 
@@ -369,6 +374,7 @@ mlia all_tests --output ./report.json ~/models/ds_cnn_l.h5
     * ethos-u55-256
     * ethos-u55-128
     * ethos-u65-512
+    * ethos-u65-256
     * tosa
 
 ##### Output options
