@@ -255,19 +255,27 @@ class DefaultInstallationManager(InstallationManager, InstallationFiltersMixin):
     def show_env_details(self) -> None:
         """Print current state of the execution environment."""
         if installed := self.already_installed():
-            logger.info("Installed backends:\n")
-
-            for installation in installed:
-                logger.info("  - %s", installation.name)
+            self._print_installation_list("Installed backends:", installed)
 
         if could_be_installed := self.ready_for_installation():
-            logger.info("Following backends could be installed:")
-
-            for installation in could_be_installed:
-                logger.info("  - %s", installation.name)
+            self._print_installation_list(
+                "Following backends could be installed:",
+                could_be_installed,
+                new_section=bool(installed),
+            )
 
         if not installed and not could_be_installed:
             logger.info("No backends installed")
+
+    @staticmethod
+    def _print_installation_list(
+        header: str, installations: List[Installation], new_section: bool = False
+    ) -> None:
+        """Print list of the installations."""
+        logger.info("%s%s\n", "\n" if new_section else "", header)
+
+        for installation in installations:
+            logger.info("  - %s", installation.name)
 
     def _install(
         self,
