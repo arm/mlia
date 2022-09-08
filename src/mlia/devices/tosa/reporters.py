@@ -1,9 +1,10 @@
 # SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Reports module."""
+from __future__ import annotations
+
 from typing import Any
 from typing import Callable
-from typing import List
 
 from mlia.core.advice_generation import Advice
 from mlia.core.reporting import Cell
@@ -30,7 +31,7 @@ def report_device(device: TOSAConfiguration) -> Report:
     )
 
 
-def report_advice(advice: List[Advice]) -> Report:
+def report_advice(advice: list[Advice]) -> Report:
     """Generate report for the advice."""
     return Table(
         columns=[
@@ -43,7 +44,7 @@ def report_advice(advice: List[Advice]) -> Report:
     )
 
 
-def report_tosa_operators(ops: List[Operator]) -> Report:
+def report_tosa_operators(ops: list[Operator]) -> Report:
     """Generate report for the operators."""
     return Table(
         [

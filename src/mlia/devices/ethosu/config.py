@@ -1,9 +1,10 @@
 # SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Ethos-U configuration."""
+from __future__ import annotations
+
 import logging
 from typing import Any
-from typing import Dict
 
 from mlia.devices.config import IPConfiguration
 from mlia.tools.vela_wrapper import resolve_compiler_config
@@ -38,7 +39,7 @@ class EthosUConfiguration(IPConfiguration):
         )
 
     @property
-    def resolved_compiler_config(self) -> Dict[str, Any]:
+    def resolved_compiler_config(self) -> dict[str, Any]:
         """Resolve compiler configuration."""
         return resolve_compiler_config(self.compiler_options)
 
@@ -63,7 +64,7 @@ def get_target(target_profile: str) -> EthosUConfiguration:
     return EthosUConfiguration(target_profile)
 
 
-def _check_target_data_complete(target_data: Dict[str, Any]) -> None:
+def _check_target_data_complete(target_data: dict[str, Any]) -> None:
     """Check if profile contains all needed data."""
     mandatory_keys = {"target", "mac", "system_config", "memory_mode"}
     missing_keys = sorted(mandatory_keys - target_data.keys())

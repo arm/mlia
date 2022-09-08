@@ -1,7 +1,8 @@
 # SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for cli.config module."""
-from typing import List
+from __future__ import annotations
+
 from unittest.mock import MagicMock
 
 import pytest
@@ -30,8 +31,8 @@ from mlia.cli.config import is_corstone_backend
 )
 def test_get_default_backends(
     monkeypatch: pytest.MonkeyPatch,
-    available_backends: List[str],
-    expected_default_backends: List[str],
+    available_backends: list[str],
+    expected_default_backends: list[str],
 ) -> None:
     """Test function get_default backends."""
     monkeypatch.setattr(

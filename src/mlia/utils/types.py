@@ -1,11 +1,12 @@
 # SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Types related utility functions."""
+from __future__ import annotations
+
 from typing import Any
-from typing import Optional
 
 
-def is_list_of(data: Any, cls: type, elem_num: Optional[int] = None) -> bool:
+def is_list_of(data: Any, cls: type, elem_num: int | None = None) -> bool:
     """Check if data is a list of object of the same class."""
     return (
         isinstance(data, (tuple, list))
@@ -24,7 +25,7 @@ def is_number(value: str) -> bool:
     return True
 
 
-def parse_int(value: Any, default: Optional[int] = None) -> Optional[int]:
+def parse_int(value: Any, default: int | None = None) -> int | None:
     """Parse integer value."""
     try:
         return int(value)

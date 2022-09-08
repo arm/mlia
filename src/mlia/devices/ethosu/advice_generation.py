@@ -1,9 +1,9 @@
 # SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Ethos-U advice generation."""
+from __future__ import annotations
+
 from functools import singledispatchmethod
-from typing import List
-from typing import Union
 
 from mlia.core.advice_generation import Advice
 from mlia.core.advice_generation import advice_category
@@ -146,8 +146,8 @@ class EthosUAdviceProducer(FactBasedAdviceProducer):
 
     @staticmethod
     def get_next_optimization_targets(
-        opt_type: List[OptimizationSettings],
-    ) -> List[OptimizationSettings]:
+        opt_type: list[OptimizationSettings],
+    ) -> list[OptimizationSettings]:
         """Get next optimization targets."""
         next_targets = (item.next_target() for item in opt_type)
 
@@ -173,7 +173,7 @@ class EthosUStaticAdviceProducer(ContextAwareAdviceProducer):
     def produce_advice(self, data_item: DataItem) -> None:
         """Do not process passed data items."""
 
-    def get_advice(self) -> Union[Advice, List[Advice]]:
+    def get_advice(self) -> Advice | list[Advice]:
         """Return predefined advice based on category."""
         advice_per_category = {
             AdviceCategory.PERFORMANCE: [

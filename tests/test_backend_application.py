@@ -2,11 +2,12 @@
 # SPDX-License-Identifier: Apache-2.0
 # pylint: disable=no-self-use
 """Tests for the application backend."""
+from __future__ import annotations
+
 from collections import Counter
 from contextlib import ExitStack as does_not_raise
 from pathlib import Path
 from typing import Any
-from typing import List
 from unittest.mock import MagicMock
 
 import pytest
@@ -289,7 +290,7 @@ class TestApplication:
         ),
     )
     def test_remove_unused_params(
-        self, config: ApplicationConfig, expected_params: List[Param]
+        self, config: ApplicationConfig, expected_params: list[Param]
     ) -> None:
         """Test mod remove_unused_parameter."""
         application = Application(config)

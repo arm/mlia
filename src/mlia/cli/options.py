@@ -1,13 +1,12 @@
 # SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Module for the CLI options."""
+from __future__ import annotations
+
 import argparse
 from pathlib import Path
 from typing import Any
 from typing import Callable
-from typing import Dict
-from typing import List
-from typing import Optional
 
 from mlia.cli.config import get_available_backends
 from mlia.cli.config import get_default_backends
@@ -17,7 +16,7 @@ from mlia.utils.types import is_number
 
 
 def add_target_options(
-    parser: argparse.ArgumentParser, profiles_to_skip: Optional[List[str]] = None
+    parser: argparse.ArgumentParser, profiles_to_skip: list[str] | None = None
 ) -> None:
     """Add target specific options."""
     target_profiles = get_supported_profile_names()
@@ -217,8 +216,8 @@ def parse_optimization_parameters(
     optimization_type: str,
     optimization_target: str,
     sep: str = ",",
-    layers_to_optimize: Optional[List[str]] = None,
-) -> List[Dict[str, Any]]:
+    layers_to_optimize: list[str] | None = None,
+) -> list[dict[str, Any]]:
     """Parse provided optimization parameters."""
     if not optimization_type:
         raise Exception("Optimization type is not provided")
@@ -250,7 +249,7 @@ def parse_optimization_parameters(
     return optimizer_params
 
 
-def get_target_profile_opts(device_args: Optional[Dict]) -> List[str]:
+def get_target_profile_opts(device_args: dict | None) -> list[str]:
     """Get non default values passed as parameters for the target profile."""
     if not device_args:
         return []
@@ -270,7 +269,7 @@ def get_target_profile_opts(device_args: Optional[Dict]) -> List[str]:
         if arg_name in args and vars(args)[arg_name] != arg_value
     ]
 
-    def construct_param(name: str, value: Any) -> List[str]:
+    def construct_param(name: str, value: Any) -> list[str]:
         """Construct parameter."""
         if isinstance(value, list):
             return [str(item) for v in value for item in [name, v]]

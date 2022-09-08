@@ -1,10 +1,11 @@
 # SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Output consumers module."""
+from __future__ import annotations
+
 import base64
 import json
 import re
-from typing import List
 from typing import Protocol
 from typing import runtime_checkable
 
@@ -37,7 +38,7 @@ class Base64OutputConsumer(OutputConsumer):
     def __init__(self) -> None:
         """Set up the regular expression to extract tagged strings."""
         self._regex = re.compile(rf"<{self.TAG_NAME}>(.*)</{self.TAG_NAME}>")
-        self.parsed_output: List = []
+        self.parsed_output: list = []
 
     def feed(self, line: str) -> bool:
         """

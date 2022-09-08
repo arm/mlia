@@ -16,11 +16,11 @@ be configured. Function 'setup_logging' from module
 >>> mlia.all_tests(ExecutionContext(working_dir="mlia_output"), "ethos-u55-256",
                    "path/to/model")
 """
+from __future__ import annotations
+
 import logging
 from pathlib import Path
 from typing import cast
-from typing import List
-from typing import Optional
 
 from mlia.api import ExecutionContext
 from mlia.api import get_advice
@@ -42,8 +42,8 @@ def all_tests(
     model: str,
     optimization_type: str = "pruning,clustering",
     optimization_target: str = "0.5,32",
-    output: Optional[PathOrFileLike] = None,
-    evaluate_on: Optional[List[str]] = None,
+    output: PathOrFileLike | None = None,
+    evaluate_on: list[str] | None = None,
 ) -> None:
     """Generate a full report on the input model.
 
@@ -99,8 +99,8 @@ def all_tests(
 def operators(
     ctx: ExecutionContext,
     target_profile: str,
-    model: Optional[str] = None,
-    output: Optional[PathOrFileLike] = None,
+    model: str | None = None,
+    output: PathOrFileLike | None = None,
     supported_ops_report: bool = False,
 ) -> None:
     """Print the model's operator list.
@@ -149,8 +149,8 @@ def performance(
     ctx: ExecutionContext,
     target_profile: str,
     model: str,
-    output: Optional[PathOrFileLike] = None,
-    evaluate_on: Optional[List[str]] = None,
+    output: PathOrFileLike | None = None,
+    evaluate_on: list[str] | None = None,
 ) -> None:
     """Print the model's performance stats.
 
@@ -192,9 +192,9 @@ def optimization(
     model: str,
     optimization_type: str,
     optimization_target: str,
-    layers_to_optimize: Optional[List[str]] = None,
-    output: Optional[PathOrFileLike] = None,
-    evaluate_on: Optional[List[str]] = None,
+    layers_to_optimize: list[str] | None = None,
+    output: PathOrFileLike | None = None,
+    evaluate_on: list[str] | None = None,
 ) -> None:
     """Show the performance improvements (if any) after applying the optimizations.
 
@@ -245,9 +245,9 @@ def optimization(
 
 def backend(
     backend_action: str,
-    path: Optional[Path] = None,
+    path: Path | None = None,
     download: bool = False,
-    name: Optional[str] = None,
+    name: str | None = None,
     i_agree_to_the_contained_eula: bool = False,
     noninteractive: bool = False,
 ) -> None:

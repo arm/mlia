@@ -1,12 +1,13 @@
 # SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Test for module utils/tflite_metrics."""
+from __future__ import annotations
+
 import os
 import tempfile
 from math import isclose
 from pathlib import Path
 from typing import Generator
-from typing import List
 
 import numpy as np
 import pytest
@@ -31,7 +32,7 @@ def _dummy_keras_model() -> tf.keras.Model:
 
 
 def _sparse_binary_keras_model() -> tf.keras.Model:
-    def get_sparse_weights(shape: List[int]) -> np.ndarray:
+    def get_sparse_weights(shape: list[int]) -> np.ndarray:
         weights = np.zeros(shape)
         with np.nditer(weights, op_flags=["writeonly"]) as weight_iterator:
             for idx, value in enumerate(weight_iterator):

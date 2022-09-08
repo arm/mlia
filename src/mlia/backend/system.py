@@ -1,12 +1,12 @@
 # SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """System backend module."""
+from __future__ import annotations
+
 from pathlib import Path
 from typing import Any
 from typing import cast
-from typing import Dict
 from typing import List
-from typing import Tuple
 
 from mlia.backend.common import Backend
 from mlia.backend.common import ConfigurationException
@@ -33,7 +33,7 @@ class System(Backend):
     def _setup_reporting(self, config: SystemConfig) -> None:
         self.reporting = config.get("reporting")
 
-    def run(self, command: str) -> Tuple[int, bytearray, bytearray]:
+    def run(self, command: str) -> tuple[int, bytearray, bytearray]:
         """
         Run command on the system.
 
@@ -63,7 +63,7 @@ class System(Backend):
 
         return super().__eq__(other) and self.name == other.name
 
-    def get_details(self) -> Dict[str, Any]:
+    def get_details(self) -> dict[str, Any]:
         """Return a dictionary with all relevant information of a System."""
         output = {
             "type": "system",
@@ -76,12 +76,12 @@ class System(Backend):
         return output
 
 
-def get_available_systems_directory_names() -> List[str]:
+def get_available_systems_directory_names() -> list[str]:
     """Return a list of directory names for all avialable systems."""
     return [entry.name for entry in get_backend_directories("systems")]
 
 
-def get_available_systems() -> List[System]:
+def get_available_systems() -> list[System]:
     """Return a list with all available systems."""
     available_systems = []
     for config_json in get_backend_configs("systems"):

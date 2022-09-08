@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for module advice_generation."""
-from typing import List
+from __future__ import annotations
 
 import pytest
 
@@ -46,7 +46,7 @@ def test_advice_generation() -> None:
 )
 def test_advice_category_decorator(
     category: AdviceCategory,
-    expected_advice: List[Advice],
+    expected_advice: list[Advice],
     dummy_context: Context,
 ) -> None:
     """Test for advice_category decorator."""

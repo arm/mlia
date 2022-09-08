@@ -5,6 +5,8 @@
 This module contains common interfaces/classess shared across
 core module.
 """
+from __future__ import annotations
+
 from abc import ABC
 from abc import abstractmethod
 from enum import auto
@@ -30,7 +32,7 @@ class AdviceCategory(Flag):
     ALL = OPERATORS | PERFORMANCE | OPTIMIZATION
 
     @classmethod
-    def from_string(cls, value: str) -> "AdviceCategory":
+    def from_string(cls, value: str) -> AdviceCategory:
         """Resolve enum value from string value."""
         category_names = [item.name for item in AdviceCategory]
         if not value or value.upper() not in category_names:

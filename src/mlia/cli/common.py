@@ -1,10 +1,11 @@
 # SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """CLI common module."""
+from __future__ import annotations
+
 import argparse
 from dataclasses import dataclass
 from typing import Callable
-from typing import List
 
 
 @dataclass
@@ -12,8 +13,8 @@ class CommandInfo:
     """Command description."""
 
     func: Callable
-    aliases: List[str]
-    opt_groups: List[Callable[[argparse.ArgumentParser], None]]
+    aliases: list[str]
+    opt_groups: list[Callable[[argparse.ArgumentParser], None]]
     is_default: bool = False
 
     @property
@@ -22,7 +23,7 @@ class CommandInfo:
         return self.func.__name__
 
     @property
-    def command_name_and_aliases(self) -> List[str]:
+    def command_name_and_aliases(self) -> list[str]:
         """Return list of command name and aliases."""
         return [self.command_name, *self.aliases]
 

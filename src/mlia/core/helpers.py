@@ -2,34 +2,35 @@
 # SPDX-License-Identifier: Apache-2.0
 """Module for various helper classes."""
 # pylint: disable=no-self-use, unused-argument
+from __future__ import annotations
+
 from typing import Any
-from typing import List
 
 
 class ActionResolver:
     """Helper class for generating actions (e.g. commands with parameters)."""
 
-    def apply_optimizations(self, **kwargs: Any) -> List[str]:
+    def apply_optimizations(self, **kwargs: Any) -> list[str]:
         """Return action details for applying optimizations."""
         return []
 
-    def supported_operators_info(self) -> List[str]:
+    def supported_operators_info(self) -> list[str]:
         """Return action details for generating supported ops report."""
         return []
 
-    def check_performance(self) -> List[str]:
+    def check_performance(self) -> list[str]:
         """Return action details for checking performance."""
         return []
 
-    def check_operator_compatibility(self) -> List[str]:
+    def check_operator_compatibility(self) -> list[str]:
         """Return action details for checking op compatibility."""
         return []
 
-    def operator_compatibility_details(self) -> List[str]:
+    def operator_compatibility_details(self) -> list[str]:
         """Return action details for getting more information about op compatibility."""
         return []
 
-    def optimization_details(self) -> List[str]:
+    def optimization_details(self) -> list[str]:
         """Return action detail for getting information about optimizations."""
         return []
 

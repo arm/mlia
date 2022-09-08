@@ -1,11 +1,12 @@
 # SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for download functionality."""
+from __future__ import annotations
+
 from contextlib import ExitStack as does_not_raise
 from pathlib import Path
 from typing import Any
 from typing import Iterable
-from typing import Optional
 from unittest.mock import MagicMock
 from unittest.mock import PropertyMock
 
@@ -17,7 +18,7 @@ from mlia.utils.download import DownloadArtifact
 
 
 def response_mock(
-    content_length: Optional[str], content_chunks: Iterable[bytes]
+    content_length: str | None, content_chunks: Iterable[bytes]
 ) -> MagicMock:
     """Mock response object."""
     mock = MagicMock(spec=requests.Response)
@@ -59,9 +60,9 @@ def test_download(
     show_progress: bool,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
-    content_length: Optional[str],
+    content_length: str | None,
     content_chunks: Iterable[bytes],
-    label: Optional[str],
+    label: str | None,
 ) -> None:
     """Test function download."""
     monkeypatch.setattr(
@@ -97,7 +98,7 @@ def test_download(
 )
 def test_download_artifact_download_to(
     monkeypatch: pytest.MonkeyPatch,
-    content_length: Optional[str],
+    content_length: str | None,
     content_chunks: Iterable[bytes],
     sha256_hash: str,
     expected_error: Any,

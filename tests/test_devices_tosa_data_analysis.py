@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for TOSA data analysis module."""
-from typing import List
+from __future__ import annotations
 
 import pytest
 
@@ -26,7 +26,7 @@ from mlia.devices.tosa.operators import TOSACompatibilityInfo
         ],
     ],
 )
-def test_tosa_data_analyzer(input_data: DataItem, expected_facts: List[Fact]) -> None:
+def test_tosa_data_analyzer(input_data: DataItem, expected_facts: list[Fact]) -> None:
     """Test TOSA data analyzer."""
     analyzer = TOSADataAnalyzer()
     analyzer.analyze_data(input_data)

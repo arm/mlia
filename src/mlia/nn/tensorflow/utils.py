@@ -2,11 +2,12 @@
 # SPDX-FileCopyrightText: Copyright The TensorFlow Authors. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0
 """Collection of useful functions for optimizations."""
+from __future__ import annotations
+
 import logging
 from pathlib import Path
 from typing import Callable
 from typing import Iterable
-from typing import Union
 
 import numpy as np
 import tensorflow as tf
@@ -101,21 +102,19 @@ def convert_tf_to_tflite(model: str, quantized: bool = False) -> Interpreter:
     return tflite_model
 
 
-def save_keras_model(model: tf.keras.Model, save_path: Union[str, Path]) -> None:
+def save_keras_model(model: tf.keras.Model, save_path: str | Path) -> None:
     """Save Keras model at provided path."""
     # Checkpoint: saving the optimizer is necessary.
     model.save(save_path, include_optimizer=True)
 
 
-def save_tflite_model(
-    model: tf.lite.TFLiteConverter, save_path: Union[str, Path]
-) -> None:
+def save_tflite_model(model: tf.lite.TFLiteConverter, save_path: str | Path) -> None:
     """Save TFLite model at provided path."""
     with open(save_path, "wb") as file:
         file.write(model)
 
 
-def is_tflite_model(model: Union[Path, str]) -> bool:
+def is_tflite_model(model: str | Path) -> bool:
     """Check if model type is supported by TFLite API.
 
     TFLite model is indicated by the model file extension .tflite
@@ -124,7 +123,7 @@ def is_tflite_model(model: Union[Path, str]) -> bool:
     return model_path.suffix == ".tflite"
 
 
-def is_keras_model(model: Union[Path, str]) -> bool:
+def is_keras_model(model: str | Path) -> bool:
     """Check if model type is supported by Keras API.
 
     Keras model is indicated by:
@@ -139,7 +138,7 @@ def is_keras_model(model: Union[Path, str]) -> bool:
     return model_path.suffix in (".h5", ".hdf5")
 
 
-def is_tf_model(model: Union[Path, str]) -> bool:
+def is_tf_model(model: str | Path) -> bool:
     """Check if model type is supported by TensorFlow API.
 
     TensorFlow model is indicated if its directory (meaning saved model)

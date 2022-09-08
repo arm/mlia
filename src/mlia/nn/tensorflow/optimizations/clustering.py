@@ -7,11 +7,10 @@ In order to do this, we need to have a base model and corresponding training dat
 We also have to specify a subset of layers we want to cluster. For more details,
 please refer to the documentation for TensorFlow Model Optimization Toolkit.
 """
+from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import Any
-from typing import Dict
-from typing import List
-from typing import Optional
 
 import tensorflow as tf
 import tensorflow_model_optimization as tfmot
@@ -28,7 +27,7 @@ class ClusteringConfiguration(OptimizerConfiguration):
     """Clustering configuration."""
 
     optimization_target: int
-    layers_to_optimize: Optional[List[str]] = None
+    layers_to_optimize: list[str] | None = None
 
     def __str__(self) -> str:
         """Return string representation of the configuration."""
@@ -61,7 +60,7 @@ class Clusterer(Optimizer):
         """Return string representation of the optimization config."""
         return str(self.optimizer_configuration)
 
-    def _setup_clustering_params(self) -> Dict[str, Any]:
+    def _setup_clustering_params(self) -> dict[str, Any]:
         CentroidInitialization = tfmot.clustering.keras.CentroidInitialization
         return {
             "number_of_clusters": self.optimizer_configuration.optimization_target,

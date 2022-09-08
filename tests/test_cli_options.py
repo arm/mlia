@@ -1,13 +1,12 @@
 # SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for module options."""
+from __future__ import annotations
+
 import argparse
 from contextlib import ExitStack as does_not_raise
 from pathlib import Path
 from typing import Any
-from typing import Dict
-from typing import List
-from typing import Optional
 
 import pytest
 
@@ -137,7 +136,7 @@ def test_parse_optimization_parameters(
         ],
     ],
 )
-def test_get_target_opts(args: Optional[Dict], expected_opts: List[str]) -> None:
+def test_get_target_opts(args: dict | None, expected_opts: list[str]) -> None:
     """Test getting target options."""
     assert get_target_profile_opts(args) == expected_opts
 
@@ -153,7 +152,7 @@ def test_get_target_opts(args: Optional[Dict], expected_opts: List[str]) -> None
         [["--output", "some_folder/report.csv"], "some_folder/report.csv"],
     ],
 )
-def test_output_options(output_parameters: List[str], expected_path: str) -> None:
+def test_output_options(output_parameters: list[str], expected_path: str) -> None:
     """Test output options resolving."""
     parser = argparse.ArgumentParser()
     add_output_options(parser)

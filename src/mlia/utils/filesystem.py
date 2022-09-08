@@ -1,6 +1,8 @@
 # SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Utils related to file management."""
+from __future__ import annotations
+
 import hashlib
 import importlib.resources as pkg_resources
 import json
@@ -12,12 +14,8 @@ from tempfile import mkstemp
 from tempfile import TemporaryDirectory
 from typing import Any
 from typing import cast
-from typing import Dict
 from typing import Generator
 from typing import Iterable
-from typing import List
-from typing import Optional
-from typing import Union
 
 
 def get_mlia_resources() -> Path:
@@ -37,7 +35,7 @@ def get_profiles_file() -> Path:
     return get_mlia_resources() / "profiles.json"
 
 
-def get_profiles_data() -> Dict[str, Dict[str, Any]]:
+def get_profiles_data() -> dict[str, dict[str, Any]]:
     """Get the profile values as a dictionary."""
     with open(get_profiles_file(), encoding="utf-8") as json_file:
         profiles = json.load(json_file)
@@ -48,7 +46,7 @@ def get_profiles_data() -> Dict[str, Dict[str, Any]]:
         return profiles
 
 
-def get_profile(target_profile: str) -> Dict[str, Any]:
+def get_profile(target_profile: str) -> dict[str, Any]:
     """Get settings for the provided target profile."""
     if not target_profile:
         raise Exception("Target profile is not provided")
@@ -61,7 +59,7 @@ def get_profile(target_profile: str) -> Dict[str, Any]:
         raise Exception(f"Unable to find target profile {target_profile}") from err
 
 
-def get_supported_profile_names() -> List[str]:
+def get_supported_profile_names() -> list[str]:
     """Get the supported Ethos-U profile names."""
     return list(get_profiles_data().keys())
 
@@ -73,7 +71,7 @@ def get_target(target_profile: str) -> str:
 
 
 @contextmanager
-def temp_file(suffix: Optional[str] = None) -> Generator[Path, None, None]:
+def temp_file(suffix: str | None = None) -> Generator[Path, None, None]:
     """Create temp file and remove it after."""
     _, tmp_file = mkstemp(suffix=suffix)
 
@@ -84,14 +82,14 @@ def temp_file(suffix: Optional[str] = None) -> Generator[Path, None, None]:
 
 
 @contextmanager
-def temp_directory(suffix: Optional[str] = None) -> Generator[Path, None, None]:
+def temp_directory(suffix: str | None = None) -> Generator[Path, None, None]:
     """Create temp directory and remove it after."""
     with TemporaryDirectory(suffix=suffix) as tmpdir:
         yield Path(tmpdir)
 
 
 def file_chunks(
-    filepath: Union[Path, str], chunk_size: int = 4096
+    filepath: str | Path, chunk_size: int = 4096
 ) -> Generator[bytes, None, None]:
     """Return sequence of the file chunks."""
     with open(filepath, "rb") as file:
@@ -99,7 +97,7 @@ def file_chunks(
             yield data
 
 
-def hexdigest(filepath: Union[Path, str], hash_obj: "hashlib._Hash") -> str:
+def hexdigest(filepath: str | Path, hash_obj: "hashlib._Hash") -> str:
     """Return hex digest of the file."""
     for chunk in file_chunks(filepath):
         hash_obj.update(chunk)

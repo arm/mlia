@@ -6,6 +6,8 @@ The import of subprocess module raises a B404 bandit error. MLIA usage of
 subprocess is needed and can be considered safe hence disabling the security
 check.
 """
+from __future__ import annotations
+
 import logging
 import platform
 import subprocess  # nosec
@@ -14,7 +16,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
 from typing import Iterable
-from typing import List
 from typing import Optional
 
 import mlia.backend.manager as backend_manager
@@ -40,7 +41,7 @@ class BackendInfo:
 
     backend_path: Path
     copy_source: bool = True
-    system_config: Optional[str] = None
+    system_config: str | None = None
 
 
 PathChecker = Callable[[Path], Optional[BackendInfo]]
@@ -55,10 +56,10 @@ class BackendMetadata:
         name: str,
         description: str,
         system_config: str,
-        apps_resources: List[str],
+        apps_resources: list[str],
         fvp_dir_name: str,
-        download_artifact: Optional[DownloadArtifact],
-        supported_platforms: Optional[List[str]] = None,
+        download_artifact: DownloadArtifact | None,
+        supported_platforms: list[str] | None = None,
     ) -> None:
         """
         Initialize BackendMetadata.
@@ -100,7 +101,7 @@ class BackendInstallation(Installation):
         backend_runner: backend_manager.BackendRunner,
         metadata: BackendMetadata,
         path_checker: PathChecker,
-        backend_installer: Optional[BackendInstaller],
+        backend_installer: BackendInstaller | None,
     ) -> None:
         """Init the backend installation."""
         self.backend_runner = backend_runner
@@ -209,13 +210,13 @@ class PackagePathChecker:
     """Package path checker."""
 
     def __init__(
-        self, expected_files: List[str], backend_subfolder: Optional[str] = None
+        self, expected_files: list[str], backend_subfolder: str | None = None
     ) -> None:
         """Init the path checker."""
         self.expected_files = expected_files
         self.backend_subfolder = backend_subfolder
 
-    def __call__(self, backend_path: Path) -> Optional[BackendInfo]:
+    def __call__(self, backend_path: Path) -> BackendInfo | None:
         """Check if directory contains all expected files."""
         resolved_paths = (backend_path / file for file in self.expected_files)
         if not all_files_exist(resolved_paths):
@@ -238,9 +239,9 @@ class StaticPathChecker:
     def __init__(
         self,
         static_backend_path: Path,
-        expected_files: List[str],
+        expected_files: list[str],
         copy_source: bool = False,
-        system_config: Optional[str] = None,
+        system_config: str | None = None,
     ) -> None:
         """Init static path checker."""
         self.static_backend_path = static_backend_path
@@ -248,7 +249,7 @@ class StaticPathChecker:
         self.copy_source = copy_source
         self.system_config = system_config
 
-    def __call__(self, backend_path: Path) -> Optional[BackendInfo]:
+    def __call__(self, backend_path: Path) -> BackendInfo | None:
         """Check if directory equals static backend path with all expected files."""
         if backend_path != self.static_backend_path:
             return None
@@ -271,7 +272,7 @@ class CompoundPathChecker:
         """Init compound path checker."""
         self.path_checkers = path_checkers
 
-    def __call__(self, backend_path: Path) -> Optional[BackendInfo]:
+    def __call__(self, backend_path: Path) -> BackendInfo | None:
         """Iterate over checkers and return first non empty backend info."""
         first_resolved_backend_info = (
             backend_info
@@ -401,7 +402,7 @@ def get_corstone_310_installation() -> Installation:
     return corstone_310
 
 
-def get_corstone_installations() -> List[Installation]:
+def get_corstone_installations() -> list[Installation]:
     """Get Corstone installations."""
     return [
         get_corstone_300_installation(),

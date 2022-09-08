@@ -1,11 +1,11 @@
 # SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for module select."""
+from __future__ import annotations
+
 from contextlib import ExitStack as does_not_raise
 from pathlib import Path
 from typing import Any
-from typing import List
-from typing import Tuple
 
 import pytest
 import tensorflow as tf
@@ -187,7 +187,7 @@ def test_get_optimizer(
     ],
 )
 def test_optimization_settings_create_from(
-    params: List[Tuple[str, float]], expected_result: List[OptimizationSettings]
+    params: list[tuple[str, float]], expected_result: list[OptimizationSettings]
 ) -> None:
     """Test creating settings from parsed params."""
     assert OptimizationSettings.create_from(params) == expected_result

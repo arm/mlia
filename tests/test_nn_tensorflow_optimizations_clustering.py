@@ -1,9 +1,9 @@
 # SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Test for module optimizations/clustering."""
+from __future__ import annotations
+
 from pathlib import Path
-from typing import List
-from typing import Optional
 
 import pytest
 import tensorflow as tf
@@ -21,7 +21,7 @@ from tests.utils.common import train_model
 
 
 def _prune_model(
-    model: tf.keras.Model, target_sparsity: float, layers_to_prune: Optional[List[str]]
+    model: tf.keras.Model, target_sparsity: float, layers_to_prune: list[str] | None
 ) -> tf.keras.Model:
     x_train, y_train = get_dataset()
     batch_size = 1
@@ -47,7 +47,7 @@ def _prune_model(
 def _test_num_unique_weights(
     metrics: TFLiteMetrics,
     target_num_clusters: int,
-    layers_to_cluster: Optional[List[str]],
+    layers_to_cluster: list[str] | None,
 ) -> None:
     clustered_uniqueness_dict = metrics.num_unique_weights(
         ReportClusterMode.NUM_CLUSTERS_PER_AXIS
@@ -71,7 +71,7 @@ def _test_num_unique_weights(
 def _test_sparsity(
     metrics: TFLiteMetrics,
     target_sparsity: float,
-    layers_to_cluster: Optional[List[str]],
+    layers_to_cluster: list[str] | None,
 ) -> None:
     pruned_sparsity_dict = metrics.sparsity_per_layer()
     num_sparse_layers = 0
@@ -95,7 +95,7 @@ def _test_sparsity(
 def test_cluster_simple_model_fully(
     target_num_clusters: int,
     sparsity_aware: bool,
-    layers_to_cluster: Optional[List[str]],
+    layers_to_cluster: list[str] | None,
     tmp_path: Path,
     test_keras_model: Path,
 ) -> None:

@@ -1,10 +1,10 @@
 # SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for Corstone related installation functions.."""
+from __future__ import annotations
+
 import tarfile
 from pathlib import Path
-from typing import List
-from typing import Optional
 from unittest.mock import MagicMock
 
 import pytest
@@ -44,12 +44,12 @@ def get_backend_installation(  # pylint: disable=too-many-arguments
     backend_runner_mock: MagicMock = MagicMock(),
     name: str = "test_name",
     description: str = "test_description",
-    download_artifact: Optional[MagicMock] = None,
+    download_artifact: MagicMock | None = None,
     path_checker: PathChecker = MagicMock(),
-    apps_resources: Optional[List[str]] = None,
-    system_config: Optional[str] = None,
+    apps_resources: list[str] | None = None,
+    system_config: str | None = None,
     backend_installer: BackendInstaller = MagicMock(),
-    supported_platforms: Optional[List[str]] = None,
+    supported_platforms: list[str] | None = None,
 ) -> BackendInstallation:
     """Get backend installation."""
     return BackendInstallation(
@@ -79,7 +79,7 @@ def get_backend_installation(  # pylint: disable=too-many-arguments
 )
 def test_could_be_installed_depends_on_platform(
     platform: str,
-    supported_platforms: Optional[List[str]],
+    supported_platforms: list[str] | None,
     expected_result: bool,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -309,7 +309,7 @@ def test_backend_installation_download_and_install(
     ],
 )
 def test_corstone_path_checker_valid_path(
-    tmp_path: Path, dir_content: List[str], expected_result: Optional[str]
+    tmp_path: Path, dir_content: list[str], expected_result: str | None
 ) -> None:
     """Test Corstone path checker valid scenario."""
     path_checker = PackagePathChecker(["file1.txt", "file2.txt"], "models")
@@ -333,7 +333,7 @@ def test_corstone_path_checker_valid_path(
 @pytest.mark.parametrize("system_config", [None, "system_config"])
 @pytest.mark.parametrize("copy_source", [True, False])
 def test_static_path_checker(
-    tmp_path: Path, copy_source: bool, system_config: Optional[str]
+    tmp_path: Path, copy_source: bool, system_config: str | None
 ) -> None:
     """Test static path checker."""
     static_checker = StaticPathChecker(
@@ -404,7 +404,7 @@ def test_corstone_300_installer(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     eula_agreement: bool,
-    expected_command: List[str],
+    expected_command: list[str],
 ) -> None:
     """Test Corstone-300 installer."""
     command_mock = MagicMock()

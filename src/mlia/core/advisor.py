@@ -1,10 +1,11 @@
 # SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Inference advisor module."""
+from __future__ import annotations
+
 from abc import abstractmethod
 from pathlib import Path
 from typing import cast
-from typing import List
 
 from mlia.core.advice_generation import AdviceProducer
 from mlia.core.common import NamedEntity
@@ -44,19 +45,19 @@ class DefaultInferenceAdvisor(InferenceAdvisor, ParameterResolverMixin):
         )
 
     @abstractmethod
-    def get_collectors(self, context: Context) -> List[DataCollector]:
+    def get_collectors(self, context: Context) -> list[DataCollector]:
         """Return list of the data collectors."""
 
     @abstractmethod
-    def get_analyzers(self, context: Context) -> List[DataAnalyzer]:
+    def get_analyzers(self, context: Context) -> list[DataAnalyzer]:
         """Return list of the data analyzers."""
 
     @abstractmethod
-    def get_producers(self, context: Context) -> List[AdviceProducer]:
+    def get_producers(self, context: Context) -> list[AdviceProducer]:
         """Return list of the advice producers."""
 
     @abstractmethod
-    def get_events(self, context: Context) -> List[Event]:
+    def get_events(self, context: Context) -> list[Event]:
         """Return list of the startup events."""
 
     def get_string_parameter(self, context: Context, param: str) -> str:

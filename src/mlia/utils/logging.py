@@ -1,6 +1,8 @@
 # SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Logging utility functions."""
+from __future__ import annotations
+
 import logging
 from contextlib import contextmanager
 from contextlib import ExitStack
@@ -10,8 +12,6 @@ from pathlib import Path
 from typing import Any
 from typing import Callable
 from typing import Generator
-from typing import List
-from typing import Optional
 
 
 class LoggerWriter:
@@ -61,7 +61,7 @@ class LogFilter(logging.Filter):
         return self.log_record_filter(record)
 
     @classmethod
-    def equals(cls, log_level: int) -> "LogFilter":
+    def equals(cls, log_level: int) -> LogFilter:
         """Return log filter that filters messages by log level."""
 
         def filter_by_level(log_record: logging.LogRecord) -> bool:
@@ -70,7 +70,7 @@ class LogFilter(logging.Filter):
         return cls(filter_by_level)
 
     @classmethod
-    def skip(cls, log_level: int) -> "LogFilter":
+    def skip(cls, log_level: int) -> LogFilter:
         """Return log filter that skips messages with particular level."""
 
         def skip_by_level(log_record: logging.LogRecord) -> bool:
@@ -81,15 +81,15 @@ class LogFilter(logging.Filter):
 
 def create_log_handler(
     *,
-    file_path: Optional[Path] = None,
-    stream: Optional[Any] = None,
-    log_level: Optional[int] = None,
-    log_format: Optional[str] = None,
-    log_filter: Optional[logging.Filter] = None,
+    file_path: Path | None = None,
+    stream: Any | None = None,
+    log_level: int | None = None,
+    log_format: str | None = None,
+    log_filter: logging.Filter | None = None,
     delay: bool = True,
 ) -> logging.Handler:
     """Create logger handler."""
-    handler: Optional[logging.Handler] = None
+    handler: logging.Handler | None = None
 
     if file_path is not None:
         handler = logging.FileHandler(file_path, delay=delay)
@@ -112,7 +112,7 @@ def create_log_handler(
 
 
 def attach_handlers(
-    handlers: List[logging.Handler], loggers: List[logging.Logger]
+    handlers: list[logging.Handler], loggers: list[logging.Logger]
 ) -> None:
     """Attach handlers to the loggers."""
     for handler in handlers:

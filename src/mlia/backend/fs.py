@@ -1,11 +1,12 @@
 # SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Module to host all file system related functions."""
+from __future__ import annotations
+
 import re
 import shutil
 from pathlib import Path
 from typing import Literal
-from typing import Optional
 
 from mlia.utils.filesystem import get_mlia_resources
 
@@ -58,7 +59,7 @@ def remove_resource(resource_directory: str, resource_type: ResourceType) -> Non
     shutil.rmtree(resource_location)
 
 
-def remove_directory(directory_path: Optional[Path]) -> None:
+def remove_directory(directory_path: Path | None) -> None:
     """Remove directory."""
     if not directory_path or not directory_path.is_dir():
         raise Exception("No directory path provided")
@@ -66,7 +67,7 @@ def remove_directory(directory_path: Optional[Path]) -> None:
     shutil.rmtree(directory_path)
 
 
-def recreate_directory(directory_path: Optional[Path]) -> None:
+def recreate_directory(directory_path: Path | None) -> None:
     """Recreate directory."""
     if not directory_path:
         raise Exception("No directory path provided")

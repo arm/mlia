@@ -1,10 +1,11 @@
 # SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Module for data analysis."""
+from __future__ import annotations
+
 from abc import ABC
 from abc import abstractmethod
 from dataclasses import dataclass
-from typing import List
 
 from mlia.core.common import DataItem
 from mlia.core.mixins import ContextMixin
@@ -29,7 +30,7 @@ class DataAnalyzer(ABC):
         """
 
     @abstractmethod
-    def get_analyzed_data(self) -> List[DataItem]:
+    def get_analyzed_data(self) -> list[DataItem]:
         """Get analyzed data."""
 
 
@@ -59,9 +60,9 @@ class FactExtractor(ContextAwareDataAnalyzer):
 
     def __init__(self) -> None:
         """Init fact extractor."""
-        self.facts: List[Fact] = []
+        self.facts: list[Fact] = []
 
-    def get_analyzed_data(self) -> List[DataItem]:
+    def get_analyzed_data(self) -> list[DataItem]:
         """Return list of the collected facts."""
         return self.facts
 

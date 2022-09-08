@@ -1,10 +1,10 @@
 # SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Data collection module for Ethos-U."""
+from __future__ import annotations
+
 import logging
 from pathlib import Path
-from typing import List
-from typing import Optional
 
 from mlia.core.context import Context
 from mlia.core.data_collection import ContextAwareDataCollector
@@ -59,7 +59,7 @@ class EthosUPerformance(ContextAwareDataCollector):
         self,
         model: Path,
         device: EthosUConfiguration,
-        backends: Optional[List[str]] = None,
+        backends: list[str] | None = None,
     ) -> None:
         """Init performance data collector."""
         self.model = model
@@ -87,7 +87,7 @@ class OptimizeModel:
     """Helper class for model optimization."""
 
     def __init__(
-        self, context: Context, opt_settings: List[OptimizationSettings]
+        self, context: Context, opt_settings: list[OptimizationSettings]
     ) -> None:
         """Init helper."""
         self.context = context
@@ -115,8 +115,8 @@ class EthosUOptimizationPerformance(ContextAwareDataCollector):
         self,
         model: Path,
         device: EthosUConfiguration,
-        optimizations: List[List[dict]],
-        backends: Optional[List[str]] = None,
+        optimizations: list[list[dict]],
+        backends: list[str] | None = None,
     ) -> None:
         """Init performance optimizations data collector."""
         self.model = model
@@ -124,7 +124,7 @@ class EthosUOptimizationPerformance(ContextAwareDataCollector):
         self.optimizations = optimizations
         self.backends = backends
 
-    def collect_data(self) -> Optional[OptimizationPerformanceMetrics]:
+    def collect_data(self) -> OptimizationPerformanceMetrics | None:
         """Collect performance metrics for the optimizations."""
         logger.info("Estimate performance ...")
 
@@ -164,8 +164,8 @@ class EthosUOptimizationPerformance(ContextAwareDataCollector):
 
     @staticmethod
     def _parse_optimization_params(
-        optimizations: List[List[dict]],
-    ) -> List[List[OptimizationSettings]]:
+        optimizations: list[list[dict]],
+    ) -> list[list[OptimizationSettings]]:
         """Parse optimization parameters."""
         if not is_list_of(optimizations, list):
             raise Exception("Optimization parameters expected to be a list")

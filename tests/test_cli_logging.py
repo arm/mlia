@@ -1,9 +1,10 @@
 # SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for the module cli.logging."""
+from __future__ import annotations
+
 import logging
 from pathlib import Path
-from typing import Optional
 
 import pytest
 
@@ -78,7 +79,7 @@ def test_setup_logging(
 
 
 def check_log_assertions(
-    logs_dir_path: Optional[Path], expected_log_file_content: str
+    logs_dir_path: Path | None, expected_log_file_content: str
 ) -> None:
     """Test assertions for log file."""
     if logs_dir_path is not None:

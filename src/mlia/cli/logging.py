@@ -1,12 +1,11 @@
 # SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """CLI logging configuration."""
+from __future__ import annotations
+
 import logging
 import sys
 from pathlib import Path
-from typing import List
-from typing import Optional
-from typing import Union
 
 from mlia.utils.logging import attach_handlers
 from mlia.utils.logging import create_log_handler
@@ -18,7 +17,7 @@ _FILE_DEBUG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 
 
 def setup_logging(
-    logs_dir: Optional[Union[str, Path]] = None,
+    logs_dir: str | Path | None = None,
     verbose: bool = False,
     log_filename: str = "mlia.log",
 ) -> None:
@@ -49,10 +48,10 @@ def setup_logging(
 
 
 def _get_mlia_handlers(
-    logs_dir: Optional[Union[str, Path]],
+    logs_dir: str | Path | None,
     log_filename: str,
     verbose: bool,
-) -> List[logging.Handler]:
+) -> list[logging.Handler]:
     """Get handlers for the MLIA loggers."""
     result = []
     stdout_handler = create_log_handler(
@@ -84,10 +83,10 @@ def _get_mlia_handlers(
 
 
 def _get_tools_handlers(
-    logs_dir: Optional[Union[str, Path]],
+    logs_dir: str | Path | None,
     log_filename: str,
     verbose: bool,
-) -> List[logging.Handler]:
+) -> list[logging.Handler]:
     """Get handler for the tools loggers."""
     result = []
     if verbose:
@@ -110,7 +109,7 @@ def _get_tools_handlers(
     return result
 
 
-def _get_log_file(logs_dir: Union[str, Path], log_filename: str) -> Path:
+def _get_log_file(logs_dir: str | Path, log_filename: str) -> Path:
     """Get the log file path."""
     logs_dir_path = Path(logs_dir)
     logs_dir_path.mkdir(exist_ok=True)

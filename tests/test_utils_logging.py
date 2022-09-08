@@ -1,12 +1,13 @@
 # SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for the logging utility functions."""
+from __future__ import annotations
+
 import logging
 import sys
 from contextlib import ExitStack as does_not_raise
 from pathlib import Path
 from typing import Any
-from typing import Optional
 
 import pytest
 
@@ -43,9 +44,9 @@ from mlia.cli.logging import create_log_handler
     ],
 )
 def test_create_log_handler(
-    file_path: Optional[Path],
-    stream: Optional[Any],
-    log_filter: Optional[logging.Filter],
+    file_path: Path | None,
+    stream: Any | None,
+    log_filter: logging.Filter | None,
     delay: bool,
     expected_error: Any,
     expected_class: type,

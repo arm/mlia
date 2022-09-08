@@ -1,11 +1,11 @@
 # SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Utils for files downloading."""
+from __future__ import annotations
+
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
-from typing import List
-from typing import Optional
 
 import requests
 from rich.progress import BarColumn
@@ -20,10 +20,10 @@ from mlia.utils.types import parse_int
 
 
 def download_progress(
-    content_chunks: Iterable[bytes], content_length: Optional[int], label: Optional[str]
+    content_chunks: Iterable[bytes], content_length: int | None, label: str | None
 ) -> Iterable[bytes]:
     """Show progress info while reading content."""
-    columns: List[ProgressColumn] = [TextColumn("{task.description}")]
+    columns: list[ProgressColumn] = [TextColumn("{task.description}")]
 
     if content_length is None:
         total = float("inf")
@@ -44,7 +44,7 @@ def download(
     url: str,
     dest: Path,
     show_progress: bool = False,
-    label: Optional[str] = None,
+    label: str | None = None,
     chunk_size: int = 8192,
 ) -> None:
     """Download the file."""

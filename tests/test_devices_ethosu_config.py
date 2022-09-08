@@ -1,9 +1,10 @@
 # SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for config module."""
+from __future__ import annotations
+
 from contextlib import ExitStack as does_not_raise
 from typing import Any
-from typing import Dict
 from unittest.mock import MagicMock
 
 import pytest
@@ -113,7 +114,7 @@ def test_get_target() -> None:
     ],
 )
 def test_ethosu_configuration(
-    monkeypatch: pytest.MonkeyPatch, profile_data: Dict[str, Any], expected_error: Any
+    monkeypatch: pytest.MonkeyPatch, profile_data: dict[str, Any], expected_error: Any
 ) -> None:
     """Test creating Ethos-U configuration."""
     monkeypatch.setattr(

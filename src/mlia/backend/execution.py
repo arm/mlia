@@ -1,12 +1,11 @@
 # SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Application execution module."""
+from __future__ import annotations
+
 import logging
 import re
 from typing import cast
-from typing import List
-from typing import Optional
-from typing import Tuple
 
 from mlia.backend.application import Application
 from mlia.backend.application import get_application
@@ -29,9 +28,9 @@ class ExecutionContext:  # pylint: disable=too-few-public-methods
     def __init__(
         self,
         app: Application,
-        app_params: List[str],
+        app_params: list[str],
         system: System,
-        system_params: List[str],
+        system_params: list[str],
     ):
         """Init execution context."""
         self.app = app
@@ -41,8 +40,8 @@ class ExecutionContext:  # pylint: disable=too-few-public-methods
 
         self.param_resolver = ParamResolver(self)
 
-        self.stdout: Optional[bytearray] = None
-        self.stderr: Optional[bytearray] = None
+        self.stdout: bytearray | None = None
+        self.stderr: bytearray | None = None
 
 
 class ParamResolver:
@@ -54,16 +53,16 @@ class ParamResolver:
 
     @staticmethod
     def resolve_user_params(
-        cmd_name: Optional[str],
+        cmd_name: str | None,
         index_or_alias: str,
-        resolved_params: Optional[List[Tuple[Optional[str], Param]]],
+        resolved_params: list[tuple[str | None, Param]] | None,
     ) -> str:
         """Resolve user params."""
         if not cmd_name or resolved_params is None:
             raise ConfigurationException("Unable to resolve user params")
 
-        param_value: Optional[str] = None
-        param: Optional[Param] = None
+        param_value: str | None = None
+        param: Param | None = None
 
         if index_or_alias.isnumeric():
             i = int(index_or_alias)
@@ -176,8 +175,8 @@ class ParamResolver:
     def param_matcher(
         self,
         param_name: str,
-        cmd_name: Optional[str],
-        resolved_params: Optional[List[Tuple[Optional[str], Param]]],
+        cmd_name: str | None,
+        resolved_params: list[tuple[str | None, Param]] | None,
     ) -> str:
         """Regexp to resolve a param from the param_name."""
         # this pattern supports parameter names like "application.commands.run:0" and
@@ -224,8 +223,8 @@ class ParamResolver:
     def param_resolver(
         self,
         param_name: str,
-        cmd_name: Optional[str] = None,
-        resolved_params: Optional[List[Tuple[Optional[str], Param]]] = None,
+        cmd_name: str | None = None,
+        resolved_params: list[tuple[str | None, Param]] | None = None,
     ) -> str:
         """Resolve parameter value based on current execution context."""
         # Note: 'software.*' is included for backward compatibility.
@@ -253,15 +252,15 @@ class ParamResolver:
     def __call__(
         self,
         param_name: str,
-        cmd_name: Optional[str] = None,
-        resolved_params: Optional[List[Tuple[Optional[str], Param]]] = None,
+        cmd_name: str | None = None,
+        resolved_params: list[tuple[str | None, Param]] | None = None,
     ) -> str:
         """Resolve provided parameter."""
         return self.param_resolver(param_name, cmd_name, resolved_params)
 
 
 def validate_parameters(
-    backend: Backend, command_names: List[str], params: List[str]
+    backend: Backend, command_names: list[str], params: list[str]
 ) -> None:
     """Check parameters passed to backend."""
     for param in params:
@@ -301,7 +300,7 @@ def get_application_by_name_and_system(
 
 def get_application_and_system(
     application_name: str, system_name: str
-) -> Tuple[Application, System]:
+) -> tuple[Application, System]:
     """Return application and system by provided names."""
     system = get_system(system_name)
     if not system:
@@ -314,9 +313,9 @@ def get_application_and_system(
 
 def run_application(
     application_name: str,
-    application_params: List[str],
+    application_params: list[str],
     system_name: str,
-    system_params: List[str],
+    system_params: list[str],
 ) -> ExecutionContext:
     """Run application on the provided system."""
     application, system = get_application_and_system(application_name, system_name)

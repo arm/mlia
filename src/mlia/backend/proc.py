@@ -5,6 +5,8 @@
 This module contains all classes and functions for dealing with Linux
 processes.
 """
+from __future__ import annotations
+
 import datetime
 import logging
 import shlex
@@ -13,9 +15,6 @@ import tempfile
 import time
 from pathlib import Path
 from typing import Any
-from typing import List
-from typing import Optional
-from typing import Tuple
 
 from sh import Command
 from sh import CommandNotFound
@@ -38,12 +37,12 @@ class ShellCommand:
         self,
         cmd: str,
         *args: str,
-        _cwd: Optional[Path] = None,
+        _cwd: Path | None = None,
         _tee: bool = True,
         _bg: bool = True,
         _out: Any = None,
         _err: Any = None,
-        _search_paths: Optional[List[Path]] = None,
+        _search_paths: list[Path] | None = None,
     ) -> RunningCommand:
         """Run the shell command with the given arguments.
 
@@ -72,7 +71,7 @@ class ShellCommand:
         return command(_out=out, _err=err, _tee=_tee, _bg=_bg, _bg_exc=False)
 
     @classmethod
-    def get_stdout_stderr_paths(cls, cmd: str) -> Tuple[Path, Path]:
+    def get_stdout_stderr_paths(cls, cmd: str) -> tuple[Path, Path]:
         """Construct and returns the paths of stdout/stderr files."""
         timestamp = datetime.datetime.now().timestamp()
         base_path = Path(tempfile.mkdtemp(prefix="mlia-", suffix=f"{timestamp}"))
@@ -88,7 +87,7 @@ class ShellCommand:
         return stdout, stderr
 
 
-def parse_command(command: str, shell: str = "bash") -> List[str]:
+def parse_command(command: str, shell: str = "bash") -> list[str]:
     """Parse command."""
     cmd, *args = shlex.split(command, posix=True)
 
@@ -130,13 +129,13 @@ def run_and_wait(
     terminate_on_error: bool = False,
     out: Any = None,
     err: Any = None,
-) -> Tuple[int, bytearray, bytearray]:
+) -> tuple[int, bytearray, bytearray]:
     """
     Run command and wait while it is executing.
 
     Returns a tuple: (exit_code, stdout, stderr)
     """
-    running_cmd: Optional[RunningCommand] = None
+    running_cmd: RunningCommand | None = None
     try:
         running_cmd = execute_command(command, cwd, bg=True, out=out, err=err)
         return running_cmd.exit_code, running_cmd.stdout, running_cmd.stderr

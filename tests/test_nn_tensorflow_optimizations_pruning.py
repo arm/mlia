@@ -1,9 +1,9 @@
 # SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Test for module optimizations/pruning."""
+from __future__ import annotations
+
 from pathlib import Path
-from typing import List
-from typing import Optional
 
 import pytest
 import tensorflow as tf
@@ -21,7 +21,7 @@ from tests.utils.common import train_model
 def _test_sparsity(
     metrics: TFLiteMetrics,
     target_sparsity: float,
-    layers_to_prune: Optional[List[str]],
+    layers_to_prune: list[str] | None,
 ) -> None:
     pruned_sparsity_dict = metrics.sparsity_per_layer()
     num_sparse_layers = 0
@@ -62,7 +62,7 @@ def _get_tflite_metrics(
 def test_prune_simple_model_fully(
     target_sparsity: float,
     mock_data: bool,
-    layers_to_prune: Optional[List[str]],
+    layers_to_prune: list[str] | None,
     tmp_path: Path,
     test_keras_model: Path,
 ) -> None:

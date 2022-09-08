@@ -1,14 +1,14 @@
 # SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Module for installation process."""
+from __future__ import annotations
+
 import logging
 from abc import ABC
 from abc import abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
-from typing import List
-from typing import Optional
 from typing import Union
 
 from mlia.utils.misc import yes
@@ -100,7 +100,7 @@ class SupportsInstallTypeFilter:
 class SearchByNameFilter:
     """Filter installation by name."""
 
-    def __init__(self, backend_name: Optional[str]) -> None:
+    def __init__(self, backend_name: str | None) -> None:
         """Init filter."""
         self.backend_name = backend_name
 
@@ -113,12 +113,12 @@ class InstallationManager(ABC):
     """Helper class for managing installations."""
 
     @abstractmethod
-    def install_from(self, backend_path: Path, backend_name: Optional[str]) -> None:
+    def install_from(self, backend_path: Path, backend_name: str | None) -> None:
         """Install backend from the local directory."""
 
     @abstractmethod
     def download_and_install(
-        self, backend_name: Optional[str], eula_agreement: bool
+        self, backend_name: str | None, eula_agreement: bool
     ) -> None:
         """Download and install backends."""
 
@@ -134,9 +134,9 @@ class InstallationManager(ABC):
 class InstallationFiltersMixin:
     """Mixin for filtering installation based on different conditions."""
 
-    installations: List[Installation]
+    installations: list[Installation]
 
-    def filter_by(self, *filters: InstallationFilter) -> List[Installation]:
+    def filter_by(self, *filters: InstallationFilter) -> list[Installation]:
         """Filter installations."""
         return [
             installation
@@ -145,8 +145,8 @@ class InstallationFiltersMixin:
         ]
 
     def could_be_installed_from(
-        self, backend_path: Path, backend_name: Optional[str]
-    ) -> List[Installation]:
+        self, backend_path: Path, backend_name: str | None
+    ) -> list[Installation]:
         """Return installations that could be installed from provided directory."""
         return self.filter_by(
             SupportsInstallTypeFilter(InstallFromPath(backend_path)),
@@ -154,8 +154,8 @@ class InstallationFiltersMixin:
         )
 
     def could_be_downloaded_and_installed(
-        self, backend_name: Optional[str] = None
-    ) -> List[Installation]:
+        self, backend_name: str | None = None
+    ) -> list[Installation]:
         """Return installations that could be downloaded and installed."""
         return self.filter_by(
             SupportsInstallTypeFilter(DownloadAndInstall()),
@@ -163,15 +163,13 @@ class InstallationFiltersMixin:
             ReadyForInstallationFilter(),
         )
 
-    def already_installed(
-        self, backend_name: Optional[str] = None
-    ) -> List[Installation]:
+    def already_installed(self, backend_name: str | None = None) -> list[Installation]:
         """Return list of backends that are already installed."""
         return self.filter_by(
             AlreadyInstalledFilter(), SearchByNameFilter(backend_name)
         )
 
-    def ready_for_installation(self) -> List[Installation]:
+    def ready_for_installation(self) -> list[Installation]:
         """Return list of the backends that could be installed."""
         return self.filter_by(ReadyForInstallationFilter())
 
@@ -180,15 +178,15 @@ class DefaultInstallationManager(InstallationManager, InstallationFiltersMixin):
     """Interactive installation manager."""
 
     def __init__(
-        self, installations: List[Installation], noninteractive: bool = False
+        self, installations: list[Installation], noninteractive: bool = False
     ) -> None:
         """Init the manager."""
         self.installations = installations
         self.noninteractive = noninteractive
 
     def choose_installation_for_path(
-        self, backend_path: Path, backend_name: Optional[str]
-    ) -> Optional[Installation]:
+        self, backend_path: Path, backend_name: str | None
+    ) -> Installation | None:
         """Check available installation and select one if possible."""
         installs = self.could_be_installed_from(backend_path, backend_name)
 
@@ -220,7 +218,7 @@ class DefaultInstallationManager(InstallationManager, InstallationFiltersMixin):
 
         return installation
 
-    def install_from(self, backend_path: Path, backend_name: Optional[str]) -> None:
+    def install_from(self, backend_path: Path, backend_name: str | None) -> None:
         """Install from the provided directory."""
         installation = self.choose_installation_for_path(backend_path, backend_name)
 
@@ -234,7 +232,7 @@ class DefaultInstallationManager(InstallationManager, InstallationFiltersMixin):
         self._install(installation, InstallFromPath(backend_path), prompt)
 
     def download_and_install(
-        self, backend_name: Optional[str] = None, eula_agreement: bool = True
+        self, backend_name: str | None = None, eula_agreement: bool = True
     ) -> None:
         """Download and install available backends."""
         installations = self.could_be_downloaded_and_installed(backend_name)
@@ -269,7 +267,7 @@ class DefaultInstallationManager(InstallationManager, InstallationFiltersMixin):
 
     @staticmethod
     def _print_installation_list(
-        header: str, installations: List[Installation], new_section: bool = False
+        header: str, installations: list[Installation], new_section: bool = False
     ) -> None:
         """Print list of the installations."""
         logger.info("%s%s\n", "\n" if new_section else "", header)

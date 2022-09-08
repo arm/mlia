@@ -7,15 +7,14 @@ Context is an object that describes advisor working environment
 and requested behavior (advice categories, input configuration
 parameters).
 """
+from __future__ import annotations
+
 import logging
 from abc import ABC
 from abc import abstractmethod
 from pathlib import Path
 from typing import Any
-from typing import List
 from typing import Mapping
-from typing import Optional
-from typing import Union
 
 from mlia.core.common import AdviceCategory
 from mlia.core.events import DefaultEventPublisher
@@ -50,7 +49,7 @@ class Context(ABC):
 
     @property
     @abstractmethod
-    def event_handlers(self) -> Optional[List[EventHandler]]:
+    def event_handlers(self) -> list[EventHandler] | None:
         """Return list of the event_handlers."""
 
     @property
@@ -60,7 +59,7 @@ class Context(ABC):
 
     @property
     @abstractmethod
-    def config_parameters(self) -> Optional[Mapping[str, Any]]:
+    def config_parameters(self) -> Mapping[str, Any] | None:
         """Return configuration parameters."""
 
     @property
@@ -73,7 +72,7 @@ class Context(ABC):
         self,
         *,
         advice_category: AdviceCategory,
-        event_handlers: List[EventHandler],
+        event_handlers: list[EventHandler],
         config_parameters: Mapping[str, Any],
     ) -> None:
         """Update context parameters."""
@@ -98,14 +97,14 @@ class ExecutionContext(Context):
         self,
         *,
         advice_category: AdviceCategory = AdviceCategory.ALL,
-        config_parameters: Optional[Mapping[str, Any]] = None,
-        working_dir: Optional[Union[str, Path]] = None,
-        event_handlers: Optional[List[EventHandler]] = None,
-        event_publisher: Optional[EventPublisher] = None,
+        config_parameters: Mapping[str, Any] | None = None,
+        working_dir: str | Path | None = None,
+        event_handlers: list[EventHandler] | None = None,
+        event_publisher: EventPublisher | None = None,
         verbose: bool = False,
         logs_dir: str = "logs",
         models_dir: str = "models",
-        action_resolver: Optional[ActionResolver] = None,
+        action_resolver: ActionResolver | None = None,
     ) -> None:
         """Init execution context.
 
@@ -151,22 +150,22 @@ class ExecutionContext(Context):
         self._advice_category = advice_category
 
     @property
-    def config_parameters(self) -> Optional[Mapping[str, Any]]:
+    def config_parameters(self) -> Mapping[str, Any] | None:
         """Return configuration parameters."""
         return self._config_parameters
 
     @config_parameters.setter
-    def config_parameters(self, config_parameters: Optional[Mapping[str, Any]]) -> None:
+    def config_parameters(self, config_parameters: Mapping[str, Any] | None) -> None:
         """Setter for the configuration parameters."""
         self._config_parameters = config_parameters
 
     @property
-    def event_handlers(self) -> Optional[List[EventHandler]]:
+    def event_handlers(self) -> list[EventHandler] | None:
         """Return list of the event handlers."""
         return self._event_handlers
 
     @event_handlers.setter
-    def event_handlers(self, event_handlers: List[EventHandler]) -> None:
+    def event_handlers(self, event_handlers: list[EventHandler]) -> None:
         """Setter for the event handlers."""
         self._event_handlers = event_handlers
 
@@ -196,7 +195,7 @@ class ExecutionContext(Context):
         self,
         *,
         advice_category: AdviceCategory,
-        event_handlers: List[EventHandler],
+        event_handlers: list[EventHandler],
         config_parameters: Mapping[str, Any],
     ) -> None:
         """Update context parameters."""

@@ -1,10 +1,11 @@
 # SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for the output parsing."""
+from __future__ import annotations
+
 import base64
 import json
 from typing import Any
-from typing import Dict
 
 import pytest
 
@@ -42,7 +43,7 @@ REGEX_CONFIG = {
     "FloatValue": {"pattern": r"Float.*: (.*)", "type": "float"},
 }
 
-EMPTY_REGEX_CONFIG: Dict[str, Dict[str, Any]] = {}
+EMPTY_REGEX_CONFIG: dict[str, dict[str, Any]] = {}
 
 EXPECTED_METRICS_ALL = {
     "FirstString": "My awesome string!",
@@ -63,7 +64,7 @@ EXPECTED_METRICS_PARTIAL = {
         EXPECTED_METRICS_PARTIAL,
     ],
 )
-def test_base64_output_consumer(expected_metrics: Dict) -> None:
+def test_base64_output_consumer(expected_metrics: dict) -> None:
     """
     Make sure the Base64OutputConsumer yields valid results.
 
@@ -73,7 +74,7 @@ def test_base64_output_consumer(expected_metrics: Dict) -> None:
     parser = Base64OutputConsumer()
     assert isinstance(parser, OutputConsumer)
 
-    def create_base64_output(expected_metrics: Dict) -> bytearray:
+    def create_base64_output(expected_metrics: dict) -> bytearray:
         json_str = json.dumps(expected_metrics, indent=4)
         json_b64 = base64.b64encode(json_str.encode("utf-8"))
         return (

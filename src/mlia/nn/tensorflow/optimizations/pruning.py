@@ -7,11 +7,10 @@ In order to do this, we need to have a base model and corresponding training dat
 We also have to specify a subset of layers we want to prune. For more details,
 please refer to the documentation for TensorFlow Model Optimization Toolkit.
 """
+from __future__ import annotations
+
 import typing
 from dataclasses import dataclass
-from typing import List
-from typing import Optional
-from typing import Tuple
 
 import numpy as np
 import tensorflow as tf
@@ -29,9 +28,9 @@ class PruningConfiguration(OptimizerConfiguration):
     """Pruning configuration."""
 
     optimization_target: float
-    layers_to_optimize: Optional[List[str]] = None
-    x_train: Optional[np.ndarray] = None
-    y_train: Optional[np.ndarray] = None
+    layers_to_optimize: list[str] | None = None
+    x_train: np.ndarray | None = None
+    y_train: np.ndarray | None = None
     batch_size: int = 1
     num_epochs: int = 1
 
@@ -74,7 +73,7 @@ class Pruner(Optimizer):
         """Return string representation of the optimization config."""
         return str(self.optimizer_configuration)
 
-    def _mock_train_data(self) -> Tuple[np.ndarray, np.ndarray]:
+    def _mock_train_data(self) -> tuple[np.ndarray, np.ndarray]:
         # get rid of the batch_size dimension in input and output shape
         input_shape = tuple(x for x in self.model.input_shape if x is not None)
         output_shape = tuple(x for x in self.model.output_shape if x is not None)

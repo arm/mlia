@@ -1,9 +1,10 @@
 # SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for cli.commands module."""
+from __future__ import annotations
+
 from pathlib import Path
 from typing import Any
-from typing import Optional
 from unittest.mock import call
 from unittest.mock import MagicMock
 
@@ -165,7 +166,7 @@ def test_backend_command_action_status(installation_manager_mock: MagicMock) -> 
 def test_backend_command_action_add_downoad(
     installation_manager_mock: MagicMock,
     i_agree_to_the_contained_eula: bool,
-    backend_name: Optional[str],
+    backend_name: str | None,
     expected_calls: Any,
 ) -> None:
     """Test backend command "install" with download option."""
@@ -183,7 +184,7 @@ def test_backend_command_action_add_downoad(
 def test_backend_command_action_install_from_path(
     installation_manager_mock: MagicMock,
     tmp_path: Path,
-    backend_name: Optional[str],
+    backend_name: str | None,
 ) -> None:
     """Test backend command "install" with backend path."""
     backend(backend_action="install", path=tmp_path, name=backend_name)

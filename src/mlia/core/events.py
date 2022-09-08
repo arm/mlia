@@ -9,6 +9,8 @@ calling application.
 Each component of the workflow can generate events of specific type.
 Application can subscribe and react to those events.
 """
+from __future__ import annotations
+
 import traceback
 import uuid
 from abc import ABC
@@ -19,11 +21,7 @@ from dataclasses import dataclass
 from dataclasses import field
 from functools import singledispatchmethod
 from typing import Any
-from typing import Dict
 from typing import Generator
-from typing import List
-from typing import Optional
-from typing import Tuple
 
 from mlia.core.common import DataItem
 
@@ -41,7 +39,7 @@ class Event:
         """Generate unique ID for the event."""
         self.event_id = str(uuid.uuid4())
 
-    def compare_without_id(self, other: "Event") -> bool:
+    def compare_without_id(self, other: Event) -> bool:
         """Compare two events without event_id field."""
         if not isinstance(other, Event) or self.__class__ != other.__class__:
             return False
@@ -73,7 +71,7 @@ class ActionStartedEvent(Event):
     """
 
     action_type: str
-    params: Optional[Dict] = None
+    params: dict | None = None
 
 
 @dataclass
@@ -84,7 +82,7 @@ class SubActionEvent(ChildEvent):
     """
 
     action_type: str
-    params: Optional[Dict] = None
+    params: dict | None = None
 
 
 @dataclass
@@ -271,8 +269,8 @@ class EventDispatcherMetaclass(type):
     def __new__(
         cls,
         clsname: str,
-        bases: Tuple,
-        namespace: Dict[str, Any],
+        bases: tuple[type, ...],
+        namespace: dict[str, Any],
         event_handler_method_prefix: str = "on_",
     ) -> Any:
         """Create event dispatcher and link event handlers."""
@@ -321,7 +319,7 @@ class EventPublisher(ABC):
         """
 
     def register_event_handlers(
-        self, event_handlers: Optional[List[EventHandler]]
+        self, event_handlers: list[EventHandler] | None
     ) -> None:
         """Register event handlers.
 
@@ -354,7 +352,7 @@ class DefaultEventPublisher(EventPublisher):
 
     def __init__(self) -> None:
         """Init the event publisher."""
-        self.handlers: List[EventHandler] = []
+        self.handlers: list[EventHandler] = []
 
     def register_event_handler(self, event_handler: EventHandler) -> None:
         """Register the event handler.
@@ -374,7 +372,7 @@ class DefaultEventPublisher(EventPublisher):
 
 @contextmanager
 def stage(
-    publisher: EventPublisher, events: Tuple[Event, Event]
+    publisher: EventPublisher, events: tuple[Event, Event]
 ) -> Generator[None, None, None]:
     """Generate events before and after stage.
 
@@ -390,7 +388,7 @@ def stage(
 
 @contextmanager
 def action(
-    publisher: EventPublisher, action_type: str, params: Optional[Dict] = None
+    publisher: EventPublisher, action_type: str, params: dict | None = None
 ) -> Generator[None, None, None]:
     """Generate events before and after action."""
     action_started = ActionStartedEvent(action_type, params)

@@ -1,14 +1,14 @@
 # SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Module for advice generation."""
+from __future__ import annotations
+
 from abc import ABC
 from abc import abstractmethod
 from dataclasses import dataclass
 from functools import wraps
 from typing import Any
 from typing import Callable
-from typing import List
-from typing import Union
 
 from mlia.core.common import AdviceCategory
 from mlia.core.common import DataItem
@@ -20,7 +20,7 @@ from mlia.core.mixins import ContextMixin
 class Advice:
     """Base class for the advice."""
 
-    messages: List[str]
+    messages: list[str]
 
 
 @dataclass
@@ -56,7 +56,7 @@ class AdviceProducer(ABC):
         """
 
     @abstractmethod
-    def get_advice(self) -> Union[Advice, List[Advice]]:
+    def get_advice(self) -> Advice | list[Advice]:
         """Get produced advice."""
 
 
@@ -76,13 +76,13 @@ class FactBasedAdviceProducer(ContextAwareAdviceProducer):
 
     def __init__(self) -> None:
         """Init advice producer."""
-        self.advice: List[Advice] = []
+        self.advice: list[Advice] = []
 
-    def get_advice(self) -> Union[Advice, List[Advice]]:
+    def get_advice(self) -> Advice | list[Advice]:
         """Get produced advice."""
         return self.advice
 
-    def add_advice(self, messages: List[str]) -> None:
+    def add_advice(self, messages: list[str]) -> None:
         """Add advice."""
         self.advice.append(Advice(messages))
 

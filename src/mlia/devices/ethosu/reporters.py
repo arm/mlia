@@ -1,12 +1,11 @@
 # SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Reports module."""
+from __future__ import annotations
+
 from collections import defaultdict
 from typing import Any
 from typing import Callable
-from typing import List
-from typing import Tuple
-from typing import Union
 
 from mlia.core.advice_generation import Advice
 from mlia.core.reporting import BytesCell
@@ -52,7 +51,7 @@ def report_operators_stat(operators: Operators) -> Report:
     )
 
 
-def report_operators(ops: List[Operator]) -> Report:
+def report_operators(ops: list[Operator]) -> Report:
     """Return table representation for the list of operators."""
     columns = [
         Column("#", only_for=["plain_text"]),
@@ -235,11 +234,11 @@ def report_device_details(device: EthosUConfiguration) -> Report:
     )
 
 
-def metrics_as_records(perf_metrics: List[PerformanceMetrics]) -> List[Tuple]:
+def metrics_as_records(perf_metrics: list[PerformanceMetrics]) -> list[tuple]:
     """Convert perf metrics object into list of records."""
     perf_metrics = [item.in_kilobytes() for item in perf_metrics]
 
-    def _cycles_as_records(perf_metrics: List[PerformanceMetrics]) -> List[Tuple]:
+    def _cycles_as_records(perf_metrics: list[PerformanceMetrics]) -> list[tuple]:
         metric_map = defaultdict(list)
         for metrics in perf_metrics:
             if not metrics.npu_cycles:
@@ -253,7 +252,7 @@ def metrics_as_records(perf_metrics: List[PerformanceMetrics]) -> List[Tuple]:
             for name, values in metric_map.items()
         ]
 
-    def _memory_usage_as_records(perf_metrics: List[PerformanceMetrics]) -> List[Tuple]:
+    def _memory_usage_as_records(perf_metrics: list[PerformanceMetrics]) -> list[tuple]:
         metric_map = defaultdict(list)
         for metrics in perf_metrics:
             if not metrics.memory_usage:
@@ -276,7 +275,7 @@ def metrics_as_records(perf_metrics: List[PerformanceMetrics]) -> List[Tuple]:
             if all(val > 0 for val in values)
         ]
 
-    def _data_beats_as_records(perf_metrics: List[PerformanceMetrics]) -> List[Tuple]:
+    def _data_beats_as_records(perf_metrics: list[PerformanceMetrics]) -> list[tuple]:
         metric_map = defaultdict(list)
         for metrics in perf_metrics:
             if not metrics.npu_cycles:
@@ -308,7 +307,7 @@ def metrics_as_records(perf_metrics: List[PerformanceMetrics]) -> List[Tuple]:
 
 
 def report_perf_metrics(
-    perf_metrics: Union[PerformanceMetrics, List[PerformanceMetrics]]
+    perf_metrics: PerformanceMetrics | list[PerformanceMetrics],
 ) -> Report:
     """Return comparison table for the performance metrics."""
     if isinstance(perf_metrics, PerformanceMetrics):
@@ -361,7 +360,7 @@ def report_perf_metrics(
     )
 
 
-def report_advice(advice: List[Advice]) -> Report:
+def report_advice(advice: list[Advice]) -> Report:
     """Generate report for the advice."""
     return Table(
         columns=[

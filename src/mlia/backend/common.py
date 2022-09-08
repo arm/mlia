@@ -1,6 +1,8 @@
 # SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Contain all common functions for the backends."""
+from __future__ import annotations
+
 import json
 import logging
 import re
@@ -10,18 +12,12 @@ from pathlib import Path
 from typing import Any
 from typing import Callable
 from typing import cast
-from typing import Dict
 from typing import Final
 from typing import IO
 from typing import Iterable
-from typing import List
 from typing import Match
 from typing import NamedTuple
-from typing import Optional
 from typing import Pattern
-from typing import Tuple
-from typing import Type
-from typing import Union
 
 from mlia.backend.config import BackendConfig
 from mlia.backend.config import BaseBackendConfig
@@ -74,7 +70,7 @@ def remove_backend(directory_name: str, resource_type: ResourceType) -> None:
     remove_resource(directory_name, resource_type)
 
 
-def load_config(config: Union[None, Path, IO[bytes]]) -> BackendConfig:
+def load_config(config: Path | IO[bytes] | None) -> BackendConfig:
     """Return a loaded json file."""
     if config is None:
         raise Exception("Unable to read config")
@@ -86,7 +82,7 @@ def load_config(config: Union[None, Path, IO[bytes]]) -> BackendConfig:
     return cast(BackendConfig, json.load(config))
 
 
-def parse_raw_parameter(parameter: str) -> Tuple[str, Optional[str]]:
+def parse_raw_parameter(parameter: str) -> tuple[str, str | None]:
     """Split the parameter string in name and optional value.
 
     It manages the following cases:
@@ -176,7 +172,7 @@ class Backend(ABC):
 
     def _parse_commands_and_params(self, config: BaseBackendConfig) -> None:
         """Parse commands and user parameters."""
-        self.commands: Dict[str, Command] = {}
+        self.commands: dict[str, Command] = {}
 
         commands = config.get("commands")
         if commands:
@@ -213,15 +209,15 @@ class Backend(ABC):
 
     @classmethod
     def _parse_params(
-        cls, params: Optional[UserParamsConfig], command: str
-    ) -> List["Param"]:
+        cls, params: UserParamsConfig | None, command: str
+    ) -> list[Param]:
         if not params:
             return []
 
         return [cls._parse_param(p) for p in params.get(command, [])]
 
     @classmethod
-    def _parse_param(cls, param: UserParamConfig) -> "Param":
+    def _parse_param(cls, param: UserParamConfig) -> Param:
         """Parse a single parameter."""
         name = param.get("name")
         if name is not None and not name:
@@ -239,16 +235,14 @@ class Backend(ABC):
             alias=alias,
         )
 
-    def _get_command_details(self) -> Dict:
+    def _get_command_details(self) -> dict:
         command_details = {
             command_name: command.get_details()
             for command_name, command in self.commands.items()
         }
         return command_details
 
-    def _get_user_param_value(
-        self, user_params: List[str], param: "Param"
-    ) -> Optional[str]:
+    def _get_user_param_value(self, user_params: list[str], param: Param) -> str | None:
         """Get the user-specified value of a parameter."""
         for user_param in user_params:
             user_param_name, user_param_value = parse_raw_parameter(user_param)
@@ -267,7 +261,7 @@ class Backend(ABC):
         return None
 
     @staticmethod
-    def _same_parameter(user_param_name_or_alias: str, param: "Param") -> bool:
+    def _same_parameter(user_param_name_or_alias: str, param: Param) -> bool:
         """Compare user parameter name with param name or alias."""
         # Strip the "=" sign in the param_name. This is needed just for
         # comparison with the parameters passed by the user.
@@ -277,10 +271,10 @@ class Backend(ABC):
         return user_param_name_or_alias in [param_name, param.alias]
 
     def resolved_parameters(
-        self, command_name: str, user_params: List[str]
-    ) -> List[Tuple[Optional[str], "Param"]]:
+        self, command_name: str, user_params: list[str]
+    ) -> list[tuple[str | None, Param]]:
         """Return list of parameters with values."""
-        result: List[Tuple[Optional[str], "Param"]] = []
+        result: list[tuple[str | None, Param]] = []
         command = self.commands.get(command_name)
         if not command:
             return result
@@ -296,9 +290,9 @@ class Backend(ABC):
     def build_command(
         self,
         command_name: str,
-        user_params: List[str],
-        param_resolver: Callable[[str, str, List[Tuple[Optional[str], "Param"]]], str],
-    ) -> List[str]:
+        user_params: list[str],
+        param_resolver: Callable[[str, str, list[tuple[str | None, Param]]], str],
+    ) -> list[str]:
         """
         Return a list of executable command strings.
 
@@ -328,11 +322,11 @@ class Param:
 
     def __init__(  # pylint: disable=too-many-arguments
         self,
-        name: Optional[str],
+        name: str | None,
         description: str,
-        values: Optional[List[str]] = None,
-        default_value: Optional[str] = None,
-        alias: Optional[str] = None,
+        values: list[str] | None = None,
+        default_value: str | None = None,
+        alias: str | None = None,
     ) -> None:
         """Construct a Param instance."""
         if not name and not alias:
@@ -345,7 +339,7 @@ class Param:
         self.default_value = default_value
         self.alias = alias
 
-    def get_details(self) -> Dict:
+    def get_details(self) -> dict:
         """Return a dictionary with all relevant information of a Param."""
         return {key: value for key, value in self.__dict__.items() if value}
 
@@ -366,7 +360,7 @@ class Command:
     """Class for representing a command."""
 
     def __init__(
-        self, command_strings: List[str], params: Optional[List[Param]] = None
+        self, command_strings: list[str], params: list[Param] | None = None
     ) -> None:
         """Construct a Command instance."""
         self.command_strings = command_strings
@@ -404,7 +398,7 @@ class Command:
                 "as parameter name."
             )
 
-    def get_details(self) -> Dict:
+    def get_details(self) -> dict:
         """Return a dictionary with all relevant information of a Command."""
         output = {
             "command_strings": self.command_strings,
@@ -425,9 +419,9 @@ class Command:
 
 def resolve_all_parameters(
     str_val: str,
-    param_resolver: Callable[[str, str, List[Tuple[Optional[str], Param]]], str],
-    command_name: Optional[str] = None,
-    params_values: Optional[List[Tuple[Optional[str], Param]]] = None,
+    param_resolver: Callable[[str, str, list[tuple[str | None, Param]]], str],
+    command_name: str | None = None,
+    params_values: list[tuple[str | None, Param]] | None = None,
 ) -> str:
     """Resolve all parameters in the string."""
     if not str_val:
@@ -446,7 +440,7 @@ def resolve_all_parameters(
 
 def load_application_configs(
     config: Any,
-    config_type: Type[Any],
+    config_type: type[Any],
     is_system_required: bool = True,
 ) -> Any:
     """Get one config for each system supported by the application.
@@ -456,7 +450,7 @@ def load_application_configs(
     config with appropriate configuration.
     """
     merged_configs = []
-    supported_systems: Optional[List[NamedExecutionConfig]] = config.get(
+    supported_systems: list[NamedExecutionConfig] | None = config.get(
         "supported_systems"
     )
     if not supported_systems:

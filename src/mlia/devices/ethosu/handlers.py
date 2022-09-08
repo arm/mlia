@@ -1,12 +1,13 @@
 # SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Event handler."""
-import logging
-from typing import Optional
+from __future__ import annotations
 
-from mlia.core._typing import PathOrFileLike
+import logging
+
 from mlia.core.events import CollectedDataEvent
 from mlia.core.handlers import WorkflowEventsHandler
+from mlia.core.typing import PathOrFileLike
 from mlia.devices.ethosu.events import EthosUAdvisorEventHandler
 from mlia.devices.ethosu.events import EthosUAdvisorStartedEvent
 from mlia.devices.ethosu.performance import OptimizationPerformanceMetrics
@@ -20,7 +21,7 @@ logger = logging.getLogger(__name__)
 class EthosUEventHandler(WorkflowEventsHandler, EthosUAdvisorEventHandler):
     """CLI event handler."""
 
-    def __init__(self, output: Optional[PathOrFileLike] = None) -> None:
+    def __init__(self, output: PathOrFileLike | None = None) -> None:
         """Init event handler."""
         super().__init__(ethos_u_formatters, output)
 

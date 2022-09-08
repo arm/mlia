@@ -1,9 +1,10 @@
 # SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Environment configuration functions."""
+from __future__ import annotations
+
 import logging
 from functools import lru_cache
-from typing import List
 
 import mlia.backend.manager as backend_manager
 from mlia.tools.metadata.common import DefaultInstallationManager
@@ -21,7 +22,7 @@ def get_installation_manager(noninteractive: bool = False) -> InstallationManage
 
 
 @lru_cache
-def get_available_backends() -> List[str]:
+def get_available_backends() -> list[str]:
     """Return list of the available backends."""
     available_backends = ["Vela"]
 
@@ -42,7 +43,7 @@ def get_available_backends() -> List[str]:
 _CORSTONE_EXCLUSIVE_PRIORITY = ("Corstone-310", "Corstone-300")
 
 
-def get_default_backends() -> List[str]:
+def get_default_backends() -> list[str]:
     """Get default backends for evaluation."""
     backends = get_available_backends()
 

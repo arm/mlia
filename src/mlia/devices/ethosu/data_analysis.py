@@ -1,11 +1,10 @@
 # SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Ethos-U data analysis module."""
+from __future__ import annotations
+
 from dataclasses import dataclass
 from functools import singledispatchmethod
-from typing import Dict
-from typing import List
-from typing import Union
 
 from mlia.core.common import DataItem
 from mlia.core.data_analysis import Fact
@@ -19,7 +18,7 @@ from mlia.tools.vela_wrapper import Operators
 class HasCPUOnlyOperators(Fact):
     """Model has CPU only operators."""
 
-    cpu_only_ops: List[str]
+    cpu_only_ops: list[str]
 
 
 @dataclass
@@ -38,8 +37,8 @@ class AllOperatorsSupportedOnNPU(Fact):
 class PerfMetricDiff:
     """Performance metric difference."""
 
-    original_value: Union[int, float]
-    optimized_value: Union[int, float]
+    original_value: int | float
+    optimized_value: int | float
 
     @property
     def diff(self) -> float:
@@ -69,15 +68,15 @@ class PerfMetricDiff:
 class OptimizationDiff:
     """Optimization performance impact."""
 
-    opt_type: List[OptimizationSettings]
-    opt_diffs: Dict[str, PerfMetricDiff]
+    opt_type: list[OptimizationSettings]
+    opt_diffs: dict[str, PerfMetricDiff]
 
 
 @dataclass
 class OptimizationResults(Fact):
     """Optimization results."""
 
-    diffs: List[OptimizationDiff]
+    diffs: list[OptimizationDiff]
 
 
 class EthosUDataAnalyzer(FactExtractor):
@@ -113,13 +112,13 @@ class EthosUDataAnalyzer(FactExtractor):
         orig_memory = orig.memory_usage
         orig_cycles = orig.npu_cycles
 
-        diffs: List[OptimizationDiff] = []
+        diffs: list[OptimizationDiff] = []
         for opt_type, opt_perf_metrics in optimizations:
             opt = opt_perf_metrics.in_kilobytes()
             opt_memory = opt.memory_usage
             opt_cycles = opt.npu_cycles
 
-            opt_diffs: Dict[str, PerfMetricDiff] = {}
+            opt_diffs: dict[str, PerfMetricDiff] = {}
 
             if orig_memory and opt_memory:
                 opt_diffs.update(

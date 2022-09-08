@@ -1,6 +1,8 @@
 # SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Reporting module."""
+from __future__ import annotations
+
 import csv
 import json
 import logging
@@ -19,19 +21,14 @@ from typing import Any
 from typing import Callable
 from typing import cast
 from typing import Collection
-from typing import Dict
 from typing import Generator
 from typing import Iterable
-from typing import List
-from typing import Optional
-from typing import Tuple
-from typing import Union
 
 import numpy as np
 
-from mlia.core._typing import FileLike
-from mlia.core._typing import OutputFormat
-from mlia.core._typing import PathOrFileLike
+from mlia.core.typing import FileLike
+from mlia.core.typing import OutputFormat
+from mlia.core.typing import PathOrFileLike
 from mlia.utils.console import apply_style
 from mlia.utils.console import produce_table
 from mlia.utils.logging import LoggerWriter
@@ -48,7 +45,7 @@ class Report(ABC):
         """Convert to json serializible format."""
 
     @abstractmethod
-    def to_csv(self, **kwargs: Any) -> List[Any]:
+    def to_csv(self, **kwargs: Any) -> list[Any]:
         """Convert to csv serializible format."""
 
     @abstractmethod
@@ -62,9 +59,9 @@ class ReportItem:
     def __init__(
         self,
         name: str,
-        alias: Optional[str] = None,
-        value: Optional[Union[str, int, "Cell"]] = None,
-        nested_items: Optional[List["ReportItem"]] = None,
+        alias: str | None = None,
+        value: str | int | Cell | None = None,
+        nested_items: list[ReportItem] | None = None,
     ) -> None:
         """Init the report item."""
         self.name = name
@@ -98,9 +95,9 @@ class Format:
     :param style: text style
     """
 
-    wrap_width: Optional[int] = None
-    str_fmt: Optional[Union[str, Callable[[Any], str]]] = None
-    style: Optional[str] = None
+    wrap_width: int | None = None
+    str_fmt: str | Callable[[Any], str] | None = None
+    style: str | None = None
 
 
 @dataclass
@@ -112,7 +109,7 @@ class Cell:
     """
 
     value: Any
-    fmt: Optional[Format] = None
+    fmt: Format | None = None
 
     def _apply_style(self, value: str) -> str:
         """Apply style to the value."""
@@ -151,7 +148,7 @@ class CountAwareCell(Cell):
 
     def __init__(
         self,
-        value: Optional[Union[int, float]],
+        value: int | float | None,
         singular: str,
         plural: str,
         format_string: str = ",d",
@@ -159,7 +156,7 @@ class CountAwareCell(Cell):
         """Init cell instance."""
         self.unit = singular if value == 1 else plural
 
-        def format_value(val: Optional[Union[int, float]]) -> str:
+        def format_value(val: int | float | None) -> str:
             """Provide string representation for the value."""
             if val is None:
                 return ""
@@ -183,7 +180,7 @@ class CountAwareCell(Cell):
 class BytesCell(CountAwareCell):
     """Cell that represents memory size."""
 
-    def __init__(self, value: Optional[int]) -> None:
+    def __init__(self, value: int | None) -> None:
         """Init cell instance."""
         super().__init__(value, "byte", "bytes")
 
@@ -191,7 +188,7 @@ class BytesCell(CountAwareCell):
 class CyclesCell(CountAwareCell):
     """Cell that represents cycles."""
 
-    def __init__(self, value: Optional[Union[int, float]]) -> None:
+    def __init__(self, value: int | float | None) -> None:
         """Init cell instance."""
         super().__init__(value, "cycle", "cycles", ",.0f")
 
@@ -199,7 +196,7 @@ class CyclesCell(CountAwareCell):
 class ClockCell(CountAwareCell):
     """Cell that represents clock value."""
 
-    def __init__(self, value: Optional[Union[int, float]]) -> None:
+    def __init__(self, value: int | float | None) -> None:
         """Init cell instance."""
         super().__init__(value, "Hz", "Hz", ",.0f")
 
@@ -210,9 +207,9 @@ class Column:
     def __init__(
         self,
         header: str,
-        alias: Optional[str] = None,
-        fmt: Optional[Format] = None,
-        only_for: Optional[List[str]] = None,
+        alias: str | None = None,
+        fmt: Format | None = None,
+        only_for: list[str] | None = None,
     ) -> None:
         """Init column definition.
 
@@ -228,7 +225,7 @@ class Column:
         self.fmt = fmt
         self.only_for = only_for
 
-    def supports_format(self, fmt: str) -> bool:
+    def supports_format(self, fmt: OutputFormat) -> bool:
         """Return true if column should be shown."""
         return not self.only_for or fmt in self.only_for
 
@@ -236,20 +233,20 @@ class Column:
 class NestedReport(Report):
     """Report with nested items."""
 
-    def __init__(self, name: str, alias: str, items: List[ReportItem]) -> None:
+    def __init__(self, name: str, alias: str, items: list[ReportItem]) -> None:
         """Init nested report."""
         self.name = name
         self.alias = alias
         self.items = items
 
-    def to_csv(self, **kwargs: Any) -> List[Any]:
+    def to_csv(self, **kwargs: Any) -> list[Any]:
         """Convert to csv serializible format."""
         result = {}
 
         def collect_item_values(
             item: ReportItem,
-            _parent: Optional[ReportItem],
-            _prev: Optional[ReportItem],
+            _parent: ReportItem | None,
+            _prev: ReportItem | None,
             _level: int,
         ) -> None:
             """Collect item values into a dictionary.."""
@@ -279,13 +276,13 @@ class NestedReport(Report):
 
     def to_json(self, **kwargs: Any) -> Any:
         """Convert to json serializible format."""
-        per_parent: Dict[Optional[ReportItem], Dict] = defaultdict(dict)
+        per_parent: dict[ReportItem | None, dict] = defaultdict(dict)
         result = per_parent[None]
 
         def collect_as_dicts(
             item: ReportItem,
-            parent: Optional[ReportItem],
-            _prev: Optional[ReportItem],
+            parent: ReportItem | None,
+            _prev: ReportItem | None,
             _level: int,
         ) -> None:
             """Collect item values as nested dictionaries."""
@@ -313,8 +310,8 @@ class NestedReport(Report):
 
         def convert_to_text(
             item: ReportItem,
-            _parent: Optional[ReportItem],
-            prev: Optional[ReportItem],
+            _parent: ReportItem | None,
+            prev: ReportItem | None,
             level: int,
         ) -> None:
             """Convert item to text representation."""
@@ -345,12 +342,12 @@ class NestedReport(Report):
 
     def _traverse(
         self,
-        items: List[ReportItem],
+        items: list[ReportItem],
         visit_item: Callable[
-            [ReportItem, Optional[ReportItem], Optional[ReportItem], int], None
+            [ReportItem, ReportItem | None, ReportItem | None, int], None
         ],
         level: int = 1,
-        parent: Optional[ReportItem] = None,
+        parent: ReportItem | None = None,
     ) -> None:
         """Traverse through items."""
         prev = None
@@ -369,11 +366,11 @@ class Table(Report):
 
     def __init__(
         self,
-        columns: List[Column],
+        columns: list[Column],
         rows: Collection,
         name: str,
-        alias: Optional[str] = None,
-        notes: Optional[str] = None,
+        alias: str | None = None,
+        notes: str | None = None,
     ) -> None:
         """Init table definition.
 
@@ -477,7 +474,7 @@ class Table(Report):
 
         return title + formatted_table + footer
 
-    def to_csv(self, **kwargs: Any) -> List[Any]:
+    def to_csv(self, **kwargs: Any) -> list[Any]:
         """Convert table to csv format."""
         headers = [[c.header for c in self.columns if c.supports_format("csv")]]
 
@@ -528,7 +525,7 @@ class CompoundReport(Report):
     This class could be used for producing multiple reports at once.
     """
 
-    def __init__(self, reports: List[Report]) -> None:
+    def __init__(self, reports: list[Report]) -> None:
         """Init compound report instance."""
         self.reports = reports
 
@@ -538,13 +535,13 @@ class CompoundReport(Report):
         Method attempts to create compound dictionary based on provided
         parts.
         """
-        result: Dict[str, Any] = {}
+        result: dict[str, Any] = {}
         for item in self.reports:
             result.update(item.to_json(**kwargs))
 
         return result
 
-    def to_csv(self, **kwargs: Any) -> List[Any]:
+    def to_csv(self, **kwargs: Any) -> list[Any]:
         """Convert to csv serializible format.
 
         CSV format does support only one table. In order to be able to export
@@ -592,7 +589,7 @@ class CompoundReport(Report):
 class CompoundFormatter:
     """Compound data formatter."""
 
-    def __init__(self, formatters: List[Callable]) -> None:
+    def __init__(self, formatters: list[Callable]) -> None:
         """Init compound formatter."""
         self.formatters = formatters
 
@@ -637,7 +634,7 @@ def produce_report(
     data: Any,
     formatter: Callable[[Any], Report],
     fmt: OutputFormat = "plain_text",
-    output: Optional[PathOrFileLike] = None,
+    output: PathOrFileLike | None = None,
     **kwargs: Any,
 ) -> None:
     """Produce report based on provided data."""
@@ -679,8 +676,8 @@ class Reporter:
         self.output_format = output_format
         self.print_as_submitted = print_as_submitted
 
-        self.data: List[Tuple[Any, Callable[[Any], Report]]] = []
-        self.delayed: List[Tuple[Any, Callable[[Any], Report]]] = []
+        self.data: list[tuple[Any, Callable[[Any], Report]]] = []
+        self.delayed: list[tuple[Any, Callable[[Any], Report]]] = []
 
     def submit(self, data_item: Any, delay_print: bool = False, **kwargs: Any) -> None:
         """Submit data for the report."""
@@ -713,7 +710,7 @@ class Reporter:
         )
         self.delayed = []
 
-    def generate_report(self, output: Optional[PathOrFileLike]) -> None:
+    def generate_report(self, output: PathOrFileLike | None) -> None:
         """Generate report."""
         already_printed = (
             self.print_as_submitted
@@ -735,7 +732,7 @@ class Reporter:
 @contextmanager
 def get_reporter(
     output_format: OutputFormat,
-    output: Optional[PathOrFileLike],
+    output: PathOrFileLike | None,
     formatter_resolver: Callable[[Any], Callable[[Any], Report]],
 ) -> Generator[Reporter, None, None]:
     """Get reporter and generate report."""
@@ -762,7 +759,7 @@ def _apply_format_parameters(
     return wrapper
 
 
-def resolve_output_format(output: Optional[PathOrFileLike]) -> OutputFormat:
+def resolve_output_format(output: PathOrFileLike | None) -> OutputFormat:
     """Resolve output format based on the output name."""
     if isinstance(output, (str, Path)):
         format_from_filename = Path(output).suffix.lstrip(".")

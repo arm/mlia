@@ -1,10 +1,11 @@
 # SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for TOSA compatibility."""
+from __future__ import annotations
+
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
-from typing import Optional
 from unittest.mock import MagicMock
 
 import pytest
@@ -15,7 +16,7 @@ from mlia.devices.tosa.operators import TOSACompatibilityInfo
 
 
 def replace_get_tosa_checker_with_mock(
-    monkeypatch: pytest.MonkeyPatch, mock: Optional[MagicMock]
+    monkeypatch: pytest.MonkeyPatch, mock: MagicMock | None
 ) -> None:
     """Replace TOSA checker with mock."""
     monkeypatch.setattr(

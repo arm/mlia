@@ -1,9 +1,9 @@
 # SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for the helper classes."""
+from __future__ import annotations
+
 from typing import Any
-from typing import Dict
-from typing import List
 
 import pytest
 
@@ -67,9 +67,9 @@ class TestCliActionResolver:
         ],
     )
     def test_apply_optimizations(
-        args: Dict[str, Any],
-        params: Dict[str, Any],
-        expected_result: List[str],
+        args: dict[str, Any],
+        params: dict[str, Any],
+        expected_result: list[str],
     ) -> None:
         """Test action resolving for applying optimizations."""
         resolver = CLIActionResolver(args)
@@ -127,7 +127,7 @@ class TestCliActionResolver:
         ],
     )
     def test_check_performance(
-        args: Dict[str, Any], expected_result: List[str]
+        args: dict[str, Any], expected_result: list[str]
     ) -> None:
         """Test check performance info."""
         resolver = CLIActionResolver(args)
@@ -158,7 +158,7 @@ class TestCliActionResolver:
         ],
     )
     def test_check_operator_compatibility(
-        args: Dict[str, Any], expected_result: List[str]
+        args: dict[str, Any], expected_result: list[str]
     ) -> None:
         """Test checking operator compatibility info."""
         resolver = CLIActionResolver(args)

@@ -1,9 +1,10 @@
 # SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for the types related utility functions."""
+from __future__ import annotations
+
 from typing import Any
 from typing import Iterable
-from typing import Optional
 
 import pytest
 
@@ -42,7 +43,7 @@ def test_is_number(value: str, expected_result: bool) -> None:
     ],
 )
 def test_is_list(
-    data: Any, cls: type, elem_num: Optional[int], expected_result: bool
+    data: Any, cls: type, elem_num: int | None, expected_result: bool
 ) -> None:
     """Test function is_list."""
     assert is_list_of(data, cls, elem_num) == expected_result
@@ -70,8 +71,6 @@ def test_only_one_selected(options: Iterable[bool], expected_result: bool) -> No
         [None, 11, 11],
     ],
 )
-def test_parse_int(
-    value: Any, default: Optional[int], expected_int: Optional[int]
-) -> None:
+def test_parse_int(value: Any, default: int | None, expected_int: int | None) -> None:
     """Test function parse_int."""
     assert parse_int(value, default) == expected_int

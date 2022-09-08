@@ -1,8 +1,9 @@
 # SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Mixins module."""
+from __future__ import annotations
+
 from typing import Any
-from typing import Optional
 
 from mlia.core.context import Context
 
@@ -27,8 +28,8 @@ class ParameterResolverMixin:
         section: str,
         name: str,
         expected: bool = True,
-        expected_type: Optional[type] = None,
-        context: Optional[Context] = None,
+        expected_type: type | None = None,
+        context: Context | None = None,
     ) -> Any:
         """Get parameter value."""
         ctx = context or self.context

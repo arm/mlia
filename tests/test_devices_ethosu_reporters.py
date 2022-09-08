@@ -1,14 +1,14 @@
 # SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for reports module."""
+from __future__ import annotations
+
 import json
 import sys
 from contextlib import ExitStack as doesnt_raise
 from pathlib import Path
 from typing import Any
 from typing import Callable
-from typing import Dict
-from typing import List
 from typing import Literal
 
 import pytest
@@ -91,7 +91,7 @@ from mlia.utils.console import remove_ascii_codes
 )
 def test_report(
     data: Any,
-    formatters: List[Callable],
+    formatters: list[Callable],
     fmt: Literal["plain_text", "json", "csv"],
     output: Any,
     expected_error: Any,
@@ -202,10 +202,10 @@ Operators:
     ],
 )
 def test_report_operators(
-    ops: List[Operator],
+    ops: list[Operator],
     expected_plain_text: str,
-    expected_json_dict: Dict,
-    expected_csv_list: List,
+    expected_json_dict: dict,
+    expected_csv_list: list,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Test report_operatos formatter."""
@@ -380,8 +380,8 @@ def test_report_operators(
 def test_report_device_details(
     device: EthosUConfiguration,
     expected_plain_text: str,
-    expected_json_dict: Dict,
-    expected_csv_list: List,
+    expected_json_dict: dict,
+    expected_csv_list: list,
 ) -> None:
     """Test report_operatos formatter."""
     report = report_device_details(device)

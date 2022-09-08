@@ -1,13 +1,13 @@
 # SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Common test utils module."""
-from typing import Tuple
+from __future__ import annotations
 
 import numpy as np
 import tensorflow as tf
 
 
-def get_dataset() -> Tuple[np.ndarray, np.ndarray]:
+def get_dataset() -> tuple[np.ndarray, np.ndarray]:
     """Return sample dataset."""
     mnist = tf.keras.datasets.mnist
     (x_train, y_train), _ = mnist.load_data()

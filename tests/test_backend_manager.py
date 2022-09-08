@@ -1,16 +1,13 @@
 # SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for module backend/manager."""
+from __future__ import annotations
+
 import base64
 import json
 from contextlib import ExitStack as does_not_raise
 from pathlib import Path
 from typing import Any
-from typing import Dict
-from typing import List
-from typing import Optional
-from typing import Set
-from typing import Tuple
 from unittest.mock import MagicMock
 from unittest.mock import PropertyMock
 
@@ -35,7 +32,7 @@ from mlia.backend.output_consumer import Base64OutputConsumer
 from mlia.backend.system import get_system
 
 
-def _mock_encode_b64(data: Dict[str, int]) -> str:
+def _mock_encode_b64(data: dict[str, int]) -> str:
     """
     Encode the given data into a mock base64-encoded string of JSON.
 
@@ -138,7 +135,7 @@ def _mock_encode_b64(data: Dict[str, int]) -> str:
     ],
 )
 def test_generic_inference_output_parser(
-    data: Dict[str, int], is_ready: bool, result: Dict, missed_keys: Set[str]
+    data: dict[str, int], is_ready: bool, result: dict, missed_keys: set[str]
 ) -> None:
     """Test generic runner output parser."""
     parser = GenericInferenceOutputParser()
@@ -157,8 +154,8 @@ class TestBackendRunner:
     @staticmethod
     def _setup_backends(
         monkeypatch: pytest.MonkeyPatch,
-        available_systems: Optional[List[str]] = None,
-        available_apps: Optional[List[str]] = None,
+        available_systems: list[str] | None = None,
+        available_apps: list[str] | None = None,
     ) -> None:
         """Set up backend metadata."""
 
@@ -196,7 +193,7 @@ class TestBackendRunner:
     )
     def test_is_system_installed(
         self,
-        available_systems: List,
+        available_systems: list,
         system: str,
         installed: bool,
         monkeypatch: pytest.MonkeyPatch,
@@ -217,8 +214,8 @@ class TestBackendRunner:
     )
     def test_installed_systems(
         self,
-        available_systems: List[str],
-        systems: List[str],
+        available_systems: list[str],
+        systems: list[str],
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Test method installed_systems."""
@@ -250,8 +247,8 @@ class TestBackendRunner:
     )
     def test_systems_installed(
         self,
-        available_systems: List[str],
-        systems: List[str],
+        available_systems: list[str],
+        systems: list[str],
         expected_result: bool,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
@@ -274,8 +271,8 @@ class TestBackendRunner:
     )
     def test_applications_installed(
         self,
-        available_apps: List[str],
-        applications: List[str],
+        available_apps: list[str],
+        applications: list[str],
         expected_result: bool,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
@@ -297,8 +294,8 @@ class TestBackendRunner:
     )
     def test_get_installed_applications(
         self,
-        available_apps: List[str],
-        applications: List[str],
+        available_apps: list[str],
+        applications: list[str],
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Test method get_installed_applications."""
@@ -337,7 +334,7 @@ class TestBackendRunner:
     )
     def test_is_application_installed(
         self,
-        available_apps: List[str],
+        available_apps: list[str],
         application: str,
         installed: bool,
         monkeypatch: pytest.MonkeyPatch,
@@ -377,7 +374,7 @@ class TestBackendRunner:
     def test_run_application_local(
         monkeypatch: pytest.MonkeyPatch,
         execution_params: ExecutionParams,
-        expected_command: List[str],
+        expected_command: list[str],
     ) -> None:
         """Test method run_application with local systems."""
         run_app = MagicMock(wraps=run_application)
@@ -491,8 +488,8 @@ class TestBackendRunner:
 )
 def test_estimate_performance(
     device: DeviceInfo,
-    system: Tuple[str, bool],
-    application: Tuple[str, bool],
+    system: tuple[str, bool],
+    application: tuple[str, bool],
     backend: str,
     expected_error: Any,
     test_tflite_model: Path,
@@ -588,7 +585,7 @@ def test_estimate_performance_invalid_output(
         )
 
 
-def create_mock_process(stdout: List[str], stderr: List[str]) -> MagicMock:
+def create_mock_process(stdout: list[str], stderr: list[str]) -> MagicMock:
     """Mock underlying process."""
     mock_process = MagicMock()
     mock_process.poll.return_value = 0
@@ -597,7 +594,7 @@ def create_mock_process(stdout: List[str], stderr: List[str]) -> MagicMock:
     return mock_process
 
 
-def create_mock_context(stdout: List[str]) -> ExecutionContext:
+def create_mock_context(stdout: list[str]) -> ExecutionContext:
     """Mock ExecutionContext."""
     ctx = ExecutionContext(
         app=get_application("application_1")[0],

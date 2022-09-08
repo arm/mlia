@@ -1,19 +1,17 @@
 # SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Module for the API functions."""
+from __future__ import annotations
+
 import logging
 from pathlib import Path
 from typing import Any
-from typing import Dict
-from typing import List
 from typing import Literal
-from typing import Optional
-from typing import Union
 
-from mlia.core._typing import PathOrFileLike
 from mlia.core.advisor import InferenceAdvisor
 from mlia.core.common import AdviceCategory
 from mlia.core.context import ExecutionContext
+from mlia.core.typing import PathOrFileLike
 from mlia.devices.ethosu.advisor import configure_and_get_ethosu_advisor
 from mlia.devices.tosa.advisor import configure_and_get_tosa_advisor
 from mlia.utils.filesystem import get_target
@@ -24,13 +22,13 @@ logger = logging.getLogger(__name__)
 
 def get_advice(
     target_profile: str,
-    model: Union[Path, str],
+    model: str | Path,
     category: Literal["all", "operators", "performance", "optimization"] = "all",
-    optimization_targets: Optional[List[Dict[str, Any]]] = None,
-    working_dir: Union[str, Path] = "mlia_output",
-    output: Optional[PathOrFileLike] = None,
-    context: Optional[ExecutionContext] = None,
-    backends: Optional[List[str]] = None,
+    optimization_targets: list[dict[str, Any]] | None = None,
+    working_dir: str | Path = "mlia_output",
+    output: PathOrFileLike | None = None,
+    context: ExecutionContext | None = None,
+    backends: list[str] | None = None,
 ) -> None:
     """Get the advice.
 
@@ -97,8 +95,8 @@ def get_advice(
 def get_advisor(
     context: ExecutionContext,
     target_profile: str,
-    model: Union[Path, str],
-    output: Optional[PathOrFileLike] = None,
+    model: str | Path,
+    output: PathOrFileLike | None = None,
     **extra_args: Any,
 ) -> InferenceAdvisor:
     """Find appropriate advisor for the target."""

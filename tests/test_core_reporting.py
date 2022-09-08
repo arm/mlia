@@ -1,13 +1,10 @@
 # SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for reporting module."""
-from typing import List
-from typing import Optional
+from __future__ import annotations
 
 import pytest
 
-from mlia.core._typing import OutputFormat
-from mlia.core._typing import PathOrFileLike
 from mlia.core.reporting import BytesCell
 from mlia.core.reporting import Cell
 from mlia.core.reporting import ClockCell
@@ -19,6 +16,8 @@ from mlia.core.reporting import ReportItem
 from mlia.core.reporting import resolve_output_format
 from mlia.core.reporting import SingleRow
 from mlia.core.reporting import Table
+from mlia.core.typing import OutputFormat
+from mlia.core.typing import PathOrFileLike
 from mlia.utils.console import remove_ascii_codes
 
 
@@ -370,7 +369,7 @@ def test_nested_report_representation(
     report: NestedReport,
     expected_plain_text: str,
     expected_json_data: dict,
-    expected_csv_data: List,
+    expected_csv_data: list,
 ) -> None:
     """Test representation of the NestedReport."""
     plain_text = report.to_plain_text()
@@ -429,7 +428,7 @@ Single row example:
     ],
 )
 def test_resolve_output_format(
-    output: Optional[PathOrFileLike], expected_output_format: OutputFormat
+    output: PathOrFileLike | None, expected_output_format: OutputFormat
 ) -> None:
     """Test function resolve_output_format."""
     assert resolve_output_format(output) == expected_output_format

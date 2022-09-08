@@ -8,13 +8,13 @@ These metrics include:
 * Unique weights (clusters) (per layer)
 * gzip compression ratio
 """
+from __future__ import annotations
+
 import os
 import typing
 from enum import Enum
 from pprint import pprint
 from typing import Any
-from typing import List
-from typing import Optional
 
 import numpy as np
 import tensorflow as tf
@@ -42,7 +42,7 @@ def calculate_num_unique_weights(weights: np.ndarray) -> int:
     return num_unique_weights
 
 
-def calculate_num_unique_weights_per_axis(weights: np.ndarray, axis: int) -> List[int]:
+def calculate_num_unique_weights_per_axis(weights: np.ndarray, axis: int) -> list[int]:
     """Calculate unique weights per quantization axis."""
     # Make quantized dimension the first dimension
     weights_trans = np.swapaxes(weights, 0, axis)
@@ -74,7 +74,7 @@ class SparsityAccumulator:
 
 
 def calculate_sparsity(
-    weights: np.ndarray, accumulator: Optional[SparsityAccumulator] = None
+    weights: np.ndarray, accumulator: SparsityAccumulator | None = None
 ) -> float:
     """
     Calculate the sparsity for the given weights.
@@ -110,9 +110,7 @@ class TFLiteMetrics:
     * File compression via gzip
     """
 
-    def __init__(
-        self, tflite_file: str, ignore_list: Optional[List[str]] = None
-    ) -> None:
+    def __init__(self, tflite_file: str, ignore_list: list[str] | None = None) -> None:
         """Load the TFLite file and filter layers."""
         self.tflite_file = tflite_file
         if ignore_list is None:
@@ -159,7 +157,7 @@ class TFLiteMetrics:
             acc(self.get_tensor(details))
         return acc.sparsity()
 
-    def calc_num_clusters_per_axis(self, details: dict) -> List[int]:
+    def calc_num_clusters_per_axis(self, details: dict) -> list[int]:
         """Calculate number of clusters per axis."""
         quant_params = details["quantization_parameters"]
         per_axis = len(quant_params["zero_points"]) > 1
@@ -178,14 +176,14 @@ class TFLiteMetrics:
             aggregation_func = self.calc_num_clusters_per_axis
         elif mode == ReportClusterMode.NUM_CLUSTERS_MIN_MAX:
 
-            def cluster_min_max(details: dict) -> List[int]:
+            def cluster_min_max(details: dict) -> list[int]:
                 num_clusters = self.calc_num_clusters_per_axis(details)
                 return [min(num_clusters), max(num_clusters)]
 
             aggregation_func = cluster_min_max
         elif mode == ReportClusterMode.NUM_CLUSTERS_HISTOGRAM:
 
-            def cluster_hist(details: dict) -> List[int]:
+            def cluster_hist(details: dict) -> list[int]:
                 num_clusters = self.calc_num_clusters_per_axis(details)
                 max_num = max(num_clusters)
                 hist = [0] * (max_num)
@@ -289,7 +287,7 @@ class TFLiteMetrics:
             print(f"- {self._prettify_name(name)}: {nums}")
 
     @staticmethod
-    def _print_in_outs(ios: List[dict], verbose: bool = False) -> None:
+    def _print_in_outs(ios: list[dict], verbose: bool = False) -> None:
         for item in ios:
             if verbose:
                 pprint(item)

@@ -1,12 +1,13 @@
 # SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for main module."""
+from __future__ import annotations
+
 import argparse
 from functools import wraps
 from pathlib import Path
 from typing import Any
 from typing import Callable
-from typing import List
 from unittest.mock import ANY
 from unittest.mock import call
 from unittest.mock import MagicMock
@@ -252,7 +253,7 @@ def test_default_command(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Non
     ],
 )
 def test_commands_execution(
-    monkeypatch: pytest.MonkeyPatch, params: List[str], expected_call: Any
+    monkeypatch: pytest.MonkeyPatch, params: list[str], expected_call: Any
 ) -> None:
     """Test calling commands from the main function."""
     mock = MagicMock()
@@ -320,7 +321,7 @@ def test_verbose_output(
     capsys: pytest.CaptureFixture,
     verbose: bool,
     exc_mock: MagicMock,
-    expected_output: List[str],
+    expected_output: list[str],
 ) -> None:
     """Test flag --verbose."""
 

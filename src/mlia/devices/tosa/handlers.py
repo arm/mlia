@@ -2,12 +2,13 @@
 # SPDX-License-Identifier: Apache-2.0
 """TOSA Advisor event handlers."""
 # pylint: disable=R0801
-import logging
-from typing import Optional
+from __future__ import annotations
 
-from mlia.core._typing import PathOrFileLike
+import logging
+
 from mlia.core.events import CollectedDataEvent
 from mlia.core.handlers import WorkflowEventsHandler
+from mlia.core.typing import PathOrFileLike
 from mlia.devices.tosa.events import TOSAAdvisorEventHandler
 from mlia.devices.tosa.events import TOSAAdvisorStartedEvent
 from mlia.devices.tosa.operators import TOSACompatibilityInfo
@@ -19,7 +20,7 @@ logger = logging.getLogger(__name__)
 class TOSAEventHandler(WorkflowEventsHandler, TOSAAdvisorEventHandler):
     """Event handler for TOSA advisor."""
 
-    def __init__(self, output: Optional[PathOrFileLike] = None) -> None:
+    def __init__(self, output: PathOrFileLike | None = None) -> None:
         """Init event handler."""
         super().__init__(tosa_formatters, output)
 

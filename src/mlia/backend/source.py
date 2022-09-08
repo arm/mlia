@@ -1,6 +1,8 @@
 # SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Contain source related classes and functions."""
+from __future__ import annotations
+
 import os
 import shutil
 import tarfile
@@ -8,8 +10,6 @@ from abc import ABC
 from abc import abstractmethod
 from pathlib import Path
 from tarfile import TarFile
-from typing import Optional
-from typing import Union
 
 from mlia.backend.common import BACKEND_CONFIG_FILE
 from mlia.backend.common import ConfigurationException
@@ -24,11 +24,11 @@ class Source(ABC):
     """Source class."""
 
     @abstractmethod
-    def name(self) -> Optional[str]:
+    def name(self) -> str | None:
         """Get source name."""
 
     @abstractmethod
-    def config(self) -> Optional[BackendConfig]:
+    def config(self) -> BackendConfig | None:
         """Get configuration file content."""
 
     @abstractmethod
@@ -52,7 +52,7 @@ class DirectorySource(Source):
         """Return name of source."""
         return self.directory_path.name
 
-    def config(self) -> Optional[BackendConfig]:
+    def config(self) -> BackendConfig | None:
         """Return configuration file content."""
         if not is_backend_directory(self.directory_path):
             raise ConfigurationException("No configuration file found")
@@ -84,9 +84,9 @@ class TarArchiveSource(Source):
         """Create the TarArchiveSource class."""
         assert isinstance(archive_path, Path)
         self.archive_path = archive_path
-        self._config: Optional[BackendConfig] = None
-        self._has_top_level_folder: Optional[bool] = None
-        self._name: Optional[str] = None
+        self._config: BackendConfig | None = None
+        self._has_top_level_folder: bool | None = None
+        self._name: str | None = None
 
     def _read_archive_content(self) -> None:
         """Read various information about archive."""
@@ -125,14 +125,14 @@ class TarArchiveSource(Source):
             content = archive.extractfile(config_entry)
             self._config = load_config(content)
 
-    def config(self) -> Optional[BackendConfig]:
+    def config(self) -> BackendConfig | None:
         """Return configuration file content."""
         if self._config is None:
             self._read_archive_content()
 
         return self._config
 
-    def name(self) -> Optional[str]:
+    def name(self) -> str | None:
         """Return name of the source."""
         if self._name is None:
             self._read_archive_content()
@@ -171,7 +171,7 @@ class TarArchiveSource(Source):
         )
 
 
-def get_source(source_path: Path) -> Union[TarArchiveSource, DirectorySource]:
+def get_source(source_path: Path) -> TarArchiveSource | DirectorySource:
     """Return appropriate source instance based on provided source path."""
     if source_path.is_file():
         return TarArchiveSource(source_path)

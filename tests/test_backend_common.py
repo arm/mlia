@@ -2,16 +2,14 @@
 # SPDX-License-Identifier: Apache-2.0
 # pylint: disable=no-self-use,protected-access
 """Tests for the common backend module."""
+from __future__ import annotations
+
 from contextlib import ExitStack as does_not_raise
 from pathlib import Path
 from typing import Any
 from typing import cast
-from typing import Dict
 from typing import IO
 from typing import List
-from typing import Optional
-from typing import Tuple
-from typing import Union
 from unittest.mock import MagicMock
 
 import pytest
@@ -62,7 +60,7 @@ def test_load_config(
 ) -> None:
     """Test load_config."""
     with expected_exception:
-        configs: List[Optional[Union[Path, IO[bytes]]]] = (
+        configs: list[Path | IO[bytes] | None] = (
             [None]
             if not filename
             else [
@@ -283,8 +281,8 @@ class TestBackend:
     def test_resolved_parameters(
         self,
         class_: type,
-        config: Dict,
-        expected_output: List[Tuple[Optional[str], Param]],
+        config: dict,
+        expected_output: list[tuple[str | None, Param]],
     ) -> None:
         """Test command building."""
         backend = class_(config)
@@ -343,7 +341,7 @@ class TestBackend:
         ],
     )
     def test__parse_raw_parameter(
-        self, input_param: str, expected: Tuple[str, Optional[str]]
+        self, input_param: str, expected: tuple[str, str | None]
     ) -> None:
         """Test internal method of parsing a single raw parameter."""
         assert parse_raw_parameter(input_param) == expected
@@ -476,7 +474,7 @@ class TestCommand:
             ],
         ],
     )
-    def test_validate_params(self, params: List[Param], expected_error: Any) -> None:
+    def test_validate_params(self, params: list[Param], expected_error: Any) -> None:
         """Test command validation function."""
         with expected_error:
             Command([], params)

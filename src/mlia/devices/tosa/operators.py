@@ -1,14 +1,14 @@
 # SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Operators module."""
+from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import Any
 from typing import cast
-from typing import List
-from typing import Optional
 from typing import Protocol
 
-from mlia.core._typing import PathOrFileLike
+from mlia.core.typing import PathOrFileLike
 
 
 class TOSAChecker(Protocol):
@@ -17,7 +17,7 @@ class TOSAChecker(Protocol):
     def is_tosa_compatible(self) -> bool:
         """Return true if model is TOSA compatible."""
 
-    def _get_tosa_compatibility_for_ops(self) -> List[Any]:
+    def _get_tosa_compatibility_for_ops(self) -> list[Any]:
         """Return list of operators."""
 
 
@@ -35,7 +35,7 @@ class TOSACompatibilityInfo:
     """Models' TOSA compatibility information."""
 
     tosa_compatible: bool
-    operators: List[Operator]
+    operators: list[Operator]
 
 
 def get_tosa_compatibility_info(
@@ -59,7 +59,7 @@ def get_tosa_compatibility_info(
     return TOSACompatibilityInfo(checker.is_tosa_compatible(), ops)
 
 
-def get_tosa_checker(tflite_model_path: PathOrFileLike) -> Optional[TOSAChecker]:
+def get_tosa_checker(tflite_model_path: PathOrFileLike) -> TOSAChecker | None:
     """Return instance of the TOSA checker."""
     try:
         import tosa_checker as tc  # pylint: disable=import-outside-toplevel

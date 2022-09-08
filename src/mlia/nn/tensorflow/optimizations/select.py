@@ -1,12 +1,10 @@
 # SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Module for optimization selection."""
+from __future__ import annotations
+
 import math
-from typing import List
 from typing import NamedTuple
-from typing import Optional
-from typing import Tuple
-from typing import Union
 
 import tensorflow as tf
 
@@ -25,14 +23,14 @@ class OptimizationSettings(NamedTuple):
     """Optimization settings."""
 
     optimization_type: str
-    optimization_target: Union[int, float]
-    layers_to_optimize: Optional[List[str]]
+    optimization_target: int | float
+    layers_to_optimize: list[str] | None
 
     @staticmethod
     def create_from(
-        optimizer_params: List[Tuple[str, float]],
-        layers_to_optimize: Optional[List[str]] = None,
-    ) -> List["OptimizationSettings"]:
+        optimizer_params: list[tuple[str, float]],
+        layers_to_optimize: list[str] | None = None,
+    ) -> list[OptimizationSettings]:
         """Create optimization settings from the provided parameters."""
         return [
             OptimizationSettings(
@@ -47,7 +45,7 @@ class OptimizationSettings(NamedTuple):
         """Return string representation."""
         return f"{self.optimization_type}: {self.optimization_target}"
 
-    def next_target(self) -> "OptimizationSettings":
+    def next_target(self) -> OptimizationSettings:
         """Return next optimization target."""
         if self.optimization_type == "pruning":
             next_target = round(min(self.optimization_target + 0.1, 0.9), 2)
@@ -75,7 +73,7 @@ class MultiStageOptimizer(Optimizer):
     def __init__(
         self,
         model: tf.keras.Model,
-        optimizations: List[OptimizerConfiguration],
+        optimizations: list[OptimizerConfiguration],
     ) -> None:
         """Init MultiStageOptimizer instance."""
         self.model = model
@@ -98,10 +96,8 @@ class MultiStageOptimizer(Optimizer):
 
 
 def get_optimizer(
-    model: Union[tf.keras.Model, KerasModel],
-    config: Union[
-        OptimizerConfiguration, OptimizationSettings, List[OptimizationSettings]
-    ],
+    model: tf.keras.Model | KerasModel,
+    config: OptimizerConfiguration | OptimizationSettings | list[OptimizationSettings],
 ) -> Optimizer:
     """Get optimizer for provided configuration."""
     if isinstance(model, KerasModel):
@@ -123,7 +119,7 @@ def get_optimizer(
 
 def _get_optimizer(
     model: tf.keras.Model,
-    optimization_settings: Union[OptimizationSettings, List[OptimizationSettings]],
+    optimization_settings: OptimizationSettings | list[OptimizationSettings],
 ) -> Optimizer:
     if isinstance(optimization_settings, OptimizationSettings):
         optimization_settings = [optimization_settings]
@@ -145,8 +141,8 @@ def _get_optimizer(
 
 def _get_optimizer_configuration(
     optimization_type: str,
-    optimization_target: Union[int, float],
-    layers_to_optimize: Optional[List[str]] = None,
+    optimization_target: int | float,
+    layers_to_optimize: list[str] | None = None,
 ) -> OptimizerConfiguration:
     """Get optimizer configuration for provided parameters."""
     _check_optimizer_params(optimization_type, optimization_target)
@@ -169,7 +165,7 @@ def _get_optimizer_configuration(
 
 
 def _check_optimizer_params(
-    optimization_type: str, optimization_target: Union[int, float]
+    optimization_type: str, optimization_target: int | float
 ) -> None:
     """Check optimizer params."""
     if not optimization_target:

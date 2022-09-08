@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for Ethos-U advice generation."""
-from typing import List
+from __future__ import annotations
 
 import pytest
 
@@ -363,7 +363,7 @@ from mlia.nn.tensorflow.optimizations.select import OptimizationSettings
 def test_ethosu_advice_producer(
     tmpdir: str,
     input_data: DataItem,
-    expected_advice: List[Advice],
+    expected_advice: list[Advice],
     advice_category: AdviceCategory,
     action_resolver: ActionResolver,
 ) -> None:
@@ -468,7 +468,7 @@ def test_ethosu_static_advice_producer(
     tmpdir: str,
     advice_category: AdviceCategory,
     action_resolver: ActionResolver,
-    expected_advice: List[Advice],
+    expected_advice: list[Advice],
 ) -> None:
     """Test static advice generation."""
     producer = EthosUStaticAdviceProducer()

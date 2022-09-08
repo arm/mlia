@@ -1,9 +1,9 @@
 # SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Console output utility functions."""
+from __future__ import annotations
+
 from typing import Iterable
-from typing import List
-from typing import Optional
 
 from rich.console import Console
 from rich.console import RenderableType
@@ -13,7 +13,7 @@ from rich.text import Text
 
 
 def create_section_header(
-    section_name: Optional[str] = None, length: int = 80, sep: str = "-"
+    section_name: str | None = None, length: int = 80, sep: str = "-"
 ) -> str:
     """Return section header."""
     if not section_name:
@@ -41,7 +41,7 @@ def style_improvement(result: bool) -> str:
 
 def produce_table(
     rows: Iterable,
-    headers: Optional[List[str]] = None,
+    headers: list[str] | None = None,
     table_style: str = "default",
 ) -> str:
     """Represent data in tabular form."""

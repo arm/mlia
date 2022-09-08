@@ -1,13 +1,12 @@
 # SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Event handlers module."""
+from __future__ import annotations
+
 import logging
 from typing import Any
 from typing import Callable
-from typing import List
-from typing import Optional
 
-from mlia.core._typing import PathOrFileLike
 from mlia.core.advice_generation import Advice
 from mlia.core.advice_generation import AdviceEvent
 from mlia.core.events import ActionFinishedEvent
@@ -28,6 +27,7 @@ from mlia.core.events import ExecutionStartedEvent
 from mlia.core.reporting import Report
 from mlia.core.reporting import Reporter
 from mlia.core.reporting import resolve_output_format
+from mlia.core.typing import PathOrFileLike
 from mlia.utils.console import create_section_header
 
 
@@ -101,14 +101,14 @@ class WorkflowEventsHandler(SystemEventsHandler):
     def __init__(
         self,
         formatter_resolver: Callable[[Any], Callable[[Any], Report]],
-        output: Optional[PathOrFileLike] = None,
+        output: PathOrFileLike | None = None,
     ) -> None:
         """Init event handler."""
         output_format = resolve_output_format(output)
         self.reporter = Reporter(formatter_resolver, output_format)
         self.output = output
 
-        self.advice: List[Advice] = []
+        self.advice: list[Advice] = []
 
     def on_execution_started(self, event: ExecutionStartedEvent) -> None:
         """Handle ExecutionStarted event."""

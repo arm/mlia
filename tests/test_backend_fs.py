@@ -2,10 +2,11 @@
 # SPDX-License-Identifier: Apache-2.0
 # pylint: disable=no-self-use
 """Module for testing fs.py."""
+from __future__ import annotations
+
 from contextlib import ExitStack as does_not_raise
 from pathlib import Path
 from typing import Any
-from typing import Union
 from unittest.mock import MagicMock
 
 import pytest
@@ -108,7 +109,7 @@ def test_recreate_directory(tmpdir: Any) -> None:
 
 
 def write_to_file(
-    write_directory: Any, write_mode: str, write_text: Union[str, bytes]
+    write_directory: Any, write_mode: str, write_text: str | bytes
 ) -> Path:
     """Write some text to a temporary test file."""
     tmpdir_path = Path(write_directory)

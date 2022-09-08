@@ -1,10 +1,10 @@
 # SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for commmon installation related functions."""
+from __future__ import annotations
+
 from pathlib import Path
 from typing import Any
-from typing import List
-from typing import Optional
 from unittest.mock import call
 from unittest.mock import MagicMock
 from unittest.mock import PropertyMock
@@ -22,7 +22,7 @@ def get_installation_mock(
     name: str,
     already_installed: bool = False,
     could_be_installed: bool = False,
-    supported_install_type: Optional[type] = None,
+    supported_install_type: type | None = None,
 ) -> MagicMock:
     """Get mock instance for the installation."""
     mock = MagicMock(spec=Installation)
@@ -81,7 +81,7 @@ def _could_be_installed_from_mock() -> MagicMock:
 
 def get_installation_manager(
     noninteractive: bool,
-    installations: List[Any],
+    installations: list[Any],
     monkeypatch: pytest.MonkeyPatch,
     yes_response: bool = True,
 ) -> DefaultInstallationManager:
@@ -146,7 +146,7 @@ def test_installation_manager_download_and_install(
     install_mock: MagicMock,
     noninteractive: bool,
     eula_agreement: bool,
-    backend_name: Optional[str],
+    backend_name: str | None,
     expected_call: Any,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -183,7 +183,7 @@ def test_installation_manager_download_and_install(
 def test_installation_manager_install_from(
     install_mock: MagicMock,
     noninteractive: bool,
-    backend_name: Optional[str],
+    backend_name: str | None,
     expected_call: Any,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

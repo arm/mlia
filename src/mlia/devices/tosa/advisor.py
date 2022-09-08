@@ -1,14 +1,11 @@
 # SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """TOSA advisor."""
+from __future__ import annotations
+
 from pathlib import Path
 from typing import Any
-from typing import Dict
-from typing import List
-from typing import Optional
-from typing import Union
 
-from mlia.core._typing import PathOrFileLike
 from mlia.core.advice_generation import AdviceCategory
 from mlia.core.advice_generation import AdviceProducer
 from mlia.core.advisor import DefaultInferenceAdvisor
@@ -18,6 +15,7 @@ from mlia.core.context import ExecutionContext
 from mlia.core.data_analysis import DataAnalyzer
 from mlia.core.data_collection import DataCollector
 from mlia.core.events import Event
+from mlia.core.typing import PathOrFileLike
 from mlia.devices.tosa.advice_generation import TOSAAdviceProducer
 from mlia.devices.tosa.config import TOSAConfiguration
 from mlia.devices.tosa.data_analysis import TOSADataAnalyzer
@@ -34,30 +32,30 @@ class TOSAInferenceAdvisor(DefaultInferenceAdvisor):
         """Return name of the advisor."""
         return "tosa_inference_advisor"
 
-    def get_collectors(self, context: Context) -> List[DataCollector]:
+    def get_collectors(self, context: Context) -> list[DataCollector]:
         """Return list of the data collectors."""
         model = self.get_model(context)
 
-        collectors: List[DataCollector] = []
+        collectors: list[DataCollector] = []
 
         if AdviceCategory.OPERATORS in context.advice_category:
             collectors.append(TOSAOperatorCompatibility(model))
 
         return collectors
 
-    def get_analyzers(self, context: Context) -> List[DataAnalyzer]:
+    def get_analyzers(self, context: Context) -> list[DataAnalyzer]:
         """Return list of the data analyzers."""
         return [
             TOSADataAnalyzer(),
         ]
 
-    def get_producers(self, context: Context) -> List[AdviceProducer]:
+    def get_producers(self, context: Context) -> list[AdviceProducer]:
         """Return list of the advice producers."""
         return [
             TOSAAdviceProducer(),
         ]
 
-    def get_events(self, context: Context) -> List[Event]:
+    def get_events(self, context: Context) -> list[Event]:
         """Return list of the startup events."""
         model = self.get_model(context)
         target_profile = self.get_target_profile(context)
@@ -70,9 +68,9 @@ class TOSAInferenceAdvisor(DefaultInferenceAdvisor):
 def configure_and_get_tosa_advisor(
     context: ExecutionContext,
     target_profile: str,
-    model: Union[Path, str],
-    output: Optional[PathOrFileLike] = None,
-    **_extra_args: Any
+    model: str | Path,
+    output: PathOrFileLike | None = None,
+    **_extra_args: Any,
 ) -> InferenceAdvisor:
     """Create and configure TOSA advisor."""
     if context.event_handlers is None:
@@ -84,11 +82,9 @@ def configure_and_get_tosa_advisor(
     return TOSAInferenceAdvisor()
 
 
-def _get_config_parameters(
-    model: Union[Path, str], target_profile: str
-) -> Dict[str, Any]:
+def _get_config_parameters(model: str | Path, target_profile: str) -> dict[str, Any]:
     """Get configuration parameters for the advisor."""
-    advisor_parameters: Dict[str, Any] = {
+    advisor_parameters: dict[str, Any] = {
         "tosa_inference_advisor": {
             "model": str(model),
             "target_profile": target_profile,

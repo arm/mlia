@@ -1,14 +1,11 @@
 # SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Ethos-U MLIA module."""
+from __future__ import annotations
+
 from pathlib import Path
 from typing import Any
-from typing import Dict
-from typing import List
-from typing import Optional
-from typing import Union
 
-from mlia.core._typing import PathOrFileLike
 from mlia.core.advice_generation import AdviceProducer
 from mlia.core.advisor import DefaultInferenceAdvisor
 from mlia.core.advisor import InferenceAdvisor
@@ -18,6 +15,7 @@ from mlia.core.context import ExecutionContext
 from mlia.core.data_analysis import DataAnalyzer
 from mlia.core.data_collection import DataCollector
 from mlia.core.events import Event
+from mlia.core.typing import PathOrFileLike
 from mlia.devices.ethosu.advice_generation import EthosUAdviceProducer
 from mlia.devices.ethosu.advice_generation import EthosUStaticAdviceProducer
 from mlia.devices.ethosu.config import EthosUConfiguration
@@ -40,13 +38,13 @@ class EthosUInferenceAdvisor(DefaultInferenceAdvisor):
         """Return name of the advisor."""
         return "ethos_u_inference_advisor"
 
-    def get_collectors(self, context: Context) -> List[DataCollector]:
+    def get_collectors(self, context: Context) -> list[DataCollector]:
         """Return list of the data collectors."""
         model = self.get_model(context)
         device = self._get_device(context)
         backends = self._get_backends(context)
 
-        collectors: List[DataCollector] = []
+        collectors: list[DataCollector] = []
 
         if AdviceCategory.OPERATORS in context.advice_category:
             collectors.append(EthosUOperatorCompatibility(model, device))
@@ -75,20 +73,20 @@ class EthosUInferenceAdvisor(DefaultInferenceAdvisor):
 
         return collectors
 
-    def get_analyzers(self, context: Context) -> List[DataAnalyzer]:
+    def get_analyzers(self, context: Context) -> list[DataAnalyzer]:
         """Return list of the data analyzers."""
         return [
             EthosUDataAnalyzer(),
         ]
 
-    def get_producers(self, context: Context) -> List[AdviceProducer]:
+    def get_producers(self, context: Context) -> list[AdviceProducer]:
         """Return list of the advice producers."""
         return [
             EthosUAdviceProducer(),
             EthosUStaticAdviceProducer(),
         ]
 
-    def get_events(self, context: Context) -> List[Event]:
+    def get_events(self, context: Context) -> list[Event]:
         """Return list of the startup events."""
         model = self.get_model(context)
         device = self._get_device(context)
@@ -103,7 +101,7 @@ class EthosUInferenceAdvisor(DefaultInferenceAdvisor):
 
         return get_target(target_profile)
 
-    def _get_optimization_settings(self, context: Context) -> List[List[dict]]:
+    def _get_optimization_settings(self, context: Context) -> list[list[dict]]:
         """Get optimization settings."""
         return self.get_parameter(  # type: ignore
             EthosUOptimizationPerformance.name(),
@@ -113,7 +111,7 @@ class EthosUInferenceAdvisor(DefaultInferenceAdvisor):
             context=context,
         )
 
-    def _get_backends(self, context: Context) -> Optional[List[str]]:
+    def _get_backends(self, context: Context) -> list[str] | None:
         """Get list of backends."""
         return self.get_parameter(  # type: ignore
             self.name(),
@@ -127,8 +125,8 @@ class EthosUInferenceAdvisor(DefaultInferenceAdvisor):
 def configure_and_get_ethosu_advisor(
     context: ExecutionContext,
     target_profile: str,
-    model: Union[Path, str],
-    output: Optional[PathOrFileLike] = None,
+    model: str | Path,
+    output: PathOrFileLike | None = None,
     **extra_args: Any,
 ) -> InferenceAdvisor:
     """Create and configure Ethos-U advisor."""
@@ -158,12 +156,12 @@ _DEFAULT_OPTIMIZATION_TARGETS = [
 
 
 def _get_config_parameters(
-    model: Union[Path, str],
+    model: str | Path,
     target_profile: str,
     **extra_args: Any,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Get configuration parameters for the advisor."""
-    advisor_parameters: Dict[str, Any] = {
+    advisor_parameters: dict[str, Any] = {
         "ethos_u_inference_advisor": {
             "model": model,
             "target_profile": target_profile,

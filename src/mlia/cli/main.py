@@ -1,16 +1,14 @@
 # SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """CLI main entry point."""
+from __future__ import annotations
+
 import argparse
 import logging
 import sys
 from functools import partial
 from inspect import signature
 from pathlib import Path
-from typing import Dict
-from typing import List
-from typing import Optional
-from typing import Tuple
 
 from mlia import __version__
 from mlia.cli.commands import all_tests
@@ -50,7 +48,7 @@ Supported targets:
 """.strip()
 
 
-def get_commands() -> List[CommandInfo]:
+def get_commands() -> list[CommandInfo]:
     """Return commands configuration."""
     return [
         CommandInfo(
@@ -111,7 +109,7 @@ def get_commands() -> List[CommandInfo]:
     ]
 
 
-def get_default_command() -> Optional[str]:
+def get_default_command() -> str | None:
     """Get name of the default command."""
     commands = get_commands()
 
@@ -121,7 +119,7 @@ def get_default_command() -> Optional[str]:
     return next(iter(marked_as_default), None)
 
 
-def get_possible_command_names() -> List[str]:
+def get_possible_command_names() -> list[str]:
     """Get all possible command names including aliases."""
     return [
         name_or_alias
@@ -151,7 +149,7 @@ def init_commands(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
 
 def setup_context(
     args: argparse.Namespace, context_var_name: str = "ctx"
-) -> Tuple[ExecutionContext, Dict]:
+) -> tuple[ExecutionContext, dict]:
     """Set up context and resolve function parameters."""
     ctx = ExecutionContext(
         working_dir=args.working_dir,
@@ -252,7 +250,7 @@ def init_subcommand_parser(parent: argparse.ArgumentParser) -> argparse.Argument
     return parser
 
 
-def add_default_command_if_needed(args: List[str]) -> None:
+def add_default_command_if_needed(args: list[str]) -> None:
     """Add default command to the list of the arguments if needed."""
     default_command = get_default_command()
 
@@ -265,7 +263,7 @@ def add_default_command_if_needed(args: List[str]) -> None:
             args.insert(0, default_command)
 
 
-def main(argv: Optional[List[str]] = None) -> int:
+def main(argv: list[str] | None = None) -> int:
     """Entry point of the application."""
     common_parser = init_common_parser()
     subcommand_parser = init_subcommand_parser(common_parser)

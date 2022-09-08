@@ -1,30 +1,31 @@
 # SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Module for performance estimation."""
+from __future__ import annotations
+
 from abc import abstractmethod
 from typing import Callable
 from typing import Generic
-from typing import List
 from typing import TypeVar
 
 
-ModelType = TypeVar("ModelType")  # pylint: disable=invalid-name
-PerfMetricsType = TypeVar("PerfMetricsType")  # pylint: disable=invalid-name
+M = TypeVar("M")  # model type
+P = TypeVar("P")  # performance metrics
 
 
-class PerformanceEstimator(Generic[ModelType, PerfMetricsType]):
+class PerformanceEstimator(Generic[M, P]):
     """Base class for the performance estimation."""
 
     @abstractmethod
-    def estimate(self, model: ModelType) -> PerfMetricsType:
+    def estimate(self, model: M) -> P:
         """Estimate performance."""
 
 
 def estimate_performance(
-    original_model: ModelType,
-    estimator: PerformanceEstimator[ModelType, PerfMetricsType],
-    model_transformations: List[Callable[[ModelType], ModelType]],
-) -> List[PerfMetricsType]:
+    original_model: M,
+    estimator: PerformanceEstimator[M, P],
+    model_transformations: list[Callable[[M], M]],
+) -> list[P]:
     """Estimate performance impact.
 
     This function estimates performance impact on model performance after

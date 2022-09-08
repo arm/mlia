@@ -1,13 +1,12 @@
 # SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Performance estimation."""
+from __future__ import annotations
+
 import logging
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import List
-from typing import Optional
-from typing import Tuple
 from typing import Union
 
 import mlia.backend.manager as backend_manager
@@ -49,11 +48,11 @@ class MemorySizeType(Enum):
 class MemoryUsage:
     """Memory usage metrics."""
 
-    sram_memory_area_size: Union[int, float]
-    dram_memory_area_size: Union[int, float]
-    unknown_memory_area_size: Union[int, float]
-    on_chip_flash_memory_area_size: Union[int, float]
-    off_chip_flash_memory_area_size: Union[int, float]
+    sram_memory_area_size: int | float
+    dram_memory_area_size: int | float
+    unknown_memory_area_size: int | float
+    on_chip_flash_memory_area_size: int | float
+    off_chip_flash_memory_area_size: int | float
     memory_size_type: MemorySizeType = MemorySizeType.BYTES
 
     _default_columns = [
@@ -64,7 +63,7 @@ class MemoryUsage:
         "Off chip flash used",
     ]
 
-    def in_kilobytes(self) -> "MemoryUsage":
+    def in_kilobytes(self) -> MemoryUsage:
         """Return memory usage with values in kilobytes."""
         if self.memory_size_type == MemorySizeType.KILOBYTES:
             return self
@@ -91,10 +90,10 @@ class PerformanceMetrics:
     """Performance metrics."""
 
     device: EthosUConfiguration
-    npu_cycles: Optional[NPUCycles]
-    memory_usage: Optional[MemoryUsage]
+    npu_cycles: NPUCycles | None
+    memory_usage: MemoryUsage | None
 
-    def in_kilobytes(self) -> "PerformanceMetrics":
+    def in_kilobytes(self) -> PerformanceMetrics:
         """Return metrics with memory usage in KiB."""
         if self.memory_usage is None:
             return PerformanceMetrics(self.device, self.npu_cycles, self.memory_usage)
@@ -109,8 +108,8 @@ class OptimizationPerformanceMetrics:
     """Optimization performance metrics."""
 
     original_perf_metrics: PerformanceMetrics
-    optimizations_perf_metrics: List[
-        Tuple[List[OptimizationSettings], PerformanceMetrics]
+    optimizations_perf_metrics: list[
+        tuple[list[OptimizationSettings], PerformanceMetrics]
     ]
 
 
@@ -124,7 +123,7 @@ class VelaPerformanceEstimator(
         self.context = context
         self.device = device
 
-    def estimate(self, model: Union[Path, ModelConfiguration]) -> MemoryUsage:
+    def estimate(self, model: Path | ModelConfiguration) -> MemoryUsage:
         """Estimate performance."""
         logger.info("Getting the memory usage metrics ...")
 
@@ -160,7 +159,7 @@ class CorstonePerformanceEstimator(
         self.device = device
         self.backend = backend
 
-    def estimate(self, model: Union[Path, ModelConfiguration]) -> NPUCycles:
+    def estimate(self, model: Path | ModelConfiguration) -> NPUCycles:
         """Estimate performance."""
         logger.info("Getting the performance metrics for '%s' ...", self.backend)
         logger.info(
@@ -212,7 +211,7 @@ class EthosUPerformanceEstimator(
         self,
         context: Context,
         device: EthosUConfiguration,
-        backends: Optional[List[str]] = None,
+        backends: list[str] | None = None,
     ) -> None:
         """Init performance estimator."""
         self.context = context
@@ -228,7 +227,7 @@ class EthosUPerformanceEstimator(
                 )
         self.backends = set(backends)
 
-    def estimate(self, model: Union[Path, ModelConfiguration]) -> PerformanceMetrics:
+    def estimate(self, model: Path | ModelConfiguration) -> PerformanceMetrics:
         """Estimate performance."""
         model_path = (
             Path(model.model_path) if isinstance(model, ModelConfiguration) else model

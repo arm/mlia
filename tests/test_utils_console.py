@@ -1,9 +1,9 @@
 # SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for console utility functions."""
+from __future__ import annotations
+
 from typing import Iterable
-from typing import List
-from typing import Optional
 
 import pytest
 
@@ -44,7 +44,7 @@ from mlia.utils.console import remove_ascii_codes
     ],
 )
 def test_produce_table(
-    rows: Iterable, headers: Optional[List[str]], table_style: str, expected_result: str
+    rows: Iterable, headers: list[str] | None, table_style: str, expected_result: str
 ) -> None:
     """Test produce_table function."""
     result = produce_table(rows, headers, table_style)

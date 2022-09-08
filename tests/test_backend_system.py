@@ -1,14 +1,12 @@
 # SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for system backend."""
+from __future__ import annotations
+
 from contextlib import ExitStack as does_not_raise
 from pathlib import Path
 from typing import Any
 from typing import Callable
-from typing import Dict
-from typing import List
-from typing import Optional
-from typing import Tuple
 from unittest.mock import MagicMock
 
 import pytest
@@ -27,12 +25,12 @@ from mlia.backend.system import System
 
 
 def dummy_resolver(
-    values: Optional[Dict[str, str]] = None
-) -> Callable[[str, str, List[Tuple[Optional[str], Param]]], str]:
+    values: dict[str, str] | None = None
+) -> Callable[[str, str, list[tuple[str | None, Param]]], str]:
     """Return dummy parameter resolver implementation."""
     # pylint: disable=unused-argument
     def resolver(
-        param: str, cmd: str, param_values: List[Tuple[Optional[str], Param]]
+        param: str, cmd: str, param_values: list[tuple[str | None, Param]]
     ) -> str:
         """Implement dummy parameter resolver."""
         return values.get(param, "") if values else ""

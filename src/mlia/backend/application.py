@@ -1,13 +1,13 @@
 # SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Application backend module."""
+from __future__ import annotations
+
 import re
 from pathlib import Path
 from typing import Any
 from typing import cast
-from typing import Dict
 from typing import List
-from typing import Optional
 
 from mlia.backend.common import Backend
 from mlia.backend.common import ConfigurationException
@@ -23,12 +23,12 @@ from mlia.backend.source import create_destination_and_install
 from mlia.backend.source import get_source
 
 
-def get_available_application_directory_names() -> List[str]:
+def get_available_application_directory_names() -> list[str]:
     """Return a list of directory names for all available applications."""
     return [entry.name for entry in get_backend_directories("applications")]
 
 
-def get_available_applications() -> List["Application"]:
+def get_available_applications() -> list[Application]:
     """Return a list with all available applications."""
     available_applications = []
     for config_json in get_backend_configs("applications"):
@@ -42,8 +42,8 @@ def get_available_applications() -> List["Application"]:
 
 
 def get_application(
-    application_name: str, system_name: Optional[str] = None
-) -> List["Application"]:
+    application_name: str, system_name: str | None = None
+) -> list[Application]:
     """Return a list of application instances with provided name."""
     return [
         application
@@ -85,7 +85,7 @@ def remove_application(directory_name: str) -> None:
     remove_backend(directory_name, "applications")
 
 
-def get_unique_application_names(system_name: Optional[str] = None) -> List[str]:
+def get_unique_application_names(system_name: str | None = None) -> list[str]:
     """Extract a list of unique application names of all application available."""
     return list(
         set(
@@ -120,7 +120,7 @@ class Application(Backend):
         """Check if the application can run on the system passed as argument."""
         return system_name in self.supported_systems
 
-    def get_details(self) -> Dict[str, Any]:
+    def get_details(self) -> dict[str, Any]:
         """Return dictionary with information about the Application instance."""
         output = {
             "type": "application",
@@ -156,7 +156,7 @@ class Application(Backend):
                 command.params = used_params
 
 
-def load_applications(config: ExtendedApplicationConfig) -> List[Application]:
+def load_applications(config: ExtendedApplicationConfig) -> list[Application]:
     """Load application.
 
     Application configuration could contain different parameters/commands for different
