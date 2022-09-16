@@ -143,10 +143,8 @@ class ParamResolver:
 
             if not param_value:
                 raise ConfigurationException(
-                    (
-                        "No value for parameter with index or "
-                        f"alias {index_or_alias} of command {cmd_name}."
-                    )
+                    "No value for parameter with index or "
+                    f"alias {index_or_alias} of command {cmd_name}."
                 )
             return param_value
 

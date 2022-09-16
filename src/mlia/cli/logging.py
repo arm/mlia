@@ -31,10 +31,10 @@ def setup_logging(
     :param verbose: enable extended logging for the tools loggers
     :param log_filename: name of the log file in the logs directory
     """
-    mlia_logger, *tools_loggers = [
+    mlia_logger, *tools_loggers = (
         logging.getLogger(logger_name)
         for logger_name in ["mlia", "tensorflow", "py.warnings"]
-    ]
+    )
 
     # enable debug output, actual message filtering depends on
     # the provided parameters and being done on the handlers level

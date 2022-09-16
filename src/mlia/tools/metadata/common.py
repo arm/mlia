@@ -199,7 +199,7 @@ class DefaultInstallationManager(InstallationManager, InstallationFiltersMixin):
             return None
 
         if len(installs) != 1:
-            names = ",".join((install.name for install in installs))
+            names = ",".join(install.name for install in installs)
             logger.info(
                 "Unable to correctly detect type of the installed FVP."
                 "The following FVPs are detected %s. Installation skipped.",
@@ -241,7 +241,7 @@ class DefaultInstallationManager(InstallationManager, InstallationFiltersMixin):
             logger.info("No backends available for the installation.")
             return
 
-        names = ",".join((installation.name for installation in installations))
+        names = ",".join(installation.name for installation in installations)
         logger.info("Following backends are available for downloading: %s", names)
 
         for installation in installations:

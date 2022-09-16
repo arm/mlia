@@ -88,11 +88,11 @@ def remove_application(directory_name: str) -> None:
 def get_unique_application_names(system_name: str | None = None) -> list[str]:
     """Extract a list of unique application names of all application available."""
     return list(
-        set(
+        {
             application.name
             for application in get_available_applications()
             if not system_name or application.can_run_on(system_name)
-        )
+        }
     )
 
 

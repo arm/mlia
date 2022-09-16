@@ -79,9 +79,9 @@ def test_base64_output_consumer(expected_metrics: dict) -> None:
         json_b64 = base64.b64encode(json_str.encode("utf-8"))
         return (
             OUTPUT_MATCH_ALL  # Should not be matched by the Base64OutputConsumer
-            + f"<{Base64OutputConsumer.TAG_NAME}>".encode("utf-8")
+            + f"<{Base64OutputConsumer.TAG_NAME}>".encode()
             + bytearray(json_b64)
-            + f"</{Base64OutputConsumer.TAG_NAME}>".encode("utf-8")
+            + f"</{Base64OutputConsumer.TAG_NAME}>".encode()
             + OUTPUT_NO_MATCH  # Just to add some difficulty...
         )
 

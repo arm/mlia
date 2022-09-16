@@ -97,7 +97,9 @@ def file_chunks(
             yield data
 
 
-def hexdigest(filepath: str | Path, hash_obj: "hashlib._Hash") -> str:
+def hexdigest(
+    filepath: str | Path, hash_obj: hashlib._Hash  # pylint: disable=no-member
+) -> str:
     """Return hex digest of the file."""
     for chunk in file_chunks(filepath):
         hash_obj.update(chunk)

@@ -29,11 +29,9 @@ def get_available_backends() -> list[str]:
     # Add backends using backend manager
     manager = get_installation_manager()
     available_backends.extend(
-        (
-            backend
-            for backend in backend_manager.supported_backends()
-            if manager.backend_installed(backend)
-        )
+        backend
+        for backend in backend_manager.supported_backends()
+        if manager.backend_installed(backend)
     )
 
     return available_backends

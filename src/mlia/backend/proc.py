@@ -66,7 +66,7 @@ class ShellCommand:
 
         out, err = _out, _err
         if not _out and not _err:
-            out, err = [str(item) for item in self.get_stdout_stderr_paths(cmd)]
+            out, err = (str(item) for item in self.get_stdout_stderr_paths(cmd))
 
         return command(_out=out, _err=err, _tee=_tee, _bg=_bg, _bg_exc=False)
 

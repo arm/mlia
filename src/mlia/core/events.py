@@ -284,7 +284,7 @@ class EventDispatcherMetaclass(type):
         event_handler_methods = (
             (item_name, item)
             for item_name in dir(new_class)
-            if callable((item := getattr(new_class, item_name)))
+            if callable(item := getattr(new_class, item_name))
             and item_name.startswith(event_handler_method_prefix)
         )
 

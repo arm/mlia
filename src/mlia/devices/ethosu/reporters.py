@@ -41,7 +41,7 @@ def report_operators_stat(operators: Operators) -> Report:
             operators.npu_supported_number,
             Cell(
                 operators.npu_unsupported_ratio * 100,
-                fmt=Format(str_fmt="{0:.0f}%".format),
+                fmt=Format(str_fmt="{:.0f}%".format),
             ),
         )
     ]
