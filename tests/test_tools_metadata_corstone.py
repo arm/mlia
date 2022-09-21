@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import tarfile
 from pathlib import Path
+from typing import Iterable
 from unittest.mock import MagicMock
 
 import pytest
@@ -18,6 +19,8 @@ from mlia.tools.metadata.corstone import BackendInstaller
 from mlia.tools.metadata.corstone import BackendMetadata
 from mlia.tools.metadata.corstone import CompoundPathChecker
 from mlia.tools.metadata.corstone import Corstone300Installer
+from mlia.tools.metadata.corstone import get_corstone_300_installation
+from mlia.tools.metadata.corstone import get_corstone_310_installation
 from mlia.tools.metadata.corstone import get_corstone_installations
 from mlia.tools.metadata.corstone import PackagePathChecker
 from mlia.tools.metadata.corstone import PathChecker
@@ -417,3 +420,46 @@ def test_corstone_300_installer(
 
     command_mock.assert_called_once_with(expected_command)
     assert result == tmp_path / "corstone-300"
+
+
+@pytest.mark.parametrize(
+    "corstone_installation, expected_paths",
+    [
+        [
+            get_corstone_300_installation(),
+            {
+                "/opt/VHT/VHT_Corstone_SSE-300_Ethos-U55",
+                "/opt/VHT/VHT_Corstone_SSE-300_Ethos-U65",
+            },
+        ],
+        [get_corstone_310_installation(), {"/opt/VHT/VHT_Corstone_SSE-310"}],
+    ],
+)
+def test_corstone_vht_install(
+    corstone_installation: BackendInstallation,
+    expected_paths: set,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test if Corstone 300/310 could be installed from /opt/VHT."""
+
+    def _all_files_exist(paths: Iterable[Path]) -> bool:
+        """Check if all files exist."""
+        pathset = {item.as_posix() for item in paths}
+        return pathset == expected_paths
+
+    create_destination_and_install_mock = MagicMock()
+
+    monkeypatch.setattr(
+        "mlia.tools.metadata.corstone.all_files_exist", _all_files_exist
+    )
+
+    monkeypatch.setattr("mlia.backend.system.get_available_systems", lambda: [])
+
+    monkeypatch.setattr(
+        "mlia.backend.system.create_destination_and_install",
+        create_destination_and_install_mock,
+    )
+
+    corstone_installation.install(InstallFromPath(Path("/opt/VHT")))
+
+    create_destination_and_install_mock.assert_called_once()

@@ -353,7 +353,7 @@ def get_corstone_300_installation() -> Installation:
                 ],
                 copy_source=False,
                 system_config=(
-                    "backends_configs/systems/corstone-300-vht/backend-config.json"
+                    "backend_configs/systems/corstone-300-vht/backend-config.json"
                 ),
             ),
         ),
