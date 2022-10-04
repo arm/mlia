@@ -254,13 +254,13 @@ def get_target_profile_opts(device_args: dict | None) -> list[str]:
     if not device_args:
         return []
 
-    dummy_parser = argparse.ArgumentParser()
-    add_target_options(dummy_parser)
-    args = dummy_parser.parse_args([])
+    parser = argparse.ArgumentParser()
+    add_target_options(parser)
+    args = parser.parse_args([])
 
     params_name = {
         action.dest: param_name
-        for param_name, action in dummy_parser._option_string_actions.items()  # pylint: disable=protected-access
+        for param_name, action in parser._option_string_actions.items()  # pylint: disable=protected-access
     }
 
     non_default = [

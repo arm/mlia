@@ -22,19 +22,19 @@ from mlia.devices.ethosu.performance import PerformanceMetrics
 from mlia.tools.metadata.common import InstallationManager
 
 
-def test_operators_expected_parameters(dummy_context: ExecutionContext) -> None:
+def test_operators_expected_parameters(sample_context: ExecutionContext) -> None:
     """Test operators command wrong parameters."""
     with pytest.raises(Exception, match="Model is not provided"):
-        operators(dummy_context, "ethos-u55-256")
+        operators(sample_context, "ethos-u55-256")
 
 
 def test_performance_unknown_target(
-    dummy_context: ExecutionContext, test_tflite_model: Path
+    sample_context: ExecutionContext, test_tflite_model: Path
 ) -> None:
     """Test that command should fail if unknown target passed."""
     with pytest.raises(Exception, match="Unable to find target profile unknown"):
         performance(
-            dummy_context, model=str(test_tflite_model), target_profile="unknown"
+            sample_context, model=str(test_tflite_model), target_profile="unknown"
         )
 
 
@@ -74,7 +74,7 @@ def test_performance_unknown_target(
     ],
 )
 def test_opt_expected_parameters(
-    dummy_context: ExecutionContext,
+    sample_context: ExecutionContext,
     target_profile: str,
     monkeypatch: pytest.MonkeyPatch,
     optimization_type: str,
@@ -87,7 +87,7 @@ def test_opt_expected_parameters(
 
     with expected_error:
         optimization(
-            ctx=dummy_context,
+            ctx=sample_context,
             target_profile=target_profile,
             model=str(test_keras_model),
             optimization_type=optimization_type,
@@ -105,7 +105,7 @@ def test_opt_expected_parameters(
 )
 def test_opt_valid_optimization_target(
     target_profile: str,
-    dummy_context: ExecutionContext,
+    sample_context: ExecutionContext,
     optimization_type: str,
     optimization_target: str,
     monkeypatch: pytest.MonkeyPatch,
@@ -115,7 +115,7 @@ def test_opt_valid_optimization_target(
     mock_performance_estimation(monkeypatch)
 
     optimization(
-        ctx=dummy_context,
+        ctx=sample_context,
         target_profile=target_profile,
         model=str(test_keras_model),
         optimization_type=optimization_type,

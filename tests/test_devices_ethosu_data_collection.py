@@ -47,20 +47,20 @@ def test_collectors_metadata(
 
 
 def test_operator_compatibility_collector(
-    dummy_context: Context, test_tflite_model: Path
+    sample_context: Context, test_tflite_model: Path
 ) -> None:
     """Test operator compatibility data collector."""
     device = EthosUConfiguration("ethos-u55-256")
 
     collector = EthosUOperatorCompatibility(test_tflite_model, device)
-    collector.set_context(dummy_context)
+    collector.set_context(sample_context)
 
     result = collector.collect_data()
     assert isinstance(result, Operators)
 
 
 def test_performance_collector(
-    monkeypatch: pytest.MonkeyPatch, dummy_context: Context, test_tflite_model: Path
+    monkeypatch: pytest.MonkeyPatch, sample_context: Context, test_tflite_model: Path
 ) -> None:
     """Test performance data collector."""
     device = EthosUConfiguration("ethos-u55-256")
@@ -68,7 +68,7 @@ def test_performance_collector(
     mock_performance_estimation(monkeypatch, device)
 
     collector = EthosUPerformance(test_tflite_model, device)
-    collector.set_context(dummy_context)
+    collector.set_context(sample_context)
 
     result = collector.collect_data()
     assert isinstance(result, PerformanceMetrics)
@@ -76,7 +76,7 @@ def test_performance_collector(
 
 def test_optimization_performance_collector(
     monkeypatch: pytest.MonkeyPatch,
-    dummy_context: Context,
+    sample_context: Context,
     test_keras_model: Path,
     test_tflite_model: Path,
 ) -> None:
@@ -93,7 +93,7 @@ def test_optimization_performance_collector(
             ]
         ],
     )
-    collector.set_context(dummy_context)
+    collector.set_context(sample_context)
     result = collector.collect_data()
 
     assert isinstance(result, OptimizationPerformanceMetrics)
@@ -122,7 +122,7 @@ def test_optimization_performance_collector(
             ]
         ],
     )
-    collector_tflite.set_context(dummy_context)
+    collector_tflite.set_context(sample_context)
     with pytest.raises(FunctionalityNotSupportedError):
         collector_tflite.collect_data()
 
@@ -132,7 +132,7 @@ def test_optimization_performance_collector(
         collector_bad_config = EthosUOptimizationPerformance(
             test_keras_model, device, {"optimization_type": "pruning"}  # type: ignore
         )
-        collector.set_context(dummy_context)
+        collector.set_context(sample_context)
         collector_bad_config.collect_data()
 
 

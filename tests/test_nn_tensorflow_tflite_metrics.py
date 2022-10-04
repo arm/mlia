@@ -17,8 +17,8 @@ from mlia.nn.tensorflow.tflite_metrics import ReportClusterMode
 from mlia.nn.tensorflow.tflite_metrics import TFLiteMetrics
 
 
-def _dummy_keras_model() -> tf.keras.Model:
-    # Create a dummy model
+def _sample_keras_model() -> tf.keras.Model:
+    # Create a sample model
     keras_model = tf.keras.Sequential(
         [
             tf.keras.Input(shape=(8, 8, 3)),
@@ -40,7 +40,7 @@ def _sparse_binary_keras_model() -> tf.keras.Model:
                     value[...] = 1.0
         return weights
 
-    keras_model = _dummy_keras_model()
+    keras_model = _sample_keras_model()
     # Assign weights to have 0.5 sparsity
     for layer in keras_model.layers:
         if not isinstance(layer, tf.keras.layers.Flatten):
@@ -74,7 +74,7 @@ class TestTFLiteMetrics:
     @staticmethod
     def test_sparsity(metrics: TFLiteMetrics) -> None:
         """Test sparsity."""
-        # Create new instance with a dummy TFLite file
+        # Create new instance with a sample TFLite file
         # Check sparsity calculation
         sparsity_per_layer = metrics.sparsity_per_layer()
         for name, sparsity in sparsity_per_layer.items():

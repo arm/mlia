@@ -6,7 +6,6 @@ from __future__ import annotations
 from contextlib import ExitStack as does_not_raise
 from pathlib import Path
 from typing import Any
-from typing import Callable
 from unittest.mock import MagicMock
 
 import pytest
@@ -22,20 +21,6 @@ from mlia.backend.system import install_system
 from mlia.backend.system import load_system
 from mlia.backend.system import remove_system
 from mlia.backend.system import System
-
-
-def dummy_resolver(
-    values: dict[str, str] | None = None
-) -> Callable[[str, str, list[tuple[str | None, Param]]], str]:
-    """Return dummy parameter resolver implementation."""
-    # pylint: disable=unused-argument
-    def resolver(
-        param: str, cmd: str, param_values: list[tuple[str | None, Param]]
-    ) -> str:
-        """Implement dummy parameter resolver."""
-        return values.get(param, "") if values else ""
-
-    return resolver
 
 
 def test_get_available_systems() -> None:

@@ -10,22 +10,22 @@ from mlia.core.mixins import ContextMixin
 from mlia.core.mixins import ParameterResolverMixin
 
 
-def test_context_mixin(dummy_context: Context) -> None:
+def test_context_mixin(sample_context: Context) -> None:
     """Test ContextMixin."""
 
     class SampleClass(ContextMixin):
         """Sample class."""
 
     sample_object = SampleClass()
-    sample_object.set_context(dummy_context)
-    assert sample_object.context == dummy_context
+    sample_object.set_context(sample_context)
+    assert sample_object.context == sample_context
 
 
 class TestParameterResolverMixin:
     """Tests for parameter resolver mixin."""
 
     @staticmethod
-    def test_parameter_resolver_mixin(dummy_context: ExecutionContext) -> None:
+    def test_parameter_resolver_mixin(sample_context: ExecutionContext) -> None:
         """Test ParameterResolverMixin."""
 
         class SampleClass(ParameterResolverMixin):
@@ -33,7 +33,7 @@ class TestParameterResolverMixin:
 
             def __init__(self) -> None:
                 """Init sample object."""
-                self.context = dummy_context
+                self.context = sample_context
 
                 self.context.update(
                     advice_category=AdviceCategory.OPERATORS,
@@ -55,7 +55,7 @@ class TestParameterResolverMixin:
 
     @staticmethod
     def test_parameter_resolver_mixin_no_config(
-        dummy_context: ExecutionContext,
+        sample_context: ExecutionContext,
     ) -> None:
         """Test ParameterResolverMixin without config params."""
 
@@ -64,7 +64,7 @@ class TestParameterResolverMixin:
 
             def __init__(self) -> None:
                 """Init sample object."""
-                self.context = dummy_context
+                self.context = sample_context
 
         with pytest.raises(Exception, match="Configuration parameters are not set"):
             sample_object_no_config = SampleClassNoConfig()
@@ -72,7 +72,7 @@ class TestParameterResolverMixin:
 
     @staticmethod
     def test_parameter_resolver_mixin_bad_section(
-        dummy_context: ExecutionContext,
+        sample_context: ExecutionContext,
     ) -> None:
         """Test ParameterResolverMixin without config params."""
 
@@ -81,7 +81,7 @@ class TestParameterResolverMixin:
 
             def __init__(self) -> None:
                 """Init sample object."""
-                self.context = dummy_context
+                self.context = sample_context
                 self.context.update(
                     advice_category=AdviceCategory.OPERATORS,
                     event_handlers=[],

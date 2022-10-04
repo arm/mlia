@@ -112,7 +112,7 @@ class TestBackend:
     @pytest.mark.parametrize(
         "parameter, valid",
         [
-            ("--choice-param dummy_value_1", True),
+            ("--choice-param value_1", True),
             ("--choice-param wrong_value", False),
             ("--open-param something", True),
             ("--wrong-param value", False),
@@ -313,7 +313,7 @@ class TestBackend:
         self, param_name: str, user_param: str, expected_value: str
     ) -> None:
         """Test different variants to provide user parameters."""
-        # A dummy config providing one backend config
+        # A sample config providing one backend config
         config = {
             "name": "test_backend",
             "commands": {

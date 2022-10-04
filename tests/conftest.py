@@ -24,9 +24,9 @@ def fixture_test_resources_path() -> Path:
     return Path(__file__).parent / "test_resources"
 
 
-@pytest.fixture(name="dummy_context")
-def fixture_dummy_context(tmpdir: str) -> ExecutionContext:
-    """Return dummy context fixture."""
+@pytest.fixture(name="sample_context")
+def fixture_sample_context(tmpdir: str) -> ExecutionContext:
+    """Return sample context fixture."""
     return ExecutionContext(working_dir=tmpdir)
 
 
@@ -44,19 +44,19 @@ def test_applications_path(test_resources_path: Path) -> Path:
 
 @pytest.fixture(scope="session")
 def non_optimised_input_model_file(test_tflite_model: Path) -> Path:
-    """Provide the path to a quantized dummy model file."""
+    """Provide the path to a quantized test model file."""
     return test_tflite_model
 
 
 @pytest.fixture(scope="session")
 def optimised_input_model_file(test_tflite_vela_model: Path) -> Path:
-    """Provide path to Vela-optimised dummy model file."""
+    """Provide path to Vela-optimised test model file."""
     return test_tflite_vela_model
 
 
 @pytest.fixture(scope="session")
 def invalid_input_model_file(test_tflite_invalid_model: Path) -> Path:
-    """Provide the path to an invalid dummy model file."""
+    """Provide the path to an invalid test model file."""
     return test_tflite_invalid_model
 
 

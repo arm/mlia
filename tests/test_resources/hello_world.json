@@ -1,9 +1,9 @@
 [
     {
         "name": "Hello world",
-        "description": "Dummy application that displays 'Hello world!'",
+        "description": "Sample application that displays 'Hello world!'",
         "supported_systems": [
-            "Dummy System"
+            "Sample System"
         ],
         "deploy_data": [
             [
@@ -29,21 +29,21 @@
                 {
                     "name": "--choice-param",
                     "values": [
-                        "dummy_value_1",
-                        "dummy_value_2"
+                        "value_1",
+                        "value_2"
                     ],
-                    "default_value": "dummy_value_1",
+                    "default_value": "value_1",
                     "description": "Choice param"
                 },
                 {
                     "name": "--open-param",
                     "values": [],
-                    "default_value": "dummy_value_4",
+                    "default_value": "value_4",
                     "description": "Open param"
                 },
                 {
                     "name": "--enable-flag",
-                    "default_value": "dummy_value_4",
+                    "default_value": "value_4",
                     "description": "Flag param"
                 }
             ],

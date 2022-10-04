@@ -47,7 +47,7 @@ def test_advice_generation() -> None:
 def test_advice_category_decorator(
     category: AdviceCategory,
     expected_advice: list[Advice],
-    dummy_context: Context,
+    sample_context: Context,
 ) -> None:
     """Test for advice_category decorator."""
 
@@ -60,10 +60,10 @@ def test_advice_category_decorator(
             self.add_advice(["Good advice!"])
 
     producer = SampleAdviceProducer()
-    dummy_context.update(
+    sample_context.update(
         advice_category=category, event_handlers=[], config_parameters={}
     )
-    producer.set_context(dummy_context)
+    producer.set_context(sample_context)
 
     producer.produce_advice("some_data")
     advice = producer.get_advice()
