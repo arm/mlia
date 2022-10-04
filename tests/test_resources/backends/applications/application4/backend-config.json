@@ -12,9 +12,7 @@
     ],
     "commands": {
       "run": [
-        "cp {application.config_dir}/hello_app.txt {system.config_dir}",
-        "echo '{user_params:0}' > {system.config_dir}/params.txt",
-        "cat hello_app.txt"
+        "echo {application.name}"
       ]
     },
     "user_params": {

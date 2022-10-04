@@ -16,6 +16,7 @@ from mlia.backend.execution import ExecutionContext
 from mlia.backend.execution import get_application_and_system
 from mlia.backend.execution import get_application_by_name_and_system
 from mlia.backend.execution import ParamResolver
+from mlia.backend.execution import run_application
 from mlia.backend.system import load_system
 
 
@@ -201,3 +202,12 @@ def test_get_application_and_system(monkeypatch: Any) -> None:
 
     with pytest.raises(ValueError, match="System test_system is not found"):
         get_application_and_system("test_application", "test_system")
+
+
+def test_run_application() -> None:
+    """Test function run_application."""
+    ctx = run_application("application_4", [], "System 4", [])
+
+    assert isinstance(ctx, ExecutionContext)
+    assert ctx.stderr is not None and not ctx.stderr.decode()
+    assert ctx.stdout is not None and ctx.stdout.decode().strip() == "application_4"

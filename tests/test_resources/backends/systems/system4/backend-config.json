@@ -4,10 +4,8 @@
     "description": "This is system 4",
     "commands": {
       "run": [
-        "echo {application.name}",
-        "{application.commands.run:0}",
-        "{application.commands.run:1}",
-        "{application.commands.run:2}"
+        "echo {system.name}",
+        "{application.commands.run:0}"
       ]
     },
     "user_params": {

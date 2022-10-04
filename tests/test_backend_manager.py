@@ -15,7 +15,6 @@ import pytest
 
 from mlia.backend.application import get_application
 from mlia.backend.execution import ExecutionContext
-from mlia.backend.execution import run_application
 from mlia.backend.manager import BackendRunner
 from mlia.backend.manager import DeviceInfo
 from mlia.backend.manager import estimate_performance
@@ -377,7 +376,7 @@ class TestBackendRunner:
         expected_command: list[str],
     ) -> None:
         """Test method run_application with local systems."""
-        run_app = MagicMock(wraps=run_application)
+        run_app = MagicMock()
         monkeypatch.setattr("mlia.backend.manager.run_application", run_app)
 
         backend_runner = BackendRunner()
