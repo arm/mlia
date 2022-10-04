@@ -3,8 +3,7 @@
 """Init of MLIA."""
 import logging
 import os
-
-import pkg_resources
+from importlib.metadata import version
 
 # redirect warnings to logging
 logging.captureWarnings(True)
@@ -19,4 +18,4 @@ root_logger.addHandler(logging.NullHandler())
 # disable TensorFlow warning messages
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 
-__version__ = pkg_resources.get_distribution("mlia").version
+__version__ = version("mlia")
