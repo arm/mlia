@@ -444,7 +444,7 @@ def test_ethosu_advice_producer(
                 Advice(
                     [
                         "For better performance, make sure that all the operators "
-                        "of your final TFLite model are supported by the NPU.",
+                        "of your final TensorFlow Lite model are supported by the NPU.",
                     ]
                 )
             ],
@@ -456,7 +456,7 @@ def test_ethosu_advice_producer(
                 Advice(
                     [
                         "For better performance, make sure that all the operators "
-                        "of your final TFLite model are supported by the NPU.",
+                        "of your final TensorFlow Lite model are supported by the NPU.",
                         "For more details, run: mlia operators --help",
                     ]
                 )

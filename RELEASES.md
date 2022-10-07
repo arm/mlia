@@ -29,8 +29,8 @@ TensorFlow™ is a trademark of Google® LLC.
 
 ### Issues fixed
 
-* Fix the issue that no performance information is shown for TFLite files when
-  the mode 'all_tests' is used (MLIA-552)
+* Fix the issue that no performance information is shown for
+  TensorFlow Lite files when the mode 'all_tests' is used (MLIA-552)
 * Specify cache arena size in the Vela memory profiles (MLIA-316)
 
 ### Internal changes

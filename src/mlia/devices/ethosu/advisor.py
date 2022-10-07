@@ -52,10 +52,10 @@ class EthosUInferenceAdvisor(DefaultInferenceAdvisor):
         # Performance and optimization are mutually exclusive.
         # Decide which one to use (taking into account the model format).
         if is_tflite_model(model):
-            # TFLite models do not support optimization (only performance)!
+            # TensorFlow Lite models do not support optimization (only performance)!
             if context.advice_category == AdviceCategory.OPTIMIZATION:
                 raise Exception(
-                    "Command 'optimization' is not supported for TFLite files."
+                    "Command 'optimization' is not supported for TensorFlow Lite files."
                 )
             if AdviceCategory.PERFORMANCE in context.advice_category:
                 collectors.append(EthosUPerformance(model, device, backends))

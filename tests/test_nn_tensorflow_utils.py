@@ -15,7 +15,7 @@ from mlia.nn.tensorflow.utils import save_tflite_model
 
 
 def test_convert_to_tflite(test_keras_model: Path) -> None:
-    """Test converting Keras model to TFLite."""
+    """Test converting Keras model to TensorFlow Lite."""
     keras_model = tf.keras.models.load_model(str(test_keras_model))
     tflite_model = convert_to_tflite(keras_model)
 
@@ -34,7 +34,7 @@ def test_save_keras_model(tmp_path: Path, test_keras_model: Path) -> None:
 
 
 def test_save_tflite_model(tmp_path: Path, test_keras_model: Path) -> None:
-    """Test saving TFLite model."""
+    """Test saving TensorFlow Lite model."""
     keras_model = tf.keras.models.load_model(str(test_keras_model))
 
     tflite_model = convert_to_tflite(keras_model)

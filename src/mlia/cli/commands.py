@@ -50,7 +50,7 @@ def all_tests(
     This command runs a series of tests in order to generate a
     comprehensive report/advice:
 
-        - converts the input Keras model into TFLite format
+        - converts the input Keras model into TensorFlow Lite format
         - checks the model for operator compatibility on the specified device
         - applies optimizations to the model and estimates the resulting performance
           on both the original and the optimized models
@@ -112,14 +112,14 @@ def operators(
     :param ctx: execution context
     :param target_profile: target profile identifier. Will load appropriate parameters
             from the profile.json file based on this argument.
-    :param model: path to the model, which can be TFLite or Keras
+    :param model: path to the model, which can be TensorFlow Lite or Keras
     :param output: path to the file where the report will be saved
     :param supported_ops_report: if True then generates supported operators
            report in current directory and exits
 
     Example:
         Run command for the target profile ethos-u55-256 and the provided
-        TFLite model and print report on the standard output
+        TensorFlow Lite model and print report on the standard output
 
         >>> from mlia.api import ExecutionContext
         >>> from mlia.cli.logging import setup_logging
@@ -161,13 +161,13 @@ def performance(
     :param ctx: execution context
     :param target_profile: target profile identifier. Will load appropriate parameters
             from the profile.json file based on this argument.
-    :param model: path to the model, which can be TFLite or Keras
+    :param model: path to the model, which can be TensorFlow Lite or Keras
     :param output: path to the file where the report will be saved
     :param evaluate_on: list of the backends to use for evaluation
 
     Example:
         Run command for the target profile ethos-u55-256 and
-        the provided TFLite model and print report on the standard output
+        the provided TensorFlow Lite model and print report on the standard output
 
         >>> from mlia.api import ExecutionContext
         >>> from mlia.cli.logging import setup_logging
@@ -205,7 +205,7 @@ def optimization(
     :param ctx: execution context
     :param target: target profile identifier. Will load appropriate parameters
             from the profile.json file based on this argument.
-    :param model: path to the TFLite model
+    :param model: path to the TensorFlow Lite model
     :param optimization_type: list of the optimization techniques separated
            by comma, e.g. 'pruning,clustering'
     :param optimization_target: list of the corresponding targets for
@@ -217,7 +217,7 @@ def optimization(
 
     Example:
         Run command for the target profile ethos-u55-256 and
-        the provided TFLite model and print report on the standard output
+        the provided TensorFlow Lite model and print report on the standard output
 
         >>> from mlia.cli.logging import setup_logging
         >>> setup_logging()

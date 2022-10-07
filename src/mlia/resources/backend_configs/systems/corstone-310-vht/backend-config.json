@@ -16,7 +16,7 @@
       "run": [
         {
           "name": "--data",
-          "description": "Full file name for a custom model. Model must be in TFLite format compiled with Vela.",
+          "description": "Full file name for a custom model. Model must be in TensorFlow Lite format compiled with Vela.",
           "values": [],
           "alias": "input_file"
         },

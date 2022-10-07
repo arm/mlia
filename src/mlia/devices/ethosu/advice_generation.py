@@ -196,7 +196,7 @@ class EthosUStaticAdviceProducer(ContextAwareAdviceProducer):
                 Advice(
                     [
                         "For better performance, make sure that all the operators "
-                        "of your final TFLite model are supported by the NPU.",
+                        "of your final TensorFlow Lite model are supported by the NPU.",
                     ]
                     + self.context.action_resolver.operator_compatibility_details()
                 )

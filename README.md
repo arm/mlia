@@ -190,9 +190,9 @@ mlia operators --target-profile ethos-u55-256 ~/models/mobilenet_v1_1.0_224_quan
 
 #### *Arguments*
 
-##### TFLite model options
+##### TensorFlow Lite model options
 
-* model: Input model in TFLite format [required].
+* model: Input model in TensorFlow Lite format [required].
 
 ##### Target profile options
 
@@ -234,9 +234,9 @@ mlia performance ~/models/mobilenet_v1_1.0_224_quant.tflite \
 
 #### *Arguments*
 
-##### TFLite model options
+##### TensorFlow Lite model options
 
-* model: Input model in TFLite format [required].
+* model: Input model in TensorFlow Lite format [required].
 
 ##### Target profile options
 

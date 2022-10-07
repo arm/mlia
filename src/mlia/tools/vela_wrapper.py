@@ -275,7 +275,7 @@ class VelaCompiler:  # pylint: disable=too-many-instance-attributes
 
     @staticmethod
     def _read_model(model: str | Path) -> tuple[Graph, NetworkType]:
-        """Read TFLite model."""
+        """Read TensorFlow Lite model."""
         try:
             model_path = str(model) if isinstance(model, Path) else model
 
@@ -448,7 +448,7 @@ def run_on_npu(operator: Op) -> NpuSupported:
     a particular operator is supported to run on NPU.
 
     There are two groups of checks:
-      - general TFLite constraints
+      - general TensorFlow Lite constraints
       - operator specific constraints
 
     If an operator is not supported on NPU then this function

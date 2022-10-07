@@ -53,7 +53,7 @@ def _sparse_binary_keras_model() -> tf.keras.Model:
 
 @pytest.fixture(scope="class", name="tflite_file")
 def fixture_tflite_file() -> Generator:
-    """Generate temporary TFLite file for tests."""
+    """Generate temporary TensorFlow Lite file for tests."""
     converter = tf.lite.TFLiteConverter.from_keras_model(_sparse_binary_keras_model())
     tflite_model = converter.convert()
     with tempfile.TemporaryDirectory() as tmp_dir:
@@ -64,7 +64,7 @@ def fixture_tflite_file() -> Generator:
 
 @pytest.fixture(scope="function", name="metrics")
 def fixture_metrics(tflite_file: str) -> TFLiteMetrics:
-    """Generate metrics file for a given TFLite model."""
+    """Generate metrics file for a given TensorFlow Lite model."""
     return TFLiteMetrics(tflite_file)
 
 
@@ -74,7 +74,7 @@ class TestTFLiteMetrics:
     @staticmethod
     def test_sparsity(metrics: TFLiteMetrics) -> None:
         """Test sparsity."""
-        # Create new instance with a sample TFLite file
+        # Create new instance with a sample TensorFlow Lite file
         # Check sparsity calculation
         sparsity_per_layer = metrics.sparsity_per_layer()
         for name, sparsity in sparsity_per_layer.items():

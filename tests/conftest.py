@@ -176,23 +176,23 @@ def fixture_test_keras_model(test_models_path: Path) -> Path:
 
 @pytest.fixture(scope="session", name="test_tflite_model")
 def fixture_test_tflite_model(test_models_path: Path) -> Path:
-    """Return test TFLite model."""
+    """Return test TensorFlow Lite model."""
     return test_models_path / "test_model.tflite"
 
 
 @pytest.fixture(scope="session", name="test_tflite_vela_model")
 def fixture_test_tflite_vela_model(test_models_path: Path) -> Path:
-    """Return test Vela-optimized TFLite model."""
+    """Return test Vela-optimized TensorFlow Lite model."""
     return test_models_path / "test_model_vela.tflite"
 
 
 @pytest.fixture(scope="session", name="test_tf_model")
 def fixture_test_tf_model(test_models_path: Path) -> Path:
-    """Return test TFLite model."""
+    """Return test TensorFlow Lite model."""
     return test_models_path / "tf_model_test_model"
 
 
 @pytest.fixture(scope="session", name="test_tflite_invalid_model")
 def fixture_test_tflite_invalid_model(test_models_path: Path) -> Path:
-    """Return test invalid TFLite model."""
+    """Return test invalid TensorFlow Lite model."""
     return test_models_path / "invalid.tflite"
