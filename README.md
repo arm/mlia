@@ -405,7 +405,7 @@ ML Inference Advisor is licensed under [Apache License 2.0](LICENSE.txt).
 
 ## Trademarks and copyrights
 
-* Arm®, Ethos™-U, Cortex®-M, Corstone™ are registered trademarks or
+* Arm®, Ethos™-U, Cortex®-A, Cortex®-M, Corstone™ are registered trademarks or
   trademarks of Arm® Limited (or its subsidiaries) in the U.S. and/or
   elsewhere.
 * TensorFlow™ is a trademark of Google® LLC.

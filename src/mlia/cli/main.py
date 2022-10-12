@@ -79,7 +79,7 @@ def get_commands() -> list[CommandInfo]:
             performance,
             ["perf"],
             [
-                partial(add_target_options, profiles_to_skip=["tosa"]),
+                partial(add_target_options, profiles_to_skip=["tosa", "cortex-a"]),
                 add_tflite_model_options,
                 add_output_options,
                 add_debug_options,
@@ -90,7 +90,7 @@ def get_commands() -> list[CommandInfo]:
             optimization,
             ["opt"],
             [
-                partial(add_target_options, profiles_to_skip=["tosa"]),
+                partial(add_target_options, profiles_to_skip=["tosa", "cortex-a"]),
                 add_keras_model_options,
                 add_multi_optimization_options,
                 add_output_options,

@@ -1,0 +1,29 @@
+# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-License-Identifier: Apache-2.0
+"""Cortex-A tools module."""
+from __future__ import annotations
+
+from dataclasses import dataclass
+from pathlib import Path
+
+
+@dataclass
+class Operator:
+    """Cortex-A compatibility information of the operator."""
+
+    name: str
+    location: str
+    is_cortex_a_compatible: bool
+
+
+@dataclass
+class CortexACompatibilityInfo:
+    """Model's operators."""
+
+    cortex_a_compatible: bool
+    operators: list[Operator]
+
+
+def get_cortex_a_compatibility_info(model_path: Path) -> CortexACompatibilityInfo:
+    """Return list of model's operators."""
+    raise NotImplementedError()

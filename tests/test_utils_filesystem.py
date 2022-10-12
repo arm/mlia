@@ -48,6 +48,7 @@ def test_profiles_data() -> None:
         "ethos-u65-512",
         "ethos-u65-256",
         "tosa",
+        "cortex-a",
     ]
 
 
@@ -76,6 +77,7 @@ def test_get_supported_profile_names() -> None:
         "ethos-u65-512",
         "ethos-u65-256",
         "tosa",
+        "cortex-a",
     ]
 
 

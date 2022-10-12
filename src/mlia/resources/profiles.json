@@ -25,5 +25,8 @@
     },
     "tosa": {
         "target": "tosa"
+    },
+    "cortex-a": {
+        "target": "cortex-a"
     }
 }
