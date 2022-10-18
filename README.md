@@ -411,6 +411,13 @@ Additional useful information:
 
 ML Inference Advisor is licensed under [Apache License 2.0](LICENSES/Apache-2.0.txt).
 
+## Inclusive language commitment
+
+This product confirms to Arm's inclusive language policy and, to the best of
+our knowledge, does not contain any non-inclusive language.
+
+If you find something that concerns you, email terms@arm.com.
+
 ## Trademarks and copyrights
 
 * Arm®, Ethos™-U, Cortex®-A, Cortex®-M, Corstone™ are registered trademarks or
