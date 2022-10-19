@@ -1,6 +1,6 @@
 [
   {
-    "name": "Generic Inference Runner: Ethos-U55 SRAM",
+    "name": "Generic Inference Runner: Ethos-U55",
     "description": "This application allows running inferences using custom NN TensorFlow Lite models on Ethos-U. No data pre-/post-processing is executed.",
     "supported_systems": [
       {

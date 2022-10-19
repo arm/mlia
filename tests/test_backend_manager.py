@@ -389,16 +389,16 @@ class TestBackendRunner:
     "device, system, application, backend, expected_error",
     [
         (
-            DeviceInfo(device_type="ethos-u55", mac=32, memory_mode="Shared_Sram"),
+            DeviceInfo(device_type="ethos-u55", mac=32),
             ("Corstone-300: Cortex-M55+Ethos-U55", True),
-            ("Generic Inference Runner: Ethos-U55 SRAM", True),
+            ("Generic Inference Runner: Ethos-U55", True),
             "Corstone-300",
             does_not_raise(),
         ),
         (
-            DeviceInfo(device_type="ethos-u55", mac=32, memory_mode="Shared_Sram"),
+            DeviceInfo(device_type="ethos-u55", mac=32),
             ("Corstone-300: Cortex-M55+Ethos-U55", False),
-            ("Generic Inference Runner: Ethos-U55 SRAM", False),
+            ("Generic Inference Runner: Ethos-U55", False),
             "Corstone-300",
             pytest.raises(
                 Exception,
@@ -406,27 +406,27 @@ class TestBackendRunner:
             ),
         ),
         (
-            DeviceInfo(device_type="ethos-u55", mac=32, memory_mode="Shared_Sram"),
+            DeviceInfo(device_type="ethos-u55", mac=32),
             ("Corstone-300: Cortex-M55+Ethos-U55", True),
-            ("Generic Inference Runner: Ethos-U55 SRAM", False),
+            ("Generic Inference Runner: Ethos-U55", False),
             "Corstone-300",
             pytest.raises(
                 Exception,
-                match=r"Application Generic Inference Runner: Ethos-U55/65 Shared SRAM "
+                match=r"Application Generic Inference Runner: Ethos-U55 "
                 r"for the system Corstone-300: Cortex-M55\+Ethos-U55 is not installed",
             ),
         ),
         (
-            DeviceInfo(device_type="ethos-u55", mac=32, memory_mode="Shared_Sram"),
+            DeviceInfo(device_type="ethos-u55", mac=32),
             ("Corstone-310: Cortex-M85+Ethos-U55", True),
-            ("Generic Inference Runner: Ethos-U55 SRAM", True),
+            ("Generic Inference Runner: Ethos-U55", True),
             "Corstone-310",
             does_not_raise(),
         ),
         (
-            DeviceInfo(device_type="ethos-u55", mac=32, memory_mode="Shared_Sram"),
+            DeviceInfo(device_type="ethos-u55", mac=32),
             ("Corstone-310: Cortex-M85+Ethos-U55", False),
-            ("Generic Inference Runner: Ethos-U55 SRAM", False),
+            ("Generic Inference Runner: Ethos-U55", False),
             "Corstone-310",
             pytest.raises(
                 Exception,
@@ -434,27 +434,27 @@ class TestBackendRunner:
             ),
         ),
         (
-            DeviceInfo(device_type="ethos-u55", mac=32, memory_mode="Shared_Sram"),
+            DeviceInfo(device_type="ethos-u55", mac=32),
             ("Corstone-310: Cortex-M85+Ethos-U55", True),
-            ("Generic Inference Runner: Ethos-U55 SRAM", False),
+            ("Generic Inference Runner: Ethos-U55", False),
             "Corstone-310",
             pytest.raises(
                 Exception,
-                match=r"Application Generic Inference Runner: Ethos-U55/65 Shared SRAM "
+                match=r"Application Generic Inference Runner: Ethos-U55 "
                 r"for the system Corstone-310: Cortex-M85\+Ethos-U55 is not installed",
             ),
         ),
         (
-            DeviceInfo(device_type="ethos-u65", mac=512, memory_mode="Shared_Sram"),
+            DeviceInfo(device_type="ethos-u65", mac=512),
             ("Corstone-300: Cortex-M55+Ethos-U65", True),
-            ("Generic Inference Runner: Ethos-U65 Dedicated SRAM", True),
+            ("Generic Inference Runner: Ethos-U65", True),
             "Corstone-300",
             does_not_raise(),
         ),
         (
-            DeviceInfo(device_type="ethos-u65", mac=512, memory_mode="Shared_Sram"),
+            DeviceInfo(device_type="ethos-u65", mac=512),
             ("Corstone-300: Cortex-M55+Ethos-U65", False),
-            ("Generic Inference Runner: Ethos-U65 Dedicated SRAM", False),
+            ("Generic Inference Runner: Ethos-U65", False),
             "Corstone-300",
             pytest.raises(
                 Exception,
@@ -462,21 +462,48 @@ class TestBackendRunner:
             ),
         ),
         (
-            DeviceInfo(device_type="ethos-u65", mac=512, memory_mode="Shared_Sram"),
+            DeviceInfo(device_type="ethos-u65", mac=512),
             ("Corstone-300: Cortex-M55+Ethos-U65", True),
-            ("Generic Inference Runner: Ethos-U65 Dedicated SRAM", False),
+            ("Generic Inference Runner: Ethos-U65", False),
             "Corstone-300",
             pytest.raises(
                 Exception,
-                match=r"Application Generic Inference Runner: Ethos-U55/65 Shared SRAM "
+                match=r"Application Generic Inference Runner: Ethos-U65 "
                 r"for the system Corstone-300: Cortex-M55\+Ethos-U65 is not installed",
+            ),
+        ),
+        (
+            DeviceInfo(device_type="ethos-u65", mac=512),
+            ("Corstone-310: Cortex-M85+Ethos-U65", True),
+            ("Generic Inference Runner: Ethos-U65", True),
+            "Corstone-310",
+            does_not_raise(),
+        ),
+        (
+            DeviceInfo(device_type="ethos-u65", mac=512),
+            ("Corstone-310: Cortex-M85+Ethos-U65", False),
+            ("Generic Inference Runner: Ethos-U65", False),
+            "Corstone-310",
+            pytest.raises(
+                Exception,
+                match=r"System Corstone-310: Cortex-M85\+Ethos-U65 is not installed",
+            ),
+        ),
+        (
+            DeviceInfo(device_type="ethos-u65", mac=512),
+            ("Corstone-310: Cortex-M85+Ethos-U65", True),
+            ("Generic Inference Runner: Ethos-U65", False),
+            "Corstone-310",
+            pytest.raises(
+                Exception,
+                match=r"Application Generic Inference Runner: Ethos-U65 "
+                r"for the system Corstone-310: Cortex-M85\+Ethos-U65 is not installed",
             ),
         ),
         (
             DeviceInfo(
                 device_type="unknown_device",  # type: ignore
                 mac=None,  # type: ignore
-                memory_mode="Shared_Sram",
             ),
             ("some_system", False),
             ("some_application", False),
@@ -561,7 +588,7 @@ def test_estimate_performance_insufficient_data(
     with pytest.raises(
         Exception, match="Unable to get performance metrics, insufficient data"
     ):
-        device = DeviceInfo(device_type="ethos-u55", mac=32, memory_mode="Shared_Sram")
+        device = DeviceInfo(device_type="ethos-u55", mac=32)
         estimate_performance(ModelInfo(test_tflite_model), device, backend)
 
 
@@ -579,7 +606,7 @@ def test_estimate_performance_invalid_output(
     with pytest.raises(Exception, match="Unable to get performance metrics"):
         estimate_performance(
             ModelInfo(test_tflite_model),
-            DeviceInfo(device_type="ethos-u55", mac=256, memory_mode="Shared_Sram"),
+            DeviceInfo(device_type="ethos-u55", mac=256),
             backend=backend,
         )
 
@@ -608,7 +635,7 @@ def create_mock_context(stdout: list[str]) -> ExecutionContext:
 @pytest.mark.parametrize("backend", ("Corstone-300", "Corstone-310"))
 def test_get_generic_runner(backend: str) -> None:
     """Test function get_generic_runner()."""
-    device_info = DeviceInfo("ethos-u55", 256, memory_mode="Shared_Sram")
+    device_info = DeviceInfo("ethos-u55", 256)
 
     runner = get_generic_runner(device_info=device_info, backend=backend)
     assert isinstance(runner, GenericInferenceRunnerEthosU)
@@ -643,40 +670,28 @@ class TestGenericInferenceRunnerEthosU:
         "device, backend, expected_system, expected_app",
         [
             [
-                DeviceInfo("ethos-u55", 256, memory_mode="Shared_Sram"),
+                DeviceInfo("ethos-u55", 256),
                 "Corstone-300",
                 "Corstone-300: Cortex-M55+Ethos-U55",
-                "Generic Inference Runner: Ethos-U55/65 Shared SRAM",
+                "Generic Inference Runner: Ethos-U55",
             ],
             [
-                DeviceInfo("ethos-u55", 256, memory_mode="Shared_Sram"),
-                "Corstone-310",
-                "Corstone-310: Cortex-M85+Ethos-U55",
-                "Generic Inference Runner: Ethos-U55/65 Shared SRAM",
-            ],
-            [
-                DeviceInfo("ethos-u55", 256, memory_mode="Sram"),
-                "Corstone-310",
-                "Corstone-310: Cortex-M85+Ethos-U55",
-                "Generic Inference Runner: Ethos-U55 SRAM",
-            ],
-            [
-                DeviceInfo("ethos-u55", 256, memory_mode="Sram"),
-                "Corstone-300",
-                "Corstone-300: Cortex-M55+Ethos-U55",
-                "Generic Inference Runner: Ethos-U55 SRAM",
-            ],
-            [
-                DeviceInfo("ethos-u65", 256, memory_mode="Shared_Sram"),
+                DeviceInfo("ethos-u65", 256),
                 "Corstone-300",
                 "Corstone-300: Cortex-M55+Ethos-U65",
-                "Generic Inference Runner: Ethos-U55/65 Shared SRAM",
+                "Generic Inference Runner: Ethos-U65",
             ],
             [
-                DeviceInfo("ethos-u65", 256, memory_mode="Dedicated_Sram"),
-                "Corstone-300",
-                "Corstone-300: Cortex-M55+Ethos-U65",
-                "Generic Inference Runner: Ethos-U65 Dedicated SRAM",
+                DeviceInfo("ethos-u55", 256),
+                "Corstone-310",
+                "Corstone-310: Cortex-M85+Ethos-U55",
+                "Generic Inference Runner: Ethos-U55",
+            ],
+            [
+                DeviceInfo("ethos-u65", 256),
+                "Corstone-310",
+                "Corstone-310: Cortex-M85+Ethos-U65",
+                "Generic Inference Runner: Ethos-U65",
             ],
         ],
     )
@@ -696,24 +711,7 @@ class TestGenericInferenceRunnerEthosU:
         with pytest.raises(
             RuntimeError, match="Unsupported device ethos-u65 for backend test_backend"
         ):
-            get_generic_runner(
-                DeviceInfo("ethos-u65", 256, memory_mode="Shared_Sram"), "test_backend"
-            )
-
-    @staticmethod
-    def test_artifact_resolver_unsupported_memory_mode() -> None:
-        """Test that it should be not possible to use unsupported memory modes."""
-        with pytest.raises(
-            RuntimeError, match="Unsupported memory mode test_memory_mode"
-        ):
-            get_generic_runner(
-                DeviceInfo(
-                    "ethos-u65",
-                    256,
-                    memory_mode="test_memory_mode",  # type: ignore
-                ),
-                "Corstone-300",
-            )
+            get_generic_runner(DeviceInfo("ethos-u65", 256), "test_backend")
 
     @staticmethod
     @pytest.mark.parametrize("backend", ("Corstone-300", "Corstone-310"))
@@ -723,9 +721,7 @@ class TestGenericInferenceRunnerEthosU:
         """Test that inference should fail if system is not installed."""
         backend_runner.is_system_installed.return_value = False
 
-        generic_runner = get_generic_runner(
-            DeviceInfo("ethos-u55", 256, memory_mode="Shared_Sram"), backend
-        )
+        generic_runner = get_generic_runner(DeviceInfo("ethos-u55", 256), backend)
         with pytest.raises(
             Exception,
             match=r"System Corstone-3[01]0: Cortex-M[58]5\+Ethos-U55 is not installed",
@@ -741,12 +737,10 @@ class TestGenericInferenceRunnerEthosU:
         backend_runner.is_system_installed.return_value = True
         backend_runner.is_application_installed.return_value = False
 
-        generic_runner = get_generic_runner(
-            DeviceInfo("ethos-u55", 256, memory_mode="Shared_Sram"), backend
-        )
+        generic_runner = get_generic_runner(DeviceInfo("ethos-u55", 256), backend)
         with pytest.raises(
             Exception,
-            match="Application Generic Inference Runner: Ethos-U55/65 Shared SRAM"
+            match="Application Generic Inference Runner: Ethos-U55"
             r" for the system Corstone-3[01]0: Cortex-M[58]5\+Ethos-U55 is not "
             r"installed",
         ):

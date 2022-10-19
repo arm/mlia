@@ -382,6 +382,7 @@ def get_corstone_310_installation() -> Installation:
             PackagePathChecker(
                 expected_files=[
                     "models/Linux64_GCC-9.3/FVP_Corstone_SSE-310",
+                    "models/Linux64_GCC-9.3/FVP_Corstone_SSE-310_Ethos-U65",
                 ],
                 backend_subfolder="models/Linux64_GCC-9.3",
             ),
@@ -389,6 +390,7 @@ def get_corstone_310_installation() -> Installation:
                 static_backend_path=Path("/opt/VHT"),
                 expected_files=[
                     "VHT_Corstone_SSE-310",
+                    "VHT_Corstone_SSE-310_Ethos-U65",
                 ],
                 copy_source=False,
                 system_config=(

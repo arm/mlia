@@ -30,23 +30,16 @@ _SUPPORTED_SYSTEMS = {
     },
     "Corstone-310": {
         "ethos-u55": "Corstone-310: Cortex-M85+Ethos-U55",
+        "ethos-u65": "Corstone-310: Cortex-M85+Ethos-U65",
     },
 }
 
-# Mapping system_name -> memory_mode -> application
+# Mapping system_name -> application
 _SYSTEM_TO_APP_MAP = {
-    "Corstone-300: Cortex-M55+Ethos-U55": {
-        "Sram": "Generic Inference Runner: Ethos-U55 SRAM",
-        "Shared_Sram": "Generic Inference Runner: Ethos-U55/65 Shared SRAM",
-    },
-    "Corstone-300: Cortex-M55+Ethos-U65": {
-        "Shared_Sram": "Generic Inference Runner: Ethos-U55/65 Shared SRAM",
-        "Dedicated_Sram": "Generic Inference Runner: Ethos-U65 Dedicated SRAM",
-    },
-    "Corstone-310: Cortex-M85+Ethos-U55": {
-        "Sram": "Generic Inference Runner: Ethos-U55 SRAM",
-        "Shared_Sram": "Generic Inference Runner: Ethos-U55/65 Shared SRAM",
-    },
+    "Corstone-300: Cortex-M55+Ethos-U55": "Generic Inference Runner: Ethos-U55",
+    "Corstone-300: Cortex-M55+Ethos-U65": "Generic Inference Runner: Ethos-U65",
+    "Corstone-310: Cortex-M85+Ethos-U55": "Generic Inference Runner: Ethos-U55",
+    "Corstone-310: Cortex-M85+Ethos-U65": "Generic Inference Runner: Ethos-U65",
 }
 
 
@@ -79,11 +72,7 @@ def get_all_system_names(backend: str) -> list[str]:
 
 def get_all_application_names(backend: str) -> list[str]:
     """Get all applications supported by the backend."""
-    app_set = {
-        app
-        for sys in get_all_system_names(backend)
-        for app in _SYSTEM_TO_APP_MAP[sys].values()
-    }
+    app_set = {_SYSTEM_TO_APP_MAP[sys] for sys in get_all_system_names(backend)}
     return list(app_set)
 
 
@@ -93,7 +82,6 @@ class DeviceInfo:
 
     device_type: Literal["ethos-u55", "ethos-u65"]
     mac: int
-    memory_mode: Literal["Sram", "Shared_Sram", "Dedicated_Sram"]
 
 
 @dataclass
@@ -327,15 +315,10 @@ class GenericInferenceRunnerEthosU(GenericInferenceRunner):
                 f"for backend {backend}"
             ) from ex
 
-        if system_name not in _SYSTEM_TO_APP_MAP:
-            raise RuntimeError(f"System {system_name} is not installed")
-
         try:
-            app_name = _SYSTEM_TO_APP_MAP[system_name][device_info.memory_mode]
+            app_name = _SYSTEM_TO_APP_MAP[system_name]
         except KeyError as err:
-            raise RuntimeError(
-                f"Unsupported memory mode {device_info.memory_mode}"
-            ) from err
+            raise RuntimeError(f"System {system_name} is not installed") from err
 
         return system_name, app_name
 

@@ -432,7 +432,13 @@ def test_corstone_300_installer(
                 "/opt/VHT/VHT_Corstone_SSE-300_Ethos-U65",
             },
         ],
-        [get_corstone_310_installation(), {"/opt/VHT/VHT_Corstone_SSE-310"}],
+        [
+            get_corstone_310_installation(),
+            {
+                "/opt/VHT/VHT_Corstone_SSE-310",
+                "/opt/VHT/VHT_Corstone_SSE-310_Ethos-U65",
+            },
+        ],
     ],
 )
 def test_corstone_vht_install(

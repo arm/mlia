@@ -182,7 +182,6 @@ class CorstonePerformanceEstimator(
         device_info = backend_manager.DeviceInfo(
             device_type=self.device.target,  # type: ignore
             mac=self.device.mac,
-            memory_mode=self.device.compiler_options.memory_mode,  # type: ignore
         )
 
         corstone_perf_metrics = backend_manager.estimate_performance(

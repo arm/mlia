@@ -1,10 +1,10 @@
 [
   {
-    "name": "Generic Inference Runner: Ethos-U55/65 Shared SRAM",
+    "name": "Generic Inference Runner: Ethos-U65",
     "description": "This application allows running inferences using custom NN TensorFlow Lite models on Ethos-U. No data pre-/post-processing is executed.",
     "supported_systems": [
       {
-        "name": "Corstone-310: Cortex-M85+Ethos-U55"
+        "name": "Corstone-310: Cortex-M85+Ethos-U65"
       }
     ],
     "variables": {
