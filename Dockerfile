@@ -85,9 +85,6 @@ ARG PYTHON_VERSIONS
 COPY docker/install_python_versions.sh /home/foo
 RUN /home/foo/install_python_versions.sh "${PYTHON_VERSIONS}" --set-all-global
 
-# Install tox
-RUN pip3 install tox
-
 # Create a temporary mock MLIA repository to setup the tox and pre-commit
 # environments. Copy only relevant files to facilitate caching.
 ENV TMP_REPO /tmp/mlia/
@@ -98,13 +95,20 @@ RUN git init \
     && touch README.md
 COPY pyproject.toml setup.cfg setup.py tox.ini ./
 
-# Create tox environment for linting (as this takes most time to set up) in a
-# specific cache directory so that it is cached in the docker image.
 ENV TOX_WORK_DIR $HOME/tox
-RUN tox --workdir $TOX_WORK_DIR --notest --recreate -e lint
-# Set up pre-commit hooks to cache the hook environments
 COPY .pre-commit-config.yaml .
-RUN tox --workdir $TOX_WORK_DIR -e lint_setup
+
+# Install tox, create tox environment for linting (as this takes most time to set up)
+# in a specific cache directory so that it is cached in the docker image.
+# Set up pre-commit hooks to cache the hook environments
+
+# pip.conf may contain sensitive information such as login information for the
+# chosen pip index. By loading it as a secret, the secret information will not
+# be leaked into the final build or cache.
+RUN --mount=type=secret,id=pip_conf,mode=755,target=/home/foo/.pip/pip.conf \
+    pip3 install tox &&\
+    tox --workdir $TOX_WORK_DIR --notest --recreate -e lint &&\
+    tox --workdir $TOX_WORK_DIR -e lint_setup
 
 WORKDIR $HOME
 RUN rm -r $TMP_REPO
