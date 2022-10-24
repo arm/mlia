@@ -17,6 +17,7 @@ from mlia.devices.ethosu.config import EthosUConfiguration
 from mlia.nn.tensorflow.config import get_tflite_model
 from mlia.nn.tensorflow.config import ModelConfiguration
 from mlia.nn.tensorflow.optimizations.select import OptimizationSettings
+from mlia.utils.logging import log_action
 
 
 logger = logging.getLogger(__name__)
@@ -125,25 +126,24 @@ class VelaPerformanceEstimator(
 
     def estimate(self, model: Path | ModelConfiguration) -> MemoryUsage:
         """Estimate performance."""
-        logger.info("Getting the memory usage metrics ...")
+        with log_action("Getting the memory usage metrics ..."):
+            model_path = (
+                Path(model.model_path)
+                if isinstance(model, ModelConfiguration)
+                else model
+            )
 
-        model_path = (
-            Path(model.model_path) if isinstance(model, ModelConfiguration) else model
-        )
+            vela_perf_metrics = vela.estimate_performance(
+                model_path, self.device.compiler_options
+            )
 
-        vela_perf_metrics = vela.estimate_performance(
-            model_path, self.device.compiler_options
-        )
-
-        memory_usage = MemoryUsage(
-            vela_perf_metrics.sram_memory_area_size,
-            vela_perf_metrics.dram_memory_area_size,
-            vela_perf_metrics.unknown_memory_area_size,
-            vela_perf_metrics.on_chip_flash_memory_area_size,
-            vela_perf_metrics.off_chip_flash_memory_area_size,
-        )
-        logger.info("Done\n")
-        return memory_usage
+            return MemoryUsage(
+                vela_perf_metrics.sram_memory_area_size,
+                vela_perf_metrics.dram_memory_area_size,
+                vela_perf_metrics.unknown_memory_area_size,
+                vela_perf_metrics.on_chip_flash_memory_area_size,
+                vela_perf_metrics.off_chip_flash_memory_area_size,
+            )
 
 
 class CorstonePerformanceEstimator(
@@ -161,44 +161,44 @@ class CorstonePerformanceEstimator(
 
     def estimate(self, model: Path | ModelConfiguration) -> NPUCycles:
         """Estimate performance."""
-        logger.info("Getting the performance metrics for '%s' ...", self.backend)
-        logger.info(
-            "WARNING: This task may require several minutes (press ctrl-c to interrupt)"
-        )
+        with log_action(f"Getting the performance metrics for '{self.backend}' ..."):
+            logger.info(
+                "WARNING: This task may require several minutes "
+                "(press ctrl-c to interrupt)"
+            )
 
-        model_path = (
-            Path(model.model_path) if isinstance(model, ModelConfiguration) else model
-        )
+            model_path = (
+                Path(model.model_path)
+                if isinstance(model, ModelConfiguration)
+                else model
+            )
 
-        optimized_model_path = self.context.get_model_path(
-            f"{model_path.stem}_vela.tflite"
-        )
+            optimized_model_path = self.context.get_model_path(
+                f"{model_path.stem}_vela.tflite"
+            )
 
-        vela.optimize_model(
-            model_path, self.device.compiler_options, optimized_model_path
-        )
+            vela.optimize_model(
+                model_path, self.device.compiler_options, optimized_model_path
+            )
 
-        model_info = backend_manager.ModelInfo(model_path=optimized_model_path)
-        device_info = backend_manager.DeviceInfo(
-            device_type=self.device.target,  # type: ignore
-            mac=self.device.mac,
-        )
+            model_info = backend_manager.ModelInfo(model_path=optimized_model_path)
+            device_info = backend_manager.DeviceInfo(
+                device_type=self.device.target,  # type: ignore
+                mac=self.device.mac,
+            )
 
-        corstone_perf_metrics = backend_manager.estimate_performance(
-            model_info, device_info, self.backend
-        )
+            corstone_perf_metrics = backend_manager.estimate_performance(
+                model_info, device_info, self.backend
+            )
 
-        npu_cycles = NPUCycles(
-            corstone_perf_metrics.npu_active_cycles,
-            corstone_perf_metrics.npu_idle_cycles,
-            corstone_perf_metrics.npu_total_cycles,
-            corstone_perf_metrics.npu_axi0_rd_data_beat_received,
-            corstone_perf_metrics.npu_axi0_wr_data_beat_written,
-            corstone_perf_metrics.npu_axi1_rd_data_beat_received,
-        )
-
-        logger.info("Done\n")
-        return npu_cycles
+            return NPUCycles(
+                corstone_perf_metrics.npu_active_cycles,
+                corstone_perf_metrics.npu_idle_cycles,
+                corstone_perf_metrics.npu_total_cycles,
+                corstone_perf_metrics.npu_axi0_rd_data_beat_received,
+                corstone_perf_metrics.npu_axi0_wr_data_beat_written,
+                corstone_perf_metrics.npu_axi1_rd_data_beat_received,
+            )
 
 
 class EthosUPerformanceEstimator(

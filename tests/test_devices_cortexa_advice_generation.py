@@ -12,6 +12,7 @@ from mlia.core.context import ExecutionContext
 from mlia.devices.cortexa.advice_generation import CortexAAdviceProducer
 from mlia.devices.cortexa.data_analysis import ModelIsCortexACompatible
 from mlia.devices.cortexa.data_analysis import ModelIsNotCortexACompatible
+from mlia.devices.cortexa.data_analysis import ModelIsNotTFLiteCompatible
 
 
 @pytest.mark.parametrize(
@@ -33,6 +34,43 @@ from mlia.devices.cortexa.data_analysis import ModelIsNotCortexACompatible
             ModelIsCortexACompatible(),
             AdviceCategory.OPERATORS,
             [Advice(["Model is fully compatible with Cortex-A."])],
+        ],
+        [
+            ModelIsNotTFLiteCompatible(
+                flex_ops=["flex_op1", "flex_op2"],
+                custom_ops=["custom_op1", "custom_op2"],
+            ),
+            AdviceCategory.OPERATORS,
+            [
+                Advice(
+                    [
+                        "The following operators are not natively "
+                        "supported by TensorFlow Lite: flex_op1, flex_op2.",
+                        "Please refer to the TensorFlow documentation for "
+                        "more details.",
+                    ]
+                ),
+                Advice(
+                    [
+                        "The following operators are custom and not natively "
+                        "supported by TensorFlow Lite: custom_op1, custom_op2.",
+                        "Please refer to the TensorFlow documentation for "
+                        "more details.",
+                    ]
+                ),
+            ],
+        ],
+        [
+            ModelIsNotTFLiteCompatible(),
+            AdviceCategory.OPERATORS,
+            [
+                Advice(
+                    [
+                        "Model could not be converted into TensorFlow Lite format.",
+                        "Please refer to the table for more details.",
+                    ]
+                ),
+            ],
         ],
     ],
 )

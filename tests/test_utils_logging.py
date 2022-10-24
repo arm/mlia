@@ -8,10 +8,14 @@ import sys
 from contextlib import ExitStack as does_not_raise
 from pathlib import Path
 from typing import Any
+from typing import Callable
+from unittest.mock import MagicMock
 
 import pytest
 
-from mlia.cli.logging import create_log_handler
+from mlia.utils.logging import create_log_handler
+from mlia.utils.logging import redirect_output
+from mlia.utils.logging import redirect_raw_output
 
 
 @pytest.mark.parametrize(
@@ -62,3 +66,21 @@ def test_create_log_handler(
             delay=delay,
         )
         assert isinstance(handler, expected_class)
+
+
+@pytest.mark.parametrize(
+    "redirect_context_manager",
+    [
+        redirect_raw_output,
+        redirect_output,
+    ],
+)
+def test_output_redirection(redirect_context_manager: Callable) -> None:
+    """Test output redirection via context manager."""
+    print("before redirect")
+    logger_mock = MagicMock()
+    with redirect_context_manager(logger_mock):
+        print("output redirected")
+    print("after redirect")
+
+    logger_mock.log.assert_called_once_with(logging.INFO, "output redirected")

@@ -6,6 +6,7 @@ from __future__ import annotations
 import logging
 import sys
 from pathlib import Path
+from typing import Iterable
 
 from mlia.utils.logging import attach_handlers
 from mlia.utils.logging import create_log_handler
@@ -31,34 +32,33 @@ def setup_logging(
     :param verbose: enable extended logging for the tools loggers
     :param log_filename: name of the log file in the logs directory
     """
-    mlia_logger, *tools_loggers = (
+    mlia_logger, tensorflow_logger, py_warnings_logger = (
         logging.getLogger(logger_name)
         for logger_name in ["mlia", "tensorflow", "py.warnings"]
     )
 
     # enable debug output, actual message filtering depends on
-    # the provided parameters and being done on the handlers level
-    mlia_logger.setLevel(logging.DEBUG)
+    # the provided parameters and being done at the handlers level
+    for logger in [mlia_logger, tensorflow_logger]:
+        logger.setLevel(logging.DEBUG)
 
     mlia_handlers = _get_mlia_handlers(logs_dir, log_filename, verbose)
     attach_handlers(mlia_handlers, [mlia_logger])
 
     tools_handlers = _get_tools_handlers(logs_dir, log_filename, verbose)
-    attach_handlers(tools_handlers, tools_loggers)
+    attach_handlers(tools_handlers, [tensorflow_logger, py_warnings_logger])
 
 
 def _get_mlia_handlers(
     logs_dir: str | Path | None,
     log_filename: str,
     verbose: bool,
-) -> list[logging.Handler]:
+) -> Iterable[logging.Handler]:
     """Get handlers for the MLIA loggers."""
-    result = []
-    stdout_handler = create_log_handler(
+    yield create_log_handler(
         stream=sys.stdout,
         log_level=logging.INFO,
     )
-    result.append(stdout_handler)
 
     if verbose:
         mlia_verbose_handler = create_log_handler(
@@ -67,50 +67,43 @@ def _get_mlia_handlers(
             log_format=_CONSOLE_DEBUG_FORMAT,
             log_filter=LogFilter.equals(logging.DEBUG),
         )
-        result.append(mlia_verbose_handler)
+        yield mlia_verbose_handler
 
     if logs_dir:
-        mlia_file_handler = create_log_handler(
+        yield create_log_handler(
             file_path=_get_log_file(logs_dir, log_filename),
             log_level=logging.DEBUG,
             log_format=_FILE_DEBUG_FORMAT,
             log_filter=LogFilter.skip(logging.INFO),
             delay=True,
         )
-        result.append(mlia_file_handler)
-
-    return result
 
 
 def _get_tools_handlers(
     logs_dir: str | Path | None,
     log_filename: str,
     verbose: bool,
-) -> list[logging.Handler]:
+) -> Iterable[logging.Handler]:
     """Get handler for the tools loggers."""
-    result = []
     if verbose:
-        verbose_stdout_handler = create_log_handler(
+        yield create_log_handler(
             stream=sys.stdout,
             log_level=logging.DEBUG,
             log_format=_CONSOLE_DEBUG_FORMAT,
         )
-        result.append(verbose_stdout_handler)
 
     if logs_dir:
-        file_handler = create_log_handler(
+        yield create_log_handler(
             file_path=_get_log_file(logs_dir, log_filename),
             log_level=logging.DEBUG,
             log_format=_FILE_DEBUG_FORMAT,
             delay=True,
         )
-        result.append(file_handler)
-
-    return result
 
 
 def _get_log_file(logs_dir: str | Path, log_filename: str) -> Path:
     """Get the log file path."""
     logs_dir_path = Path(logs_dir)
     logs_dir_path.mkdir(exist_ok=True)
+
     return logs_dir_path / log_filename

@@ -9,6 +9,7 @@ from mlia.core.common import AdviceCategory
 from mlia.core.common import DataItem
 from mlia.devices.cortexa.data_analysis import ModelIsCortexACompatible
 from mlia.devices.cortexa.data_analysis import ModelIsNotCortexACompatible
+from mlia.devices.cortexa.data_analysis import ModelIsNotTFLiteCompatible
 
 
 class CortexAAdviceProducer(FactBasedAdviceProducer):
@@ -38,3 +39,37 @@ class CortexAAdviceProducer(FactBasedAdviceProducer):
                 "Please, refer to the operators table for more information."
             ]
         )
+
+    @produce_advice.register
+    @advice_category(AdviceCategory.ALL, AdviceCategory.OPERATORS)
+    def handle_model_is_not_tflite_compatible(
+        self, data_item: ModelIsNotTFLiteCompatible
+    ) -> None:
+        """Advice for TensorFlow Lite compatibility."""
+        if data_item.flex_ops:
+            self.add_advice(
+                [
+                    "The following operators are not natively "
+                    "supported by TensorFlow Lite: "
+                    f"{', '.join(data_item.flex_ops)}.",
+                    "Please refer to the TensorFlow documentation for more details.",
+                ]
+            )
+
+        if data_item.custom_ops:
+            self.add_advice(
+                [
+                    "The following operators are custom and not natively "
+                    "supported by TensorFlow Lite: "
+                    f"{', '.join(data_item.custom_ops)}.",
+                    "Please refer to the TensorFlow documentation for more details.",
+                ]
+            )
+
+        if not data_item.flex_ops and not data_item.custom_ops:
+            self.add_advice(
+                [
+                    "Model could not be converted into TensorFlow Lite format.",
+                    "Please refer to the table for more details.",
+                ]
+            )

@@ -10,6 +10,11 @@ from mlia.core.data_collection import ContextAwareDataCollector
 from mlia.devices.cortexa.operators import CortexACompatibilityInfo
 from mlia.devices.cortexa.operators import get_cortex_a_compatibility_info
 from mlia.nn.tensorflow.config import get_tflite_model
+from mlia.nn.tensorflow.tflite_compat import TFLiteChecker
+from mlia.nn.tensorflow.tflite_compat import TFLiteCompatibilityInfo
+from mlia.nn.tensorflow.utils import is_tflite_model
+from mlia.utils.logging import log_action
+
 
 logger = logging.getLogger(__name__)
 
@@ -21,14 +26,24 @@ class CortexAOperatorCompatibility(ContextAwareDataCollector):
         """Init operator compatibility data collector."""
         self.model = model
 
-    def collect_data(self) -> CortexACompatibilityInfo:
+    def collect_data(self) -> TFLiteCompatibilityInfo | CortexACompatibilityInfo | None:
         """Collect operator compatibility information."""
+        if not is_tflite_model(self.model):
+            with log_action("Checking TensorFlow Lite compatibility ..."):
+                tflite_checker = TFLiteChecker()
+                tflite_compat = tflite_checker.check_compatibility(self.model)
+
+            if not tflite_compat.compatible:
+                return tflite_compat
+
         tflite_model = get_tflite_model(self.model, self.context)
 
-        logger.info("Checking operator compatibility ...")
-        ops = get_cortex_a_compatibility_info(Path(tflite_model.model_path))
-        logger.info("Done\n")
-        return ops
+        with log_action("Checking operator compatibility ..."):
+            return (
+                get_cortex_a_compatibility_info(  # pylint: disable=assignment-from-none
+                    Path(tflite_model.model_path)
+                )
+            )
 
     @classmethod
     def name(cls) -> str:

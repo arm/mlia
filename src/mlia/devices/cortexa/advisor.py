@@ -68,16 +68,14 @@ def configure_and_get_cortexa_advisor(
     target_profile: str,
     model: str | Path,
     output: PathOrFileLike | None = None,
-    **extra_args: Any,
+    **_extra_args: Any,
 ) -> InferenceAdvisor:
     """Create and configure Cortex-A advisor."""
     if context.event_handlers is None:
         context.event_handlers = [CortexAEventHandler(output)]
 
     if context.config_parameters is None:
-        context.config_parameters = _get_config_parameters(
-            model, target_profile, **extra_args
-        )
+        context.config_parameters = _get_config_parameters(model, target_profile)
 
     return CortexAInferenceAdvisor()
 

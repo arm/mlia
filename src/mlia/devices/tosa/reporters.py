@@ -7,6 +7,7 @@ from typing import Any
 from typing import Callable
 
 from mlia.core.advice_generation import Advice
+from mlia.core.reporters import report_advice
 from mlia.core.reporting import Cell
 from mlia.core.reporting import Column
 from mlia.core.reporting import Format
@@ -28,19 +29,6 @@ def report_device(device: TOSAConfiguration) -> Report:
         [
             ReportItem("Target", alias="target", value=device.target),
         ],
-    )
-
-
-def report_advice(advice: list[Advice]) -> Report:
-    """Generate report for the advice."""
-    return Table(
-        columns=[
-            Column("#", only_for=["plain_text"]),
-            Column("Advice", alias="advice_message"),
-        ],
-        rows=[(i + 1, a.messages) for i, a in enumerate(advice)],
-        name="Advice",
-        alias="advice",
     )
 
 

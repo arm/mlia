@@ -22,6 +22,7 @@ from mlia.nn.tensorflow.optimizations.select import OptimizationSettings
 from mlia.nn.tensorflow.utils import save_keras_model
 from mlia.tools.vela_wrapper import Operators
 from mlia.tools.vela_wrapper import supported_operators
+from mlia.utils.logging import log_action
 from mlia.utils.types import is_list_of
 
 logger = logging.getLogger(__name__)
@@ -39,12 +40,10 @@ class EthosUOperatorCompatibility(ContextAwareDataCollector):
         """Collect operator compatibility information."""
         tflite_model = get_tflite_model(self.model, self.context)
 
-        logger.info("Checking operator compatibility ...")
-        ops = supported_operators(
-            Path(tflite_model.model_path), self.device.compiler_options
-        )
-        logger.info("Done\n")
-        return ops
+        with log_action("Checking operator compatibility ..."):
+            return supported_operators(
+                Path(tflite_model.model_path), self.device.compiler_options
+            )
 
     @classmethod
     def name(cls) -> str:

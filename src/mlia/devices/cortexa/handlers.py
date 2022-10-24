@@ -12,6 +12,7 @@ from mlia.devices.cortexa.events import CortexAAdvisorEventHandler
 from mlia.devices.cortexa.events import CortexAAdvisorStartedEvent
 from mlia.devices.cortexa.operators import CortexACompatibilityInfo
 from mlia.devices.cortexa.reporters import cortex_a_formatters
+from mlia.nn.tensorflow.tflite_compat import TFLiteCompatibilityInfo
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +30,9 @@ class CortexAEventHandler(WorkflowEventsHandler, CortexAAdvisorEventHandler):
 
         if isinstance(data_item, CortexACompatibilityInfo):
             self.reporter.submit(data_item.operators, delay_print=True)
+
+        if isinstance(data_item, TFLiteCompatibilityInfo) and not data_item.compatible:
+            self.reporter.submit(data_item, delay_print=True)
 
     def on_cortex_a_advisor_started(self, event: CortexAAdvisorStartedEvent) -> None:
         """Handle CortexAAdvisorStarted event."""

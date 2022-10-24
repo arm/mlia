@@ -21,9 +21,11 @@ class CortexACompatibilityInfo:
     """Model's operators."""
 
     cortex_a_compatible: bool
-    operators: list[Operator]
+    operators: list[Operator] | None = None
 
 
-def get_cortex_a_compatibility_info(model_path: Path) -> CortexACompatibilityInfo:
+def get_cortex_a_compatibility_info(
+    _model_path: Path,
+) -> CortexACompatibilityInfo | None:
     """Return list of model's operators."""
-    raise NotImplementedError()
+    return None
