@@ -250,6 +250,21 @@ def test_default_command(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Non
                 evaluate_on=["some_backend"],
             ),
         ],
+        [
+            [
+                "operators",
+                "sample_model.h5",
+                "--target-profile",
+                "cortex-a",
+            ],
+            call(
+                ctx=ANY,
+                target_profile="cortex-a",
+                model="sample_model.h5",
+                output=None,
+                supported_ops_report=False,
+            ),
+        ],
     ],
 )
 def test_commands_execution(

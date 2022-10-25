@@ -14,12 +14,11 @@ If you find something that concerns you, email terms@arm.com.
 ## Introduction
 
 This tool is used to help AI developers design and optimize neural network
-models for efficient inference on Arm® targets (e.g. Cortex®-M55 and
-Ethos™-U55/Ethos™-U65, Cortex®-M85 and Ethos™-U55) by enabling performance analysis
-and providing actionable advice early in the model development cycle. The final
-advice can cover the operator list, performance analysis and suggestions for
-model inference run on certain hardware before/after applying model optimization
-(e.g. pruning, clustering, etc.).
+models for efficient inference on Arm® targets (e.g. Cortex®-A or
+Ethos™-U55/Ethos™-U65 with Cortex®-M55/Cortex®-M85) by enabling performance
+analysis and providing actionable advice early in the model development cycle.
+The final advice can cover supported operators, performance analysis and
+suggestions for model optimization (e.g. pruning, clustering, etc.).
 
 ## Prerequisites and dependencies
 
@@ -84,17 +83,21 @@ Not all backends work on any platform. Please refer to the compatibility table
 below:
 
 ```
-+---------------------------------------------------------------------------+
-| Backend      | Linux                  | Windows        | Python           |
-+============================================================================
-| Corstone-300 | x86_64                 | Not compatible | Python>=3.8      |
-+----------------------------------------------------------------------------
-| Corstone-310 | x86_64                 | Not compatible | Python>=3.8      |
-+----------------------------------------------------------------------------
-| TOSA checker | x86_64 (manylinux2014) | Not compatible | 3.7<=Python<=3.9 |
-+----------------------------------------------------------------------------
-| Vela         | x86_64                 | Windows 10     | Python~=3.7      |
-+---------------------------------------------------------------------------+
++----------------------------------------------------------------------------+
+| Backend       | Linux                  | Windows        | Python           |
++=============================================================================
+| Arm NN        |                        |                |                  |
+| TensorFlow    | x86_64                 | Windows 10     | Python>=3.8      |
+| Lite delegate |                        |                |                  |
++-----------------------------------------------------------------------------
+| Corstone-300  | x86_64                 | Not compatible | Python>=3.8      |
++-----------------------------------------------------------------------------
+| Corstone-310  | x86_64                 | Not compatible | Python>=3.8      |
++-----------------------------------------------------------------------------
+| TOSA checker  | x86_64 (manylinux2014) | Not compatible | 3.7<=Python<=3.9 |
++-----------------------------------------------------------------------------
+| Vela          | x86_64                 | Windows 10     | Python~=3.7      |
++----------------------------------------------------------------------------+
 ```
 
 ### Using Corstone™-300
@@ -207,6 +210,7 @@ mlia operators --target-profile ethos-u55-256 ~/models/mobilenet_v1_1.0_224_quan
   target, MAC value, memory mode, etc ...
   * default: ethos-u55-256
   * options:
+    * cortex-a
     * ethos-u55-256
     * ethos-u55-128
     * ethos-u65-512
@@ -378,6 +382,7 @@ mlia all_tests --output ./report.json ~/models/ds_cnn_l.h5
   target, MAC value, memory mode, etc ...
   * default: ethos-u55-256
   * options:
+    * cortex-a
     * ethos-u55-256
     * ethos-u55-128
     * ethos-u65-512

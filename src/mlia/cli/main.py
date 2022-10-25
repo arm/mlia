@@ -37,10 +37,11 @@ logger = logging.getLogger(__name__)
 INFO_MESSAGE = f"""
 ML Inference Advisor {__version__}
 
-Help the design and optimization of neural network models for efficient inference on a target CPU, GPU and NPU
+Help the design and optimization of neural network models for efficient inference on a target CPU and NPU
 
 Supported targets:
 
+ - Cortex-A  <op compatibility>
  - Ethos-U55 <op compatibility, perf estimation, model opt>
  - Ethos-U65 <op compatibility, perf estimation, model opt>
  - TOSA      <op compatibility>

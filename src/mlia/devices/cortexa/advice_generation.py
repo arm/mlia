@@ -15,6 +15,13 @@ from mlia.devices.cortexa.data_analysis import ModelIsNotTFLiteCompatible
 class CortexAAdviceProducer(FactBasedAdviceProducer):
     """Cortex-A advice producer."""
 
+    cortex_a_disclaimer = (
+        "Note that the provided compatibility information is general. "
+        "At runtime individual operators in the given model might fall back to "
+        "the TensorFlow Lite reference or might produce errors based on the "
+        "specific parameters."
+    )
+
     @singledispatchmethod
     def produce_advice(self, _data_item: DataItem) -> None:
         """Produce advice."""
@@ -22,21 +29,54 @@ class CortexAAdviceProducer(FactBasedAdviceProducer):
     @produce_advice.register
     @advice_category(AdviceCategory.ALL, AdviceCategory.OPERATORS)
     def handle_model_is_cortex_a_compatible(
-        self, _data_item: ModelIsCortexACompatible
-    ) -> None:
-        """Advice for Cortex-A compatibility."""
-        self.add_advice(["Model is fully compatible with Cortex-A."])
-
-    @produce_advice.register
-    @advice_category(AdviceCategory.ALL, AdviceCategory.OPERATORS)
-    def handle_model_is_not_cortex_a_compatible(
-        self, _data_item: ModelIsNotCortexACompatible
+        self, data_item: ModelIsCortexACompatible
     ) -> None:
         """Advice for Cortex-A compatibility."""
         self.add_advice(
             [
-                "Some operators in the model are not compatible with Cortex-A. "
-                "Please, refer to the operators table for more information."
+                f"Model is fully compatible with {data_item.backend_info} for "
+                "Cortex-A.",
+                self.cortex_a_disclaimer,
+            ]
+        )
+
+    @produce_advice.register
+    @advice_category(AdviceCategory.ALL, AdviceCategory.OPERATORS)
+    def handle_model_is_not_cortex_a_compatible(
+        self, data_item: ModelIsNotCortexACompatible
+    ) -> None:
+        """Advice for Cortex-A compatibility."""
+        if data_item.unsupported_ops:
+            self.add_advice(
+                [
+                    "The following operators are not supported by "
+                    f"{data_item.backend_info} and will fall back to the "
+                    "TensorFlow Lite runtime:",
+                    "\n".join(f" - {op}" for op in data_item.unsupported_ops),
+                ]
+            )
+
+        if data_item.activation_func_support:
+            self.add_advice(
+                [
+                    "The fused activation functions of the following operators "
+                    f"are not supported by {data_item.backend_info}. Please "
+                    "consider using one of the supported activation functions "
+                    "instead:",
+                    "\n".join(
+                        f" - {op}\n"
+                        f"   - Used unsupported: {act.used_unsupported}\n"
+                        f"   - Supported: {act.supported}"
+                        for op, act in data_item.activation_func_support.items()
+                    ),
+                ]
+            )
+
+        self.add_advice(
+            [
+                "Please, refer to the full table of operators above for more "
+                "information.",
+                self.cortex_a_disclaimer,
             ]
         )
 

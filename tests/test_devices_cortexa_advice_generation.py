@@ -13,27 +13,91 @@ from mlia.devices.cortexa.advice_generation import CortexAAdviceProducer
 from mlia.devices.cortexa.data_analysis import ModelIsCortexACompatible
 from mlia.devices.cortexa.data_analysis import ModelIsNotCortexACompatible
 from mlia.devices.cortexa.data_analysis import ModelIsNotTFLiteCompatible
+from mlia.devices.cortexa.operator_compatibility import ARMNN_TFLITE_DELEGATE
+from mlia.nn.tensorflow.tflite_graph import TFL_ACTIVATION_FUNCTION
+
+BACKEND_INFO = (
+    f"{ARMNN_TFLITE_DELEGATE['metadata']['backend']} "
+    f"{ARMNN_TFLITE_DELEGATE['metadata']['version']}"
+)
 
 
 @pytest.mark.parametrize(
     "input_data, advice_category, expected_advice",
     [
         [
-            ModelIsNotCortexACompatible(),
+            ModelIsNotCortexACompatible(BACKEND_INFO, {"UNSUPPORTED_OP"}, {}),
             AdviceCategory.OPERATORS,
             [
                 Advice(
                     [
-                        "Some operators in the model are not compatible with Cortex-A. "
-                        "Please, refer to the operators table for more information."
+                        "The following operators are not supported by "
+                        f"{BACKEND_INFO} and will fall back to the TensorFlow "
+                        "Lite runtime:",
+                        " - UNSUPPORTED_OP",
                     ]
-                )
+                ),
+                Advice(
+                    [
+                        "Please, refer to the full table of operators above "
+                        "for more information.",
+                        CortexAAdviceProducer.cortex_a_disclaimer,
+                    ]
+                ),
             ],
         ],
         [
-            ModelIsCortexACompatible(),
+            ModelIsNotCortexACompatible(
+                BACKEND_INFO,
+                {"UNSUPPORTED_OP"},
+                {
+                    "CONV_2D": ModelIsNotCortexACompatible.ActivationFunctionSupport(
+                        used_unsupported={TFL_ACTIVATION_FUNCTION.SIGN_BIT.name},
+                        supported={"RELU"},
+                    )
+                },
+            ),
             AdviceCategory.OPERATORS,
-            [Advice(["Model is fully compatible with Cortex-A."])],
+            [
+                Advice(
+                    [
+                        "The following operators are not supported by "
+                        f"{BACKEND_INFO} and will fall back to the TensorFlow "
+                        "Lite runtime:",
+                        " - UNSUPPORTED_OP",
+                    ]
+                ),
+                Advice(
+                    [
+                        "The fused activation functions of the following "
+                        f"operators are not supported by {BACKEND_INFO}. "
+                        "Please consider using one of the supported activation "
+                        "functions instead:",
+                        " - CONV_2D\n"
+                        "   - Used unsupported: {'SIGN_BIT'}\n"
+                        "   - Supported: {'RELU'}",
+                    ]
+                ),
+                Advice(
+                    [
+                        "Please, refer to the full table of operators above "
+                        "for more information.",
+                        CortexAAdviceProducer.cortex_a_disclaimer,
+                    ]
+                ),
+            ],
+        ],
+        [
+            ModelIsCortexACompatible(BACKEND_INFO),
+            AdviceCategory.OPERATORS,
+            [
+                Advice(
+                    [
+                        f"Model is fully compatible with {BACKEND_INFO} for Cortex-A.",
+                        CortexAAdviceProducer.cortex_a_disclaimer,
+                    ]
+                )
+            ],
         ],
         [
             ModelIsNotTFLiteCompatible(

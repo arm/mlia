@@ -5,6 +5,7 @@ from __future__ import annotations
 
 from typing import Any
 from typing import Callable
+from typing import cast
 
 from mlia.core.advice_generation import Advice
 from mlia.core.reporters import report_advice
@@ -96,21 +97,22 @@ def report_cortex_a_operators(ops: list[Operator]) -> Report:
             ),
             Column("Operator name", alias="operator_name", fmt=Format(wrap_width=20)),
             Column(
-                "Cortex-A compatibility",
+                "Arm NN TFLite Delegate compatibility",
                 alias="cortex_a_compatible",
-                fmt=Format(wrap_width=25),
+                fmt=Format(wrap_width=40),
             ),
         ],
         [
             (
                 index + 1,
                 op.location,
-                op.name,
+                op.full_name,
                 Cell(
-                    op.is_cortex_a_compatible,
+                    op.support_type,
                     Format(
+                        wrap_width=30,
                         style=style_improvement(op.is_cortex_a_compatible),
-                        str_fmt=lambda v: "Compatible" if v else "Not compatible",
+                        str_fmt=lambda v: cast(str, v.value),
                     ),
                 ),
             )
