@@ -409,7 +409,7 @@ Additional useful information:
 
 ## License
 
-ML Inference Advisor is licensed under [Apache License 2.0](LICENSE.txt).
+ML Inference Advisor is licensed under [Apache License 2.0](LICENSES/Apache-2.0.txt).
 
 ## Trademarks and copyrights
 
