@@ -391,6 +391,14 @@ mlia all_tests --output ./report.json ~/models/ds_cnn_l.h5
 
 * -h/--help: show this help message and exit
 
+## Releases
+
+Release notes can be found in [MLIA releases](RELEASES.md)
+
+# Reporting vulnerabilities
+
+Information on reporting security issues can be found in [Reporting vulnerabilities](SECURITY.md)
+
 ## Resources
 
 Additional useful information:
