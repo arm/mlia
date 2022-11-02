@@ -131,7 +131,7 @@ def add_custom_supported_operators_options(parser: argparse.ArgumentParser) -> N
     )
 
 
-def add_backend_options(parser: argparse.ArgumentParser) -> None:
+def add_backend_install_options(parser: argparse.ArgumentParser) -> None:
     """Add options for the backends configuration."""
 
     def valid_directory(param: str) -> Path:
@@ -141,42 +141,39 @@ def add_backend_options(parser: argparse.ArgumentParser) -> None:
 
         return dir_path
 
-    subparsers = parser.add_subparsers(title="Backend actions", dest="backend_action")
-    subparsers.required = True
-
-    install_subparser = subparsers.add_parser(
-        "install", help="Install backend", allow_abbrev=False
-    )
-    install_type_group = install_subparser.add_mutually_exclusive_group()
-    install_type_group.required = True
-    install_type_group.add_argument(
+    parser.add_argument(
         "--path", type=valid_directory, help="Path to the installed backend"
     )
-    install_type_group.add_argument(
-        "--download",
-        default=False,
-        action="store_true",
-        help="Download and install backend",
-    )
-    install_subparser.add_argument(
+    parser.add_argument(
         "--i-agree-to-the-contained-eula",
         default=False,
         action="store_true",
         help=argparse.SUPPRESS,
     )
-    install_subparser.add_argument(
+    parser.add_argument(
+        "--force",
+        default=False,
+        action="store_true",
+        help="Force reinstall backend in the specified path",
+    )
+    parser.add_argument(
         "--noninteractive",
         default=False,
         action="store_true",
         help="Non interactive mode with automatic confirmation of every action",
     )
-    install_subparser.add_argument(
+    parser.add_argument(
         "name",
-        nargs="?",
         help="Name of the backend to install",
     )
 
-    subparsers.add_parser("status", help="Show backends status")
+
+def add_backend_uninstall_options(parser: argparse.ArgumentParser) -> None:
+    """Add options for the backends configuration."""
+    parser.add_argument(
+        "name",
+        help="Name of the installed backend",
+    )
 
 
 def add_evaluation_options(parser: argparse.ArgumentParser) -> None:

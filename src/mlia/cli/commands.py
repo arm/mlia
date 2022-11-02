@@ -29,7 +29,6 @@ from mlia.api import PathOrFileLike
 from mlia.cli.config import get_installation_manager
 from mlia.cli.options import parse_optimization_parameters
 from mlia.utils.console import create_section_header
-from mlia.utils.types import only_one_selected
 
 logger = logging.getLogger(__name__)
 
@@ -243,34 +242,36 @@ def optimization(
     )
 
 
-def backend(
-    backend_action: str,
+def backend_install(
+    name: str,
     path: Path | None = None,
-    download: bool = False,
-    name: str | None = None,
     i_agree_to_the_contained_eula: bool = False,
     noninteractive: bool = False,
+    force: bool = False,
 ) -> None:
-    """Backends configuration."""
+    """Install configuration."""
     logger.info(CONFIG)
 
     manager = get_installation_manager(noninteractive)
 
-    if backend_action == "status":
-        manager.show_env_details()
+    install_from_path = path is not None
 
-    if backend_action == "install":
-        install_from_path = path is not None
+    if install_from_path:
+        manager.install_from(cast(Path, path), name, force)
+    else:
+        eula_agreement = not i_agree_to_the_contained_eula
+        manager.download_and_install(name, eula_agreement)
 
-        if not only_one_selected(install_from_path, download):
-            raise Exception(
-                "Please select only one action: download or "
-                "provide path to the backend installation"
-            )
 
-        if install_from_path:
-            manager.install_from(cast(Path, path), name)
+def backend_uninstall(
+    name: str,
+) -> None:
+    """Uninstall backend(s)."""
+    manager = get_installation_manager(noninteractive=True)
+    manager.uninstall(name)
 
-        if download:
-            eula_agreement = not i_agree_to_the_contained_eula
-            manager.download_and_install(name, eula_agreement)
+
+def backend_list() -> None:
+    """List backend status."""
+    manager = get_installation_manager(noninteractive=True)
+    manager.show_env_details()

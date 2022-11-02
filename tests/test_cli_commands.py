@@ -10,7 +10,9 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from mlia.cli.commands import backend
+from mlia.cli.commands import backend_install
+from mlia.cli.commands import backend_list
+from mlia.cli.commands import backend_uninstall
 from mlia.cli.commands import operators
 from mlia.cli.commands import optimization
 from mlia.cli.commands import performance
@@ -19,7 +21,7 @@ from mlia.devices.ethosu.config import EthosUConfiguration
 from mlia.devices.ethosu.performance import MemoryUsage
 from mlia.devices.ethosu.performance import NPUCycles
 from mlia.devices.ethosu.performance import PerformanceMetrics
-from mlia.tools.metadata.common import InstallationManager
+from mlia.tools.metadata.common import DefaultInstallationManager
 
 
 def test_operators_expected_parameters(sample_context: ExecutionContext) -> None:
@@ -139,7 +141,7 @@ def mock_performance_estimation(monkeypatch: pytest.MonkeyPatch) -> None:
 @pytest.fixture(name="installation_manager_mock")
 def fixture_mock_installation_manager(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
     """Mock installation manager."""
-    install_manager_mock = MagicMock(spec=InstallationManager)
+    install_manager_mock = MagicMock(spec=DefaultInstallationManager)
     monkeypatch.setattr(
         "mlia.cli.commands.get_installation_manager",
         MagicMock(return_value=install_manager_mock),
@@ -147,32 +149,47 @@ def fixture_mock_installation_manager(monkeypatch: pytest.MonkeyPatch) -> MagicM
     return install_manager_mock
 
 
-def test_backend_command_action_status(installation_manager_mock: MagicMock) -> None:
-    """Test backend command "status"."""
-    backend(backend_action="status")
+def test_backend_command_action_list(installation_manager_mock: MagicMock) -> None:
+    """Test mlia-backend command list."""
+    backend_list()
 
     installation_manager_mock.show_env_details.assert_called_once()
 
 
 @pytest.mark.parametrize(
-    "i_agree_to_the_contained_eula, backend_name, expected_calls",
+    "backend_name",
     [
-        [False, None, [call(None, True)]],
-        [True, None, [call(None, False)]],
-        [False, "backend_name", [call("backend_name", True)]],
-        [True, "backend_name", [call("backend_name", False)]],
+        "backend_name",
+        "BACKEND_NAME",
+        "BaCkend_NAme",
     ],
 )
-def test_backend_command_action_add_downoad(
+def test_backend_command_action_uninstall(
+    installation_manager_mock: MagicMock,
+    backend_name: str,
+) -> None:
+    """Test mlia-backend command uninstall."""
+    backend_uninstall(backend_name)
+
+    installation_manager_mock.uninstall.assert_called_once()
+
+
+@pytest.mark.parametrize(
+    "i_agree_to_the_contained_eula, backend_name, expected_calls",
+    [
+        [False, "backend_name", [call("backend_name", True)]],
+        [True, "backend_name", [call("backend_name", False)]],
+        [True, "BACKEND_NAME", [call("BACKEND_NAME", False)]],
+    ],
+)
+def test_backend_command_action_add_download(
     installation_manager_mock: MagicMock,
     i_agree_to_the_contained_eula: bool,
-    backend_name: str | None,
+    backend_name: str,
     expected_calls: Any,
 ) -> None:
-    """Test backend command "install" with download option."""
-    backend(
-        backend_action="install",
-        download=True,
+    """Test mlia-backend command "install" with download option."""
+    backend_install(
         name=backend_name,
         i_agree_to_the_contained_eula=i_agree_to_the_contained_eula,
     )
@@ -180,26 +197,20 @@ def test_backend_command_action_add_downoad(
     assert installation_manager_mock.download_and_install.mock_calls == expected_calls
 
 
-@pytest.mark.parametrize("backend_name", [None, "backend_name"])
+@pytest.mark.parametrize(
+    "backend_name, force",
+    [
+        ["backend_name", False],
+        ["backend_name", True],
+        ["BACKEND_NAME", True],
+    ],
+)
 def test_backend_command_action_install_from_path(
     installation_manager_mock: MagicMock,
     tmp_path: Path,
-    backend_name: str | None,
+    backend_name: str,
+    force: bool,
 ) -> None:
-    """Test backend command "install" with backend path."""
-    backend(backend_action="install", path=tmp_path, name=backend_name)
-
-    installation_manager_mock.install_from(tmp_path, backend_name)
-
-
-def test_backend_command_action_install_only_one_action(
-    installation_manager_mock: MagicMock,  # pylint: disable=unused-argument
-    tmp_path: Path,
-) -> None:
-    """Test that only one of action type allowed."""
-    with pytest.raises(
-        Exception,
-        match="Please select only one action: download or "
-        "provide path to the backend installation",
-    ):
-        backend(backend_action="install", download=True, path=tmp_path)
+    """Test mlia-backend command "install" with backend path."""
+    backend_install(path=tmp_path, name=backend_name, force=force)
+    installation_manager_mock.install_from.assert_called_once()

@@ -38,12 +38,22 @@ The ML Inference Advisor is designed to support multiple performance
 estimators (backends) that could generate performance analysis for individual
 types of hardware.
 
-The `backend` command is used to manage the installation of new backends.
-The `install` sub-command can be used to either
+The `mlia-backend` command is used to manage the installation of new backends.
 
-* install a backend installed locally already (option `--path`) or
-* (if available) automatically download the necessary components and
-  dependencies, install them and configure them properly (option `--download`).
+* The `install` sub-command can be used after `mlia-backend` to:
+  * install a backend of ML Inference Advisor from a directory
+    which contains installed backend (option `--path`). The name (mandatory
+    argument `name`) of the backend can be case insensitive. If backend
+    is already installed, it is possible to use option `--force`
+    to force the installation
+  * (if available) automatically download the necessary components and
+    dependencies, install them and configure them properly (default behavior)
+
+* The `uninstall` sub-command can be used with option `backend_name` after
+  `mlia-backend` to remove the backend installation folder
+
+* The `list` sub-command can be used after `mlia-backend` to display
+  the installed and available for installation backends
 
 The usage is:
 

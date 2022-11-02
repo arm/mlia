@@ -19,6 +19,7 @@ from typing import Iterable
 from typing import Optional
 
 import mlia.backend.manager as backend_manager
+from mlia.backend.system import remove_system
 from mlia.tools.metadata.common import DownloadAndInstall
 from mlia.tools.metadata.common import Installation
 from mlia.tools.metadata.common import InstallationType
@@ -204,6 +205,11 @@ class BackendInstallation(Installation):
                     raise Exception("Downloaded artifact has invalid structure")
 
                 self.install(InstallFromPath(backend_path))
+
+    def uninstall(self) -> None:
+        """Uninstall the backend."""
+        remove_system(self.metadata.fvp_dir_name)
+        logger.info("%s successfully uninstalled.", self.name)
 
 
 class PackagePathChecker:

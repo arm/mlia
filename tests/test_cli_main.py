@@ -15,6 +15,7 @@ from unittest.mock import MagicMock
 import pytest
 
 import mlia
+from mlia.cli.main import backend_main
 from mlia.cli.main import CommandInfo
 from mlia.cli.main import main
 from mlia.core.context import ExecutionContext
@@ -120,6 +121,17 @@ def test_default_command(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Non
 
     default_command.assert_called_once_with(ctx=ANY, sample="1", default_arg="123")
     non_default_command.assert_called_once_with(param="test")
+
+
+def wrap_mock_command(mock: MagicMock, command: Callable) -> Callable:
+    """Wrap the command with the mock."""
+
+    @wraps(command)
+    def mock_command(*args: Any, **kwargs: Any) -> Any:
+        """Mock the command."""
+        mock(*args, **kwargs)
+
+    return mock_command
 
 
 @pytest.mark.parametrize(
@@ -273,16 +285,6 @@ def test_commands_execution(
     """Test calling commands from the main function."""
     mock = MagicMock()
 
-    def wrap_mock_command(command: Callable) -> Callable:
-        """Wrap the command with the mock."""
-
-        @wraps(command)
-        def mock_command(*args: Any, **kwargs: Any) -> Any:
-            """Mock the command."""
-            mock(*args, **kwargs)
-
-        return mock_command
-
     monkeypatch.setattr(
         "mlia.cli.options.get_default_backends", MagicMock(return_value=["Vela"])
     )
@@ -295,10 +297,37 @@ def test_commands_execution(
     for command in ["all_tests", "operators", "performance", "optimization"]:
         monkeypatch.setattr(
             f"mlia.cli.main.{command}",
-            wrap_mock_command(getattr(mlia.cli.main, command)),
+            wrap_mock_command(mock, getattr(mlia.cli.main, command)),
         )
 
     main(params)
+
+    mock.assert_called_once_with(*expected_call.args, **expected_call.kwargs)
+
+
+@pytest.mark.parametrize(
+    "params, expected_call",
+    [
+        [
+            ["list"],
+            call(),
+        ],
+    ],
+)
+def test_commands_execution_backend_main(
+    monkeypatch: pytest.MonkeyPatch,
+    params: list[str],
+    expected_call: Any,
+) -> None:
+    """Test calling commands from the backend_main function."""
+    mock = MagicMock()
+
+    monkeypatch.setattr(
+        "mlia.cli.main.backend_list",
+        wrap_mock_command(mock, getattr(mlia.cli.main, "backend_list")),
+    )
+
+    backend_main(params)
 
     mock.assert_called_once_with(*expected_call.args, **expected_call.kwargs)
 

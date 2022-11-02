@@ -65,6 +65,10 @@ class Installation(ABC):
     def install(self, install_type: InstallationType) -> None:
         """Install the backend."""
 
+    @abstractmethod
+    def uninstall(self) -> None:
+        """Uninstall the backend."""
+
 
 InstallationFilter = Callable[[Installation], bool]
 
@@ -106,20 +110,21 @@ class SearchByNameFilter:
 
     def __call__(self, installation: Installation) -> bool:
         """Installation filter."""
-        return not self.backend_name or installation.name == self.backend_name
+        return (
+            not self.backend_name
+            or installation.name.casefold() == self.backend_name.casefold()
+        )
 
 
 class InstallationManager(ABC):
     """Helper class for managing installations."""
 
     @abstractmethod
-    def install_from(self, backend_path: Path, backend_name: str | None) -> None:
+    def install_from(self, backend_path: Path, backend_name: str, force: bool) -> None:
         """Install backend from the local directory."""
 
     @abstractmethod
-    def download_and_install(
-        self, backend_name: str | None, eula_agreement: bool
-    ) -> None:
+    def download_and_install(self, backend_name: str, eula_agreement: bool) -> None:
         """Download and install backends."""
 
     @abstractmethod
@@ -129,6 +134,10 @@ class InstallationManager(ABC):
     @abstractmethod
     def backend_installed(self, backend_name: str) -> bool:
         """Return true if requested backend installed."""
+
+    @abstractmethod
+    def uninstall(self, backend_name: str) -> None:
+        """Delete the existing installation."""
 
 
 class InstallationFiltersMixin:
@@ -145,7 +154,7 @@ class InstallationFiltersMixin:
         ]
 
     def could_be_installed_from(
-        self, backend_path: Path, backend_name: str | None
+        self, backend_path: Path, backend_name: str
     ) -> list[Installation]:
         """Return installations that could be installed from provided directory."""
         return self.filter_by(
@@ -154,7 +163,7 @@ class InstallationFiltersMixin:
         )
 
     def could_be_downloaded_and_installed(
-        self, backend_name: str | None = None
+        self, backend_name: str
     ) -> list[Installation]:
         """Return installations that could be downloaded and installed."""
         return self.filter_by(
@@ -163,7 +172,7 @@ class InstallationFiltersMixin:
             ReadyForInstallationFilter(),
         )
 
-    def already_installed(self, backend_name: str | None = None) -> list[Installation]:
+    def already_installed(self, backend_name: str = None) -> list[Installation]:
         """Return list of backends that are already installed."""
         return self.filter_by(
             AlreadyInstalledFilter(), SearchByNameFilter(backend_name)
@@ -185,7 +194,7 @@ class DefaultInstallationManager(InstallationManager, InstallationFiltersMixin):
         self.noninteractive = noninteractive
 
     def choose_installation_for_path(
-        self, backend_path: Path, backend_name: str | None
+        self, backend_path: Path, backend_name: str, force: bool
     ) -> Installation | None:
         """Check available installation and select one if possible."""
         installs = self.could_be_installed_from(backend_path, backend_name)
@@ -210,20 +219,32 @@ class DefaultInstallationManager(InstallationManager, InstallationFiltersMixin):
         installation = installs[0]
         if installation.already_installed:
             logger.info(
-                "%s was found in %s, but it has been already installed.",
+                "%s was found in %s, but it has been already installed "
+                "in the ML Inference Advisor.",
                 installation.name,
                 backend_path,
             )
-            return None
+            return installation if force else None
 
         return installation
 
-    def install_from(self, backend_path: Path, backend_name: str | None) -> None:
+    def install_from(
+        self, backend_path: Path, backend_name: str, force: bool = False
+    ) -> None:
         """Install from the provided directory."""
-        installation = self.choose_installation_for_path(backend_path, backend_name)
+        installation = self.choose_installation_for_path(
+            backend_path, backend_name, force
+        )
 
         if not installation:
             return
+
+        if force:
+            self.uninstall(backend_name)
+            logger.info(
+                "Force installing %s, so delete the existing installed backend first.",
+                installation.name,
+            )
 
         prompt = (
             f"{installation.name} was found in {backend_path}. "
@@ -232,7 +253,7 @@ class DefaultInstallationManager(InstallationManager, InstallationFiltersMixin):
         self._install(installation, InstallFromPath(backend_path), prompt)
 
     def download_and_install(
-        self, backend_name: str | None = None, eula_agreement: bool = True
+        self, backend_name: str, eula_agreement: bool = True
     ) -> None:
         """Download and install available backends."""
         installations = self.could_be_downloaded_and_installed(backend_name)
@@ -274,6 +295,14 @@ class DefaultInstallationManager(InstallationManager, InstallationFiltersMixin):
 
         for installation in installations:
             logger.info("  - %s", installation.name)
+
+    def uninstall(self, backend_name: str) -> None:
+        """Uninstall the backend with name backend_name."""
+        installations = self.already_installed(backend_name)
+        if not installations:
+            raise Exception("No backend available for uninstall")
+        for installation in installations:
+            installation.uninstall()
 
     def _install(
         self,

@@ -12,14 +12,17 @@ from pathlib import Path
 
 from mlia import __version__
 from mlia.cli.commands import all_tests
-from mlia.cli.commands import backend
+from mlia.cli.commands import backend_install
+from mlia.cli.commands import backend_list
+from mlia.cli.commands import backend_uninstall
 from mlia.cli.commands import operators
 from mlia.cli.commands import optimization
 from mlia.cli.commands import performance
 from mlia.cli.common import CommandInfo
 from mlia.cli.helpers import CLIActionResolver
 from mlia.cli.logging import setup_logging
-from mlia.cli.options import add_backend_options
+from mlia.cli.options import add_backend_install_options
+from mlia.cli.options import add_backend_uninstall_options
 from mlia.cli.options import add_custom_supported_operators_options
 from mlia.cli.options import add_debug_options
 from mlia.cli.options import add_evaluation_options
@@ -99,42 +102,66 @@ def get_commands() -> list[CommandInfo]:
                 add_evaluation_options,
             ],
         ),
+    ]
+
+
+def backend_commands() -> list[CommandInfo]:
+    """Return commands configuration."""
+    return [
         CommandInfo(
-            backend,
+            backend_install,
             [],
             [
-                add_backend_options,
+                add_backend_install_options,
                 add_debug_options,
             ],
+            name="install",
+        ),
+        CommandInfo(
+            backend_uninstall,
+            [],
+            [
+                add_backend_uninstall_options,
+                add_debug_options,
+            ],
+            name="uninstall",
+        ),
+        CommandInfo(
+            backend_list,
+            [],
+            [
+                add_debug_options,
+            ],
+            name="list",
         ),
     ]
 
 
-def get_default_command() -> str | None:
+def get_default_command(commands: list[CommandInfo]) -> str | None:
     """Get name of the default command."""
-    commands = get_commands()
-
     marked_as_default = [cmd.command_name for cmd in commands if cmd.is_default]
     assert len(marked_as_default) <= 1, "Only one command could be marked as default"
 
     return next(iter(marked_as_default), None)
 
 
-def get_possible_command_names() -> list[str]:
+def get_possible_command_names(commands: list[CommandInfo]) -> list[str]:
     """Get all possible command names including aliases."""
     return [
         name_or_alias
-        for cmd in get_commands()
+        for cmd in commands
         for name_or_alias in cmd.command_name_and_aliases
     ]
 
 
-def init_commands(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
+def init_commands(
+    parser: argparse.ArgumentParser, commands: list[CommandInfo]
+) -> argparse.ArgumentParser:
     """Init cli subcommands."""
     subparsers = parser.add_subparsers(title="Commands", dest="command")
     subparsers.required = True
 
-    for command in get_commands():
+    for command in commands:
         command_parser = subparsers.add_parser(
             command.command_name,
             aliases=command.aliases,
@@ -188,7 +215,6 @@ def run_command(args: argparse.Namespace) -> int:
 
     try:
         logger.info(INFO_MESSAGE)
-
         args.func(**func_args)
         return 0
     except KeyboardInterrupt:
@@ -251,12 +277,14 @@ def init_subcommand_parser(parent: argparse.ArgumentParser) -> argparse.Argument
     return parser
 
 
-def add_default_command_if_needed(args: list[str]) -> None:
+def add_default_command_if_needed(
+    args: list[str], input_commands: list[CommandInfo]
+) -> None:
     """Add default command to the list of the arguments if needed."""
-    default_command = get_default_command()
+    default_command = get_default_command(input_commands)
 
     if default_command and len(args) > 0:
-        commands = get_possible_command_names()
+        commands = get_possible_command_names(input_commands)
         help_or_version = ["-h", "--help", "-v", "--version"]
 
         command_is_missing = args[0] not in [*commands, *help_or_version]
@@ -264,16 +292,31 @@ def add_default_command_if_needed(args: list[str]) -> None:
             args.insert(0, default_command)
 
 
-def main(argv: list[str] | None = None) -> int:
-    """Entry point of the application."""
+def generic_main(
+    commands: list[CommandInfo], argv: list[str] | None = None
+) -> argparse.Namespace:
+    """Enable multiple entry points."""
     common_parser = init_common_parser()
     subcommand_parser = init_subcommand_parser(common_parser)
-    init_commands(subcommand_parser)
+    init_commands(subcommand_parser, commands)
 
     common_args, subcommand_args = common_parser.parse_known_args(argv)
-    add_default_command_if_needed(subcommand_args)
+
+    add_default_command_if_needed(subcommand_args, commands)
 
     args = subcommand_parser.parse_args(subcommand_args, common_args)
+    return args
+
+
+def main(argv: list[str] | None = None) -> int:
+    """Entry point of the main application."""
+    args = generic_main(get_commands(), argv)
+    return run_command(args)
+
+
+def backend_main(argv: list[str] | None = None) -> int:
+    """Entry point of the backend application."""
+    args = generic_main(backend_commands(), argv)
     return run_command(args)
 
 

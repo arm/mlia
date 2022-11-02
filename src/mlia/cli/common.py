@@ -16,11 +16,12 @@ class CommandInfo:
     aliases: list[str]
     opt_groups: list[Callable[[argparse.ArgumentParser], None]]
     is_default: bool = False
+    name: str | None = None
 
     @property
     def command_name(self) -> str:
         """Return command name."""
-        return self.func.__name__
+        return self.name or self.func.__name__
 
     @property
     def command_name_and_aliases(self) -> list[str]:

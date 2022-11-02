@@ -18,6 +18,30 @@ from mlia.tools.metadata.common import InstallationType
 from mlia.tools.metadata.common import InstallFromPath
 
 
+def get_default_installation_manager_mock(
+    name: str,
+    already_installed: bool = False,
+) -> MagicMock:
+    """Get mock instance for DefaultInstallationManager."""
+    mock = MagicMock(spec=DefaultInstallationManager)
+
+    props = {
+        "name": name,
+        "already_installed": already_installed,
+    }
+    for prop, value in props.items():
+        setattr(type(mock), prop, PropertyMock(return_value=value))
+
+    return mock
+
+
+def _ready_for_uninstall_mock() -> MagicMock:
+    return get_default_installation_manager_mock(
+        name="already_installed",
+        already_installed=True,
+    )
+
+
 def get_installation_mock(
     name: str,
     already_installed: bool = False,
@@ -107,14 +131,14 @@ def test_installation_manager_filtering() -> None:
             could_be_downloaded_and_installed,
         ]
     )
-    assert manager.already_installed() == [already_installed]
+    assert manager.already_installed("already_installed") == [already_installed]
     assert manager.ready_for_installation() == [
         ready_for_installation,
         could_be_downloaded_and_installed,
     ]
-    assert manager.could_be_downloaded_and_installed() == [
-        could_be_downloaded_and_installed
-    ]
+    assert manager.could_be_downloaded_and_installed(
+        "could_be_downloaded_and_installed"
+    ) == [could_be_downloaded_and_installed]
     assert manager.could_be_downloaded_and_installed("some_installation") == []
 
 
@@ -146,7 +170,7 @@ def test_installation_manager_download_and_install(
     install_mock: MagicMock,
     noninteractive: bool,
     eula_agreement: bool,
-    backend_name: str | None,
+    backend_name: str,
     expected_call: Any,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -183,7 +207,7 @@ def test_installation_manager_download_and_install(
 def test_installation_manager_install_from(
     install_mock: MagicMock,
     noninteractive: bool,
-    backend_name: str | None,
+    backend_name: str,
     expected_call: Any,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -194,3 +218,30 @@ def test_installation_manager_install_from(
     manager.install_from(Path("some_path"), backend_name)
 
     assert install_mock.install.mock_calls == expected_call
+
+
+@pytest.mark.parametrize("noninteractive", [True, False])
+@pytest.mark.parametrize(
+    "install_mock, backend_name, expected_call",
+    [
+        [
+            _ready_for_uninstall_mock(),
+            "already_installed",
+            [call()],
+        ],
+    ],
+)
+def test_installation_manager_uninstall(
+    install_mock: MagicMock,
+    noninteractive: bool,
+    backend_name: str,
+    expected_call: Any,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test uninstallation."""
+    install_mock.reset_mock()
+
+    manager = get_installation_manager(noninteractive, [install_mock], monkeypatch)
+    manager.uninstall(backend_name)
+
+    assert install_mock.uninstall.mock_calls == expected_call

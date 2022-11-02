@@ -469,3 +469,20 @@ def test_corstone_vht_install(
     corstone_installation.install(InstallFromPath(Path("/opt/VHT")))
 
     create_destination_and_install_mock.assert_called_once()
+
+
+def test_corstone_uninstall(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test the uninstall function in Corstone."""
+    remove_system_mock = MagicMock()
+
+    monkeypatch.setattr(
+        "mlia.tools.metadata.corstone.remove_system",
+        remove_system_mock,
+    )
+
+    installation = get_corstone_300_installation()
+
+    installation.uninstall()
+    remove_system_mock.assert_called_once_with("corstone_300")
