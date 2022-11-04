@@ -29,3 +29,11 @@ def get_cortex_a_compatibility_info(
 ) -> CortexACompatibilityInfo | None:
     """Return list of model's operators."""
     return None
+
+
+def report() -> None:
+    """Generate supported operators report."""
+    raise Exception(
+        "Generating a supported operators report is not "
+        "currently supported with Cortex-A target profile."
+    )

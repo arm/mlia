@@ -23,11 +23,11 @@ from pathlib import Path
 from typing import cast
 
 from mlia.api import ExecutionContext
+from mlia.api import generate_supported_operators_report
 from mlia.api import get_advice
 from mlia.api import PathOrFileLike
 from mlia.cli.config import get_installation_manager
 from mlia.cli.options import parse_optimization_parameters
-from mlia.devices.ethosu.operators import generate_supported_operators_report
 from mlia.utils.console import create_section_header
 from mlia.utils.types import only_one_selected
 
@@ -129,7 +129,7 @@ def operators(
                       "model.tflite")
     """
     if supported_ops_report:
-        generate_supported_operators_report()
+        generate_supported_operators_report(target_profile)
         logger.info("Report saved into SUPPORTED_OPS.md")
         return
 

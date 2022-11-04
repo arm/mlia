@@ -216,7 +216,7 @@ mlia operators --target-profile ethos-u55-256 ~/models/mobilenet_v1_1.0_224_quan
 
 * -h/--help: Show the general help document and exit.
 * --supported-ops-report: Generate the SUPPORTED_OPS.md file in the current working
-  directory and exit.
+  directory and exit (Ethos-U target profiles only).
 
 ### **Performance** (perf)
 
@@ -272,7 +272,7 @@ mlia performance ~/models/mobilenet_v1_1.0_224_quant.tflite \
 
 * -h/--help: Show the general help document and exit.
 * --supported-ops-report: Generate the SUPPORTED_OPS.md file in the current
-  working directory and exit.
+  working directory and exit (Ethos-U target profiles only).
 
 ### **Model optimization** (opt)
 
@@ -334,7 +334,7 @@ mlia optimization \
 
 * -h/--help: Show the general help document and exit.
 * --supported-ops-report: Generate the SUPPORTED_OPS.md file in the current
-  working directory and exit.
+  working directory and exit (Ethos-U target profiles only).
 
 ### **All tests** (all)
 

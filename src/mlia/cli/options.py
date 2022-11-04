@@ -124,7 +124,8 @@ def add_custom_supported_operators_options(parser: argparse.ArgumentParser) -> N
         default=False,
         help=(
             "Generate the SUPPORTED_OPS.md file in the "
-            "current working directory and exit"
+            "current working directory and exit "
+            "(Ethos-U target profiles only)"
         ),
     )
 

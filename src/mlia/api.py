@@ -13,10 +13,12 @@ from mlia.core.common import AdviceCategory
 from mlia.core.context import ExecutionContext
 from mlia.core.typing import PathOrFileLike
 from mlia.devices.cortexa.advisor import configure_and_get_cortexa_advisor
+from mlia.devices.cortexa.operators import report as cortex_a_report
 from mlia.devices.ethosu.advisor import configure_and_get_ethosu_advisor
+from mlia.devices.ethosu.operators import report as ethos_u_report
 from mlia.devices.tosa.advisor import configure_and_get_tosa_advisor
+from mlia.devices.tosa.operators import report as tosa_report
 from mlia.utils.filesystem import get_target
-
 
 logger = logging.getLogger(__name__)
 
@@ -121,3 +123,17 @@ def get_advisor(
         output,
         **extra_args,
     )
+
+
+def generate_supported_operators_report(target_profile: str) -> None:
+    """Generate a supported operators report based on given target profile."""
+    generators_map = {
+        "ethos-u55": ethos_u_report,
+        "ethos-u65": ethos_u_report,
+        "cortex-a": cortex_a_report,
+        "tosa": tosa_report,
+    }
+
+    target = get_target(target_profile)
+
+    generators_map[target]()

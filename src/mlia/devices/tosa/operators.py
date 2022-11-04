@@ -68,3 +68,11 @@ def get_tosa_checker(tflite_model_path: PathOrFileLike) -> TOSAChecker | None:
 
     checker = tc.TOSAChecker(str(tflite_model_path))
     return cast(TOSAChecker, checker)
+
+
+def report() -> None:
+    """Generate supported operators report."""
+    raise Exception(
+        "Generating a supported operators report is not "
+        "currently supported with TOSA target profile."
+    )

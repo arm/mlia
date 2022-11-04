@@ -9,6 +9,6 @@ from mlia.tools import vela_wrapper
 logger = logging.getLogger(__name__)
 
 
-def generate_supported_operators_report() -> None:
+def report() -> None:
     """Generate supported operators report."""
     vela_wrapper.generate_supported_operators_report()
