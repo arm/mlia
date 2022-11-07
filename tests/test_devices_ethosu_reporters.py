@@ -68,11 +68,6 @@ from mlia.utils.console import remove_ascii_codes
             doesnt_raise(),
         ],
         [
-            "csv",
-            sys.stdout,
-            doesnt_raise(),
-        ],
-        [
             "plain_text",
             "report.txt",
             doesnt_raise(),
@@ -82,17 +77,12 @@ from mlia.utils.console import remove_ascii_codes
             "report.json",
             doesnt_raise(),
         ],
-        [
-            "csv",
-            "report.csv",
-            doesnt_raise(),
-        ],
     ],
 )
 def test_report(
     data: Any,
     formatters: list[Callable],
-    fmt: Literal["plain_text", "json", "csv"],
+    fmt: Literal["plain_text", "json"],
     output: Any,
     expected_error: Any,
     tmp_path: Path,
@@ -111,7 +101,7 @@ def test_report(
 
 
 @pytest.mark.parametrize(
-    "ops, expected_plain_text, expected_json_dict, expected_csv_list",
+    "ops, expected_plain_text, expected_json_dict",
     [
         (
             [
@@ -187,17 +177,6 @@ Operators:
                     },
                 ]
             },
-            [
-                ["Operator name", "Operator type", "Placement", "Notes"],
-                ["npu_supported", "test_type", "NPU", ""],
-                ["cpu_only", "test_type", "CPU", "CPU only operator"],
-                [
-                    "npu_unsupported",
-                    "test_type",
-                    "CPU",
-                    "Not supported operator;Reason why operator is not supported",
-                ],
-            ],
         ),
     ],
 )
@@ -205,7 +184,6 @@ def test_report_operators(
     ops: list[Operator],
     expected_plain_text: str,
     expected_json_dict: dict,
-    expected_csv_list: list,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Test report_operatos formatter."""
@@ -221,12 +199,9 @@ def test_report_operators(
     json_dict = report.to_json()
     assert json_dict == expected_json_dict
 
-    csv_list = report.to_csv()
-    assert csv_list == expected_csv_list
-
 
 @pytest.mark.parametrize(
-    "device, expected_plain_text, expected_json_dict, expected_csv_list",
+    "device, expected_plain_text, expected_json_dict",
     [
         [
             EthosUConfiguration("ethos-u55-256"),
@@ -322,58 +297,6 @@ def test_report_operators(
                     },
                 }
             },
-            [
-                (
-                    "target",
-                    "mac",
-                    "memory_mode",
-                    "const_mem_area",
-                    "arena_mem_area",
-                    "cache_mem_area",
-                    "arena_cache_size_value",
-                    "arena_cache_size_unit",
-                    "system_config",
-                    "accelerator_clock_value",
-                    "accelerator_clock_unit",
-                    "axi0_port",
-                    "axi1_port",
-                    "clock_scales",
-                    "burst_length_value",
-                    "burst_length_unit",
-                    "read_latency_value",
-                    "read_latency_unit",
-                    "write_latency_value",
-                    "write_latency_unit",
-                    "permanent_storage_mem_area",
-                    "feature_map_storage_mem_area",
-                    "fast_storage_mem_area",
-                ),
-                (
-                    "ethos-u55",
-                    256,
-                    "Shared_Sram",
-                    "Axi1",
-                    "Axi0",
-                    "Axi0",
-                    2096768,
-                    "bytes",
-                    "Ethos_U55_High_End_Embedded",
-                    500000000.0,
-                    "Hz",
-                    "Sram",
-                    "OffChipFlash",
-                    0.125,
-                    128,
-                    "bytes",
-                    64,
-                    "cycles",
-                    64,
-                    "cycles",
-                    "OffChipFlash",
-                    "Sram",
-                    "Sram",
-                ),
-            ],
         ],
     ],
 )
@@ -381,7 +304,6 @@ def test_report_device_details(
     device: EthosUConfiguration,
     expected_plain_text: str,
     expected_json_dict: dict,
-    expected_csv_list: list,
 ) -> None:
     """Test report_operatos formatter."""
     report = report_device_details(device)
@@ -392,9 +314,6 @@ def test_report_device_details(
 
     json_dict = report.to_json()
     assert json_dict == expected_json_dict
-
-    csv_list = report.to_csv()
-    assert csv_list == expected_csv_list
 
 
 def test_get_reporter(tmp_path: Path) -> None:

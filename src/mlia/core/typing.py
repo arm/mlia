@@ -9,4 +9,4 @@ from typing import Union
 
 FileLike = TextIO
 PathOrFileLike = Union[str, Path, FileLike]
-OutputFormat = Literal["plain_text", "csv", "json"]
+OutputFormat = Literal["plain_text", "json"]

@@ -11,6 +11,7 @@ from typing import Callable
 from mlia.cli.config import get_available_backends
 from mlia.cli.config import get_default_backends
 from mlia.cli.config import is_corstone_backend
+from mlia.core.reporting import OUTPUT_FORMATS
 from mlia.utils.filesystem import get_supported_profile_names
 from mlia.utils.types import is_number
 
@@ -77,7 +78,7 @@ def add_tflite_model_options(parser: argparse.ArgumentParser) -> None:
 
 def add_output_options(parser: argparse.ArgumentParser) -> None:
     """Add output specific options."""
-    valid_extensions = ["csv", "json"]
+    valid_extensions = OUTPUT_FORMATS
 
     def check_extension(filename: str) -> str:
         """Check extension of the provided file."""

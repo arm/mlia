@@ -95,9 +95,6 @@ def test_table_representation(with_notes: bool, expected_text_report: str) -> No
         )
 
     table = sample_table(with_notes)
-    csv_repr = table.to_csv()
-    assert csv_repr == [["Header 2", "Header 3"], [2, 3], [5, 123123]]
-
     json_repr = table.to_json()
     assert json_repr == {
         "sample_table": [
@@ -110,48 +107,8 @@ def test_table_representation(with_notes: bool, expected_text_report: str) -> No
     assert text_report == expected_text_report
 
 
-def test_csv_nested_table_representation() -> None:
-    """Test representation of the nested tables in csv format."""
-
-    def sample_table(num_of_cols: int) -> Table:
-        columns = [
-            Column("Header 1", alias="header1"),
-            Column("Header 2", alias="header2"),
-        ]
-
-        rows = [
-            (
-                1,
-                Table(
-                    columns=[
-                        Column(f"Nested column {i+1}") for i in range(num_of_cols)
-                    ],
-                    rows=[[f"value{i+1}" for i in range(num_of_cols)]],
-                    name="Nested table",
-                ),
-            )
-        ]
-
-        return Table(columns, rows, name="Sample table", alias="sample_table")
-
-    assert sample_table(num_of_cols=2).to_csv() == [
-        ["Header 1", "Header 2"],
-        [1, "value1;value2"],
-    ]
-
-    assert sample_table(num_of_cols=1).to_csv() == [
-        ["Header 1", "Header 2"],
-        [1, "value1"],
-    ]
-
-    assert sample_table(num_of_cols=0).to_csv() == [
-        ["Header 1", "Header 2"],
-        [1, ""],
-    ]
-
-
 @pytest.mark.parametrize(
-    "report, expected_plain_text, expected_json_data, expected_csv_data",
+    "report, expected_plain_text, expected_json_data",
     [
         (
             NestedReport(
@@ -168,10 +125,6 @@ Sample report:
             {
                 "sample_report": {"item": "item_value"},
             },
-            [
-                ("item",),
-                ("item_value",),
-            ],
         ),
         (
             NestedReport(
@@ -196,10 +149,6 @@ Sample report:
                     "item": {"nested_item": "nested_item_value"},
                 },
             },
-            [
-                ("item", "nested_item"),
-                ("item_value", "nested_item_value"),
-            ],
         ),
         (
             NestedReport(
@@ -224,10 +173,6 @@ Sample report:
                     "item": {"nested_item": {"unit": "bytes", "value": 10}},
                 },
             },
-            [
-                ("item", "nested_item_value", "nested_item_unit"),
-                ("item_value", 10, "bytes"),
-            ],
         ),
         (
             NestedReport(
@@ -260,10 +205,6 @@ Sample report:
                     "item": {"nested_item": 10},
                 },
             },
-            [
-                ("item", "nested_item"),
-                ("item_value", 10),
-            ],
         ),
         (
             NestedReport(
@@ -296,10 +237,6 @@ Sample report:
                     "item": {"nested_item": 10},
                 },
             },
-            [
-                ("item", "nested_item"),
-                ("item_value", 10),
-            ],
         ),
         (
             NestedReport(
@@ -326,10 +263,6 @@ Sample report:
                     "item": {"nested_item": 10},
                 },
             },
-            [
-                ("item", "nested_item"),
-                ("item_value", 10),
-            ],
         ),
         (
             NestedReport(
@@ -358,10 +291,6 @@ Sample report:
                     "item": {"nested_item": 10},
                 },
             },
-            [
-                ("item", "nested_item"),
-                ("item_value", 10),
-            ],
         ),
     ],
 )
@@ -369,7 +298,6 @@ def test_nested_report_representation(
     report: NestedReport,
     expected_plain_text: str,
     expected_json_data: dict,
-    expected_csv_data: list,
 ) -> None:
     """Test representation of the NestedReport."""
     plain_text = report.to_plain_text()
@@ -377,9 +305,6 @@ def test_nested_report_representation(
 
     json_data = report.to_json()
     assert json_data == expected_json_data
-
-    csv_data = report.to_csv()
-    assert csv_data == expected_csv_data
 
 
 def test_single_row_representation() -> None:
@@ -398,7 +323,6 @@ Single row example:
   column1                                               value1
 """.strip()
     assert single_row.to_plain_text() == expected_text
-    assert single_row.to_csv() == [["column1"], ["value1"]]
     assert single_row.to_json() == {"simple_row_example": [{"column1": "value1"}]}
 
     with pytest.raises(Exception, match="Table should have only one row"):
@@ -423,7 +347,6 @@ Single row example:
         ["", "plain_text"],
         ["some_file", "plain_text"],
         ["some_format.some_ext", "plain_text"],
-        ["output.csv", "csv"],
         ["output.json", "json"],
     ],
 )

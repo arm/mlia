@@ -147,9 +147,6 @@ def test_get_target_opts(args: dict | None, expected_opts: list[str]) -> None:
         [["--output", "report.json"], "report.json"],
         [["--output", "REPORT.JSON"], "REPORT.JSON"],
         [["--output", "some_folder/report.json"], "some_folder/report.json"],
-        [["--output", "report.csv"], "report.csv"],
-        [["--output", "REPORT.CSV"], "REPORT.CSV"],
-        [["--output", "some_folder/report.csv"], "some_folder/report.csv"],
     ],
 )
 def test_output_options(output_parameters: list[str], expected_path: str) -> None:

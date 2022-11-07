@@ -217,7 +217,7 @@ mlia operators --target-profile ethos-u55-256 ~/models/mobilenet_v1_1.0_224_quan
 
 * --output: Name of the file where the report will be saved. The report format
   is automatically detected based on the file extension. Supported formats are:
-  csv, json.
+  json.
 
 ##### Optional arguments
 
@@ -260,7 +260,7 @@ mlia performance ~/models/mobilenet_v1_1.0_224_quant.tflite \
 
 * --output: Name of the file where the report will be saved. The report format
   is automatically detected based on the file extension. Supported formats are:
-  csv, json.
+  json.
 
 ##### Debug options
 
@@ -388,7 +388,7 @@ mlia all_tests --output ./report.json ~/models/ds_cnn_l.h5
 
 * --output: Name of the file where the report will be saved. The report format
   is automatically detected based on the file extension. Supported formats are:
-  csv, json.
+  json.
 
 ##### Debug options
 

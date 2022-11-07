@@ -3,7 +3,6 @@
 """Reporting module."""
 from __future__ import annotations
 
-import csv
 import json
 import logging
 from abc import ABC
@@ -36,6 +35,8 @@ from mlia.utils.types import is_list_of
 
 logger = logging.getLogger(__name__)
 
+OUTPUT_FORMATS = ("json",)
+
 
 class Report(ABC):
     """Abstract class for the report."""
@@ -43,10 +44,6 @@ class Report(ABC):
     @abstractmethod
     def to_json(self, **kwargs: Any) -> Any:
         """Convert to json serializible format."""
-
-    @abstractmethod
-    def to_csv(self, **kwargs: Any) -> list[Any]:
-        """Convert to csv serializible format."""
 
     @abstractmethod
     def to_plain_text(self, **kwargs: Any) -> str:
@@ -134,10 +131,6 @@ class Cell:
         val = self._get_value()
         return self._apply_style(val)
 
-    def to_csv(self) -> Any:
-        """Cell definition for csv."""
-        return self.value
-
     def to_json(self) -> Any:
         """Cell definition for json."""
         return self.value
@@ -167,10 +160,6 @@ class CountAwareCell(Cell):
             return f"{val:{format_string}} {plural}"
 
         super().__init__(value, Format(str_fmt=format_value))
-
-    def to_csv(self) -> Any:
-        """Cell definition for csv."""
-        return {"value": self.value, "unit": self.unit}
 
     def to_json(self) -> Any:
         """Cell definition for json."""
@@ -238,41 +227,6 @@ class NestedReport(Report):
         self.name = name
         self.alias = alias
         self.items = items
-
-    def to_csv(self, **kwargs: Any) -> list[Any]:
-        """Convert to csv serializible format."""
-        result = {}
-
-        def collect_item_values(
-            item: ReportItem,
-            _parent: ReportItem | None,
-            _prev: ReportItem | None,
-            _level: int,
-        ) -> None:
-            """Collect item values into a dictionary.."""
-            if item.value is None:
-                return
-
-            if not isinstance(item.value, Cell):
-                result[item.alias] = item.raw_value
-                return
-
-            csv_value = item.value.to_csv()
-            if isinstance(csv_value, dict):
-                csv_value = {
-                    f"{item.alias}_{key}": value for key, value in csv_value.items()
-                }
-            else:
-                csv_value = {item.alias: csv_value}
-
-            result.update(csv_value)
-
-        self._traverse(self.items, collect_item_values)
-
-        # make list out of the result dictionary
-        # first element - keys of the dictionary as headers
-        # second element - list of the dictionary values
-        return list(zip(*result.items()))
 
     def to_json(self, **kwargs: Any) -> Any:
         """Convert to json serializible format."""
@@ -474,32 +428,6 @@ class Table(Report):
 
         return title + formatted_table + footer
 
-    def to_csv(self, **kwargs: Any) -> list[Any]:
-        """Convert table to csv format."""
-        headers = [[c.header for c in self.columns if c.supports_format("csv")]]
-
-        def item_data(item: Any) -> Any:
-            if isinstance(item, Cell):
-                return item.value
-
-            if isinstance(item, Table):
-                return ";".join(
-                    str(item_data(cell)) for row in item.rows for cell in row
-                )
-
-            return item
-
-        rows = [
-            [
-                item_data(item)
-                for (item, col) in zip(row, self.columns)
-                if col.supports_format("csv")
-            ]
-            for row in self.rows
-        ]
-
-        return headers + rows
-
 
 class SingleRow(Table):
     """Table with a single row."""
@@ -540,46 +468,6 @@ class CompoundReport(Report):
             result.update(item.to_json(**kwargs))
 
         return result
-
-    def to_csv(self, **kwargs: Any) -> list[Any]:
-        """Convert to csv serializible format.
-
-        CSV format does support only one table. In order to be able to export
-        multiply tables they should be merged before that. This method tries to
-        do next:
-
-        - if all tables have the same length then just concatenate them
-        - if one table has many rows and other just one (two with headers), then
-          for each row in table with many rows duplicate values from other tables
-        """
-        csv_data = [item.to_csv() for item in self.reports]
-        lengths = [len(csv_item_data) for csv_item_data in csv_data]
-
-        same_length = len(set(lengths)) == 1
-        if same_length:
-            # all lists are of the same length, merge them into one
-            return [[cell for item in row for cell in item] for row in zip(*csv_data)]
-
-        main_obj_indexes = [i for i, item in enumerate(csv_data) if len(item) > 2]
-        one_main_obj = len(main_obj_indexes) == 1
-
-        reference_obj_indexes = [i for i, item in enumerate(csv_data) if len(item) == 2]
-        other_only_ref_objs = len(reference_obj_indexes) == len(csv_data) - 1
-
-        if one_main_obj and other_only_ref_objs:
-            main_obj = csv_data[main_obj_indexes[0]]
-            return [
-                item
-                + [
-                    ref_item
-                    for ref_table_index in reference_obj_indexes
-                    for ref_item in csv_data[ref_table_index][0 if i == 0 else 1]
-                ]
-                for i, item in enumerate(main_obj)
-            ]
-
-        # write tables one after another if there is no other options
-        return [row for item in csv_data for row in item]
 
     def to_plain_text(self, **kwargs: Any) -> str:
         """Convert to human readable format."""
@@ -624,12 +512,6 @@ def text_reporter(report: Report, output: FileLike, **kwargs: Any) -> None:
     print(report.to_plain_text(**kwargs), file=output)
 
 
-def csv_reporter(report: Report, output: FileLike, **kwargs: Any) -> None:
-    """Produce report in csv format."""
-    csv_writer = csv.writer(output)
-    csv_writer.writerows(report.to_csv(**kwargs))
-
-
 def produce_report(
     data: Any,
     formatter: Callable[[Any], Report],
@@ -639,7 +521,7 @@ def produce_report(
 ) -> None:
     """Produce report based on provided data."""
     # check if provided format value is supported
-    formats = {"json": json_reporter, "plain_text": text_reporter, "csv": csv_reporter}
+    formats = {"json": json_reporter, "plain_text": text_reporter}
     if fmt not in formats:
         raise Exception(f"Unknown format {fmt}")
 
@@ -764,7 +646,7 @@ def resolve_output_format(output: PathOrFileLike | None) -> OutputFormat:
     if isinstance(output, (str, Path)):
         format_from_filename = Path(output).suffix.lstrip(".")
 
-        if format_from_filename in ["json", "csv"]:
+        if format_from_filename in OUTPUT_FORMATS:
             return cast(OutputFormat, format_from_filename)
 
     return "plain_text"
