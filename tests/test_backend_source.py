@@ -1,6 +1,5 @@
 # SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
-# pylint: disable=no-self-use
 """Tests for the source backend module."""
 from collections import Counter
 from contextlib import ExitStack as does_not_raise

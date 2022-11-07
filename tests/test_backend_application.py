@@ -1,6 +1,5 @@
 # SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
-# pylint: disable=no-self-use
 """Tests for the application backend."""
 from __future__ import annotations
 

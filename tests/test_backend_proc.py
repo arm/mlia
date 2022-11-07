@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
-# pylint: disable=attribute-defined-outside-init,no-self-use,not-callable
+# pylint: disable=attribute-defined-outside-init,not-callable
 """Pytests for testing mlia/backend/proc.py."""
 from pathlib import Path
 from typing import Any

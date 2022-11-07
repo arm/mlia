@@ -29,7 +29,13 @@ class AdviceCategory(Flag):
     OPERATORS = auto()
     PERFORMANCE = auto()
     OPTIMIZATION = auto()
-    ALL = OPERATORS | PERFORMANCE | OPTIMIZATION
+    ALL = (
+        # pylint: disable=unsupported-binary-operation
+        OPERATORS
+        | PERFORMANCE
+        | OPTIMIZATION
+        # pylint: enable=unsupported-binary-operation
+    )
 
     @classmethod
     def from_string(cls, value: str) -> AdviceCategory:

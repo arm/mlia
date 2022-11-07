@@ -21,7 +21,7 @@ class CortexADataAnalyzer(FactExtractor):
     """Cortex-A data analyzer."""
 
     @singledispatchmethod
-    def analyze_data(self, data_item: DataItem) -> None:
+    def analyze_data(self, data_item: DataItem) -> None:  # type: ignore
         """Analyse the data."""
 
     @analyze_data.register

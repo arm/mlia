@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Module for various helper classes."""
-# pylint: disable=no-self-use, unused-argument
+# pylint: disable=unused-argument
 from __future__ import annotations
 
 from typing import Any

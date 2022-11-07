@@ -105,9 +105,7 @@ def test_event_dispatcher(capsys: pytest.CaptureFixture) -> None:
     class SampleEventHandler(EventDispatcher):
         """Sample event handler."""
 
-        def on_sample_event(  # pylint: disable=no-self-use
-            self, _event: SampleEvent
-        ) -> None:
+        def on_sample_event(self, _event: SampleEvent) -> None:
             """Event handler for SampleEvent."""
             print("Got sample event")
 

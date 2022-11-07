@@ -205,7 +205,7 @@ class Backend(ABC):
 
             return self.variables[var_name]
 
-        return var_pattern.sub(var_value, str_val)  # type: ignore
+        return var_pattern.sub(var_value, str_val)
 
     @classmethod
     def _parse_params(

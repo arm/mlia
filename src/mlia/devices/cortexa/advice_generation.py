@@ -23,7 +23,7 @@ class CortexAAdviceProducer(FactBasedAdviceProducer):
     )
 
     @singledispatchmethod
-    def produce_advice(self, _data_item: DataItem) -> None:
+    def produce_advice(self, _data_item: DataItem) -> None:  # type: ignore
         """Produce advice."""
 
     @produce_advice.register
