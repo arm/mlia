@@ -12,9 +12,39 @@ scheme.
 
 ### Trademarks and Copyrights
 
-Arm®, Ethos™-U, Corstone™ are registered trademarks or trademarks of Arm®
-Limited (or its subsidiaries) in the U.S. and/or elsewhere.
-TensorFlow™ is a trademark of Google® LLC.
+* Arm®, Cortex®-A, Ethos™-U, Corstone™ are registered trademarks or trademarks
+  of Arm® Limited (or its subsidiaries) in the U.S. and/or elsewhere.
+* TensorFlow™ is a trademark of Google® LLC.
+
+## Release 0.5.0
+
+### Feature changes
+
+* Add TensorFlow Lite compatibility check for Cortex-A (MLIA-433)
+* Add operator compatibility for Cortex-A (MLIA-411)
+
+### Interface changes
+
+* Remove support for CSV output (MLIA-275)
+* Add "mlia-backend" command for managing backends (MLIA-649)
+* Add performance for Ethos-U65-256 target profile (MLIA-618)
+
+### Issues fixed
+
+* Fix hyperlinks in README.md (MLIA-630)
+* Fix TOSA checker dependency (MLIA-622)
+* Fix backend install for Corstone-300 on AVH/VHT (MLIA-647)
+* Fix --supported-ops-report flag (MLIA-688)
+
+### Internal changes
+
+* Update generic inference runner to 22.08 (MLIA-671)
+* Use importlib for getting package version (MLIA-670)
+* Make python syntax consistent across codebase
+* Use tox to run additional project tasks (MLIA-571)
+* Simplify typing in the source code (MLIA-386)
+* Define incident response plan (MLIA-496)
+* Enable testing for aarch64 (MLIA-584/MLIA-599)
 
 ## Release 0.4.0
 
