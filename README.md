@@ -4,6 +4,13 @@ SPDX-License-Identifier: Apache-2.0
 --->
 # ML Inference Advisor
 
+## Inclusive language commitment
+
+This product conforms to Arm's inclusive language policy and, to the best of
+our knowledge, does not contain any non-inclusive language.
+
+If you find something that concerns you, email terms@arm.com.
+
 ## Introduction
 
 This tool is used to help AI developers design and optimize neural network
@@ -410,13 +417,6 @@ Additional useful information:
 ## License
 
 ML Inference Advisor is licensed under [Apache License 2.0](LICENSES/Apache-2.0.txt).
-
-## Inclusive language commitment
-
-This product confirms to Arm's inclusive language policy and, to the best of
-our knowledge, does not contain any non-inclusive language.
-
-If you find something that concerns you, email terms@arm.com.
 
 ## Trademarks and copyrights
 
