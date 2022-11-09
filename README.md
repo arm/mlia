@@ -407,7 +407,16 @@ mlia all_tests --output ./report.json ~/models/ds_cnn_l.h5
 
 Release notes can be found in [MLIA releases](RELEASES.md)
 
-# Reporting vulnerabilities
+## Getting support
+
+In case you need support or want to report an issue, give us feedback or
+simply ask a question about MLIA, please send an email to mlia@arm.com.
+
+Alternatively, use the
+[AI and ML forum](https://community.arm.com/support-forums/f/ai-and-ml-forum)
+to get support by marking your post with the **MLIA** tag.
+
+## Reporting vulnerabilities
 
 Information on reporting security issues can be found in [Reporting vulnerabilities](SECURITY.md)
 
