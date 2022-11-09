@@ -8,13 +8,16 @@ import pytest
 from mlia.core.common import DataItem
 from mlia.core.data_analysis import Fact
 from mlia.devices.cortexa.data_analysis import CortexADataAnalyzer
+from mlia.devices.cortexa.data_analysis import ModelHasCustomOperators
 from mlia.devices.cortexa.data_analysis import ModelIsCortexACompatible
 from mlia.devices.cortexa.data_analysis import ModelIsNotCortexACompatible
 from mlia.devices.cortexa.data_analysis import ModelIsNotTFLiteCompatible
+from mlia.devices.cortexa.data_analysis import TFLiteCompatibilityCheckFailed
 from mlia.devices.cortexa.operator_compatibility import ARMNN_TFLITE_DELEGATE
 from mlia.devices.cortexa.operators import CortexACompatibilityInfo
 from mlia.devices.cortexa.operators import Operator
 from mlia.nn.tensorflow.tflite_compat import TFLiteCompatibilityInfo
+from mlia.nn.tensorflow.tflite_compat import TFLiteCompatibilityStatus
 from mlia.nn.tensorflow.tflite_compat import TFLiteConversionError
 from mlia.nn.tensorflow.tflite_compat import TFLiteConversionErrorCode
 from mlia.nn.tensorflow.tflite_graph import TFL_ACTIVATION_FUNCTION
@@ -104,16 +107,28 @@ BACKEND_INFO = (
             # pylint: enable=line-too-long
         ],
         [
-            TFLiteCompatibilityInfo(compatible=True),
+            TFLiteCompatibilityInfo(status=TFLiteCompatibilityStatus.COMPATIBLE),
             [],
         ],
         [
-            TFLiteCompatibilityInfo(compatible=False),
+            TFLiteCompatibilityInfo(
+                status=TFLiteCompatibilityStatus.MODEL_WITH_CUSTOM_OP_ERROR
+            ),
+            [ModelHasCustomOperators()],
+        ],
+        [
+            TFLiteCompatibilityInfo(status=TFLiteCompatibilityStatus.UNKNOWN_ERROR),
+            [TFLiteCompatibilityCheckFailed()],
+        ],
+        [
+            TFLiteCompatibilityInfo(
+                status=TFLiteCompatibilityStatus.TFLITE_CONVERSION_ERROR
+            ),
             [ModelIsNotTFLiteCompatible(custom_ops=[], flex_ops=[])],
         ],
         [
             TFLiteCompatibilityInfo(
-                compatible=False,
+                status=TFLiteCompatibilityStatus.TFLITE_CONVERSION_ERROR,
                 conversion_errors=[
                     TFLiteConversionError(
                         "error",

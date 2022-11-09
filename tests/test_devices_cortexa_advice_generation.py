@@ -10,9 +10,11 @@ from mlia.core.common import AdviceCategory
 from mlia.core.common import DataItem
 from mlia.core.context import ExecutionContext
 from mlia.devices.cortexa.advice_generation import CortexAAdviceProducer
+from mlia.devices.cortexa.data_analysis import ModelHasCustomOperators
 from mlia.devices.cortexa.data_analysis import ModelIsCortexACompatible
 from mlia.devices.cortexa.data_analysis import ModelIsNotCortexACompatible
 from mlia.devices.cortexa.data_analysis import ModelIsNotTFLiteCompatible
+from mlia.devices.cortexa.data_analysis import TFLiteCompatibilityCheckFailed
 from mlia.devices.cortexa.operator_compatibility import ARMNN_TFLITE_DELEGATE
 from mlia.nn.tensorflow.tflite_graph import TFL_ACTIVATION_FUNCTION
 
@@ -110,22 +112,56 @@ BACKEND_INFO = (
                     [
                         "The following operators are not natively "
                         "supported by TensorFlow Lite: flex_op1, flex_op2.",
+                        "Using select TensorFlow operators in TensorFlow Lite model "
+                        "requires special initialization of TFLiteConverter and "
+                        "TensorFlow Lite run-time.",
                         "Please refer to the TensorFlow documentation for "
                         "more details.",
+                        "Note, such models are not supported by "
+                        "the ML Inference Advisor.",
                     ]
                 ),
                 Advice(
                     [
-                        "The following operators are custom and not natively "
+                        "The following operators appears to be custom and not natively "
                         "supported by TensorFlow Lite: custom_op1, custom_op2.",
+                        "Using custom operators in TensorFlow Lite model "
+                        "requires special initialization of TFLiteConverter and "
+                        "TensorFlow Lite run-time.",
                         "Please refer to the TensorFlow documentation for "
                         "more details.",
+                        "Note, such models are not supported by "
+                        "the ML Inference Advisor.",
                     ]
                 ),
             ],
         ],
         [
             ModelIsNotTFLiteCompatible(),
+            AdviceCategory.OPERATORS,
+            [
+                Advice(
+                    [
+                        "Model could not be converted into TensorFlow Lite format.",
+                        "Please refer to the table for more details.",
+                    ]
+                ),
+            ],
+        ],
+        [
+            ModelHasCustomOperators(),
+            AdviceCategory.OPERATORS,
+            [
+                Advice(
+                    [
+                        "Models with custom operators require special initialization "
+                        "and currently are not supported by the ML Inference Advisor.",
+                    ]
+                ),
+            ],
+        ],
+        [
+            TFLiteCompatibilityCheckFailed(),
             AdviceCategory.OPERATORS,
             [
                 Advice(

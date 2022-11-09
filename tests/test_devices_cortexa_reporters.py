@@ -12,6 +12,7 @@ from mlia.devices.cortexa.operators import Operator
 from mlia.devices.cortexa.reporters import cortex_a_formatters
 from mlia.devices.cortexa.reporters import report_device
 from mlia.nn.tensorflow.tflite_compat import TFLiteCompatibilityInfo
+from mlia.nn.tensorflow.tflite_compat import TFLiteCompatibilityStatus
 from mlia.nn.tensorflow.tflite_graph import TFL_ACTIVATION_FUNCTION
 
 
@@ -25,7 +26,7 @@ def test_report_device() -> None:
     "data",
     (
         [Advice(["Sample", "Advice"])],
-        TFLiteCompatibilityInfo(compatible=True),
+        TFLiteCompatibilityInfo(status=TFLiteCompatibilityStatus.COMPATIBLE),
         [
             Operator(
                 name="Test",

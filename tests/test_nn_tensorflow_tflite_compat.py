@@ -12,6 +12,7 @@ from tensorflow.lite.python import convert
 from mlia.nn.tensorflow.tflite_compat import converter_error_data_pb2
 from mlia.nn.tensorflow.tflite_compat import TFLiteChecker
 from mlia.nn.tensorflow.tflite_compat import TFLiteCompatibilityInfo
+from mlia.nn.tensorflow.tflite_compat import TFLiteCompatibilityStatus
 from mlia.nn.tensorflow.tflite_compat import TFLiteConversionError
 from mlia.nn.tensorflow.tflite_compat import TFLiteConversionErrorCode
 
@@ -87,11 +88,14 @@ def _get_tflite_conversion_error(
 @pytest.mark.parametrize(
     "conversion_error, expected_result",
     [
-        (None, TFLiteCompatibilityInfo(compatible=True)),
+        (
+            None,
+            TFLiteCompatibilityInfo(status=TFLiteCompatibilityStatus.COMPATIBLE),
+        ),
         (
             err := _get_tflite_conversion_error(custom_op=True),
             TFLiteCompatibilityInfo(
-                compatible=False,
+                status=TFLiteCompatibilityStatus.TFLITE_CONVERSION_ERROR,
                 conversion_exception=err,
                 conversion_errors=[
                     TFLiteConversionError(
@@ -106,7 +110,7 @@ def _get_tflite_conversion_error(
         (
             err := _get_tflite_conversion_error(flex_op=True),
             TFLiteCompatibilityInfo(
-                compatible=False,
+                status=TFLiteCompatibilityStatus.TFLITE_CONVERSION_ERROR,
                 conversion_exception=err,
                 conversion_errors=[
                     TFLiteConversionError(
@@ -121,7 +125,7 @@ def _get_tflite_conversion_error(
         (
             err := _get_tflite_conversion_error(unknown_reason=True),
             TFLiteCompatibilityInfo(
-                compatible=False,
+                status=TFLiteCompatibilityStatus.TFLITE_CONVERSION_ERROR,
                 conversion_exception=err,
                 conversion_errors=[
                     TFLiteConversionError(
@@ -141,7 +145,7 @@ def _get_tflite_conversion_error(
                 unsupported_flow_v1=True,
             ),
             TFLiteCompatibilityInfo(
-                compatible=False,
+                status=TFLiteCompatibilityStatus.TFLITE_CONVERSION_ERROR,
                 conversion_exception=err,
                 conversion_errors=[
                     TFLiteConversionError(
@@ -174,7 +178,7 @@ def _get_tflite_conversion_error(
         (
             err := _get_tflite_conversion_error(),
             TFLiteCompatibilityInfo(
-                compatible=False,
+                status=TFLiteCompatibilityStatus.TFLITE_CONVERSION_ERROR,
                 conversion_exception=err,
                 conversion_errors=[],
             ),
@@ -182,7 +186,21 @@ def _get_tflite_conversion_error(
         (
             err := ValueError("Some unknown issue"),
             TFLiteCompatibilityInfo(
-                compatible=False,
+                status=TFLiteCompatibilityStatus.UNKNOWN_ERROR,
+                conversion_exception=err,
+            ),
+        ),
+        (
+            err := ValueError("Unable to restore custom object"),
+            TFLiteCompatibilityInfo(
+                status=TFLiteCompatibilityStatus.MODEL_WITH_CUSTOM_OP_ERROR,
+                conversion_exception=err,
+            ),
+        ),
+        (
+            err := FileNotFoundError("Op type not registered"),
+            TFLiteCompatibilityInfo(
+                status=TFLiteCompatibilityStatus.MODEL_WITH_CUSTOM_OP_ERROR,
                 conversion_exception=err,
             ),
         ),
