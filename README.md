@@ -2,7 +2,14 @@
 SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
 SPDX-License-Identifier: Apache-2.0
 --->
-# ML Inference Advisor
+# ML Inference Advisor - Introduction
+
+The ML Inference Advisor (MLIA) is used to help AI developers design and
+optimize neural network models for efficient inference on Arm® targets (see
+[supported targets](#target-profiles)) by enabling performance analysis and
+providing actionable advice early in the model development cycle. The final
+advice can cover supported operators, performance analysis and suggestions for
+model optimization (e.g. pruning, clustering, etc.).
 
 ## Inclusive language commitment
 
@@ -11,18 +18,46 @@ our knowledge, does not contain any non-inclusive language.
 
 If you find something that concerns you, email terms@arm.com.
 
-## Introduction
+## Releases
 
-This tool is used to help AI developers design and optimize neural network
-models for efficient inference on Arm® targets (e.g. Cortex®-A or
-Ethos™-U55/Ethos™-U65 with Cortex®-M55/Cortex®-M85) by enabling performance
-analysis and providing actionable advice early in the model development cycle.
-The final advice can cover supported operators, performance analysis and
-suggestions for model optimization (e.g. pruning, clustering, etc.).
+Release notes can be found in [MLIA releases](RELEASES.md).
+
+## Getting support
+
+In case you need support or want to report an issue, give us feedback or
+simply ask a question about MLIA, please send an email to mlia@arm.com.
+
+Alternatively, use the
+[AI and ML forum](https://community.arm.com/support-forums/f/ai-and-ml-forum)
+to get support by marking your post with the **MLIA** tag.
+
+## Reporting vulnerabilities
+
+Information on reporting security issues can be found in
+[Reporting vulnerabilities](SECURITY.md).
+
+## License
+
+ML Inference Advisor is licensed under [Apache License 2.0](LICENSES/Apache-2.0.txt).
+
+## Trademarks and copyrights
+
+* Arm®, Arm® Ethos™-U, Arm® Cortex®-A, Arm® Cortex®-M, Arm® Corstone™ are
+  registered trademarks or trademarks of Arm® Limited (or its subsidiaries) in
+  the U.S. and/or elsewhere.
+* TensorFlow™ is a trademark of Google® LLC.
+* Keras™ is a trademark by François Chollet.
+* Linux® is the registered trademark of Linus Torvalds in the U.S. and
+  elsewhere.
+* Python® is a registered trademark of the PSF.
+* Ubuntu® is a registered trademark of Canonical.
+* Microsoft and Windows are trademarks of the Microsoft group of companies.
+
+# General usage
 
 ## Prerequisites and dependencies
 
-It is recommended to use virtual environments for MLIA installation, and a
+It is recommended to use a virtual environment for MLIA installation, and a
 typical setup for MLIA requires:
 
 * Ubuntu® 20.04.03 LTS (other OSs may work, the ML Inference Advisor has been
@@ -32,61 +67,230 @@ typical setup for MLIA requires:
   * For more details, please refer to the
     [prerequisites of Vela](https://pypi.org/project/ethos-u-vela/)
 
-## Backend installation
+## Installation
 
-The ML Inference Advisor is designed to support multiple performance
-estimators (backends) that could generate performance analysis for individual
-types of hardware.
-
-The `mlia-backend` command is used to manage the installation of new backends.
-
-* The `install` sub-command can be used after `mlia-backend` to:
-  * install a backend of ML Inference Advisor from a directory
-    which contains installed backend (option `--path`). The name (mandatory
-    argument `name`) of the backend can be case insensitive. If backend
-    is already installed, it is possible to use option `--force`
-    to force the installation
-  * (if available) automatically download the necessary components and
-    dependencies, install them and configure them properly (default behavior)
-
-* The `uninstall` sub-command can be used with option `backend_name` after
-  `mlia-backend` to remove the backend installation folder
-
-* The `list` sub-command can be used after `mlia-backend` to display
-  the installed and available for installation backends
-
-The usage is:
+MLIA can be installed with `pip` using the following command:
 
 ```bash
-mlia-backend install --help
+pip install mlia
 ```
 
-and the result looks like:
+It is highly recommended to create a new virtual environment to install MLIA.
 
-positional arguments:
+## First steps
 
-* name: Name of the backend to install
+After the installation, you can check that MLIA is installed correctly by
+opening your terminal, activating the virtual environment and typing the
+following command that should print the help text:
 
-optional arguments:
+```bash
+mlia --help
+```
 
-* -h/--help: Show this help message and exit
-* --path PATH: Path to the installed backend
-* --force: Force reinstalling backend in the specified path
-* --noninteractive: Non interactive mode with automatic confirmation of every action
+The ML Inference Advisor works with sub-commands, i.e. in general a MLIA command
+would look like this:
+
+```bash
+mlia [sub-command] [arguments]
+```
+
+Where the following sub-commands are available:
+
+* ["operators"](#operators-ops): show the model's operator list
+* ["optimization"](#model-optimization-opt): run the specified optimizations
+* ["performance"](#performance-perf): measure the performance of inference on hardware
+* ["all_tests"](#all-tests-all): have a full report
+
+Detailed help about the different sub-commands can be shown like this:
+
+```bash
+mlia [command] --help
+```
+
+The following sections go into further detail regarding the usage of MLIA.
+
+# Sub-commands
+
+This section gives an overview of the available sub-commands for MLIA.
+
+## **operators** (ops)
+
+Lists the model's operators with information about the compatibility with the
+specified target.
+
+*Examples:*
+
+```bash
+# List operator compatibility with Ethos-U55 with 256 MAC
+mlia operators --target-profile ethos-u55-256 ~/models/mobilenet_v1_1.0_224_quant.tflite
+
+# List operator compatibility with Cortex-A
+mlia ops --target-profile cortex-a ~/models/mobilenet_v1_1.0_224_quant.tflite
+
+# Get help and further information
+mlia ops --help
+```
+
+## **performance** (perf)
+
+Estimate the model's performance on the specified target and print out
+statistics.
+
+*Examples:*
+
+```bash
+# Use default parameters
+mlia performance ~/models/mobilenet_v1_1.0_224_quant.tflite
+
+# Explicitly specify the target profile and backend(s) to use with --evaluate-on
+mlia perf ~/models/ds_cnn_large_fully_quantized_int8.tflite \
+    --evaluate-on "Vela" "Corstone-310" \
+    --target-profile ethos-u65-512
+
+# Get help and further information
+mlia perf --help
+```
+
+## **optimization** (opt)
+
+This sub-command applies optimizations to the model and shows the performance
+improvements compared to the original unoptimized model.
+
+There are currently two optimization techniques available to apply:
+
+* **pruning**: Sets insignificant model weights to zero until the specified
+    sparsity is reached.
+* **clustering**: Groups the weights into the specified number of clusters and
+    then replaces the weight values with the cluster centroids.
+
+More information about these techniques can be found online in the TensorFlow
+documentation, e.g. in the
+[TensorFlow model optimization guides](https://www.tensorflow.org/model_optimization/guide).
+
+**Note:** A ***Keras model*** (.h5 or SavedModel) is required as input to
+perform the optimizations. Models in the TensorFlow Lite format are **not**
+supported.
+
+*Examples:*
+
+```bash
+# Custom optimization parameters: pruning=0.6, clustering=16
+mlia optimization \
+    --optimization-type pruning,clustering \
+    --optimization-target 0.6,16 \
+    ~/models/ds_cnn_l.h5
+
+# Get help and further information
+mlia opt --help
+```
+
+## **all_tests** (all)
+
+Combine sub-commands described above to generate a full report of the input
+model with all information available for the specified target. E.g. for Ethos-U
+this combines sub-commands *operators* and *optimization*. Therefore most
+arguments are shared with other sub-commands.
+
+*Examples:*
+
+```bash
+# Create full report and save it as JSON file
+mlia all_tests --output ./report.json ~/models/ds_cnn_l.h5
+
+# Get help and further information
+mlia all --help
+```
+
+# Target profiles
+
+Most commands accept the name of a target profile as input parameter. The
+profiles currently available are described in the following sections.
+
+The support of the above commands for different targets is provided via backends
+that need to be installed separately, see section
+[Backend installation](#backend-installation).
+
+## Ethos-U
+
+There are a number of predefined profiles for Ethos-U with the following
+attributes:
+
+```
++--------------------------------------------------------------------+
+| Profile name  | MAC | System config               | Memory mode    |
++=====================================================================
+| ethos-u55-256 | 256 | Ethos_U55_High_End_Embedded | Shared_Sram    |
++---------------------------------------------------------------------
+| ethos-u55-128 | 128 | Ethos_U55_High_End_Embedded | Shared_Sram    |
++---------------------------------------------------------------------
+| ethos-u65-512 | 512 | Ethos_U65_High_End          | Dedicated_Sram |
++---------------------------------------------------------------------
+| ethos-u65-256 | 256 | Ethos_U65_High_End          | Dedicated_Sram |
++--------------------------------------------------------------------+
+```
 
 Example:
 
 ```bash
-mlia-backend install Corstone-300
+mlia perf --target-profile ethos-u65-512 ~/model.tflite
 ```
 
-After a successful installation of the backend(s), start using mlia in your
-virtual environment.
+Ethos-U is supported by these backends:
 
-### Backend compatibility table
+* [Corstone-300](#corstone-300)
+* [Corstone-310](#corstone-310)
+* [Vela](#vela)
 
-Not all backends work on any platform. Please refer to the compatibility table
-below:
+## Cortex-A
+
+The profile *cortex-a* can be used to get operator compatibility information for
+Cortex-A CPUs based on the compatibility with Arm NN TensorFlow Lite
+delegate.
+
+## TOSA
+
+The target profile *tosa* can be used for TOSA compatibility checks of your
+model. It requires the [TOSA-Checker](#tosa-checker) backend.
+
+For more information see:
+
+* [repository](https://review.mlplatform.org/plugins/gitiles/tosa/tosa_checker/+/refs/heads/main)
+* [pypi.org](https://pypi.org/project/tosa-checker/)
+
+# Backend installation
+
+The ML Inference Advisor is designed to use backends to provide different
+metrics for different target hardware. Some backends come pre-installed with
+MLIA, but others can be added and managed using the command `mlia-backend`, that
+provides the following functionality:
+
+* **install**
+* **uninstall**
+* **list**
+
+ *Examples:*
+
+```bash
+# List backends installed and available for installation
+mlia-backend list
+
+# Install Corstone-300 backend for Ethos-U
+mlia-backend install Corstone-300 --path ~/FVP_Corstone_SSE-300/
+
+# Uninstall the Corstone-300 backend
+mlia-backend uninstall Corstone-300
+
+# Get help and further information
+mlia-backend --help
+```
+
+**Note:** Some, but not all, backends can be automatically downloaded, if no
+path is provided.
+
+## Available backends
+
+This section lists available backends. As not all backends work on any platform
+the following table shows some compatibility information:
 
 ```
 +----------------------------------------------------------------------------+
@@ -106,346 +310,61 @@ below:
 +----------------------------------------------------------------------------+
 ```
 
-### Using Corstone™-300
+### Arm NN TensorFlow Lite delegate
 
-To install Corstone™-300 as a backend for Ethos™-U next commands can be used:
+This backend provides general information about the compatibility of a operators
+with the Arm NN TensorFlow Lite delegate for Cortex-A. It comes pre-installed
+with MLIA.
+
+### Corstone-300
+
+Corstone-300 is a backend that provides performance metrics for systems based
+on Cortex-M55 and Ethos-U. It is only available on the Linux platform.
+
+*Examples:*
 
 ```bash
-# To download and install Corstone-300 automatically
+# Download and install Corstone-300 automatically
 mlia-backend install Corstone-300
-# To point MLIA to an already locally installed version of Corstone-300
+# Point to a local version of Corstone-300 installed using its installation script
 mlia-backend install Corstone-300 --path YOUR_LOCAL_PATH_TO_CORSTONE_300
 ```
 
-Please note: Corstone™-300 used in the example above is available only
-on the Linux® platform.
+For further information about Corstone-300 please refer to:
+<https://developer.arm.com/Processors/Corstone-300>
 
-### Using Corstone™-310
+### Corstone-310
 
-Corstone™-310 is available as Arm® Virtual Hardware (AVH).
+Corstone-310 is a backend that provides performance metrics for systems based
+on Cortex-M85 and Ethos-U. It is available as Arm Virtual Hardware (AVH) only,
+i.e. it can not be downloaded automatically.
 
-* For access to AVH for Corstone™-310 please refer to:
+* For access to AVH for Corstone-310 please refer to:
   <https://developer.arm.com/Processors/Corstone-310>
-* Please use the examples of MLIA using Corstone™-310 here to get started:
+* Please use the examples of MLIA using Corstone-310 here to get started:
   <https://github.com/ARM-software/open-iot-sdk>
 
-### Using TOSA checker
+### TOSA Checker
 
-TOSA compatibility checker is available in MLIA as a separate backend.
-Please, install it into the same environment as MLIA using next command:
+The TOSA Checker backend provides operator compatibility checks against the
+TOSA specification.
+
+Please, install it into the same environment as MLIA using this command:
 
 ```bash
 mlia-backend install tosa-checker
 ```
 
-TOSA checker resources:
+Additional resources:
 
 * Source code: <https://review.mlplatform.org/admin/repos/tosa/tosa_checker>
 * PyPi package <https://pypi.org/project/tosa-checker/>
 
-## Usage
+### Vela
 
-After the initial setup, you can start the program by opening your terminal and
-typing the following command:
+The Vela backend provides performance metrics for Ethos-U based systems. It
+comes pre-installed with MLIA.
 
-```bash
-mlia [command] [arguments]
-```
+Additional resources:
 
-Choices of commands:
-
-* ["operators"](#operators-ops): show the model's operator list
-* ["optimization"](#model-optimization-opt): run the specified optimizations
-* ["performance"](#performance-perf): measure the performance of inference on hardware
-* ["all_tests"](#all-tests-all): have a full report
-
-To get a list of all available options, use:
-
-```bash
-mlia --help
-```
-
-To get help on a specific command, use:
-
-```bash
-mlia [command] --help
-```
-
-Most commands accept the name of the target profile as input parameter.
-There are a number of predefined profiles for Ethos™-U with following attributes:
-
-```
-+--------------------------------------------------------------------+
-| Profile name  | MAC | System config               | Memory mode    |
-+=====================================================================
-| ethos-u55-256 | 256 | Ethos_U55_High_End_Embedded | Shared_Sram    |
-+---------------------------------------------------------------------
-| ethos-u55-128 | 128 | Ethos_U55_High_End_Embedded | Shared_Sram    |
-+---------------------------------------------------------------------
-| ethos-u65-512 | 512 | Ethos_U65_High_End          | Dedicated_Sram |
-+---------------------------------------------------------------------
-| ethos-u65-256 | 256 | Ethos_U65_High_End          | Dedicated_Sram |
-+--------------------------------------------------------------------+
-```
-
-Target profile "tosa" could be used for TOSA compatibility checks.
-
-### **Operators** (ops)
-
-#### *Description*
-
-Prints the model's operator list.
-
-#### *Example*
-
-```bash
-# List operator compatibility for a specific target profile
-mlia operators --target-profile ethos-u55-256 ~/models/mobilenet_v1_1.0_224_quant.tflite
-```
-
-#### *Arguments*
-
-##### TensorFlow Lite model options
-
-* model: Input model in TensorFlow Lite format [required].
-
-##### Target profile options
-
-* --target-profile: Target profile that will set the target options such as
-  target, MAC value, memory mode, etc ...
-  * default: ethos-u55-256
-  * options:
-    * cortex-a
-    * ethos-u55-256
-    * ethos-u55-128
-    * ethos-u65-512
-    * ethos-u65-256
-    * tosa
-
-##### Output options
-
-* --output: Name of the file where the report will be saved. The report format
-  is automatically detected based on the file extension. Supported formats are:
-  json.
-
-##### Optional arguments
-
-* -h/--help: Show the general help document and exit.
-* --supported-ops-report: Generate the SUPPORTED_OPS.md file in the current working
-  directory and exit (Ethos-U target profiles only).
-
-### **Performance** (perf)
-
-#### *Description*
-
-Prints the model's performance statistics.
-
-#### *Example*
-
-```bash
-# Explicitly specify backend(s) to use with --evaluate-on
-mlia performance ~/models/mobilenet_v1_1.0_224_quant.tflite \
---evaluate-on "Vela" "Corstone-310"
-```
-
-#### *Arguments*
-
-##### TensorFlow Lite model options
-
-* model: Input model in TensorFlow Lite format [required].
-
-##### Target profile options
-
-* --target-profile: Target profile that will set the target options such as
-  target, MAC value, memory mode, etc ...
-  * default: ethos-u55-256
-  * options:
-    * ethos-u55-256
-    * ethos-u55-128
-    * ethos-u65-512
-    * ethos-u65-256
-
-##### Output options
-
-* --output: Name of the file where the report will be saved. The report format
-  is automatically detected based on the file extension. Supported formats are:
-  json.
-
-##### Debug options
-
-* --verbose: Produce verbose output (for debugging purposes).
-
-##### Evaluation options
-
-* --evaluate-on: Backends to use for evaluation.
-  * default: Vela
-  * options:
-    * Vela
-    * Corstone-300
-    * Corstone-310
-
-##### optional arguments
-
-* -h/--help: Show the general help document and exit.
-* --supported-ops-report: Generate the SUPPORTED_OPS.md file in the current
-  working directory and exit (Ethos-U target profiles only).
-
-### **Model optimization** (opt)
-
-#### *Description*
-
-Shows the performance improvements after applying optimizations to the model.
-
-#### *Example*
-
-```bash
-# Custom optimization parameters: pruning=0.6, clustering=16
-mlia optimization \
---optimization-type pruning,clustering \
---optimization-target 0.6,16 \
-~/models/ds_cnn_l.h5
-```
-
-#### *Arguments*
-
-##### Keras™ model options
-
-* model: Input model in Keras™ (.h5 or SavedModel) format [required].
-
-##### optimization options
-
-* --optimization-type: Type of optimization to apply to the model [required].
-  * options:
-    * pruning
-    * clustering
-* --optimization-target: Target for optimization (for pruning this is sparsity
-  between (0,1), for clustering this is the number of clusters
-  (positive integer)) [required].
-
-##### Target profile options
-
-* --target-profile: Target profile that will set the target options such as
-  target, MAC value, memory mode, etc ...
-  * default: ethos-u55-256
-  * options:
-    * ethos-u55-256
-    * ethos-u55-128
-    * ethos-u65-512
-    * ethos-u65-256
-
-##### Evaluation options
-
-* --evaluate-on: Backends to use for evaluation.
-  * default: Vela
-  * options:
-    * Vela
-    * Corstone-300
-    * Corstone-310
-
-##### Debug options
-
-* --verbose: Produce verbose output (for debugging purposes).
-
-##### optional arguments
-
-* -h/--help: Show the general help document and exit.
-* --supported-ops-report: Generate the SUPPORTED_OPS.md file in the current
-  working directory and exit (Ethos-U target profiles only).
-
-### **All tests** (all)
-
-#### *Description*
-
-Generates a full report on the input model's operator list,
-runs the specified optimizations and lists the performance improvements.
-
-#### *Example*
-
-```bash
-# Create full report and save it as JSON file
-mlia all_tests --output ./report.json ~/models/ds_cnn_l.h5
-```
-
-#### *Arguments*
-
-##### Keras™ model options
-
-* model: Input model in Keras™ (.h5 or SavedModel) format [required].
-
-##### Optimization options
-
-* --optimization-type: List of the optimization types separated by comma
-  * default: pruning, clustering
-* --optimization-target: List of the optimization targets separated by comma,
-  (for pruning this is sparsity between (0,1), for clustering this is the
-  number of clusters (positive integer))
-  * default: 0.5, 32
-
-##### Target profile options
-
-* --target-profile: Target profile that will set the target options such as
-  target, MAC value, memory mode, etc ...
-  * default: ethos-u55-256
-  * options:
-    * cortex-a
-    * ethos-u55-256
-    * ethos-u55-128
-    * ethos-u65-512
-    * ethos-u65-256
-    * tosa
-
-##### Output options
-
-* --output: Name of the file where the report will be saved. The report format
-  is automatically detected based on the file extension. Supported formats are:
-  json.
-
-##### Debug options
-
-* --verbose: Produce verbose output (for debugging purposes).
-
-##### Optional arguments
-
-* -h/--help: show this help message and exit
-
-## Releases
-
-Release notes can be found in [MLIA releases](RELEASES.md)
-
-## Getting support
-
-In case you need support or want to report an issue, give us feedback or
-simply ask a question about MLIA, please send an email to mlia@arm.com.
-
-Alternatively, use the
-[AI and ML forum](https://community.arm.com/support-forums/f/ai-and-ml-forum)
-to get support by marking your post with the **MLIA** tag.
-
-## Reporting vulnerabilities
-
-Information on reporting security issues can be found in [Reporting vulnerabilities](SECURITY.md)
-
-## Resources
-
-Additional useful information:
-
-* [Corstone™-300](https://developer.arm.com/Processors/Corstone-300)
-* [Corstone™-310](https://developer.arm.com/Processors/Corstone-310)
-* [TOSA Checker](https://review.mlplatform.org/admin/repos/tosa/tosa_checker)
-
-## License
-
-ML Inference Advisor is licensed under [Apache License 2.0](LICENSES/Apache-2.0.txt).
-
-## Trademarks and copyrights
-
-* Arm®, Ethos™-U, Cortex®-A, Cortex®-M, Corstone™ are registered trademarks or
-  trademarks of Arm® Limited (or its subsidiaries) in the U.S. and/or
-  elsewhere.
-* TensorFlow™ is a trademark of Google® LLC.
-* Keras™ is a trademark by François Chollet.
-* Linux® is the registered trademark of Linus Torvalds in the U.S. and
-  elsewhere.
-* Python® is a registered trademark of the PSF.
-* Ubuntu® is a registered trademark of Canonical.
-* Microsoft and Windows are trademarks of the Microsoft group of companies.
+* <https://pypi.org/project/ethos-u-vela/>
