@@ -58,7 +58,7 @@ The `mlia-backend` command is used to manage the installation of new backends.
 The usage is:
 
 ```bash
-mlia backend install --help
+mlia-backend install --help
 ```
 
 and the result looks like:
@@ -71,21 +71,17 @@ optional arguments:
 
 * -h/--help: Show this help message and exit
 * --path PATH: Path to the installed backend
-* --download: Download and install a backend
+* --force: Force reinstalling backend in the specified path
 * --noninteractive: Non interactive mode with automatic confirmation of every action
 
 Example:
 
 ```bash
-# Use this command to see what backends can be downloaded.
-mlia backend install --download
+mlia-backend install Corstone-300
 ```
 
 After a successful installation of the backend(s), start using mlia in your
 virtual environment.
-
-*Please note*: Backends cannot be removed once installed.
-Consider creating a new environment and reinstall backends when needed.
 
 ### Backend compatibility table
 
@@ -112,14 +108,13 @@ below:
 
 ### Using Corstone™-300
 
-To install Corstone™-300 as a backend for Ethos™-U both options (`--download`
-and `--path`) can be used:
+To install Corstone™-300 as a backend for Ethos™-U next commands can be used:
 
 ```bash
 # To download and install Corstone-300 automatically
-mlia backend install --download Corstone-300
+mlia-backend install Corstone-300
 # To point MLIA to an already locally installed version of Corstone-300
-mlia backend install --path YOUR_LOCAL_PATH_TO_CORSTONE_300
+mlia-backend install Corstone-300 --path YOUR_LOCAL_PATH_TO_CORSTONE_300
 ```
 
 Please note: Corstone™-300 used in the example above is available only
@@ -136,11 +131,11 @@ Corstone™-310 is available as Arm® Virtual Hardware (AVH).
 
 ### Using TOSA checker
 
-TOSA compatibility checker is available in MLIA as an external dependency.
+TOSA compatibility checker is available in MLIA as a separate backend.
 Please, install it into the same environment as MLIA using next command:
 
 ```bash
-pip install mlia[tosa]
+mlia-backend install tosa-checker
 ```
 
 TOSA checker resources:

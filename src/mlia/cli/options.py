@@ -154,7 +154,7 @@ def add_backend_install_options(parser: argparse.ArgumentParser) -> None:
         "--force",
         default=False,
         action="store_true",
-        help="Force reinstall backend in the specified path",
+        help="Force reinstalling backend in the specified path",
     )
     parser.add_argument(
         "--noninteractive",

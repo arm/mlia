@@ -47,8 +47,7 @@ def get_tosa_compatibility_info(
     if checker is None:
         raise Exception(
             "TOSA checker is not available. "
-            "Please make sure that 'tosa_checker' package is installed: "
-            "pip install mlia[tosa]"
+            "Please make sure that 'tosa-checker' backend is installed."
         )
 
     ops = [

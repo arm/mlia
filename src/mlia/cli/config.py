@@ -10,13 +10,14 @@ import mlia.backend.manager as backend_manager
 from mlia.tools.metadata.common import DefaultInstallationManager
 from mlia.tools.metadata.common import InstallationManager
 from mlia.tools.metadata.corstone import get_corstone_installations
+from mlia.tools.metadata.py_package import get_pypackage_backend_installations
 
 logger = logging.getLogger(__name__)
 
 
 def get_installation_manager(noninteractive: bool = False) -> InstallationManager:
     """Return installation manager."""
-    backends = get_corstone_installations()
+    backends = get_corstone_installations() + get_pypackage_backend_installations()
 
     return DefaultInstallationManager(backends, noninteractive=noninteractive)
 

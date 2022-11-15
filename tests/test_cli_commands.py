@@ -175,16 +175,17 @@ def test_backend_command_action_uninstall(
 
 
 @pytest.mark.parametrize(
-    "i_agree_to_the_contained_eula, backend_name, expected_calls",
+    "i_agree_to_the_contained_eula, force, backend_name, expected_calls",
     [
-        [False, "backend_name", [call("backend_name", True)]],
-        [True, "backend_name", [call("backend_name", False)]],
-        [True, "BACKEND_NAME", [call("BACKEND_NAME", False)]],
+        [False, False, "backend_name", [call("backend_name", True, False)]],
+        [True, False, "backend_name", [call("backend_name", False, False)]],
+        [True, True, "BACKEND_NAME", [call("BACKEND_NAME", False, True)]],
     ],
 )
 def test_backend_command_action_add_download(
     installation_manager_mock: MagicMock,
     i_agree_to_the_contained_eula: bool,
+    force: bool,
     backend_name: str,
     expected_calls: Any,
 ) -> None:
@@ -192,6 +193,7 @@ def test_backend_command_action_add_download(
     backend_install(
         name=backend_name,
         i_agree_to_the_contained_eula=i_agree_to_the_contained_eula,
+        force=force,
     )
 
     assert installation_manager_mock.download_and_install.mock_calls == expected_calls

@@ -209,7 +209,6 @@ class BackendInstallation(Installation):
     def uninstall(self) -> None:
         """Uninstall the backend."""
         remove_system(self.metadata.fvp_dir_name)
-        logger.info("%s successfully uninstalled.", self.name)
 
 
 class PackagePathChecker:

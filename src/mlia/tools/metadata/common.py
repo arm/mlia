@@ -11,8 +11,9 @@ from pathlib import Path
 from typing import Callable
 from typing import Union
 
+from mlia.core.errors import ConfigurationError
+from mlia.core.errors import InternalError
 from mlia.utils.misc import yes
-
 
 logger = logging.getLogger(__name__)
 
@@ -124,7 +125,9 @@ class InstallationManager(ABC):
         """Install backend from the local directory."""
 
     @abstractmethod
-    def download_and_install(self, backend_name: str, eula_agreement: bool) -> None:
+    def download_and_install(
+        self, backend_name: str, eula_agreement: bool, force: bool
+    ) -> None:
         """Download and install backends."""
 
     @abstractmethod
@@ -153,29 +156,15 @@ class InstallationFiltersMixin:
             if all(filter_(installation) for filter_ in filters)
         ]
 
-    def could_be_installed_from(
-        self, backend_path: Path, backend_name: str
-    ) -> list[Installation]:
-        """Return installations that could be installed from provided directory."""
-        return self.filter_by(
-            SupportsInstallTypeFilter(InstallFromPath(backend_path)),
-            SearchByNameFilter(backend_name),
-        )
-
-    def could_be_downloaded_and_installed(
-        self, backend_name: str
-    ) -> list[Installation]:
-        """Return installations that could be downloaded and installed."""
-        return self.filter_by(
-            SupportsInstallTypeFilter(DownloadAndInstall()),
-            SearchByNameFilter(backend_name),
-            ReadyForInstallationFilter(),
-        )
+    def find_by_name(self, backend_name: str) -> list[Installation]:
+        """Return list of the backends filtered by name."""
+        return self.filter_by(SearchByNameFilter(backend_name))
 
     def already_installed(self, backend_name: str = None) -> list[Installation]:
         """Return list of backends that are already installed."""
         return self.filter_by(
-            AlreadyInstalledFilter(), SearchByNameFilter(backend_name)
+            AlreadyInstalledFilter(),
+            SearchByNameFilter(backend_name),
         )
 
     def ready_for_installation(self) -> list[Installation]:
@@ -193,83 +182,96 @@ class DefaultInstallationManager(InstallationManager, InstallationFiltersMixin):
         self.installations = installations
         self.noninteractive = noninteractive
 
-    def choose_installation_for_path(
-        self, backend_path: Path, backend_name: str, force: bool
-    ) -> Installation | None:
-        """Check available installation and select one if possible."""
-        installs = self.could_be_installed_from(backend_path, backend_name)
+    def _install(
+        self,
+        backend_name: str,
+        install_type: InstallationType,
+        prompt: Callable[[Installation], str],
+        force: bool,
+    ) -> None:
+        """Check metadata and install backend."""
+        installs = self.find_by_name(backend_name)
 
         if not installs:
+            logger.info("Unknown backend '%s'.", backend_name)
             logger.info(
-                "Unfortunatelly, it was not possible to automatically "
-                "detect type of the installed FVP. "
-                "Please, check provided path to the installed FVP."
+                "Please run command 'mlia-backend list' to get list of "
+                "supported backend names."
             )
-            return None
 
-        if len(installs) != 1:
-            names = ",".join(install.name for install in installs)
-            logger.info(
-                "Unable to correctly detect type of the installed FVP."
-                "The following FVPs are detected %s. Installation skipped.",
-                names,
-            )
-            return None
+            return
+
+        if len(installs) > 1:
+            raise InternalError(f"More than one backend with name {backend_name} found")
 
         installation = installs[0]
-        if installation.already_installed:
-            logger.info(
-                "%s was found in %s, but it has been already installed "
-                "in the ML Inference Advisor.",
-                installation.name,
-                backend_path,
-            )
-            return installation if force else None
+        if not installation.supports(install_type):
+            if isinstance(install_type, InstallFromPath):
+                logger.info(
+                    "Backend '%s' could not be installed using path '%s'.",
+                    installation.name,
+                    install_type.backend_path,
+                )
+                logger.info(
+                    "Please check that '%s' is a valid path to the installed backend.",
+                    install_type.backend_path,
+                )
+            else:
+                logger.info(
+                    "Backend '%s' could not be downloaded and installed",
+                    installation.name,
+                )
+                logger.info(
+                    "Please refer to the project's documentation for more details."
+                )
 
-        return installation
+            return
+
+        if installation.already_installed and not force:
+            logger.info("Backend '%s' is already installed.", installation.name)
+            logger.info("Please, consider using --force option.")
+            return
+
+        proceed = self.noninteractive or yes(prompt(installation))
+        if not proceed:
+            logger.info("%s installation canceled.", installation.name)
+            return
+
+        if installation.already_installed and force:
+            logger.info(
+                "Force installing %s, so delete the existing "
+                "installed backend first.",
+                installation.name,
+            )
+            installation.uninstall()
+
+        installation.install(install_type)
+        logger.info("%s successfully installed.", installation.name)
 
     def install_from(
         self, backend_path: Path, backend_name: str, force: bool = False
     ) -> None:
         """Install from the provided directory."""
-        installation = self.choose_installation_for_path(
-            backend_path, backend_name, force
-        )
 
-        if not installation:
-            return
-
-        if force:
-            self.uninstall(backend_name)
-            logger.info(
-                "Force installing %s, so delete the existing installed backend first.",
-                installation.name,
+        def prompt(install: Installation) -> str:
+            return (
+                f"{install.name} was found in {backend_path}. "
+                "Would you like to install it?"
             )
 
-        prompt = (
-            f"{installation.name} was found in {backend_path}. "
-            "Would you like to install it?"
-        )
-        self._install(installation, InstallFromPath(backend_path), prompt)
+        install_type = InstallFromPath(backend_path)
+        self._install(backend_name, install_type, prompt, force)
 
     def download_and_install(
-        self, backend_name: str, eula_agreement: bool = True
+        self, backend_name: str, eula_agreement: bool = True, force: bool = False
     ) -> None:
         """Download and install available backends."""
-        installations = self.could_be_downloaded_and_installed(backend_name)
 
-        if not installations:
-            logger.info("No backends available for the installation.")
-            return
+        def prompt(install: Installation) -> str:
+            return f"Would you like to download and install {install.name}?"
 
-        names = ",".join(installation.name for installation in installations)
-        logger.info("Following backends are available for downloading: %s", names)
-
-        for installation in installations:
-            prompt = f"Would you like to download and install {installation.name}?"
-            self._install(
-                installation, DownloadAndInstall(eula_agreement=eula_agreement), prompt
-            )
+        install_type = DownloadAndInstall(eula_agreement=eula_agreement)
+        self._install(backend_name, install_type, prompt, force)
 
     def show_env_details(self) -> None:
         """Print current state of the execution environment."""
@@ -299,24 +301,19 @@ class DefaultInstallationManager(InstallationManager, InstallationFiltersMixin):
     def uninstall(self, backend_name: str) -> None:
         """Uninstall the backend with name backend_name."""
         installations = self.already_installed(backend_name)
+
         if not installations:
-            raise Exception("No backend available for uninstall")
-        for installation in installations:
-            installation.uninstall()
+            raise ConfigurationError(f"Backend '{backend_name}' is not installed")
 
-    def _install(
-        self,
-        installation: Installation,
-        installation_type: InstallationType,
-        prompt: str,
-    ) -> None:
-        proceed = self.noninteractive or yes(prompt)
+        if len(installations) != 1:
+            raise InternalError(
+                f"More than one installed backend with name {backend_name} found"
+            )
 
-        if proceed:
-            installation.install(installation_type)
-            logger.info("%s successfully installed.", installation.name)
-        else:
-            logger.info("%s installation canceled.", installation.name)
+        installation = installations[0]
+        installation.uninstall()
+
+        logger.info("%s successfully uninstalled.", installation.name)
 
     def backend_installed(self, backend_name: str) -> bool:
         """Return true if requested backend installed."""

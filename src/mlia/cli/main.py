@@ -33,6 +33,8 @@ from mlia.cli.options import add_output_options
 from mlia.cli.options import add_target_options
 from mlia.cli.options import add_tflite_model_options
 from mlia.core.context import ExecutionContext
+from mlia.core.errors import ConfigurationError
+from mlia.core.errors import InternalError
 
 
 logger = logging.getLogger(__name__)
@@ -219,6 +221,10 @@ def run_command(args: argparse.Namespace) -> int:
         return 0
     except KeyboardInterrupt:
         logger.error("Execution has been interrupted")
+    except InternalError as err:
+        logger.error("Internal error: %s", err)
+    except ConfigurationError as err:
+        logger.error(err)
     except Exception as err:  # pylint: disable=broad-except
         logger.error(
             "\nExecution finished with error: %s",

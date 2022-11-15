@@ -20,7 +20,6 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import cast
 
 from mlia.api import ExecutionContext
 from mlia.api import generate_supported_operators_report
@@ -249,29 +248,29 @@ def backend_install(
     noninteractive: bool = False,
     force: bool = False,
 ) -> None:
-    """Install configuration."""
+    """Install backend."""
     logger.info(CONFIG)
 
     manager = get_installation_manager(noninteractive)
 
-    install_from_path = path is not None
-
-    if install_from_path:
-        manager.install_from(cast(Path, path), name, force)
+    if path is not None:
+        manager.install_from(path, name, force)
     else:
         eula_agreement = not i_agree_to_the_contained_eula
-        manager.download_and_install(name, eula_agreement)
+        manager.download_and_install(name, eula_agreement, force)
 
 
-def backend_uninstall(
-    name: str,
-) -> None:
-    """Uninstall backend(s)."""
+def backend_uninstall(name: str) -> None:
+    """Uninstall backend."""
+    logger.info(CONFIG)
+
     manager = get_installation_manager(noninteractive=True)
     manager.uninstall(name)
 
 
 def backend_list() -> None:
-    """List backend status."""
+    """List backends status."""
+    logger.info(CONFIG)
+
     manager = get_installation_manager(noninteractive=True)
     manager.show_env_details()

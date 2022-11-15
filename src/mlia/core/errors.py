@@ -7,6 +7,10 @@ class ConfigurationError(Exception):
     """Configuration error."""
 
 
+class InternalError(Exception):
+    """Internal error."""
+
+
 class FunctionalityNotSupportedError(Exception):
     """Functionality is not supported error."""
 
