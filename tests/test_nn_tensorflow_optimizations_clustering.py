@@ -3,6 +3,7 @@
 """Test for module optimizations/clustering."""
 from __future__ import annotations
 
+import math
 from pathlib import Path
 
 import pytest
@@ -49,22 +50,16 @@ def _test_num_unique_weights(
     target_num_clusters: int,
     layers_to_cluster: list[str] | None,
 ) -> None:
-    clustered_uniqueness_dict = metrics.num_unique_weights(
+    clustered_uniqueness = metrics.num_unique_weights(
         ReportClusterMode.NUM_CLUSTERS_PER_AXIS
     )
+
     num_clustered_layers = 0
-    num_optimizable_layers = len(clustered_uniqueness_dict)
-    if layers_to_cluster:
-        expected_num_clustered_layers = len(layers_to_cluster)
-    else:
-        expected_num_clustered_layers = num_optimizable_layers
-    for layer_name in clustered_uniqueness_dict:
-        # the +1 is there temporarily because of a bug that's been fixed
-        # but the fix hasn't been merged yet.
-        # Will need to be removed in the future.
-        if clustered_uniqueness_dict[layer_name][0] <= (target_num_clusters + 1):
-            num_clustered_layers = num_clustered_layers + 1
-    # make sure we are having exactly as many clustered layers as we wanted
+    for layer_num_clusters in clustered_uniqueness.values():
+        if layer_num_clusters[0] <= target_num_clusters:
+            num_clustered_layers += 1
+
+    expected_num_clustered_layers = len(layers_to_cluster or clustered_uniqueness)
     assert num_clustered_layers == expected_num_clustered_layers
 
 
@@ -73,22 +68,19 @@ def _test_sparsity(
     target_sparsity: float,
     layers_to_cluster: list[str] | None,
 ) -> None:
-    pruned_sparsity_dict = metrics.sparsity_per_layer()
-    num_sparse_layers = 0
-    num_optimizable_layers = len(pruned_sparsity_dict)
     error_margin = 0.03
-    if layers_to_cluster:
-        expected_num_sparse_layers = len(layers_to_cluster)
-    else:
-        expected_num_sparse_layers = num_optimizable_layers
-    for layer_name in pruned_sparsity_dict:
-        if abs(pruned_sparsity_dict[layer_name] - target_sparsity) < error_margin:
-            num_sparse_layers = num_sparse_layers + 1
+    pruned_sparsity = metrics.sparsity_per_layer()
+
+    num_sparse_layers = 0
+    for layer_sparsity in pruned_sparsity.values():
+        if math.isclose(layer_sparsity, target_sparsity, abs_tol=error_margin):
+            num_sparse_layers += 1
+
     # make sure we are having exactly as many sparse layers as we wanted
+    expected_num_sparse_layers = len(layers_to_cluster or pruned_sparsity)
     assert num_sparse_layers == expected_num_sparse_layers
 
 
-@pytest.mark.skip(reason="Test fails randomly, further investigation is needed")
 @pytest.mark.parametrize("target_num_clusters", (32, 4))
 @pytest.mark.parametrize("sparsity_aware", (False, True))
 @pytest.mark.parametrize("layers_to_cluster", (["conv1"], ["conv1", "conv2"], None))
