@@ -104,7 +104,7 @@ Where the following sub-commands are available:
 Detailed help about the different sub-commands can be shown like this:
 
 ```bash
-mlia [command] --help
+mlia [sub-command] --help
 ```
 
 The following sections go into further detail regarding the usage of MLIA.
@@ -115,7 +115,7 @@ This section gives an overview of the available sub-commands for MLIA.
 
 ## **operators** (ops)
 
-Lists the model's operators with information about the compatibility with the
+Lists the model's operators with information about their compatibility with the
 specified target.
 
 *Examples:*
@@ -153,8 +153,8 @@ mlia perf --help
 
 ## **optimization** (opt)
 
-This sub-command applies optimizations to the model and shows the performance
-improvements compared to the original unoptimized model.
+This sub-command applies optimizations to a Keras model (.h5 or SavedModel) and
+shows the performance improvements compared to the original unoptimized model.
 
 There are currently two optimization techniques available to apply:
 
@@ -189,7 +189,7 @@ mlia opt --help
 Combine sub-commands described above to generate a full report of the input
 model with all information available for the specified target. E.g. for Ethos-U
 this combines sub-commands *operators* and *optimization*. Therefore most
-arguments are shared with other sub-commands.
+command line arguments are shared with other sub-commands.
 
 *Examples:*
 
@@ -203,12 +203,12 @@ mlia all --help
 
 # Target profiles
 
-Most commands accept the name of a target profile as input parameter. The
+Most sub-commands accept the name of a target profile as input parameter. The
 profiles currently available are described in the following sections.
 
-The support of the above commands for different targets is provided via backends
-that need to be installed separately, see section
-[Backend installation](#backend-installation).
+The support of the above sub-commands for different targets is provided via
+backends that need to be installed separately, see
+[Backend installation](#backend-installation) section.
 
 ## Ethos-U
 
@@ -243,19 +243,20 @@ Ethos-U is supported by these backends:
 
 ## Cortex-A
 
-The profile *cortex-a* can be used to get operator compatibility information for
-Cortex-A CPUs based on the compatibility with Arm NN TensorFlow Lite
-delegate.
+The profile *cortex-a* can be used to get the information about supported
+operators for Cortex-A CPUs when using the Arm NN TensorFlow Lite delegate.
+Please, find more details in the section for the
+[corresponding backend](#arm-nn-tensorflow-lite-delegate).
 
 ## TOSA
 
 The target profile *tosa* can be used for TOSA compatibility checks of your
-model. It requires the [TOSA-Checker](#tosa-checker) backend.
+model. It requires the [TOSA Checker](#tosa-checker) backend.
 
-For more information see:
+For more information, see TOSA Checker's:
 
 * [repository](https://review.mlplatform.org/plugins/gitiles/tosa/tosa_checker/+/refs/heads/main)
-* [pypi.org](https://pypi.org/project/tosa-checker/)
+* [pypi.org page](https://pypi.org/project/tosa-checker/)
 
 # Backend installation
 
@@ -312,9 +313,13 @@ the following table shows some compatibility information:
 
 ### Arm NN TensorFlow Lite delegate
 
-This backend provides general information about the compatibility of a operators
+This backend provides general information about the compatibility of operators
 with the Arm NN TensorFlow Lite delegate for Cortex-A. It comes pre-installed
 with MLIA.
+
+For more information see:
+
+* [Arm NN TensorFlow Lite delegate documentation](https://arm-software.github.io/armnn/latest/delegate.xhtml)
 
 ### Corstone-300
 
