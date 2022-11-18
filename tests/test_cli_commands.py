@@ -18,10 +18,10 @@ from mlia.cli.commands import operators
 from mlia.cli.commands import optimization
 from mlia.cli.commands import performance
 from mlia.core.context import ExecutionContext
-from mlia.devices.ethosu.config import EthosUConfiguration
-from mlia.devices.ethosu.performance import MemoryUsage
-from mlia.devices.ethosu.performance import NPUCycles
-from mlia.devices.ethosu.performance import PerformanceMetrics
+from mlia.target.ethos_u.config import EthosUConfiguration
+from mlia.target.ethos_u.performance import MemoryUsage
+from mlia.target.ethos_u.performance import NPUCycles
+from mlia.target.ethos_u.performance import PerformanceMetrics
 
 
 def test_operators_expected_parameters(sample_context: ExecutionContext) -> None:
@@ -133,7 +133,7 @@ def mock_performance_estimation(monkeypatch: pytest.MonkeyPatch) -> None:
         MemoryUsage(1, 2, 3, 4, 5),
     )
     monkeypatch.setattr(
-        "mlia.devices.ethosu.data_collection.EthosUPerformanceEstimator.estimate",
+        "mlia.target.ethos_u.data_collection.EthosUPerformanceEstimator.estimate",
         MagicMock(return_value=metrics),
     )
 

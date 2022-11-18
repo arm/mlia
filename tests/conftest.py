@@ -12,10 +12,10 @@ import tensorflow as tf
 
 from mlia.backend.vela.compiler import optimize_model
 from mlia.core.context import ExecutionContext
-from mlia.devices.ethosu.config import EthosUConfiguration
 from mlia.nn.tensorflow.utils import convert_to_tflite
 from mlia.nn.tensorflow.utils import save_keras_model
 from mlia.nn.tensorflow.utils import save_tflite_model
+from mlia.target.ethos_u.config import EthosUConfiguration
 
 
 @pytest.fixture(scope="session", name="test_resources_path")

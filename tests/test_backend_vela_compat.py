@@ -10,7 +10,7 @@ from mlia.backend.vela.compat import NpuSupported
 from mlia.backend.vela.compat import Operator
 from mlia.backend.vela.compat import Operators
 from mlia.backend.vela.compat import supported_operators
-from mlia.devices.ethosu.config import EthosUConfiguration
+from mlia.target.ethos_u.config import EthosUConfiguration
 from mlia.utils.filesystem import working_directory
 
 

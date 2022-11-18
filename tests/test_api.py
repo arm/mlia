@@ -15,8 +15,8 @@ from mlia.api import get_advisor
 from mlia.core.common import AdviceCategory
 from mlia.core.context import Context
 from mlia.core.context import ExecutionContext
-from mlia.devices.ethosu.advisor import EthosUInferenceAdvisor
-from mlia.devices.tosa.advisor import TOSAInferenceAdvisor
+from mlia.target.ethos_u.advisor import EthosUInferenceAdvisor
+from mlia.target.tosa.advisor import TOSAInferenceAdvisor
 
 
 def test_get_advice_no_target_provided(test_keras_model: Path) -> None:
@@ -118,12 +118,12 @@ def test_get_advisor(
     [
         [
             "ethos-u55-128",
-            "mlia.devices.ethosu.operators.generate_supported_operators_report",
+            "mlia.target.ethos_u.operators.generate_supported_operators_report",
             None,
         ],
         [
             "ethos-u65-256",
-            "mlia.devices.ethosu.operators.generate_supported_operators_report",
+            "mlia.target.ethos_u.operators.generate_supported_operators_report",
             None,
         ],
         [

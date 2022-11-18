@@ -12,12 +12,12 @@ from mlia.core.advisor import InferenceAdvisor
 from mlia.core.common import AdviceCategory
 from mlia.core.context import ExecutionContext
 from mlia.core.typing import PathOrFileLike
-from mlia.devices.cortexa.advisor import configure_and_get_cortexa_advisor
-from mlia.devices.cortexa.operators import report as cortex_a_report
-from mlia.devices.ethosu.advisor import configure_and_get_ethosu_advisor
-from mlia.devices.ethosu.operators import report as ethos_u_report
-from mlia.devices.tosa.advisor import configure_and_get_tosa_advisor
-from mlia.devices.tosa.operators import report as tosa_report
+from mlia.target.cortex_a.advisor import configure_and_get_cortexa_advisor
+from mlia.target.cortex_a.operators import report as cortex_a_report
+from mlia.target.ethos_u.advisor import configure_and_get_ethosu_advisor
+from mlia.target.ethos_u.operators import report as ethos_u_report
+from mlia.target.tosa.advisor import configure_and_get_tosa_advisor
+from mlia.target.tosa.operators import report as tosa_report
 from mlia.utils.filesystem import get_target
 
 logger = logging.getLogger(__name__)

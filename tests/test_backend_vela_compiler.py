@@ -10,7 +10,7 @@ from mlia.backend.vela.compiler import optimize_model
 from mlia.backend.vela.compiler import OptimizedModel
 from mlia.backend.vela.compiler import VelaCompiler
 from mlia.backend.vela.compiler import VelaCompilerOptions
-from mlia.devices.ethosu.config import EthosUConfiguration
+from mlia.target.ethos_u.config import EthosUConfiguration
 
 
 def test_default_vela_compiler() -> None:

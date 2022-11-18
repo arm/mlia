@@ -9,7 +9,7 @@ import pytest
 from mlia.backend.vela.compiler import optimize_model
 from mlia.backend.vela.performance import estimate_performance
 from mlia.backend.vela.performance import PerformanceMetrics
-from mlia.devices.ethosu.config import EthosUConfiguration
+from mlia.target.ethos_u.config import EthosUConfiguration
 
 
 def test_estimate_performance(test_tflite_model: Path) -> None:

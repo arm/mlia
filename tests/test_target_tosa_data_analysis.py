@@ -1,0 +1,33 @@
+# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-License-Identifier: Apache-2.0
+"""Tests for TOSA data analysis module."""
+from __future__ import annotations
+
+import pytest
+
+from mlia.backend.tosa_checker.compat import TOSACompatibilityInfo
+from mlia.core.common import DataItem
+from mlia.core.data_analysis import Fact
+from mlia.target.tosa.data_analysis import ModelIsNotTOSACompatible
+from mlia.target.tosa.data_analysis import ModelIsTOSACompatible
+from mlia.target.tosa.data_analysis import TOSADataAnalyzer
+
+
+@pytest.mark.parametrize(
+    "input_data, expected_facts",
+    [
+        [
+            TOSACompatibilityInfo(True, []),
+            [ModelIsTOSACompatible()],
+        ],
+        [
+            TOSACompatibilityInfo(False, []),
+            [ModelIsNotTOSACompatible()],
+        ],
+    ],
+)
+def test_tosa_data_analyzer(input_data: DataItem, expected_facts: list[Fact]) -> None:
+    """Test TOSA data analyzer."""
+    analyzer = TOSADataAnalyzer()
+    analyzer.analyze_data(input_data)
+    assert analyzer.get_analyzed_data() == expected_facts
