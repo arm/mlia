@@ -10,21 +10,21 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from mlia.backend.manager import BackendRunner
-from mlia.tools.metadata.common import DownloadAndInstall
-from mlia.tools.metadata.common import InstallFromPath
-from mlia.tools.metadata.corstone import BackendInfo
-from mlia.tools.metadata.corstone import BackendInstallation
-from mlia.tools.metadata.corstone import BackendInstaller
-from mlia.tools.metadata.corstone import BackendMetadata
-from mlia.tools.metadata.corstone import CompoundPathChecker
-from mlia.tools.metadata.corstone import Corstone300Installer
-from mlia.tools.metadata.corstone import get_corstone_300_installation
-from mlia.tools.metadata.corstone import get_corstone_310_installation
-from mlia.tools.metadata.corstone import get_corstone_installations
-from mlia.tools.metadata.corstone import PackagePathChecker
-from mlia.tools.metadata.corstone import PathChecker
-from mlia.tools.metadata.corstone import StaticPathChecker
+from mlia.backend.corstone.install import Corstone300Installer
+from mlia.backend.corstone.install import get_corstone_300_installation
+from mlia.backend.corstone.install import get_corstone_310_installation
+from mlia.backend.corstone.install import get_corstone_installations
+from mlia.backend.corstone.install import PackagePathChecker
+from mlia.backend.corstone.install import StaticPathChecker
+from mlia.backend.executor.runner import BackendRunner
+from mlia.backend.install import BackendInfo
+from mlia.backend.install import BackendInstallation
+from mlia.backend.install import BackendInstaller
+from mlia.backend.install import BackendMetadata
+from mlia.backend.install import CompoundPathChecker
+from mlia.backend.install import DownloadAndInstall
+from mlia.backend.install import InstallFromPath
+from mlia.backend.install import PathChecker
 
 
 @pytest.fixture(name="test_mlia_resources")
@@ -36,7 +36,7 @@ def fixture_test_mlia_resources(
     mlia_resources.mkdir()
 
     monkeypatch.setattr(
-        "mlia.tools.metadata.corstone.get_mlia_resources",
+        "mlia.backend.install.get_mlia_resources",
         MagicMock(return_value=mlia_resources),
     )
 
@@ -88,10 +88,12 @@ def test_could_be_installed_depends_on_platform(
 ) -> None:
     """Test that installation could not be installed on unsupported platform."""
     monkeypatch.setattr(
-        "mlia.tools.metadata.corstone.platform.system", MagicMock(return_value=platform)
+        "mlia.backend.install.platform.system",
+        MagicMock(return_value=platform),
     )
     monkeypatch.setattr(
-        "mlia.tools.metadata.corstone.all_paths_valid", MagicMock(return_value=True)
+        "mlia.backend.install.all_paths_valid",
+        MagicMock(return_value=True),
     )
     backend_runner_mock = MagicMock(spec=BackendRunner)
 
@@ -413,7 +415,7 @@ def test_corstone_300_installer(
     command_mock = MagicMock()
 
     monkeypatch.setattr(
-        "mlia.tools.metadata.corstone.subprocess.check_call", command_mock
+        "mlia.backend.corstone.install.subprocess.check_call", command_mock
     )
     installer = Corstone300Installer()
     result = installer(eula_agreement, tmp_path)
@@ -455,14 +457,14 @@ def test_corstone_vht_install(
 
     create_destination_and_install_mock = MagicMock()
 
+    monkeypatch.setattr("mlia.backend.install.all_files_exist", _all_files_exist)
+
     monkeypatch.setattr(
-        "mlia.tools.metadata.corstone.all_files_exist", _all_files_exist
+        "mlia.backend.executor.system.get_available_systems", lambda: []
     )
 
-    monkeypatch.setattr("mlia.backend.system.get_available_systems", lambda: [])
-
     monkeypatch.setattr(
-        "mlia.backend.system.create_destination_and_install",
+        "mlia.backend.executor.system.create_destination_and_install",
         create_destination_and_install_mock,
     )
 
@@ -478,7 +480,7 @@ def test_corstone_uninstall(
     remove_system_mock = MagicMock()
 
     monkeypatch.setattr(
-        "mlia.tools.metadata.corstone.remove_system",
+        "mlia.backend.install.remove_system",
         remove_system_mock,
     )
 

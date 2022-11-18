@@ -14,20 +14,20 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from mlia.backend.application import Application
-from mlia.backend.common import Backend
-from mlia.backend.common import BaseBackendConfig
-from mlia.backend.common import Command
-from mlia.backend.common import ConfigurationException
-from mlia.backend.common import load_config
-from mlia.backend.common import Param
-from mlia.backend.common import parse_raw_parameter
-from mlia.backend.common import remove_backend
-from mlia.backend.config import ApplicationConfig
-from mlia.backend.config import UserParamConfig
-from mlia.backend.execution import ExecutionContext
-from mlia.backend.execution import ParamResolver
-from mlia.backend.system import System
+from mlia.backend.executor.application import Application
+from mlia.backend.executor.common import Backend
+from mlia.backend.executor.common import BaseBackendConfig
+from mlia.backend.executor.common import Command
+from mlia.backend.executor.common import ConfigurationException
+from mlia.backend.executor.common import load_config
+from mlia.backend.executor.common import Param
+from mlia.backend.executor.common import parse_raw_parameter
+from mlia.backend.executor.common import remove_backend
+from mlia.backend.executor.config import ApplicationConfig
+from mlia.backend.executor.config import UserParamConfig
+from mlia.backend.executor.execution import ExecutionContext
+from mlia.backend.executor.execution import ParamResolver
+from mlia.backend.executor.system import System
 
 
 @pytest.mark.parametrize(
@@ -42,7 +42,9 @@ def test_remove_backend(
 ) -> None:
     """Test remove_backend function."""
     mock_remove_resource = MagicMock()
-    monkeypatch.setattr("mlia.backend.common.remove_resource", mock_remove_resource)
+    monkeypatch.setattr(
+        "mlia.backend.executor.common.remove_resource", mock_remove_resource
+    )
 
     with expected_exception:
         remove_backend(directory_name, "applications")
@@ -73,7 +75,7 @@ def test_load_config(
         )
         for config in configs:
             json_mock = MagicMock()
-            monkeypatch.setattr("mlia.backend.common.json.load", json_mock)
+            monkeypatch.setattr("mlia.backend.executor.common.json.load", json_mock)
             load_config(config)
             json_mock.assert_called_once()
 

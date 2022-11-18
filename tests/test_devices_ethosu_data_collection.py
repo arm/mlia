@@ -6,6 +6,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from mlia.backend.vela.compat import Operators
 from mlia.core.context import Context
 from mlia.core.data_collection import DataCollector
 from mlia.core.errors import FunctionalityNotSupportedError
@@ -18,7 +19,6 @@ from mlia.devices.ethosu.performance import NPUCycles
 from mlia.devices.ethosu.performance import OptimizationPerformanceMetrics
 from mlia.devices.ethosu.performance import PerformanceMetrics
 from mlia.nn.tensorflow.optimizations.select import OptimizationSettings
-from mlia.tools.vela_wrapper import Operators
 
 
 @pytest.mark.parametrize(

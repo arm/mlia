@@ -7,13 +7,13 @@ import logging
 import re
 from typing import cast
 
-from mlia.backend.application import Application
-from mlia.backend.application import get_application
-from mlia.backend.common import Backend
-from mlia.backend.common import ConfigurationException
-from mlia.backend.common import Param
-from mlia.backend.system import get_system
-from mlia.backend.system import System
+from mlia.backend.executor.application import Application
+from mlia.backend.executor.application import get_application
+from mlia.backend.executor.common import Backend
+from mlia.backend.executor.common import ConfigurationException
+from mlia.backend.executor.common import Param
+from mlia.backend.executor.system import get_system
+from mlia.backend.executor.system import System
 
 logger = logging.getLogger(__name__)
 

@@ -118,12 +118,12 @@ def test_get_advisor(
     [
         [
             "ethos-u55-128",
-            "mlia.tools.vela_wrapper.generate_supported_operators_report",
+            "mlia.devices.ethosu.operators.generate_supported_operators_report",
             None,
         ],
         [
             "ethos-u65-256",
-            "mlia.tools.vela_wrapper.generate_supported_operators_report",
+            "mlia.devices.ethosu.operators.generate_supported_operators_report",
             None,
         ],
         [

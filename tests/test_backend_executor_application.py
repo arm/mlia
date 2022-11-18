@@ -11,20 +11,22 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from mlia.backend.application import Application
-from mlia.backend.application import get_application
-from mlia.backend.application import get_available_application_directory_names
-from mlia.backend.application import get_available_applications
-from mlia.backend.application import get_unique_application_names
-from mlia.backend.application import install_application
-from mlia.backend.application import load_applications
-from mlia.backend.application import remove_application
-from mlia.backend.common import Command
-from mlia.backend.common import Param
-from mlia.backend.common import UserParamConfig
-from mlia.backend.config import ApplicationConfig
-from mlia.backend.config import ExtendedApplicationConfig
-from mlia.backend.config import NamedExecutionConfig
+from mlia.backend.executor.application import Application
+from mlia.backend.executor.application import get_application
+from mlia.backend.executor.application import (
+    get_available_application_directory_names,
+)
+from mlia.backend.executor.application import get_available_applications
+from mlia.backend.executor.application import get_unique_application_names
+from mlia.backend.executor.application import install_application
+from mlia.backend.executor.application import load_applications
+from mlia.backend.executor.application import remove_application
+from mlia.backend.executor.common import Command
+from mlia.backend.executor.common import Param
+from mlia.backend.executor.common import UserParamConfig
+from mlia.backend.executor.config import ApplicationConfig
+from mlia.backend.executor.config import ExtendedApplicationConfig
+from mlia.backend.executor.config import NamedExecutionConfig
 
 
 def test_get_available_application_directory_names() -> None:
@@ -151,7 +153,7 @@ def test_install_application(
     """Test application install from archive."""
     mock_create_destination_and_install = MagicMock()
     monkeypatch.setattr(
-        "mlia.backend.application.create_destination_and_install",
+        "mlia.backend.executor.application.create_destination_and_install",
         mock_create_destination_and_install,
     )
 
@@ -163,7 +165,9 @@ def test_install_application(
 def test_remove_application(monkeypatch: Any) -> None:
     """Test application removal."""
     mock_remove_backend = MagicMock()
-    monkeypatch.setattr("mlia.backend.application.remove_backend", mock_remove_backend)
+    monkeypatch.setattr(
+        "mlia.backend.executor.application.remove_backend", mock_remove_backend
+    )
 
     remove_application("some_application_directory")
     mock_remove_backend.assert_called_once()

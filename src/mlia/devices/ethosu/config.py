@@ -6,9 +6,9 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+from mlia.backend.vela.compiler import resolve_compiler_config
+from mlia.backend.vela.compiler import VelaCompilerOptions
 from mlia.devices.config import IPConfiguration
-from mlia.tools.vela_wrapper import resolve_compiler_config
-from mlia.tools.vela_wrapper import VelaCompilerOptions
 from mlia.utils.filesystem import get_profile
 from mlia.utils.filesystem import get_vela_config
 

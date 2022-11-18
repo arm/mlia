@@ -9,14 +9,14 @@ from unittest import mock
 import pytest
 from sh import ErrorReturnCode
 
-from mlia.backend.proc import Command
-from mlia.backend.proc import CommandFailedException
-from mlia.backend.proc import CommandNotFound
-from mlia.backend.proc import parse_command
-from mlia.backend.proc import print_command_stdout
-from mlia.backend.proc import run_and_wait
-from mlia.backend.proc import ShellCommand
-from mlia.backend.proc import terminate_command
+from mlia.backend.executor.proc import Command
+from mlia.backend.executor.proc import CommandFailedException
+from mlia.backend.executor.proc import CommandNotFound
+from mlia.backend.executor.proc import parse_command
+from mlia.backend.executor.proc import print_command_stdout
+from mlia.backend.executor.proc import run_and_wait
+from mlia.backend.executor.proc import ShellCommand
+from mlia.backend.executor.proc import terminate_command
 
 
 class TestShellCommand:
@@ -136,12 +136,13 @@ class TestRunAndWait:
         """Init test method."""
         self.execute_command_mock = mock.MagicMock()
         monkeypatch.setattr(
-            "mlia.backend.proc.execute_command", self.execute_command_mock
+            "mlia.backend.executor.proc.execute_command", self.execute_command_mock
         )
 
         self.terminate_command_mock = mock.MagicMock()
         monkeypatch.setattr(
-            "mlia.backend.proc.terminate_command", self.terminate_command_mock
+            "mlia.backend.executor.proc.terminate_command",
+            self.terminate_command_mock,
         )
 
     def test_if_execute_command_raises_exception(self) -> None:

@@ -13,6 +13,9 @@ from typing import Literal
 
 import pytest
 
+from mlia.backend.vela.compat import NpuSupported
+from mlia.backend.vela.compat import Operator
+from mlia.backend.vela.compat import Operators
 from mlia.core.reporting import get_reporter
 from mlia.core.reporting import produce_report
 from mlia.core.reporting import Report
@@ -26,9 +29,6 @@ from mlia.devices.ethosu.reporters import ethos_u_formatters
 from mlia.devices.ethosu.reporters import report_device_details
 from mlia.devices.ethosu.reporters import report_operators
 from mlia.devices.ethosu.reporters import report_perf_metrics
-from mlia.tools.vela_wrapper import NpuSupported
-from mlia.tools.vela_wrapper import Operator
-from mlia.tools.vela_wrapper import Operators
 from mlia.utils.console import remove_ascii_codes
 
 

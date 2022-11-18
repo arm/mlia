@@ -9,9 +9,9 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from mlia.backend.vela.compiler import VelaCompilerOptions
 from mlia.devices.ethosu.config import EthosUConfiguration
 from mlia.devices.ethosu.config import get_target
-from mlia.tools.vela_wrapper import VelaCompilerOptions
 from mlia.utils.filesystem import get_vela_config
 
 

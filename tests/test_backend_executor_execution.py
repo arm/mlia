@@ -7,16 +7,16 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from mlia.backend.application import Application
-from mlia.backend.common import UserParamConfig
-from mlia.backend.config import ApplicationConfig
-from mlia.backend.config import SystemConfig
-from mlia.backend.execution import ExecutionContext
-from mlia.backend.execution import get_application_and_system
-from mlia.backend.execution import get_application_by_name_and_system
-from mlia.backend.execution import ParamResolver
-from mlia.backend.execution import run_application
-from mlia.backend.system import load_system
+from mlia.backend.executor.application import Application
+from mlia.backend.executor.common import UserParamConfig
+from mlia.backend.executor.config import ApplicationConfig
+from mlia.backend.executor.config import SystemConfig
+from mlia.backend.executor.execution import ExecutionContext
+from mlia.backend.executor.execution import get_application_and_system
+from mlia.backend.executor.execution import get_application_by_name_and_system
+from mlia.backend.executor.execution import ParamResolver
+from mlia.backend.executor.execution import run_application
+from mlia.backend.executor.system import load_system
 
 
 def test_context_param_resolver(tmpdir: Any) -> None:
@@ -181,7 +181,7 @@ def test_context_param_resolver(tmpdir: Any) -> None:
 def test_get_application_by_name_and_system(monkeypatch: Any) -> None:
     """Test exceptional case for get_application_by_name_and_system."""
     monkeypatch.setattr(
-        "mlia.backend.execution.get_application",
+        "mlia.backend.executor.execution.get_application",
         MagicMock(return_value=[MagicMock(), MagicMock()]),
     )
 
@@ -196,7 +196,7 @@ def test_get_application_by_name_and_system(monkeypatch: Any) -> None:
 def test_get_application_and_system(monkeypatch: Any) -> None:
     """Test exceptional case for get_application_and_system."""
     monkeypatch.setattr(
-        "mlia.backend.execution.get_system", MagicMock(return_value=None)
+        "mlia.backend.executor.execution.get_system", MagicMock(return_value=None)
     )
 
     with pytest.raises(ValueError, match="System test_system is not found"):

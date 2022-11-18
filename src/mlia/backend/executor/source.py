@@ -11,13 +11,13 @@ from abc import abstractmethod
 from pathlib import Path
 from tarfile import TarFile
 
-from mlia.backend.common import BACKEND_CONFIG_FILE
-from mlia.backend.common import ConfigurationException
-from mlia.backend.common import get_backend_config
-from mlia.backend.common import is_backend_directory
-from mlia.backend.common import load_config
-from mlia.backend.config import BackendConfig
-from mlia.backend.fs import copy_directory_content
+from mlia.backend.executor.common import BACKEND_CONFIG_FILE
+from mlia.backend.executor.common import ConfigurationException
+from mlia.backend.executor.common import get_backend_config
+from mlia.backend.executor.common import is_backend_directory
+from mlia.backend.executor.common import load_config
+from mlia.backend.executor.config import BackendConfig
+from mlia.backend.executor.fs import copy_directory_content
 
 
 class Source(ABC):

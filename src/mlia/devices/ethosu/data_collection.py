@@ -6,6 +6,8 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
+from mlia.backend.vela.compat import Operators
+from mlia.backend.vela.compat import supported_operators
 from mlia.core.context import Context
 from mlia.core.data_collection import ContextAwareDataCollector
 from mlia.core.errors import FunctionalityNotSupportedError
@@ -20,8 +22,6 @@ from mlia.nn.tensorflow.config import KerasModel
 from mlia.nn.tensorflow.optimizations.select import get_optimizer
 from mlia.nn.tensorflow.optimizations.select import OptimizationSettings
 from mlia.nn.tensorflow.utils import save_keras_model
-from mlia.tools.vela_wrapper import Operators
-from mlia.tools.vela_wrapper import supported_operators
 from mlia.utils.logging import log_action
 from mlia.utils.types import is_list_of
 

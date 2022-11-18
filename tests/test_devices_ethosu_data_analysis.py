@@ -5,6 +5,9 @@ from __future__ import annotations
 
 import pytest
 
+from mlia.backend.vela.compat import NpuSupported
+from mlia.backend.vela.compat import Operator
+from mlia.backend.vela.compat import Operators
 from mlia.core.common import DataItem
 from mlia.core.data_analysis import Fact
 from mlia.devices.ethosu.config import EthosUConfiguration
@@ -20,9 +23,6 @@ from mlia.devices.ethosu.performance import NPUCycles
 from mlia.devices.ethosu.performance import OptimizationPerformanceMetrics
 from mlia.devices.ethosu.performance import PerformanceMetrics
 from mlia.nn.tensorflow.optimizations.select import OptimizationSettings
-from mlia.tools.vela_wrapper import NpuSupported
-from mlia.tools.vela_wrapper import Operator
-from mlia.tools.vela_wrapper import Operators
 
 
 def test_perf_metrics_diff() -> None:

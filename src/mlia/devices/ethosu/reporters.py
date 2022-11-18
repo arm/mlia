@@ -7,6 +7,8 @@ from collections import defaultdict
 from typing import Any
 from typing import Callable
 
+from mlia.backend.vela.compat import Operator
+from mlia.backend.vela.compat import Operators
 from mlia.core.advice_generation import Advice
 from mlia.core.reporters import report_advice
 from mlia.core.reporting import BytesCell
@@ -23,8 +25,6 @@ from mlia.core.reporting import SingleRow
 from mlia.core.reporting import Table
 from mlia.devices.ethosu.config import EthosUConfiguration
 from mlia.devices.ethosu.performance import PerformanceMetrics
-from mlia.tools.vela_wrapper import Operator
-from mlia.tools.vela_wrapper import Operators
 from mlia.utils.console import style_improvement
 from mlia.utils.types import is_list_of
 

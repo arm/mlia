@@ -8,17 +8,17 @@ from typing import Any
 from typing import cast
 from typing import List
 
-from mlia.backend.common import Backend
-from mlia.backend.common import ConfigurationException
-from mlia.backend.common import get_backend_configs
-from mlia.backend.common import get_backend_directories
-from mlia.backend.common import load_config
-from mlia.backend.common import remove_backend
-from mlia.backend.config import SystemConfig
-from mlia.backend.fs import get_backends_path
-from mlia.backend.proc import run_and_wait
-from mlia.backend.source import create_destination_and_install
-from mlia.backend.source import get_source
+from mlia.backend.executor.common import Backend
+from mlia.backend.executor.common import ConfigurationException
+from mlia.backend.executor.common import get_backend_configs
+from mlia.backend.executor.common import get_backend_directories
+from mlia.backend.executor.common import load_config
+from mlia.backend.executor.common import remove_backend
+from mlia.backend.executor.config import SystemConfig
+from mlia.backend.executor.fs import get_backends_path
+from mlia.backend.executor.proc import run_and_wait
+from mlia.backend.executor.source import create_destination_and_install
+from mlia.backend.executor.source import get_source
 
 
 class System(Backend):

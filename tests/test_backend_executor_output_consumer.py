@@ -9,8 +9,8 @@ from typing import Any
 
 import pytest
 
-from mlia.backend.output_consumer import Base64OutputConsumer
-from mlia.backend.output_consumer import OutputConsumer
+from mlia.backend.executor.output_consumer import Base64OutputConsumer
+from mlia.backend.executor.output_consumer import OutputConsumer
 
 
 OUTPUT_MATCH_ALL = bytearray(

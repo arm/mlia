@@ -9,8 +9,13 @@ from enum import Enum
 from pathlib import Path
 from typing import Union
 
-import mlia.backend.manager as backend_manager
-import mlia.tools.vela_wrapper as vela
+import mlia.backend.vela.compiler as vela_comp
+import mlia.backend.vela.performance as vela_perf
+from mlia.backend.corstone.performance import DeviceInfo
+from mlia.backend.corstone.performance import estimate_performance
+from mlia.backend.corstone.performance import ModelInfo
+from mlia.backend.install import is_supported
+from mlia.backend.install import supported_backends
 from mlia.core.context import Context
 from mlia.core.performance import PerformanceEstimator
 from mlia.devices.ethosu.config import EthosUConfiguration
@@ -133,7 +138,7 @@ class VelaPerformanceEstimator(
                 else model
             )
 
-            vela_perf_metrics = vela.estimate_performance(
+            vela_perf_metrics = vela_perf.estimate_performance(
                 model_path, self.device.compiler_options
             )
 
@@ -177,17 +182,17 @@ class CorstonePerformanceEstimator(
                 f"{model_path.stem}_vela.tflite"
             )
 
-            vela.optimize_model(
+            vela_comp.optimize_model(
                 model_path, self.device.compiler_options, optimized_model_path
             )
 
-            model_info = backend_manager.ModelInfo(model_path=optimized_model_path)
-            device_info = backend_manager.DeviceInfo(
+            model_info = ModelInfo(model_path=optimized_model_path)
+            device_info = DeviceInfo(
                 device_type=self.device.target,  # type: ignore
                 mac=self.device.mac,
             )
 
-            corstone_perf_metrics = backend_manager.estimate_performance(
+            corstone_perf_metrics = estimate_performance(
                 model_info, device_info, self.backend
             )
 
@@ -218,10 +223,10 @@ class EthosUPerformanceEstimator(
         if backends is None:
             backends = ["Vela"]  # Only Vela is always available as default
         for backend in backends:
-            if backend != "Vela" and not backend_manager.is_supported(backend):
+            if backend != "Vela" and not is_supported(backend):
                 raise ValueError(
                     f"Unsupported backend '{backend}'. "
-                    f"Only 'Vela' and {backend_manager.supported_backends()} "
+                    f"Only 'Vela' and {supported_backends()} "
                     "are supported."
                 )
         self.backends = set(backends)
@@ -241,7 +246,7 @@ class EthosUPerformanceEstimator(
             if backend == "Vela":
                 vela_estimator = VelaPerformanceEstimator(self.context, self.device)
                 memory_usage = vela_estimator.estimate(tflite_model)
-            elif backend in backend_manager.supported_backends():
+            elif backend in supported_backends():
                 corstone_estimator = CorstonePerformanceEstimator(
                     self.context, self.device, backend
                 )

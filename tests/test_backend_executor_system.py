@@ -10,17 +10,17 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from mlia.backend.common import Command
-from mlia.backend.common import ConfigurationException
-from mlia.backend.common import Param
-from mlia.backend.common import UserParamConfig
-from mlia.backend.config import SystemConfig
-from mlia.backend.system import get_available_systems
-from mlia.backend.system import get_system
-from mlia.backend.system import install_system
-from mlia.backend.system import load_system
-from mlia.backend.system import remove_system
-from mlia.backend.system import System
+from mlia.backend.executor.common import Command
+from mlia.backend.executor.common import ConfigurationException
+from mlia.backend.executor.common import Param
+from mlia.backend.executor.common import UserParamConfig
+from mlia.backend.executor.config import SystemConfig
+from mlia.backend.executor.system import get_available_systems
+from mlia.backend.executor.system import get_system
+from mlia.backend.executor.system import install_system
+from mlia.backend.executor.system import load_system
+from mlia.backend.executor.system import remove_system
+from mlia.backend.executor.system import System
 
 
 def test_get_available_systems() -> None:
@@ -95,7 +95,7 @@ def test_install_system(
     """Test system installation from archive."""
     mock_create_destination_and_install = MagicMock()
     monkeypatch.setattr(
-        "mlia.backend.system.create_destination_and_install",
+        "mlia.backend.executor.system.create_destination_and_install",
         mock_create_destination_and_install,
     )
 
@@ -108,7 +108,9 @@ def test_install_system(
 def test_remove_system(monkeypatch: Any) -> None:
     """Test system removal."""
     mock_remove_backend = MagicMock()
-    monkeypatch.setattr("mlia.backend.system.remove_backend", mock_remove_backend)
+    monkeypatch.setattr(
+        "mlia.backend.executor.system.remove_backend", mock_remove_backend
+    )
     remove_system("some_system_dir")
     mock_remove_backend.assert_called_once()
 

@@ -19,14 +19,14 @@ from typing import Match
 from typing import NamedTuple
 from typing import Pattern
 
-from mlia.backend.config import BackendConfig
-from mlia.backend.config import BaseBackendConfig
-from mlia.backend.config import NamedExecutionConfig
-from mlia.backend.config import UserParamConfig
-from mlia.backend.config import UserParamsConfig
-from mlia.backend.fs import get_backends_path
-from mlia.backend.fs import remove_resource
-from mlia.backend.fs import ResourceType
+from mlia.backend.executor.config import BackendConfig
+from mlia.backend.executor.config import BaseBackendConfig
+from mlia.backend.executor.config import NamedExecutionConfig
+from mlia.backend.executor.config import UserParamConfig
+from mlia.backend.executor.config import UserParamsConfig
+from mlia.backend.executor.fs import get_backends_path
+from mlia.backend.executor.fs import remove_resource
+from mlia.backend.executor.fs import ResourceType
 
 
 BACKEND_CONFIG_FILE: Final[str] = "backend-config.json"

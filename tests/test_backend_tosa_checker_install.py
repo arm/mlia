@@ -6,22 +6,10 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from mlia.tools.metadata.common import DownloadAndInstall
-from mlia.tools.metadata.common import InstallFromPath
-from mlia.tools.metadata.py_package import get_pypackage_backend_installations
-from mlia.tools.metadata.py_package import get_tosa_backend_installation
-from mlia.tools.metadata.py_package import PyPackageBackendInstallation
-
-
-def test_get_pypackage_backends() -> None:
-    """Test function get_pypackage_backends."""
-    backend_installs = get_pypackage_backend_installations()
-
-    assert isinstance(backend_installs, list)
-    assert len(backend_installs) == 1
-
-    tosa_installation = backend_installs[0]
-    assert isinstance(tosa_installation, PyPackageBackendInstallation)
+from mlia.backend.install import DownloadAndInstall
+from mlia.backend.install import InstallFromPath
+from mlia.backend.install import PyPackageBackendInstallation
+from mlia.backend.tosa_checker.install import get_tosa_backend_installation
 
 
 def test_get_tosa_backend_installation(
@@ -30,7 +18,7 @@ def test_get_tosa_backend_installation(
     """Test function get_tosa_backend_installation."""
     mock_package_manager = MagicMock()
     monkeypatch.setattr(
-        "mlia.tools.metadata.py_package.get_package_manager",
+        "mlia.backend.install.get_package_manager",
         lambda: mock_package_manager,
     )
 

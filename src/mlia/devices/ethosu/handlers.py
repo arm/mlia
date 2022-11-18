@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import logging
 
+from mlia.backend.vela.compat import Operators
 from mlia.core.events import CollectedDataEvent
 from mlia.core.handlers import WorkflowEventsHandler
 from mlia.core.typing import PathOrFileLike
@@ -13,7 +14,6 @@ from mlia.devices.ethosu.events import EthosUAdvisorStartedEvent
 from mlia.devices.ethosu.performance import OptimizationPerformanceMetrics
 from mlia.devices.ethosu.performance import PerformanceMetrics
 from mlia.devices.ethosu.reporters import ethos_u_formatters
-from mlia.tools.vela_wrapper import Operators
 
 logger = logging.getLogger(__name__)
 

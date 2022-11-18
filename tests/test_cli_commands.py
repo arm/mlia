@@ -10,6 +10,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from mlia.backend.manager import DefaultInstallationManager
 from mlia.cli.commands import backend_install
 from mlia.cli.commands import backend_list
 from mlia.cli.commands import backend_uninstall
@@ -21,7 +22,6 @@ from mlia.devices.ethosu.config import EthosUConfiguration
 from mlia.devices.ethosu.performance import MemoryUsage
 from mlia.devices.ethosu.performance import NPUCycles
 from mlia.devices.ethosu.performance import PerformanceMetrics
-from mlia.tools.metadata.common import DefaultInstallationManager
 
 
 def test_operators_expected_parameters(sample_context: ExecutionContext) -> None:

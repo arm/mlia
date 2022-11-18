@@ -3,7 +3,7 @@
 """Operators module."""
 import logging
 
-from mlia.tools import vela_wrapper
+from mlia.backend.vela.compat import generate_supported_operators_report
 
 
 logger = logging.getLogger(__name__)
@@ -11,4 +11,4 @@ logger = logging.getLogger(__name__)
 
 def report() -> None:
     """Generate supported operators report."""
-    vela_wrapper.generate_supported_operators_report()
+    generate_supported_operators_report()

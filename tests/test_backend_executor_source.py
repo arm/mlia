@@ -10,11 +10,11 @@ from unittest.mock import patch
 
 import pytest
 
-from mlia.backend.common import ConfigurationException
-from mlia.backend.source import create_destination_and_install
-from mlia.backend.source import DirectorySource
-from mlia.backend.source import get_source
-from mlia.backend.source import TarArchiveSource
+from mlia.backend.executor.common import ConfigurationException
+from mlia.backend.executor.source import create_destination_and_install
+from mlia.backend.executor.source import DirectorySource
+from mlia.backend.executor.source import get_source
+from mlia.backend.executor.source import TarArchiveSource
 
 
 def test_create_destination_and_install(test_systems_path: Path, tmpdir: Any) -> None:
@@ -27,7 +27,10 @@ def test_create_destination_and_install(test_systems_path: Path, tmpdir: Any) ->
     assert (resources / "system1").is_dir()
 
 
-@patch("mlia.backend.source.DirectorySource.create_destination", return_value=False)
+@patch(
+    "mlia.backend.executor.source.DirectorySource.create_destination",
+    return_value=False,
+)
 def test_create_destination_and_install_if_dest_creation_not_required(
     mock_ds_create_destination: Any, tmpdir: Any
 ) -> None:

@@ -1,29 +1,22 @@
 # SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
-"""Module for Corstone based FVPs.
-
-The import of subprocess module raises a B404 bandit error. MLIA usage of
-subprocess is needed and can be considered safe hence disabling the security
-check.
-"""
+"""Module for installation process."""
 from __future__ import annotations
 
 import logging
 import platform
-import subprocess  # nosec
 import tarfile
+from abc import ABC
+from abc import abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
 from typing import Iterable
 from typing import Optional
+from typing import Union
 
-import mlia.backend.manager as backend_manager
-from mlia.backend.system import remove_system
-from mlia.tools.metadata.common import DownloadAndInstall
-from mlia.tools.metadata.common import Installation
-from mlia.tools.metadata.common import InstallationType
-from mlia.tools.metadata.common import InstallFromPath
+from mlia.backend.executor.runner import BackendRunner
+from mlia.backend.executor.system import remove_system
 from mlia.utils.download import DownloadArtifact
 from mlia.utils.filesystem import all_files_exist
 from mlia.utils.filesystem import all_paths_valid
@@ -31,9 +24,122 @@ from mlia.utils.filesystem import copy_all
 from mlia.utils.filesystem import get_mlia_resources
 from mlia.utils.filesystem import temp_directory
 from mlia.utils.filesystem import working_directory
+from mlia.utils.py_manager import get_package_manager
 
 
 logger = logging.getLogger(__name__)
+
+
+# Mapping backend -> device_type -> system_name
+_SUPPORTED_SYSTEMS = {
+    "Corstone-300": {
+        "ethos-u55": "Corstone-300: Cortex-M55+Ethos-U55",
+        "ethos-u65": "Corstone-300: Cortex-M55+Ethos-U65",
+    },
+    "Corstone-310": {
+        "ethos-u55": "Corstone-310: Cortex-M85+Ethos-U55",
+        "ethos-u65": "Corstone-310: Cortex-M85+Ethos-U65",
+    },
+}
+
+# Mapping system_name -> application
+_SYSTEM_TO_APP_MAP = {
+    "Corstone-300: Cortex-M55+Ethos-U55": "Generic Inference Runner: Ethos-U55",
+    "Corstone-300: Cortex-M55+Ethos-U65": "Generic Inference Runner: Ethos-U65",
+    "Corstone-310: Cortex-M85+Ethos-U55": "Generic Inference Runner: Ethos-U55",
+    "Corstone-310: Cortex-M85+Ethos-U65": "Generic Inference Runner: Ethos-U65",
+}
+
+
+def get_system_name(backend: str, device_type: str) -> str:
+    """Get the system name for the given backend and device type."""
+    return _SUPPORTED_SYSTEMS[backend][device_type]
+
+
+def get_application_name(system_name: str) -> str:
+    """Get application name for the provided system name."""
+    return _SYSTEM_TO_APP_MAP[system_name]
+
+
+def is_supported(backend: str, device_type: str | None = None) -> bool:
+    """Check if the backend (and optionally device type) is supported."""
+    if device_type is None:
+        return backend in _SUPPORTED_SYSTEMS
+
+    try:
+        get_system_name(backend, device_type)
+        return True
+    except KeyError:
+        return False
+
+
+def supported_backends() -> list[str]:
+    """Get a list of all backends supported by the backend manager."""
+    return list(_SUPPORTED_SYSTEMS.keys())
+
+
+def get_all_system_names(backend: str) -> list[str]:
+    """Get all systems supported by the backend."""
+    return list(_SUPPORTED_SYSTEMS.get(backend, {}).values())
+
+
+def get_all_application_names(backend: str) -> list[str]:
+    """Get all applications supported by the backend."""
+    app_set = {_SYSTEM_TO_APP_MAP[sys] for sys in get_all_system_names(backend)}
+    return list(app_set)
+
+
+@dataclass
+class InstallFromPath:
+    """Installation from the local path."""
+
+    backend_path: Path
+
+
+@dataclass
+class DownloadAndInstall:
+    """Download and install."""
+
+    eula_agreement: bool = True
+
+
+InstallationType = Union[InstallFromPath, DownloadAndInstall]
+
+
+class Installation(ABC):
+    """Base class for the installation process of the backends."""
+
+    @property
+    @abstractmethod
+    def name(self) -> str:
+        """Return name of the backend."""
+
+    @property
+    @abstractmethod
+    def description(self) -> str:
+        """Return description of the backend."""
+
+    @property
+    @abstractmethod
+    def could_be_installed(self) -> bool:
+        """Return true if backend could be installed in current environment."""
+
+    @property
+    @abstractmethod
+    def already_installed(self) -> bool:
+        """Return true if backend is already installed."""
+
+    @abstractmethod
+    def supports(self, install_type: InstallationType) -> bool:
+        """Return true if installation supports requested installation type."""
+
+    @abstractmethod
+    def install(self, install_type: InstallationType) -> None:
+        """Install the backend."""
+
+    @abstractmethod
+    def uninstall(self) -> None:
+        """Uninstall the backend."""
 
 
 @dataclass
@@ -75,8 +181,8 @@ class BackendMetadata:
         self.download_artifact = download_artifact
         self.supported_platforms = supported_platforms
 
-        self.expected_systems = backend_manager.get_all_system_names(name)
-        self.expected_apps = backend_manager.get_all_application_names(name)
+        self.expected_systems = get_all_system_names(name)
+        self.expected_apps = get_all_application_names(name)
 
     @property
     def expected_resources(self) -> Iterable[Path]:
@@ -99,7 +205,7 @@ class BackendInstallation(Installation):
 
     def __init__(
         self,
-        backend_runner: backend_manager.BackendRunner,
+        backend_runner: BackendRunner,
         metadata: BackendMetadata,
         path_checker: PathChecker,
         backend_installer: BackendInstaller | None,
@@ -288,130 +394,57 @@ class CompoundPathChecker:
         return next(first_resolved_backend_info, None)
 
 
-class Corstone300Installer:
-    """Helper class that wraps Corstone 300 installation logic."""
+class PyPackageBackendInstallation(Installation):
+    """Backend based on the python package."""
 
-    def __call__(self, eula_agreement: bool, dist_dir: Path) -> Path:
-        """Install Corstone-300 and return path to the models."""
-        with working_directory(dist_dir):
-            install_dir = "corstone-300"
-            try:
-                fvp_install_cmd = [
-                    "./FVP_Corstone_SSE-300.sh",
-                    "-q",
-                    "-d",
-                    install_dir,
-                ]
-                if not eula_agreement:
-                    fvp_install_cmd += [
-                        "--nointeractive",
-                        "--i-agree-to-the-contained-eula",
-                    ]
+    def __init__(
+        self,
+        name: str,
+        description: str,
+        packages_to_install: list[str],
+        packages_to_uninstall: list[str],
+        expected_packages: list[str],
+    ) -> None:
+        """Init the backend installation."""
+        self._name = name
+        self._description = description
+        self._packages_to_install = packages_to_install
+        self._packages_to_uninstall = packages_to_uninstall
+        self._expected_packages = expected_packages
 
-                # The following line raises a B603 error for bandit. In this
-                # specific case, the input is pretty much static and cannot be
-                # changed byt the user hence disabling the security check for
-                # this instance
-                subprocess.check_call(fvp_install_cmd)  # nosec
-            except subprocess.CalledProcessError as err:
-                raise Exception(
-                    "Error occurred during Corstone-300 installation"
-                ) from err
+        self.package_manager = get_package_manager()
 
-            return dist_dir / install_dir
+    @property
+    def name(self) -> str:
+        """Return name of the backend."""
+        return self._name
 
+    @property
+    def description(self) -> str:
+        """Return description of the backend."""
+        return self._description
 
-def get_corstone_300_installation() -> Installation:
-    """Get Corstone-300 installation."""
-    corstone_300 = BackendInstallation(
-        backend_runner=backend_manager.BackendRunner(),
-        # pylint: disable=line-too-long
-        metadata=BackendMetadata(
-            name="Corstone-300",
-            description="Corstone-300 FVP",
-            system_config="backend_configs/systems/corstone-300/backend-config.json",
-            apps_resources=[],
-            fvp_dir_name="corstone_300",
-            download_artifact=DownloadArtifact(
-                name="Corstone-300 FVP",
-                url="https://developer.arm.com/-/media/Arm%20Developer%20Community/Downloads/OSS/FVP/Corstone-300/FVP_Corstone_SSE-300_11.16_26.tgz",
-                filename="FVP_Corstone_SSE-300_11.16_26.tgz",
-                version="11.16_26",
-                sha256_hash="e26139be756b5003a30d978c629de638aed1934d597dc24a17043d4708e934d7",
-            ),
-            supported_platforms=["Linux"],
-        ),
-        # pylint: enable=line-too-long
-        path_checker=CompoundPathChecker(
-            PackagePathChecker(
-                expected_files=[
-                    "models/Linux64_GCC-6.4/FVP_Corstone_SSE-300_Ethos-U55",
-                    "models/Linux64_GCC-6.4/FVP_Corstone_SSE-300_Ethos-U65",
-                ],
-                backend_subfolder="models/Linux64_GCC-6.4",
-            ),
-            StaticPathChecker(
-                static_backend_path=Path("/opt/VHT"),
-                expected_files=[
-                    "VHT_Corstone_SSE-300_Ethos-U55",
-                    "VHT_Corstone_SSE-300_Ethos-U65",
-                ],
-                copy_source=False,
-                system_config=(
-                    "backend_configs/systems/corstone-300-vht/backend-config.json"
-                ),
-            ),
-        ),
-        backend_installer=Corstone300Installer(),
-    )
+    @property
+    def could_be_installed(self) -> bool:
+        """Check if backend could be installed."""
+        return True
 
-    return corstone_300
+    @property
+    def already_installed(self) -> bool:
+        """Check if backend already installed."""
+        return self.package_manager.packages_installed(self._expected_packages)
 
+    def supports(self, install_type: InstallationType) -> bool:
+        """Return true if installation supports requested installation type."""
+        return isinstance(install_type, DownloadAndInstall)
 
-def get_corstone_310_installation() -> Installation:
-    """Get Corstone-310 installation."""
-    corstone_310 = BackendInstallation(
-        backend_runner=backend_manager.BackendRunner(),
-        # pylint: disable=line-too-long
-        metadata=BackendMetadata(
-            name="Corstone-310",
-            description="Corstone-310 FVP",
-            system_config="backend_configs/systems/corstone-310/backend-config.json",
-            apps_resources=[],
-            fvp_dir_name="corstone_310",
-            download_artifact=None,
-            supported_platforms=["Linux"],
-        ),
-        # pylint: enable=line-too-long
-        path_checker=CompoundPathChecker(
-            PackagePathChecker(
-                expected_files=[
-                    "models/Linux64_GCC-9.3/FVP_Corstone_SSE-310",
-                    "models/Linux64_GCC-9.3/FVP_Corstone_SSE-310_Ethos-U65",
-                ],
-                backend_subfolder="models/Linux64_GCC-9.3",
-            ),
-            StaticPathChecker(
-                static_backend_path=Path("/opt/VHT"),
-                expected_files=[
-                    "VHT_Corstone_SSE-310",
-                    "VHT_Corstone_SSE-310_Ethos-U65",
-                ],
-                copy_source=False,
-                system_config=(
-                    "backend_configs/systems/corstone-310-vht/backend-config.json"
-                ),
-            ),
-        ),
-        backend_installer=None,
-    )
+    def install(self, install_type: InstallationType) -> None:
+        """Install the backend."""
+        if not self.supports(install_type):
+            raise Exception(f"Unsupported installation type {install_type}")
 
-    return corstone_310
+        self.package_manager.install(self._packages_to_install)
 
-
-def get_corstone_installations() -> list[Installation]:
-    """Get Corstone installations."""
-    return [
-        get_corstone_300_installation(),
-        get_corstone_310_installation(),
-    ]
+    def uninstall(self) -> None:
+        """Uninstall the backend."""
+        self.package_manager.uninstall(self._packages_to_uninstall)

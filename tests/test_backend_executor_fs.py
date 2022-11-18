@@ -10,12 +10,12 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from mlia.backend.fs import get_backends_path
-from mlia.backend.fs import recreate_directory
-from mlia.backend.fs import remove_directory
-from mlia.backend.fs import remove_resource
-from mlia.backend.fs import ResourceType
-from mlia.backend.fs import valid_for_filename
+from mlia.backend.executor.fs import get_backends_path
+from mlia.backend.executor.fs import recreate_directory
+from mlia.backend.executor.fs import remove_directory
+from mlia.backend.executor.fs import remove_resource
+from mlia.backend.executor.fs import ResourceType
+from mlia.backend.executor.fs import valid_for_filename
 
 
 @pytest.mark.parametrize(
@@ -39,10 +39,12 @@ def test_remove_resource_wrong_directory(
 ) -> None:
     """Test removing resource with wrong directory."""
     mock_get_resources = MagicMock(return_value=test_applications_path)
-    monkeypatch.setattr("mlia.backend.fs.get_backends_path", mock_get_resources)
+    monkeypatch.setattr(
+        "mlia.backend.executor.fs.get_backends_path", mock_get_resources
+    )
 
     mock_shutil_rmtree = MagicMock()
-    monkeypatch.setattr("mlia.backend.fs.shutil.rmtree", mock_shutil_rmtree)
+    monkeypatch.setattr("mlia.backend.executor.fs.shutil.rmtree", mock_shutil_rmtree)
 
     with pytest.raises(Exception, match="Resource .* does not exist"):
         remove_resource("unknown", "applications")
@@ -56,10 +58,12 @@ def test_remove_resource_wrong_directory(
 def test_remove_resource(monkeypatch: Any, test_applications_path: Path) -> None:
     """Test removing resource data."""
     mock_get_resources = MagicMock(return_value=test_applications_path)
-    monkeypatch.setattr("mlia.backend.fs.get_backends_path", mock_get_resources)
+    monkeypatch.setattr(
+        "mlia.backend.executor.fs.get_backends_path", mock_get_resources
+    )
 
     mock_shutil_rmtree = MagicMock()
-    monkeypatch.setattr("mlia.backend.fs.shutil.rmtree", mock_shutil_rmtree)
+    monkeypatch.setattr("mlia.backend.executor.fs.shutil.rmtree", mock_shutil_rmtree)
 
     remove_resource("application1", "applications")
     mock_shutil_rmtree.assert_called_once()

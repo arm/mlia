@@ -21,7 +21,7 @@ from sh import CommandNotFound
 from sh import ErrorReturnCode
 from sh import RunningCommand
 
-from mlia.backend.fs import valid_for_filename
+from mlia.backend.executor.fs import valid_for_filename
 
 logger = logging.getLogger(__name__)
 

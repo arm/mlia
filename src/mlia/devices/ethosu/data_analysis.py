@@ -6,12 +6,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from functools import singledispatchmethod
 
+from mlia.backend.vela.compat import Operators
 from mlia.core.common import DataItem
 from mlia.core.data_analysis import Fact
 from mlia.core.data_analysis import FactExtractor
 from mlia.devices.ethosu.performance import OptimizationPerformanceMetrics
 from mlia.nn.tensorflow.optimizations.select import OptimizationSettings
-from mlia.tools.vela_wrapper import Operators
 
 
 @dataclass

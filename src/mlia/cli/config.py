@@ -6,18 +6,19 @@ from __future__ import annotations
 import logging
 from functools import lru_cache
 
-import mlia.backend.manager as backend_manager
-from mlia.tools.metadata.common import DefaultInstallationManager
-from mlia.tools.metadata.common import InstallationManager
-from mlia.tools.metadata.corstone import get_corstone_installations
-from mlia.tools.metadata.py_package import get_pypackage_backend_installations
+from mlia.backend.corstone.install import get_corstone_installations
+from mlia.backend.install import supported_backends
+from mlia.backend.manager import DefaultInstallationManager
+from mlia.backend.manager import InstallationManager
+from mlia.backend.tosa_checker.install import get_tosa_backend_installation
 
 logger = logging.getLogger(__name__)
 
 
 def get_installation_manager(noninteractive: bool = False) -> InstallationManager:
     """Return installation manager."""
-    backends = get_corstone_installations() + get_pypackage_backend_installations()
+    backends = get_corstone_installations()
+    backends.append(get_tosa_backend_installation())
 
     return DefaultInstallationManager(backends, noninteractive=noninteractive)
 
@@ -31,7 +32,7 @@ def get_available_backends() -> list[str]:
     manager = get_installation_manager()
     available_backends.extend(
         backend
-        for backend in backend_manager.supported_backends()
+        for backend in supported_backends()
         if manager.backend_installed(backend)
     )
 
