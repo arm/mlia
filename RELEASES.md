@@ -46,6 +46,14 @@ scheme.
 * Define incident response plan (MLIA-496)
 * Enable testing for aarch64 (MLIA-584/MLIA-599)
 
+### Known issues
+
+* TOSA operator compatibility might raise a few errors after "Checking operator
+  compatibility". These are known errors due to some issues present in
+  TensorFlow 2.9 but they don't affect the correct result of the operator
+  compatibility (MLIA-722/MLIA-723). This will be fixed in a future release of
+  MLIA.
+
 ## Release 0.4.0
 
 ### Feature changes
