@@ -350,7 +350,7 @@ def test_commands_execution_backend_main(
             [
                 "Execution finished with error: Error",
                 f"Please check the log files in the {Path.cwd()/'mlia_output/logs'} "
-                "for more details, or enable verbose mode",
+                "for more details, or enable verbose mode (--verbose)",
             ],
         ],
         [

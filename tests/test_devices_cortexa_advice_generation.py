@@ -116,20 +116,22 @@ BACKEND_INFO = (
                         "requires special initialization of TFLiteConverter and "
                         "TensorFlow Lite run-time.",
                         "Please refer to the TensorFlow documentation for "
-                        "more details.",
+                        "more details: "
+                        "https://www.tensorflow.org/lite/guide/ops_select",
                         "Note, such models are not supported by "
                         "the ML Inference Advisor.",
                     ]
                 ),
                 Advice(
                     [
-                        "The following operators appears to be custom and not natively "
+                        "The following operators appear to be custom and not natively "
                         "supported by TensorFlow Lite: custom_op1, custom_op2.",
                         "Using custom operators in TensorFlow Lite model "
                         "requires special initialization of TFLiteConverter and "
                         "TensorFlow Lite run-time.",
                         "Please refer to the TensorFlow documentation for "
-                        "more details.",
+                        "more details: "
+                        "https://www.tensorflow.org/lite/guide/ops_custom",
                         "Note, such models are not supported by "
                         "the ML Inference Advisor.",
                     ]

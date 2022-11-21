@@ -97,7 +97,8 @@ class CortexAAdviceProducer(FactBasedAdviceProducer):
                     "Using select TensorFlow operators in TensorFlow Lite model "
                     "requires special initialization of TFLiteConverter and "
                     "TensorFlow Lite run-time.",
-                    "Please refer to the TensorFlow documentation for more details.",
+                    "Please refer to the TensorFlow documentation for more "
+                    "details: https://www.tensorflow.org/lite/guide/ops_select",
                     "Note, such models are not supported by the ML Inference Advisor.",
                 ]
             )
@@ -105,13 +106,14 @@ class CortexAAdviceProducer(FactBasedAdviceProducer):
         if data_item.custom_ops:
             self.add_advice(
                 [
-                    "The following operators appears to be custom and not natively "
+                    "The following operators appear to be custom and not natively "
                     "supported by TensorFlow Lite: "
                     f"{', '.join(data_item.custom_ops)}.",
                     "Using custom operators in TensorFlow Lite model "
                     "requires special initialization of TFLiteConverter and "
                     "TensorFlow Lite run-time.",
-                    "Please refer to the TensorFlow documentation for more details.",
+                    "Please refer to the TensorFlow documentation for more "
+                    "details: https://www.tensorflow.org/lite/guide/ops_custom",
                     "Note, such models are not supported by the ML Inference Advisor.",
                 ]
             )

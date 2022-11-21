@@ -236,7 +236,7 @@ def run_command(args: argparse.Namespace) -> int:
             f"Please check the log files in the {ctx.logs_path} for more details"
         )
         if not ctx.verbose:
-            err_advice_message += ", or enable verbose mode"
+            err_advice_message += ", or enable verbose mode (--verbose)"
 
         logger.error(err_advice_message)
 
