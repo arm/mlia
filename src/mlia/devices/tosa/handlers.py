@@ -6,12 +6,12 @@ from __future__ import annotations
 
 import logging
 
+from mlia.backend.tosa_checker.compat import TOSACompatibilityInfo
 from mlia.core.events import CollectedDataEvent
 from mlia.core.handlers import WorkflowEventsHandler
 from mlia.core.typing import PathOrFileLike
 from mlia.devices.tosa.events import TOSAAdvisorEventHandler
 from mlia.devices.tosa.events import TOSAAdvisorStartedEvent
-from mlia.devices.tosa.operators import TOSACompatibilityInfo
 from mlia.devices.tosa.reporters import tosa_formatters
 
 logger = logging.getLogger(__name__)

@@ -3,9 +3,9 @@
 """TOSA data collection module."""
 from pathlib import Path
 
+from mlia.backend.tosa_checker.compat import get_tosa_compatibility_info
+from mlia.backend.tosa_checker.compat import TOSACompatibilityInfo
 from mlia.core.data_collection import ContextAwareDataCollector
-from mlia.devices.tosa.operators import get_tosa_compatibility_info
-from mlia.devices.tosa.operators import TOSACompatibilityInfo
 from mlia.nn.tensorflow.config import get_tflite_model
 from mlia.utils.logging import log_action
 

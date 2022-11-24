@@ -5,12 +5,12 @@ from __future__ import annotations
 
 import pytest
 
+from mlia.backend.tosa_checker.compat import TOSACompatibilityInfo
 from mlia.core.common import DataItem
 from mlia.core.data_analysis import Fact
 from mlia.devices.tosa.data_analysis import ModelIsNotTOSACompatible
 from mlia.devices.tosa.data_analysis import ModelIsTOSACompatible
 from mlia.devices.tosa.data_analysis import TOSADataAnalyzer
-from mlia.devices.tosa.operators import TOSACompatibilityInfo
 
 
 @pytest.mark.parametrize(

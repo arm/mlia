@@ -4,10 +4,10 @@
 from dataclasses import dataclass
 from functools import singledispatchmethod
 
+from mlia.backend.tosa_checker.compat import TOSACompatibilityInfo
 from mlia.core.common import DataItem
 from mlia.core.data_analysis import Fact
 from mlia.core.data_analysis import FactExtractor
-from mlia.devices.tosa.operators import TOSACompatibilityInfo
 
 
 @dataclass

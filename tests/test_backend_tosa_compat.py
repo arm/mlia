@@ -10,9 +10,9 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from mlia.devices.tosa.operators import get_tosa_compatibility_info
-from mlia.devices.tosa.operators import Operator
-from mlia.devices.tosa.operators import TOSACompatibilityInfo
+from mlia.backend.tosa_checker.compat import get_tosa_compatibility_info
+from mlia.backend.tosa_checker.compat import Operator
+from mlia.backend.tosa_checker.compat import TOSACompatibilityInfo
 
 
 def replace_get_tosa_checker_with_mock(
@@ -20,7 +20,8 @@ def replace_get_tosa_checker_with_mock(
 ) -> None:
     """Replace TOSA checker with mock."""
     monkeypatch.setattr(
-        "mlia.devices.tosa.operators.get_tosa_checker", MagicMock(return_value=mock)
+        "mlia.backend.tosa_checker.compat.get_tosa_checker",
+        MagicMock(return_value=mock),
     )
 
 

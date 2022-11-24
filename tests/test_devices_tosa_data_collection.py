@@ -6,9 +6,9 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from mlia.backend.tosa_checker.compat import TOSACompatibilityInfo
 from mlia.core.context import ExecutionContext
 from mlia.devices.tosa.data_collection import TOSAOperatorCompatibility
-from mlia.devices.tosa.operators import TOSACompatibilityInfo
 
 
 def test_tosa_data_collection(

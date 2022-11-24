@@ -6,6 +6,7 @@ from __future__ import annotations
 from typing import Any
 from typing import Callable
 
+from mlia.backend.tosa_checker.compat import Operator
 from mlia.core.advice_generation import Advice
 from mlia.core.reporters import report_advice
 from mlia.core.reporting import Cell
@@ -16,7 +17,6 @@ from mlia.core.reporting import Report
 from mlia.core.reporting import ReportItem
 from mlia.core.reporting import Table
 from mlia.devices.tosa.config import TOSAConfiguration
-from mlia.devices.tosa.operators import Operator
 from mlia.utils.console import style_improvement
 from mlia.utils.types import is_list_of
 
