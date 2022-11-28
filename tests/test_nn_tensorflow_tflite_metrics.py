@@ -34,10 +34,10 @@ def _sample_keras_model() -> tf.keras.Model:
 def _sparse_binary_keras_model() -> tf.keras.Model:
     def get_sparse_weights(shape: list[int]) -> np.ndarray:
         weights = np.zeros(shape)
-        with np.nditer(weights, op_flags=["writeonly"]) as weight_iterator:
-            for idx, value in enumerate(weight_iterator):
+        with np.nditer(weights, op_flags=[["writeonly"]]) as weight_it:
+            for idx, value in enumerate(weight_it):
                 if idx % 2 == 0:
-                    value[...] = 1.0
+                    value[...] = 1.0  # type: ignore
         return weights
 
     keras_model = _sample_keras_model()

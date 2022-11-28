@@ -28,7 +28,7 @@ def test_compiler_options_default_init() -> None:
     assert opts.tensor_allocator == "HillClimb"
     assert opts.cpu_tensor_alignment == 16
     assert opts.optimization_strategy == "Performance"
-    assert opts.output_dir is None
+    assert opts.output_dir == "output"
 
 
 def test_ethosu_target() -> None:

@@ -27,7 +27,7 @@ def test_default_vela_compiler() -> None:
     assert default_compiler.tensor_allocator == TensorAllocator.HillClimb
     assert default_compiler.cpu_tensor_alignment == 16
     assert default_compiler.optimization_strategy == OptimizationStrategy.Performance
-    assert default_compiler.output_dir is None
+    assert default_compiler.output_dir == "output"
 
     assert default_compiler.get_config() == {
         "accelerator_config": "ethos-u55-256",
@@ -86,7 +86,7 @@ def test_vela_compiler_with_parameters(test_resources_path: Path) -> None:
         tensor_allocator="Greedy",
         cpu_tensor_alignment=4,
         optimization_strategy="Size",
-        output_dir="output",
+        output_dir="custom_output",
     )
     compiler = VelaCompiler(compiler_options)
 
@@ -99,7 +99,7 @@ def test_vela_compiler_with_parameters(test_resources_path: Path) -> None:
     assert compiler.tensor_allocator == TensorAllocator.Greedy
     assert compiler.cpu_tensor_alignment == 4
     assert compiler.optimization_strategy == OptimizationStrategy.Size
-    assert compiler.output_dir == "output"
+    assert compiler.output_dir == "custom_output"
 
     assert compiler.get_config() == {
         "accelerator_config": "ethos-u65-256",
