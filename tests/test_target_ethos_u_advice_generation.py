@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for Ethos-U advice generation."""
 from __future__ import annotations
@@ -28,7 +28,7 @@ from mlia.target.ethos_u.data_analysis import PerfMetricDiff
     [
         [
             AllOperatorsSupportedOnNPU(),
-            AdviceCategory.OPERATORS,
+            {AdviceCategory.COMPATIBILITY},
             APIActionResolver(),
             [
                 Advice(
@@ -41,7 +41,7 @@ from mlia.target.ethos_u.data_analysis import PerfMetricDiff
         ],
         [
             AllOperatorsSupportedOnNPU(),
-            AdviceCategory.OPERATORS,
+            {AdviceCategory.COMPATIBILITY},
             CLIActionResolver(
                 {
                     "target_profile": "sample_target",
@@ -55,15 +55,15 @@ from mlia.target.ethos_u.data_analysis import PerfMetricDiff
                         "run completely on NPU.",
                         "Check the estimated performance by running the "
                         "following command: ",
-                        "mlia performance --target-profile sample_target "
-                        "sample_model.tflite",
+                        "mlia check sample_model.tflite --target-profile sample_target "
+                        "--performance",
                     ]
                 )
             ],
         ],
         [
             HasCPUOnlyOperators(cpu_only_ops=["OP1", "OP2", "OP3"]),
-            AdviceCategory.OPERATORS,
+            {AdviceCategory.COMPATIBILITY},
             APIActionResolver(),
             [
                 Advice(
@@ -78,7 +78,7 @@ from mlia.target.ethos_u.data_analysis import PerfMetricDiff
         ],
         [
             HasCPUOnlyOperators(cpu_only_ops=["OP1", "OP2", "OP3"]),
-            AdviceCategory.OPERATORS,
+            {AdviceCategory.COMPATIBILITY},
             CLIActionResolver({}),
             [
                 Advice(
@@ -87,15 +87,13 @@ from mlia.target.ethos_u.data_analysis import PerfMetricDiff
                         "OP1,OP2,OP3.",
                         "Using operators that are supported by the NPU will "
                         "improve performance.",
-                        "For guidance on supported operators, run: mlia operators "
-                        "--supported-ops-report",
                     ]
                 )
             ],
         ],
         [
             HasUnsupportedOnNPUOperators(npu_unsupported_ratio=0.4),
-            AdviceCategory.OPERATORS,
+            {AdviceCategory.COMPATIBILITY},
             APIActionResolver(),
             [
                 Advice(
@@ -110,7 +108,7 @@ from mlia.target.ethos_u.data_analysis import PerfMetricDiff
         ],
         [
             HasUnsupportedOnNPUOperators(npu_unsupported_ratio=0.4),
-            AdviceCategory.OPERATORS,
+            {AdviceCategory.COMPATIBILITY},
             CLIActionResolver({}),
             [
                 Advice(
@@ -138,7 +136,7 @@ from mlia.target.ethos_u.data_analysis import PerfMetricDiff
                     ),
                 ]
             ),
-            AdviceCategory.OPTIMIZATION,
+            {AdviceCategory.OPTIMIZATION},
             APIActionResolver(),
             [
                 Advice(
@@ -178,7 +176,7 @@ from mlia.target.ethos_u.data_analysis import PerfMetricDiff
                     ),
                 ]
             ),
-            AdviceCategory.OPTIMIZATION,
+            {AdviceCategory.OPTIMIZATION},
             CLIActionResolver({"model": "sample_model.h5"}),
             [
                 Advice(
@@ -192,10 +190,10 @@ from mlia.target.ethos_u.data_analysis import PerfMetricDiff
                         "You can try to push the optimization target higher "
                         "(e.g. pruning: 0.6) "
                         "to check if those results can be further improved.",
-                        "For more info: mlia optimization --help",
+                        "For more info: mlia optimize --help",
                         "Optimization command: "
-                        "mlia optimization --optimization-type pruning "
-                        "--optimization-target 0.6 sample_model.h5",
+                        "mlia optimize sample_model.h5 --pruning "
+                        "--pruning-target 0.6",
                     ]
                 ),
                 Advice(
@@ -225,7 +223,7 @@ from mlia.target.ethos_u.data_analysis import PerfMetricDiff
                     ),
                 ]
             ),
-            AdviceCategory.OPTIMIZATION,
+            {AdviceCategory.OPTIMIZATION},
             APIActionResolver(),
             [
                 Advice(
@@ -267,7 +265,7 @@ from mlia.target.ethos_u.data_analysis import PerfMetricDiff
                     ),
                 ]
             ),
-            AdviceCategory.OPTIMIZATION,
+            {AdviceCategory.OPTIMIZATION},
             APIActionResolver(),
             [
                 Advice(
@@ -304,7 +302,7 @@ from mlia.target.ethos_u.data_analysis import PerfMetricDiff
                     ),
                 ]
             ),
-            AdviceCategory.OPTIMIZATION,
+            {AdviceCategory.OPTIMIZATION},
             APIActionResolver(),
             [
                 Advice(
@@ -354,7 +352,7 @@ from mlia.target.ethos_u.data_analysis import PerfMetricDiff
                     ),
                 ]
             ),
-            AdviceCategory.OPTIMIZATION,
+            {AdviceCategory.OPTIMIZATION},
             APIActionResolver(),
             [],  # no advice for more than one optimization result
         ],
@@ -364,7 +362,7 @@ def test_ethosu_advice_producer(
     tmpdir: str,
     input_data: DataItem,
     expected_advice: list[Advice],
-    advice_category: AdviceCategory,
+    advice_category: set[AdviceCategory] | None,
     action_resolver: ActionResolver,
 ) -> None:
     """Test Ethos-U Advice producer."""
@@ -386,17 +384,17 @@ def test_ethosu_advice_producer(
     "advice_category, action_resolver, expected_advice",
     [
         [
-            AdviceCategory.ALL,
+            {AdviceCategory.COMPATIBILITY, AdviceCategory.PERFORMANCE},
             None,
             [],
         ],
         [
-            AdviceCategory.OPERATORS,
+            {AdviceCategory.COMPATIBILITY},
             None,
             [],
         ],
         [
-            AdviceCategory.PERFORMANCE,
+            {AdviceCategory.PERFORMANCE},
             APIActionResolver(),
             [
                 Advice(
@@ -414,31 +412,33 @@ def test_ethosu_advice_producer(
             ],
         ],
         [
-            AdviceCategory.PERFORMANCE,
-            CLIActionResolver({"model": "test_model.h5"}),
+            {AdviceCategory.PERFORMANCE},
+            CLIActionResolver(
+                {"model": "test_model.h5", "target_profile": "sample_target"}
+            ),
             [
                 Advice(
                     [
                         "You can improve the inference time by using only operators "
                         "that are supported by the NPU.",
                         "Try running the following command to verify that:",
-                        "mlia operators test_model.h5",
+                        "mlia check test_model.h5 --target-profile sample_target",
                     ]
                 ),
                 Advice(
                     [
                         "Check if you can improve the performance by applying "
                         "tooling techniques to your model.",
-                        "For example: mlia optimization --optimization-type "
-                        "pruning,clustering --optimization-target 0.5,32 "
-                        "test_model.h5",
-                        "For more info: mlia optimization --help",
+                        "For example: mlia optimize test_model.h5 "
+                        "--pruning --clustering "
+                        "--pruning-target 0.5 --clustering-target 32",
+                        "For more info: mlia optimize --help",
                     ]
                 ),
             ],
         ],
         [
-            AdviceCategory.OPTIMIZATION,
+            {AdviceCategory.OPTIMIZATION},
             APIActionResolver(),
             [
                 Advice(
@@ -450,14 +450,14 @@ def test_ethosu_advice_producer(
             ],
         ],
         [
-            AdviceCategory.OPTIMIZATION,
+            {AdviceCategory.OPTIMIZATION},
             CLIActionResolver({"model": "test_model.h5"}),
             [
                 Advice(
                     [
                         "For better performance, make sure that all the operators "
                         "of your final TensorFlow Lite model are supported by the NPU.",
-                        "For more details, run: mlia operators --help",
+                        "For more details, run: mlia check --help",
                     ]
                 )
             ],
@@ -466,7 +466,7 @@ def test_ethosu_advice_producer(
 )
 def test_ethosu_static_advice_producer(
     tmpdir: str,
-    advice_category: AdviceCategory,
+    advice_category: set[AdviceCategory] | None,
     action_resolver: ActionResolver,
     expected_advice: list[Advice],
 ) -> None:

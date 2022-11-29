@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Cortex-A advice generation."""
 from functools import singledispatchmethod
@@ -29,7 +29,7 @@ class CortexAAdviceProducer(FactBasedAdviceProducer):
         """Produce advice."""
 
     @produce_advice.register
-    @advice_category(AdviceCategory.ALL, AdviceCategory.OPERATORS)
+    @advice_category(AdviceCategory.COMPATIBILITY)
     def handle_model_is_cortex_a_compatible(
         self, data_item: ModelIsCortexACompatible
     ) -> None:
@@ -43,7 +43,7 @@ class CortexAAdviceProducer(FactBasedAdviceProducer):
         )
 
     @produce_advice.register
-    @advice_category(AdviceCategory.ALL, AdviceCategory.OPERATORS)
+    @advice_category(AdviceCategory.COMPATIBILITY)
     def handle_model_is_not_cortex_a_compatible(
         self, data_item: ModelIsNotCortexACompatible
     ) -> None:
@@ -83,7 +83,7 @@ class CortexAAdviceProducer(FactBasedAdviceProducer):
         )
 
     @produce_advice.register
-    @advice_category(AdviceCategory.ALL, AdviceCategory.OPERATORS)
+    @advice_category(AdviceCategory.COMPATIBILITY)
     def handle_model_is_not_tflite_compatible(
         self, data_item: ModelIsNotTFLiteCompatible
     ) -> None:
@@ -127,7 +127,7 @@ class CortexAAdviceProducer(FactBasedAdviceProducer):
             )
 
     @produce_advice.register
-    @advice_category(AdviceCategory.ALL, AdviceCategory.OPERATORS)
+    @advice_category(AdviceCategory.COMPATIBILITY)
     def handle_tflite_check_failed(
         self, _data_item: TFLiteCompatibilityCheckFailed
     ) -> None:
@@ -140,7 +140,7 @@ class CortexAAdviceProducer(FactBasedAdviceProducer):
         )
 
     @produce_advice.register
-    @advice_category(AdviceCategory.ALL, AdviceCategory.OPERATORS)
+    @advice_category(AdviceCategory.COMPATIBILITY)
     def handle_model_has_custom_operators(
         self, _data_item: ModelHasCustomOperators
     ) -> None:

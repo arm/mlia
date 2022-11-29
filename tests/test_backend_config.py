@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for the backend config module."""
 from mlia.backend.config import BackendConfiguration
@@ -20,14 +20,14 @@ def test_system() -> None:
 def test_backend_config() -> None:
     """Test the class 'BackendConfiguration'."""
     cfg = BackendConfiguration(
-        [AdviceCategory.OPERATORS], [System.CURRENT], BackendType.CUSTOM
+        [AdviceCategory.COMPATIBILITY], [System.CURRENT], BackendType.CUSTOM
     )
-    assert cfg.supported_advice == [AdviceCategory.OPERATORS]
+    assert cfg.supported_advice == [AdviceCategory.COMPATIBILITY]
     assert cfg.supported_systems == [System.CURRENT]
     assert cfg.type == BackendType.CUSTOM
     assert str(cfg)
     assert cfg.is_supported()
-    assert cfg.is_supported(advice=AdviceCategory.OPERATORS)
+    assert cfg.is_supported(advice=AdviceCategory.COMPATIBILITY)
     assert not cfg.is_supported(advice=AdviceCategory.PERFORMANCE)
     assert cfg.is_supported(check_system=True)
     assert cfg.is_supported(check_system=False)
@@ -37,6 +37,6 @@ def test_backend_config() -> None:
     cfg.supported_systems = [UNSUPPORTED_SYSTEM]
     assert not cfg.is_supported(check_system=True)
     assert cfg.is_supported(check_system=False)
-    assert not cfg.is_supported(advice=AdviceCategory.OPERATORS, check_system=True)
-    assert cfg.is_supported(advice=AdviceCategory.OPERATORS, check_system=False)
+    assert not cfg.is_supported(advice=AdviceCategory.COMPATIBILITY, check_system=True)
+    assert cfg.is_supported(advice=AdviceCategory.COMPATIBILITY, check_system=False)
     assert not cfg.is_supported(advice=AdviceCategory.PERFORMANCE, check_system=False)

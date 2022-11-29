@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for reporting module."""
 from __future__ import annotations
@@ -13,11 +13,8 @@ from mlia.core.reporting import CyclesCell
 from mlia.core.reporting import Format
 from mlia.core.reporting import NestedReport
 from mlia.core.reporting import ReportItem
-from mlia.core.reporting import resolve_output_format
 from mlia.core.reporting import SingleRow
 from mlia.core.reporting import Table
-from mlia.core.typing import OutputFormat
-from mlia.core.typing import PathOrFileLike
 from mlia.utils.console import remove_ascii_codes
 
 
@@ -338,20 +335,3 @@ Single row example:
             alias="simple_row_example",
         )
         wrong_single_row.to_plain_text()
-
-
-@pytest.mark.parametrize(
-    "output, expected_output_format",
-    [
-        [None, "plain_text"],
-        ["", "plain_text"],
-        ["some_file", "plain_text"],
-        ["some_format.some_ext", "plain_text"],
-        ["output.json", "json"],
-    ],
-)
-def test_resolve_output_format(
-    output: PathOrFileLike | None, expected_output_format: OutputFormat
-) -> None:
-    """Test function resolve_output_format."""
-    assert resolve_output_format(output) == expected_output_format

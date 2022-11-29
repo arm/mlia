@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for module advice_generation."""
 from __future__ import annotations
@@ -35,17 +35,17 @@ def test_advice_generation() -> None:
     "category, expected_advice",
     [
         [
-            AdviceCategory.OPERATORS,
+            {AdviceCategory.COMPATIBILITY},
             [Advice(["Good advice!"])],
         ],
         [
-            AdviceCategory.PERFORMANCE,
+            {AdviceCategory.PERFORMANCE},
             [],
         ],
     ],
 )
 def test_advice_category_decorator(
-    category: AdviceCategory,
+    category: set[AdviceCategory],
     expected_advice: list[Advice],
     sample_context: Context,
 ) -> None:
@@ -54,7 +54,7 @@ def test_advice_category_decorator(
     class SampleAdviceProducer(FactBasedAdviceProducer):
         """Sample advice producer."""
 
-        @advice_category(AdviceCategory.OPERATORS)
+        @advice_category(AdviceCategory.COMPATIBILITY)
         def produce_advice(self, data_item: DataItem) -> None:
             """Produce the advice."""
             self.add_advice(["Good advice!"])

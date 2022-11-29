@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """TOSA advice generation."""
 from functools import singledispatchmethod
@@ -19,7 +19,7 @@ class TOSAAdviceProducer(FactBasedAdviceProducer):
         """Produce advice."""
 
     @produce_advice.register
-    @advice_category(AdviceCategory.ALL, AdviceCategory.OPERATORS)
+    @advice_category(AdviceCategory.COMPATIBILITY)
     def handle_model_is_tosa_compatible(
         self, _data_item: ModelIsTOSACompatible
     ) -> None:
@@ -27,7 +27,7 @@ class TOSAAdviceProducer(FactBasedAdviceProducer):
         self.add_advice(["Model is fully TOSA compatible."])
 
     @produce_advice.register
-    @advice_category(AdviceCategory.ALL, AdviceCategory.OPERATORS)
+    @advice_category(AdviceCategory.COMPATIBILITY)
     def handle_model_is_not_tosa_compatible(
         self, _data_item: ModelIsNotTOSACompatible
     ) -> None:

@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Context module.
 
@@ -10,6 +10,7 @@ parameters).
 from __future__ import annotations
 
 import logging
+import tempfile
 from abc import ABC
 from abc import abstractmethod
 from pathlib import Path
@@ -54,7 +55,7 @@ class Context(ABC):
 
     @property
     @abstractmethod
-    def advice_category(self) -> AdviceCategory:
+    def advice_category(self) -> set[AdviceCategory]:
         """Return advice category."""
 
     @property
@@ -71,7 +72,7 @@ class Context(ABC):
     def update(
         self,
         *,
-        advice_category: AdviceCategory,
+        advice_category: set[AdviceCategory],
         event_handlers: list[EventHandler],
         config_parameters: Mapping[str, Any],
     ) -> None:
@@ -79,11 +80,11 @@ class Context(ABC):
 
     def category_enabled(self, category: AdviceCategory) -> bool:
         """Check if category enabled."""
-        return category == self.advice_category
+        return category in self.advice_category
 
     def any_category_enabled(self, *categories: AdviceCategory) -> bool:
         """Return true if any category is enabled."""
-        return self.advice_category in categories
+        return all(category in self.advice_category for category in categories)
 
     def register_event_handlers(self) -> None:
         """Register event handlers."""
@@ -96,7 +97,7 @@ class ExecutionContext(Context):
     def __init__(
         self,
         *,
-        advice_category: AdviceCategory = AdviceCategory.ALL,
+        advice_category: set[AdviceCategory] = None,
         config_parameters: Mapping[str, Any] | None = None,
         working_dir: str | Path | None = None,
         event_handlers: list[EventHandler] | None = None,
@@ -108,7 +109,7 @@ class ExecutionContext(Context):
     ) -> None:
         """Init execution context.
 
-        :param advice_category: requested advice category
+        :param advice_category: requested advice categories
         :param config_parameters: dictionary like object with input parameters
         :param working_dir: path to the directory that will be used as a place
                to store temporary files, logs, models. If not provided then
@@ -124,13 +125,13 @@ class ExecutionContext(Context):
         :param action_resolver: instance of the action resolver that could make
                advice actionable
         """
-        self._advice_category = advice_category
+        self._advice_category = advice_category or {AdviceCategory.COMPATIBILITY}
         self._config_parameters = config_parameters
 
-        self._working_dir_path = Path.cwd()
         if working_dir:
             self._working_dir_path = Path(working_dir)
-            self._working_dir_path.mkdir(exist_ok=True)
+        else:
+            self._working_dir_path = generate_temp_workdir()
 
         self._event_handlers = event_handlers
         self._event_publisher = event_publisher or DefaultEventPublisher()
@@ -140,12 +141,17 @@ class ExecutionContext(Context):
         self._action_resolver = action_resolver or APIActionResolver()
 
     @property
-    def advice_category(self) -> AdviceCategory:
+    def working_dir(self) -> Path:
+        """Return working dir path."""
+        return self._working_dir_path
+
+    @property
+    def advice_category(self) -> set[AdviceCategory]:
         """Return advice category."""
         return self._advice_category
 
     @advice_category.setter
-    def advice_category(self, advice_category: AdviceCategory) -> None:
+    def advice_category(self, advice_category: set[AdviceCategory]) -> None:
         """Setter for the advice category."""
         self._advice_category = advice_category
 
@@ -194,7 +200,7 @@ class ExecutionContext(Context):
     def update(
         self,
         *,
-        advice_category: AdviceCategory,
+        advice_category: set[AdviceCategory],
         event_handlers: list[EventHandler],
         config_parameters: Mapping[str, Any],
     ) -> None:
@@ -206,7 +212,9 @@ class ExecutionContext(Context):
     def __str__(self) -> str:
         """Return string representation."""
         category = (
-            "<not set>" if self.advice_category is None else self.advice_category.name
+            "<not set>"
+            if self.advice_category is None
+            else {x.name for x in self.advice_category}
         )
 
         return (
@@ -215,3 +223,9 @@ class ExecutionContext(Context):
             f"config_parameters={self.config_parameters}, "
             f"verbose={self.verbose}"
         )
+
+
+def generate_temp_workdir() -> Path:
+    """Generate a temporary working dir and returns the path."""
+    working_dir = tempfile.mkdtemp(suffix=None, prefix="mlia-", dir=None)
+    return Path(working_dir)

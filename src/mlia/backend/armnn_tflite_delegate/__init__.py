@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Arm NN TensorFlow Lite delegate backend module."""
 from mlia.backend.config import BackendConfiguration
@@ -9,7 +9,7 @@ from mlia.core.common import AdviceCategory
 registry.register(
     "ArmNNTFLiteDelegate",
     BackendConfiguration(
-        supported_advice=[AdviceCategory.OPERATORS],
+        supported_advice=[AdviceCategory.COMPATIBILITY],
         supported_systems=None,
         backend_type=BackendType.BUILTIN,
     ),

@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Module for various helper classes."""
 # pylint: disable=unused-argument
@@ -12,10 +12,6 @@ class ActionResolver:
 
     def apply_optimizations(self, **kwargs: Any) -> list[str]:
         """Return action details for applying optimizations."""
-        return []
-
-    def supported_operators_info(self) -> list[str]:
-        """Return action details for generating supported ops report."""
         return []
 
     def check_performance(self) -> list[str]:

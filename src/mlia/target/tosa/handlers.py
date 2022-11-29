@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """TOSA Advisor event handlers."""
 # pylint: disable=R0801
@@ -7,9 +7,9 @@ from __future__ import annotations
 import logging
 
 from mlia.backend.tosa_checker.compat import TOSACompatibilityInfo
+from mlia.core.common import FormattedFilePath
 from mlia.core.events import CollectedDataEvent
 from mlia.core.handlers import WorkflowEventsHandler
-from mlia.core.typing import PathOrFileLike
 from mlia.target.tosa.events import TOSAAdvisorEventHandler
 from mlia.target.tosa.events import TOSAAdvisorStartedEvent
 from mlia.target.tosa.reporters import tosa_formatters
@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 class TOSAEventHandler(WorkflowEventsHandler, TOSAAdvisorEventHandler):
     """Event handler for TOSA advisor."""
 
-    def __init__(self, output: PathOrFileLike | None = None) -> None:
+    def __init__(self, output: FormattedFilePath | None = None) -> None:
         """Init event handler."""
         super().__init__(tosa_formatters, output)
 

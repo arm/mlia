@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Ethos-U MLIA module."""
 from __future__ import annotations
@@ -10,12 +10,12 @@ from mlia.core.advice_generation import AdviceProducer
 from mlia.core.advisor import DefaultInferenceAdvisor
 from mlia.core.advisor import InferenceAdvisor
 from mlia.core.common import AdviceCategory
+from mlia.core.common import FormattedFilePath
 from mlia.core.context import Context
 from mlia.core.context import ExecutionContext
 from mlia.core.data_analysis import DataAnalyzer
 from mlia.core.data_collection import DataCollector
 from mlia.core.events import Event
-from mlia.core.typing import PathOrFileLike
 from mlia.nn.tensorflow.utils import is_tflite_model
 from mlia.target.ethos_u.advice_generation import EthosUAdviceProducer
 from mlia.target.ethos_u.advice_generation import EthosUStaticAdviceProducer
@@ -46,7 +46,7 @@ class EthosUInferenceAdvisor(DefaultInferenceAdvisor):
 
         collectors: list[DataCollector] = []
 
-        if AdviceCategory.OPERATORS in context.advice_category:
+        if context.category_enabled(AdviceCategory.COMPATIBILITY):
             collectors.append(EthosUOperatorCompatibility(model, device))
 
         # Performance and optimization are mutually exclusive.
@@ -57,18 +57,18 @@ class EthosUInferenceAdvisor(DefaultInferenceAdvisor):
                 raise Exception(
                     "Command 'optimization' is not supported for TensorFlow Lite files."
                 )
-            if AdviceCategory.PERFORMANCE in context.advice_category:
+            if context.category_enabled(AdviceCategory.PERFORMANCE):
                 collectors.append(EthosUPerformance(model, device, backends))
         else:
             # Keras/SavedModel: Prefer optimization
-            if AdviceCategory.OPTIMIZATION in context.advice_category:
+            if context.category_enabled(AdviceCategory.OPTIMIZATION):
                 optimization_settings = self._get_optimization_settings(context)
                 collectors.append(
                     EthosUOptimizationPerformance(
                         model, device, optimization_settings, backends
                     )
                 )
-            elif AdviceCategory.PERFORMANCE in context.advice_category:
+            elif context.category_enabled(AdviceCategory.PERFORMANCE):
                 collectors.append(EthosUPerformance(model, device, backends))
 
         return collectors
@@ -126,7 +126,7 @@ def configure_and_get_ethosu_advisor(
     context: ExecutionContext,
     target_profile: str,
     model: str | Path,
-    output: PathOrFileLike | None = None,
+    output: FormattedFilePath | None = None,
     **extra_args: Any,
 ) -> InferenceAdvisor:
     """Create and configure Ethos-U advisor."""

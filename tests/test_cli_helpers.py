@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for the helper classes."""
 from __future__ import annotations
@@ -28,40 +28,39 @@ class TestCliActionResolver:
                 {},
                 [
                     "Note: you will need a Keras model for that.",
-                    "For example: mlia optimization --optimization-type "
-                    "pruning,clustering --optimization-target 0.5,32 "
-                    "/path/to/keras_model",
-                    "For more info: mlia optimization --help",
+                    "For example: mlia optimize /path/to/keras_model "
+                    "--pruning --clustering "
+                    "--pruning-target 0.5 --clustering-target 32",
+                    "For more info: mlia optimize --help",
                 ],
             ],
             [
                 {"model": "model.h5"},
                 {},
                 [
-                    "For example: mlia optimization --optimization-type "
-                    "pruning,clustering --optimization-target 0.5,32 model.h5",
-                    "For more info: mlia optimization --help",
+                    "For example: mlia optimize model.h5 --pruning --clustering "
+                    "--pruning-target 0.5 --clustering-target 32",
+                    "For more info: mlia optimize --help",
                 ],
             ],
             [
                 {"model": "model.h5"},
                 {"opt_settings": [OptimizationSettings("pruning", 0.5, None)]},
                 [
-                    "For more info: mlia optimization --help",
+                    "For more info: mlia optimize --help",
                     "Optimization command: "
-                    "mlia optimization --optimization-type pruning "
-                    "--optimization-target 0.5 model.h5",
+                    "mlia optimize model.h5 --pruning "
+                    "--pruning-target 0.5",
                 ],
             ],
             [
                 {"model": "model.h5", "target_profile": "target_profile"},
                 {"opt_settings": [OptimizationSettings("pruning", 0.5, None)]},
                 [
-                    "For more info: mlia optimization --help",
+                    "For more info: mlia optimize --help",
                     "Optimization command: "
-                    "mlia optimization --optimization-type pruning "
-                    "--optimization-target 0.5 "
-                    "--target-profile target_profile model.h5",
+                    "mlia optimize model.h5 --target-profile target_profile "
+                    "--pruning --pruning-target 0.5",
                 ],
             ],
         ],
@@ -76,20 +75,11 @@ class TestCliActionResolver:
         assert resolver.apply_optimizations(**params) == expected_result
 
     @staticmethod
-    def test_supported_operators_info() -> None:
-        """Test supported operators info."""
-        resolver = CLIActionResolver({})
-        assert resolver.supported_operators_info() == [
-            "For guidance on supported operators, run: mlia operators "
-            "--supported-ops-report",
-        ]
-
-    @staticmethod
     def test_operator_compatibility_details() -> None:
         """Test operator compatibility details info."""
         resolver = CLIActionResolver({})
         assert resolver.operator_compatibility_details() == [
-            "For more details, run: mlia operators --help"
+            "For more details, run: mlia check --help"
         ]
 
     @staticmethod
@@ -97,7 +87,7 @@ class TestCliActionResolver:
         """Test optimization details info."""
         resolver = CLIActionResolver({})
         assert resolver.optimization_details() == [
-            "For more info, see: mlia optimization --help"
+            "For more info, see: mlia optimize --help"
         ]
 
     @staticmethod
@@ -109,19 +99,12 @@ class TestCliActionResolver:
                 [],
             ],
             [
-                {"model": "model.tflite"},
-                [
-                    "Check the estimated performance by running the "
-                    "following command: ",
-                    "mlia performance model.tflite",
-                ],
-            ],
-            [
                 {"model": "model.tflite", "target_profile": "target_profile"},
                 [
                     "Check the estimated performance by running the "
                     "following command: ",
-                    "mlia performance --target-profile target_profile model.tflite",
+                    "mlia check model.tflite "
+                    "--target-profile target_profile --performance",
                 ],
             ],
         ],
@@ -142,17 +125,10 @@ class TestCliActionResolver:
                 [],
             ],
             [
-                {"model": "model.tflite"},
-                [
-                    "Try running the following command to verify that:",
-                    "mlia operators model.tflite",
-                ],
-            ],
-            [
                 {"model": "model.tflite", "target_profile": "target_profile"},
                 [
                     "Try running the following command to verify that:",
-                    "mlia operators --target-profile target_profile model.tflite",
+                    "mlia check model.tflite --target-profile target_profile",
                 ],
             ],
         ],

@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Types related utility functions."""
 from __future__ import annotations
@@ -19,7 +19,7 @@ def is_number(value: str) -> bool:
     """Return true if string contains a number."""
     try:
         float(value)
-    except ValueError:
+    except (ValueError, TypeError):
         return False
 
     return True

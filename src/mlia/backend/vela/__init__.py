@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Vela backend module."""
 from mlia.backend.config import BackendConfiguration
@@ -11,7 +11,7 @@ registry.register(
     "Vela",
     BackendConfiguration(
         supported_advice=[
-            AdviceCategory.OPERATORS,
+            AdviceCategory.COMPATIBILITY,
             AdviceCategory.PERFORMANCE,
             AdviceCategory.OPTIMIZATION,
         ],

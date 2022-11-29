@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """TOSA checker backend module."""
 from mlia.backend.config import BackendConfiguration
@@ -10,7 +10,7 @@ from mlia.core.common import AdviceCategory
 registry.register(
     "TOSA-Checker",
     BackendConfiguration(
-        supported_advice=[AdviceCategory.OPERATORS],
+        supported_advice=[AdviceCategory.COMPATIBILITY],
         supported_systems=[System.LINUX_AMD64],
         backend_type=BackendType.WHEEL,
     ),

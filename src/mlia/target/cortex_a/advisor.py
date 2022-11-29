@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Cortex-A MLIA module."""
 from __future__ import annotations
@@ -10,12 +10,12 @@ from mlia.core.advice_generation import AdviceProducer
 from mlia.core.advisor import DefaultInferenceAdvisor
 from mlia.core.advisor import InferenceAdvisor
 from mlia.core.common import AdviceCategory
+from mlia.core.common import FormattedFilePath
 from mlia.core.context import Context
 from mlia.core.context import ExecutionContext
 from mlia.core.data_analysis import DataAnalyzer
 from mlia.core.data_collection import DataCollector
 from mlia.core.events import Event
-from mlia.core.typing import PathOrFileLike
 from mlia.target.cortex_a.advice_generation import CortexAAdviceProducer
 from mlia.target.cortex_a.config import CortexAConfiguration
 from mlia.target.cortex_a.data_analysis import CortexADataAnalyzer
@@ -38,7 +38,7 @@ class CortexAInferenceAdvisor(DefaultInferenceAdvisor):
 
         collectors: list[DataCollector] = []
 
-        if AdviceCategory.OPERATORS in context.advice_category:
+        if context.category_enabled(AdviceCategory.COMPATIBILITY):
             collectors.append(CortexAOperatorCompatibility(model))
 
         return collectors
@@ -67,7 +67,7 @@ def configure_and_get_cortexa_advisor(
     context: ExecutionContext,
     target_profile: str,
     model: str | Path,
-    output: PathOrFileLike | None = None,
+    output: FormattedFilePath | None = None,
     **_extra_args: Any,
 ) -> InferenceAdvisor:
     """Create and configure Cortex-A advisor."""

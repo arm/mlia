@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for the backend config module."""
 from __future__ import annotations
@@ -25,7 +25,7 @@ def test_ip_config() -> None:
     (
         (None, False, True),
         (None, True, True),
-        (AdviceCategory.OPERATORS, True, True),
+        (AdviceCategory.COMPATIBILITY, True, True),
         (AdviceCategory.OPTIMIZATION, True, False),
     ),
 )
@@ -42,7 +42,7 @@ def test_target_info(
     backend_registry.register(
         "backend",
         BackendConfiguration(
-            [AdviceCategory.OPERATORS],
+            [AdviceCategory.COMPATIBILITY],
             [System.CURRENT],
             BackendType.BUILTIN,
         ),

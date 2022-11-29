@@ -1,5 +1,5 @@
 <!---
-SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 SPDX-License-Identifier: Apache-2.0
 --->
 # MLIA Releases
@@ -15,6 +15,12 @@ scheme.
 * Arm®, Cortex®-A, Ethos™-U, Corstone™ are registered trademarks or trademarks
   of Arm® Limited (or its subsidiaries) in the U.S. and/or elsewhere.
 * TensorFlow™ is a trademark of Google® LLC.
+
+## Release 0.6.0
+
+### Interface changes
+
+* **Breaking change:** Implement new CLI changes (MLIA-650)
 
 ## Release 0.5.0
 

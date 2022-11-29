@@ -1,5 +1,5 @@
 <!---
-SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 SPDX-License-Identifier: Apache-2.0
 --->
 # ML Inference Advisor - Introduction
@@ -96,10 +96,8 @@ mlia [sub-command] [arguments]
 
 Where the following sub-commands are available:
 
-* ["operators"](#operators-ops): show the model's operator list
-* ["optimization"](#model-optimization-opt): run the specified optimizations
-* ["performance"](#performance-perf): measure the performance of inference on hardware
-* ["all_tests"](#all-tests-all): have a full report
+* ["check"](#check): perform compatibility or performance checks on the model
+* ["optimize"](#optimize): apply specified optimizations
 
 Detailed help about the different sub-commands can be shown like this:
 
@@ -113,25 +111,27 @@ The following sections go into further detail regarding the usage of MLIA.
 
 This section gives an overview of the available sub-commands for MLIA.
 
-## **operators** (ops)
+## **check**
 
-Lists the model's operators with information about their compatibility with the
-specified target.
+### compatibility
+
+Default check that MLIA runs. It lists the model's operators with information
+about their compatibility with the specified target.
 
 *Examples:*
 
 ```bash
 # List operator compatibility with Ethos-U55 with 256 MAC
-mlia operators --target-profile ethos-u55-256 ~/models/mobilenet_v1_1.0_224_quant.tflite
+mlia check ~/models/mobilenet_v1_1.0_224_quant.tflite --target-profile ethos-u55-256
 
 # List operator compatibility with Cortex-A
-mlia ops --target-profile cortex-a ~/models/mobilenet_v1_1.0_224_quant.tflite
+mlia check ~/models/mobilenet_v1_1.0_224_quant.tflite --target-profile cortex-a
 
 # Get help and further information
-mlia ops --help
+mlia check --help
 ```
 
-## **performance** (perf)
+### performance
 
 Estimate the model's performance on the specified target and print out
 statistics.
@@ -140,18 +140,21 @@ statistics.
 
 ```bash
 # Use default parameters
-mlia performance ~/models/mobilenet_v1_1.0_224_quant.tflite
+mlia check ~/models/mobilenet_v1_1.0_224_quant.tflite \
+    --target-profile ethos-u55-256 \
+    --performance
 
-# Explicitly specify the target profile and backend(s) to use with --evaluate-on
-mlia perf ~/models/ds_cnn_large_fully_quantized_int8.tflite \
-    --evaluate-on "Vela" "Corstone-310" \
-    --target-profile ethos-u65-512
+# Explicitly specify the target profile and backend(s) to use with --backend
+mlia check ~/models/ds_cnn_large_fully_quantized_int8.tflite \
+    --target-profile ethos-u65-512 \
+    --performance \
+    --backend "Vela" "Corstone-310"
 
 # Get help and further information
-mlia perf --help
+mlia check --help
 ```
 
-## **optimization** (opt)
+## **optimize**
 
 This sub-command applies optimizations to a Keras model (.h5 or SavedModel) and
 shows the performance improvements compared to the original unoptimized model.
@@ -175,35 +178,20 @@ supported.
 
 ```bash
 # Custom optimization parameters: pruning=0.6, clustering=16
-mlia optimization \
-    --optimization-type pruning,clustering \
-    --optimization-target 0.6,16 \
-    ~/models/ds_cnn_l.h5
+mlia optimize ~/models/ds_cnn_l.h5 \
+    --target-profile ethos-u55-256 \
+    --pruning \
+    --pruning-target 0.6 \
+    --clustering \
+    --clustering-target 16
 
 # Get help and further information
-mlia opt --help
-```
-
-## **all_tests** (all)
-
-Combine sub-commands described above to generate a full report of the input
-model with all information available for the specified target. E.g. for Ethos-U
-this combines sub-commands *operators* and *optimization*. Therefore most
-command line arguments are shared with other sub-commands.
-
-*Examples:*
-
-```bash
-# Create full report and save it as JSON file
-mlia all_tests --output ./report.json ~/models/ds_cnn_l.h5
-
-# Get help and further information
-mlia all --help
+mlia optimize --help
 ```
 
 # Target profiles
 
-Most sub-commands accept the name of a target profile as input parameter. The
+All sub-commands require the name of a target profile as input parameter. The
 profiles currently available are described in the following sections.
 
 The support of the above sub-commands for different targets is provided via
@@ -232,7 +220,7 @@ attributes:
 Example:
 
 ```bash
-mlia perf --target-profile ethos-u65-512 ~/model.tflite
+mlia check ~/model.tflite --target-profile ethos-u65-512 --performance
 ```
 
 Ethos-U is supported by these backends:

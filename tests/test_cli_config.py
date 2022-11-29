@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for cli.config module."""
 from __future__ import annotations
@@ -7,7 +7,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from mlia.cli.config import get_default_backends
+from mlia.cli.config import get_ethos_u_default_backends
 from mlia.cli.config import is_corstone_backend
 
 
@@ -29,7 +29,7 @@ from mlia.cli.config import is_corstone_backend
         ],
     ],
 )
-def test_get_default_backends(
+def test_get_ethos_u_default_backends(
     monkeypatch: pytest.MonkeyPatch,
     available_backends: list[str],
     expected_default_backends: list[str],
@@ -40,7 +40,7 @@ def test_get_default_backends(
         MagicMock(return_value=available_backends),
     )
 
-    assert get_default_backends() == expected_default_backends
+    assert get_ethos_u_default_backends() == expected_default_backends
 
 
 def test_is_corstone_backend() -> None:

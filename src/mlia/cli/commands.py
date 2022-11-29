@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """CLI commands module.
 
@@ -13,7 +13,7 @@ be configured. Function 'setup_logging' from module
 >>> from mlia.cli.logging import setup_logging
 >>> setup_logging(verbose=True)
 >>> import mlia.cli.commands as mlia
->>> mlia.all_tests(ExecutionContext(working_dir="mlia_output"), "ethos-u55-256",
+>>> mlia.check(ExecutionContext(), "ethos-u55-256",
                    "path/to/model")
 """
 from __future__ import annotations
@@ -22,11 +22,12 @@ import logging
 from pathlib import Path
 
 from mlia.api import ExecutionContext
-from mlia.api import generate_supported_operators_report
 from mlia.api import get_advice
-from mlia.api import PathOrFileLike
+from mlia.cli.command_validators import validate_backend
+from mlia.cli.command_validators import validate_check_target_profile
 from mlia.cli.config import get_installation_manager
 from mlia.cli.options import parse_optimization_parameters
+from mlia.cli.options import parse_output_parameters
 from mlia.utils.console import create_section_header
 
 logger = logging.getLogger(__name__)
@@ -34,14 +35,15 @@ logger = logging.getLogger(__name__)
 CONFIG = create_section_header("ML Inference Advisor configuration")
 
 
-def all_tests(
+def check(
     ctx: ExecutionContext,
     target_profile: str,
-    model: str,
-    optimization_type: str = "pruning,clustering",
-    optimization_target: str = "0.5,32",
-    output: PathOrFileLike | None = None,
-    evaluate_on: list[str] | None = None,
+    model: str | None = None,
+    compatibility: bool = False,
+    performance: bool = False,
+    output: Path | None = None,
+    json: bool = False,
+    backend: list[str] | None = None,
 ) -> None:
     """Generate a full report on the input model.
 
@@ -50,8 +52,6 @@ def all_tests(
 
         - converts the input Keras model into TensorFlow Lite format
         - checks the model for operator compatibility on the specified device
-        - applies optimizations to the model and estimates the resulting performance
-          on both the original and the optimized models
         - generates a final report on the steps above
         - provides advice on how to (possibly) improve the inference performance
 
@@ -59,140 +59,63 @@ def all_tests(
     :param target_profile: target profile identifier. Will load appropriate parameters
             from the profile.json file based on this argument.
     :param model: path to the Keras model
-    :param optimization_type: list of the optimization techniques separated
-           by comma, e.g. 'pruning,clustering'
-    :param optimization_target: list of the corresponding targets for
-           the provided optimization techniques, e.g. '0.5,32'
+    :param compatibility: flag that identifies whether to run compatibility checks
+    :param performance: flag that identifies whether to run performance checks
     :param output: path to the file where the report will be saved
-    :param evaluate_on: list of the backends to use for evaluation
+    :param backend: list of the backends to use for evaluation
 
     Example:
-        Run command for the target profile ethos-u55-256 with two model optimizations
-        and save report in json format locally in the file report.json
+        Run command for the target profile ethos-u55-256 to verify both performance
+        and operator compatibility.
 
         >>> from mlia.api import ExecutionContext
         >>> from mlia.cli.logging import setup_logging
         >>> setup_logging()
-        >>> from mlia.cli.commands import all_tests
-        >>> all_tests(ExecutionContext(working_dir="mlia_output"), "ethos-u55-256",
-                      "model.h5", "pruning,clustering", "0.5,32",
+        >>> from mlia.cli.commands import check
+        >>> check(ExecutionContext(), "ethos-u55-256",
+                      "model.h5", compatibility=True, performance=True,
                        output="report.json")
     """
-    opt_params = parse_optimization_parameters(
-        optimization_type,
-        optimization_target,
-    )
-
-    get_advice(
-        target_profile,
-        model,
-        "all",
-        optimization_targets=opt_params,
-        output=output,
-        context=ctx,
-        backends=evaluate_on,
-    )
-
-
-def operators(
-    ctx: ExecutionContext,
-    target_profile: str,
-    model: str | None = None,
-    output: PathOrFileLike | None = None,
-    supported_ops_report: bool = False,
-) -> None:
-    """Print the model's operator list.
-
-    This command checks the operator compatibility of the input model with
-    the specific target profile. Generates a report of the operator placement
-    (NPU or CPU fallback) and advice on how to improve it (if necessary).
-
-    :param ctx: execution context
-    :param target_profile: target profile identifier. Will load appropriate parameters
-            from the profile.json file based on this argument.
-    :param model: path to the model, which can be TensorFlow Lite or Keras
-    :param output: path to the file where the report will be saved
-    :param supported_ops_report: if True then generates supported operators
-           report in current directory and exits
-
-    Example:
-        Run command for the target profile ethos-u55-256 and the provided
-        TensorFlow Lite model and print report on the standard output
-
-        >>> from mlia.api import ExecutionContext
-        >>> from mlia.cli.logging import setup_logging
-        >>> setup_logging()
-        >>> from mlia.cli.commands import operators
-        >>> operators(ExecutionContext(working_dir="mlia_output"), "ethos-u55-256",
-                      "model.tflite")
-    """
-    if supported_ops_report:
-        generate_supported_operators_report(target_profile)
-        logger.info("Report saved into SUPPORTED_OPS.md")
-        return
-
     if not model:
         raise Exception("Model is not provided")
 
+    formatted_output = parse_output_parameters(output, json)
+
+    # Set category based on checks to perform (i.e. "compatibility" and/or
+    # "performance").
+    # If no check type is specified, "compatibility" is the default category.
+    if compatibility and performance:
+        category = {"compatibility", "performance"}
+    elif performance:
+        category = {"performance"}
+    else:
+        category = {"compatibility"}
+
+    validate_check_target_profile(target_profile, category)
+    validated_backend = validate_backend(target_profile, backend)
+
     get_advice(
         target_profile,
         model,
-        "operators",
-        output=output,
+        category,
+        output=formatted_output,
         context=ctx,
+        backends=validated_backend,
     )
 
 
-def performance(
+def optimize(  # pylint: disable=too-many-arguments
     ctx: ExecutionContext,
     target_profile: str,
     model: str,
-    output: PathOrFileLike | None = None,
-    evaluate_on: list[str] | None = None,
-) -> None:
-    """Print the model's performance stats.
-
-    This command estimates the inference performance of the input model
-    on the specified target profile, and generates a report with advice on how
-    to improve it.
-
-    :param ctx: execution context
-    :param target_profile: target profile identifier. Will load appropriate parameters
-            from the profile.json file based on this argument.
-    :param model: path to the model, which can be TensorFlow Lite or Keras
-    :param output: path to the file where the report will be saved
-    :param evaluate_on: list of the backends to use for evaluation
-
-    Example:
-        Run command for the target profile ethos-u55-256 and
-        the provided TensorFlow Lite model and print report on the standard output
-
-        >>> from mlia.api import ExecutionContext
-        >>> from mlia.cli.logging import setup_logging
-        >>> setup_logging()
-        >>> from mlia.cli.commands import performance
-        >>> performance(ExecutionContext(working_dir="mlia_output"), "ethos-u55-256",
-                        "model.tflite")
-    """
-    get_advice(
-        target_profile,
-        model,
-        "performance",
-        output=output,
-        context=ctx,
-        backends=evaluate_on,
-    )
-
-
-def optimization(
-    ctx: ExecutionContext,
-    target_profile: str,
-    model: str,
-    optimization_type: str,
-    optimization_target: str,
+    pruning: bool,
+    clustering: bool,
+    pruning_target: float | None,
+    clustering_target: int | None,
     layers_to_optimize: list[str] | None = None,
-    output: PathOrFileLike | None = None,
-    evaluate_on: list[str] | None = None,
+    output: Path | None = None,
+    json: bool = False,
+    backend: list[str] | None = None,
 ) -> None:
     """Show the performance improvements (if any) after applying the optimizations.
 
@@ -201,43 +124,54 @@ def optimization(
     the inference performance (if possible).
 
     :param ctx: execution context
-    :param target: target profile identifier. Will load appropriate parameters
+    :param target_profile: target profile identifier. Will load appropriate parameters
             from the profile.json file based on this argument.
     :param model: path to the TensorFlow Lite model
-    :param optimization_type: list of the optimization techniques separated
-           by comma, e.g. 'pruning,clustering'
-    :param optimization_target: list of the corresponding targets for
-           the provided optimization techniques, e.g. '0.5,32'
+    :param pruning: perform pruning optimization (default if no option specified)
+    :param clustering: perform clustering optimization
+    :param clustering_target: clustering optimization target
+    :param pruning_target: pruning optimization target
     :param layers_to_optimize: list of the layers of the model which should be
            optimized, if None then all layers are used
     :param output: path to the file where the report will be saved
-    :param evaluate_on: list of the backends to use for evaluation
+    :param json: set the output format to json
+    :param backend: list of the backends to use for evaluation
 
     Example:
         Run command for the target profile ethos-u55-256 and
         the provided TensorFlow Lite model and print report on the standard output
 
         >>> from mlia.cli.logging import setup_logging
+        >>> from mlia.api import ExecutionContext
         >>> setup_logging()
-        >>> from mlia.cli.commands import optimization
-        >>> optimization(ExecutionContext(working_dir="mlia_output"),
-                         target="ethos-u55-256",
-                         "model.tflite", "pruning", "0.5")
+        >>> from mlia.cli.commands import optimize
+        >>> optimize(ExecutionContext(),
+                         target_profile="ethos-u55-256",
+                         model="model.tflite", pruning=True,
+                         clustering=False, pruning_target=0.5,
+                         clustering_target=None)
     """
-    opt_params = parse_optimization_parameters(
-        optimization_type,
-        optimization_target,
-        layers_to_optimize=layers_to_optimize,
+    opt_params = (
+        parse_optimization_parameters(  # pylint: disable=too-many-function-args
+            pruning,
+            clustering,
+            pruning_target,
+            clustering_target,
+            layers_to_optimize,
+        )
     )
+
+    formatted_output = parse_output_parameters(output, json)
+    validated_backend = validate_backend(target_profile, backend)
 
     get_advice(
         target_profile,
         model,
-        "optimization",
+        {"optimization"},
         optimization_targets=opt_params,
-        output=output,
+        output=formatted_output,
         context=ctx,
-        backends=evaluate_on,
+        backends=validated_backend,
     )
 
 

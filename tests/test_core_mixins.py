@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for the module mixins."""
 import pytest
@@ -36,7 +36,7 @@ class TestParameterResolverMixin:
                 self.context = sample_context
 
                 self.context.update(
-                    advice_category=AdviceCategory.OPERATORS,
+                    advice_category={AdviceCategory.COMPATIBILITY},
                     event_handlers=[],
                     config_parameters={"section": {"param": 123}},
                 )
@@ -83,7 +83,7 @@ class TestParameterResolverMixin:
                 """Init sample object."""
                 self.context = sample_context
                 self.context.update(
-                    advice_category=AdviceCategory.OPERATORS,
+                    advice_category={AdviceCategory.COMPATIBILITY},
                     event_handlers=[],
                     config_parameters={"section": ["param"]},
                 )

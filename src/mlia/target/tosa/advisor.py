@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """TOSA advisor."""
 from __future__ import annotations
@@ -10,12 +10,12 @@ from mlia.core.advice_generation import AdviceCategory
 from mlia.core.advice_generation import AdviceProducer
 from mlia.core.advisor import DefaultInferenceAdvisor
 from mlia.core.advisor import InferenceAdvisor
+from mlia.core.common import FormattedFilePath
 from mlia.core.context import Context
 from mlia.core.context import ExecutionContext
 from mlia.core.data_analysis import DataAnalyzer
 from mlia.core.data_collection import DataCollector
 from mlia.core.events import Event
-from mlia.core.typing import PathOrFileLike
 from mlia.target.tosa.advice_generation import TOSAAdviceProducer
 from mlia.target.tosa.config import TOSAConfiguration
 from mlia.target.tosa.data_analysis import TOSADataAnalyzer
@@ -38,7 +38,7 @@ class TOSAInferenceAdvisor(DefaultInferenceAdvisor):
 
         collectors: list[DataCollector] = []
 
-        if AdviceCategory.OPERATORS in context.advice_category:
+        if context.category_enabled(AdviceCategory.COMPATIBILITY):
             collectors.append(TOSAOperatorCompatibility(model))
 
         return collectors
@@ -69,7 +69,7 @@ def configure_and_get_tosa_advisor(
     context: ExecutionContext,
     target_profile: str,
     model: str | Path,
-    output: PathOrFileLike | None = None,
+    output: FormattedFilePath | None = None,
     **_extra_args: Any,
 ) -> InferenceAdvisor:
     """Create and configure TOSA advisor."""

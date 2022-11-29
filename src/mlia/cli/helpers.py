@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Module for various helper classes."""
 from __future__ import annotations
@@ -29,9 +29,9 @@ class CLIActionResolver(ActionResolver):
 
         return [
             *keras_note,
-            "For example: mlia optimization --optimization-type "
-            f"pruning,clustering --optimization-target 0.5,32 {model_path}",
-            "For more info: mlia optimization --help",
+            f"For example: mlia optimize {model_path} --pruning --clustering "
+            "--pruning-target 0.5 --clustering-target 32",
+            "For more info: mlia optimize --help",
         ]
 
     @staticmethod
@@ -41,14 +41,17 @@ class CLIActionResolver(ActionResolver):
         opt_settings: list[OptimizationSettings],
     ) -> list[str]:
         """Return specific optimization command description."""
-        opt_types = ",".join(opt.optimization_type for opt in opt_settings)
-        opt_targs = ",".join(str(opt.optimization_target) for opt in opt_settings)
+        opt_types = " ".join("--" + opt.optimization_type for opt in opt_settings)
+        opt_targs_strings = ["--pruning-target", "--clustering-target"]
+        opt_targs = ",".join(
+            f"{opt_targs_strings[i]} {opt.optimization_target}"
+            for i, opt in enumerate(opt_settings)
+        )
 
         return [
-            "For more info: mlia optimization --help",
+            "For more info: mlia optimize --help",
             "Optimization command: "
-            f"mlia optimization --optimization-type {opt_types} "
-            f"--optimization-target {opt_targs}{device_opts} {model_path}",
+            f"mlia optimize {model_path}{device_opts} {opt_types} {opt_targs}",
         ]
 
     def apply_optimizations(self, **kwargs: Any) -> list[str]:
@@ -65,13 +68,6 @@ class CLIActionResolver(ActionResolver):
 
         return []
 
-    def supported_operators_info(self) -> list[str]:
-        """Return command details for generating supported ops report."""
-        return [
-            "For guidance on supported operators, run: mlia operators "
-            "--supported-ops-report",
-        ]
-
     def check_performance(self) -> list[str]:
         """Return command details for checking performance."""
         model_path, device_opts = self._get_model_and_device_opts()
@@ -80,7 +76,7 @@ class CLIActionResolver(ActionResolver):
 
         return [
             "Check the estimated performance by running the following command: ",
-            f"mlia performance{device_opts} {model_path}",
+            f"mlia check {model_path}{device_opts} --performance",
         ]
 
     def check_operator_compatibility(self) -> list[str]:
@@ -91,16 +87,16 @@ class CLIActionResolver(ActionResolver):
 
         return [
             "Try running the following command to verify that:",
-            f"mlia operators{device_opts} {model_path}",
+            f"mlia check {model_path}{device_opts}",
         ]
 
     def operator_compatibility_details(self) -> list[str]:
         """Return command details for op compatibility."""
-        return ["For more details, run: mlia operators --help"]
+        return ["For more details, run: mlia check --help"]
 
     def optimization_details(self) -> list[str]:
         """Return command details for optimization."""
-        return ["For more info, see: mlia optimization --help"]
+        return ["For more info, see: mlia optimize --help"]
 
     def _get_model_and_device_opts(
         self, separate_device_opts: bool = True

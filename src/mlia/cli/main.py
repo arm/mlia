@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """CLI main entry point."""
 from __future__ import annotations
@@ -8,32 +8,28 @@ import logging
 import sys
 from functools import partial
 from inspect import signature
-from pathlib import Path
 
 from mlia import __version__
 from mlia.backend.errors import BackendUnavailableError
 from mlia.backend.registry import registry as backend_registry
-from mlia.cli.commands import all_tests
 from mlia.cli.commands import backend_install
 from mlia.cli.commands import backend_list
 from mlia.cli.commands import backend_uninstall
-from mlia.cli.commands import operators
-from mlia.cli.commands import optimization
-from mlia.cli.commands import performance
+from mlia.cli.commands import check
+from mlia.cli.commands import optimize
 from mlia.cli.common import CommandInfo
 from mlia.cli.helpers import CLIActionResolver
 from mlia.cli.logging import setup_logging
 from mlia.cli.options import add_backend_install_options
+from mlia.cli.options import add_backend_options
 from mlia.cli.options import add_backend_uninstall_options
-from mlia.cli.options import add_custom_supported_operators_options
+from mlia.cli.options import add_check_category_options
 from mlia.cli.options import add_debug_options
-from mlia.cli.options import add_evaluation_options
 from mlia.cli.options import add_keras_model_options
+from mlia.cli.options import add_model_options
 from mlia.cli.options import add_multi_optimization_options
-from mlia.cli.options import add_optional_tflite_model_options
 from mlia.cli.options import add_output_options
 from mlia.cli.options import add_target_options
-from mlia.cli.options import add_tflite_model_options
 from mlia.core.context import ExecutionContext
 from mlia.core.errors import ConfigurationError
 from mlia.core.errors import InternalError
@@ -60,50 +56,30 @@ def get_commands() -> list[CommandInfo]:
     """Return commands configuration."""
     return [
         CommandInfo(
-            all_tests,
-            ["all"],
+            check,
+            [],
             [
+                add_model_options,
                 add_target_options,
+                add_backend_options,
+                add_check_category_options,
+                add_output_options,
+                add_debug_options,
+            ],
+        ),
+        CommandInfo(
+            optimize,
+            [],
+            [
                 add_keras_model_options,
+                partial(add_target_options, profiles_to_skip=["tosa", "cortex-a"]),
+                partial(
+                    add_backend_options,
+                    backends_to_skip=["tosa-checker", "armnn-tflitedelegate"],
+                ),
                 add_multi_optimization_options,
                 add_output_options,
                 add_debug_options,
-                add_evaluation_options,
-            ],
-            True,
-        ),
-        CommandInfo(
-            operators,
-            ["ops"],
-            [
-                add_target_options,
-                add_optional_tflite_model_options,
-                add_output_options,
-                add_custom_supported_operators_options,
-                add_debug_options,
-            ],
-        ),
-        CommandInfo(
-            performance,
-            ["perf"],
-            [
-                partial(add_target_options, profiles_to_skip=["tosa", "cortex-a"]),
-                add_tflite_model_options,
-                add_output_options,
-                add_debug_options,
-                add_evaluation_options,
-            ],
-        ),
-        CommandInfo(
-            optimization,
-            ["opt"],
-            [
-                partial(add_target_options, profiles_to_skip=["tosa", "cortex-a"]),
-                add_keras_model_options,
-                add_multi_optimization_options,
-                add_output_options,
-                add_debug_options,
-                add_evaluation_options,
             ],
         ),
     ]
@@ -184,13 +160,12 @@ def setup_context(
 ) -> tuple[ExecutionContext, dict]:
     """Set up context and resolve function parameters."""
     ctx = ExecutionContext(
-        working_dir=args.working_dir,
-        verbose="verbose" in args and args.verbose,
+        verbose="debug" in args and args.debug,
         action_resolver=CLIActionResolver(vars(args)),
     )
 
     # these parameters should not be passed into command function
-    skipped_params = ["func", "command", "working_dir", "verbose"]
+    skipped_params = ["func", "command", "debug"]
 
     # pass these parameters only if command expects them
     expected_params = [context_var_name]
@@ -219,6 +194,9 @@ def run_command(args: argparse.Namespace) -> int:
 
     try:
         logger.info(INFO_MESSAGE)
+        logger.info(
+            "\nThis execution of MLIA uses working directory: %s", ctx.working_dir
+        )
         args.func(**func_args)
         return 0
     except KeyboardInterrupt:
@@ -246,22 +224,19 @@ def run_command(args: argparse.Namespace) -> int:
             f"Please check the log files in the {ctx.logs_path} for more details"
         )
         if not ctx.verbose:
-            err_advice_message += ", or enable verbose mode (--verbose)"
+            err_advice_message += ", or enable debug mode (--debug)"
 
         logger.error(err_advice_message)
-
+    finally:
+        logger.info(
+            "This execution of MLIA used working directory: %s", ctx.working_dir
+        )
     return 1
 
 
 def init_common_parser() -> argparse.ArgumentParser:
     """Init common parser."""
     parser = argparse.ArgumentParser(add_help=False, allow_abbrev=False)
-    parser.add_argument(
-        "--working-dir",
-        default=f"{Path.cwd() / 'mlia_output'}",
-        help="Path to the directory where MLIA will store logs, "
-        "models, etc. (default: %(default)s)",
-    )
 
     return parser
 

@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Reporting module."""
 from __future__ import annotations
@@ -639,14 +639,3 @@ def _apply_format_parameters(
         return report
 
     return wrapper
-
-
-def resolve_output_format(output: PathOrFileLike | None) -> OutputFormat:
-    """Resolve output format based on the output name."""
-    if isinstance(output, (str, Path)):
-        format_from_filename = Path(output).suffix.lstrip(".")
-
-        if format_from_filename in OUTPUT_FORMATS:
-            return cast(OutputFormat, format_from_filename)
-
-    return "plain_text"

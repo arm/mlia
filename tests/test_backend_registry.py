@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for the backend registry module."""
 from __future__ import annotations
@@ -18,7 +18,7 @@ from mlia.core.common import AdviceCategory
     (
         (
             "ArmNNTFLiteDelegate",
-            [AdviceCategory.OPERATORS],
+            [AdviceCategory.COMPATIBILITY],
             None,
             BackendType.BUILTIN,
         ),
@@ -36,14 +36,14 @@ from mlia.core.common import AdviceCategory
         ),
         (
             "TOSA-Checker",
-            [AdviceCategory.OPERATORS],
+            [AdviceCategory.COMPATIBILITY],
             [System.LINUX_AMD64],
             BackendType.WHEEL,
         ),
         (
             "Vela",
             [
-                AdviceCategory.OPERATORS,
+                AdviceCategory.COMPATIBILITY,
                 AdviceCategory.PERFORMANCE,
                 AdviceCategory.OPTIMIZATION,
             ],

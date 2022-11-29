@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """End to end tests for MLIA CLI."""
 from __future__ import annotations
@@ -20,7 +20,6 @@ from typing import Iterable
 import pytest
 
 from mlia.cli.config import get_available_backends
-from mlia.cli.config import get_default_backends
 from mlia.cli.main import get_commands
 from mlia.cli.main import get_possible_command_names
 from mlia.cli.main import init_commands
@@ -230,19 +229,19 @@ def check_args(args: list[str], no_skip: bool) -> None:
     """Check the arguments and skip/fail test cases based on that."""
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--evaluate-on",
-        help="Backends to use for evaluation (default: %(default)s)",
-        nargs="*",
-        default=get_default_backends(),
+        "--backend",
+        help="Backends to use for evaluation.",
+        nargs="+",
     )
 
     parsed_args, _ = parser.parse_known_args(args)
-    required_backends = set(parsed_args.evaluate_on)
-    available_backends = set(get_available_backends())
-    missing_backends = required_backends.difference(available_backends)
+    if parsed_args.backend:
+        required_backends = set(parsed_args.backend)
+        available_backends = set(get_available_backends())
+        missing_backends = required_backends.difference(available_backends)
 
-    if missing_backends and not no_skip:
-        pytest.skip(f"Missing backend(s): {','.join(missing_backends)}")
+        if missing_backends and not no_skip:
+            pytest.skip(f"Missing backend(s): {','.join(missing_backends)}")
 
 
 def get_execution_definitions() -> Generator[list[str], None, None]:

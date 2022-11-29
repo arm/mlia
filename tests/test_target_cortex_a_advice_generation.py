@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for advice generation."""
 from __future__ import annotations
@@ -31,7 +31,7 @@ BACKEND_INFO = (
     [
         [
             ModelIsNotCortexACompatible(BACKEND_INFO, {"UNSUPPORTED_OP"}, {}),
-            AdviceCategory.OPERATORS,
+            {AdviceCategory.COMPATIBILITY},
             [
                 Advice(
                     [
@@ -61,7 +61,7 @@ BACKEND_INFO = (
                     )
                 },
             ),
-            AdviceCategory.OPERATORS,
+            {AdviceCategory.COMPATIBILITY},
             [
                 Advice(
                     [
@@ -93,7 +93,7 @@ BACKEND_INFO = (
         ],
         [
             ModelIsCortexACompatible(BACKEND_INFO),
-            AdviceCategory.OPERATORS,
+            {AdviceCategory.COMPATIBILITY},
             [
                 Advice(
                     [
@@ -108,7 +108,7 @@ BACKEND_INFO = (
                 flex_ops=["flex_op1", "flex_op2"],
                 custom_ops=["custom_op1", "custom_op2"],
             ),
-            AdviceCategory.OPERATORS,
+            {AdviceCategory.COMPATIBILITY},
             [
                 Advice(
                     [
@@ -142,7 +142,7 @@ BACKEND_INFO = (
         ],
         [
             ModelIsNotTFLiteCompatible(),
-            AdviceCategory.OPERATORS,
+            {AdviceCategory.COMPATIBILITY},
             [
                 Advice(
                     [
@@ -154,7 +154,7 @@ BACKEND_INFO = (
         ],
         [
             ModelHasCustomOperators(),
-            AdviceCategory.OPERATORS,
+            {AdviceCategory.COMPATIBILITY},
             [
                 Advice(
                     [
@@ -166,7 +166,7 @@ BACKEND_INFO = (
         ],
         [
             TFLiteCompatibilityCheckFailed(),
-            AdviceCategory.OPERATORS,
+            {AdviceCategory.COMPATIBILITY},
             [
                 Advice(
                     [
@@ -181,7 +181,7 @@ BACKEND_INFO = (
 def test_cortex_a_advice_producer(
     tmpdir: str,
     input_data: DataItem,
-    advice_category: AdviceCategory,
+    advice_category: set[AdviceCategory],
     expected_advice: list[Advice],
 ) -> None:
     """Test Cortex-A advice producer."""

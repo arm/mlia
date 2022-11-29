@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Event handlers module."""
 from __future__ import annotations
@@ -9,6 +9,7 @@ from typing import Callable
 
 from mlia.core.advice_generation import Advice
 from mlia.core.advice_generation import AdviceEvent
+from mlia.core.common import FormattedFilePath
 from mlia.core.events import ActionFinishedEvent
 from mlia.core.events import ActionStartedEvent
 from mlia.core.events import AdviceStageFinishedEvent
@@ -26,7 +27,6 @@ from mlia.core.events import ExecutionFinishedEvent
 from mlia.core.events import ExecutionStartedEvent
 from mlia.core.reporting import Report
 from mlia.core.reporting import Reporter
-from mlia.core.reporting import resolve_output_format
 from mlia.core.typing import PathOrFileLike
 from mlia.utils.console import create_section_header
 
@@ -101,12 +101,12 @@ class WorkflowEventsHandler(SystemEventsHandler):
     def __init__(
         self,
         formatter_resolver: Callable[[Any], Callable[[Any], Report]],
-        output: PathOrFileLike | None = None,
+        output: FormattedFilePath | None = None,
     ) -> None:
         """Init event handler."""
-        output_format = resolve_output_format(output)
+        output_format = output.fmt if output else "plain_text"
         self.reporter = Reporter(formatter_resolver, output_format)
-        self.output = output
+        self.output = output.path if output else None
 
         self.advice: list[Advice] = []
 

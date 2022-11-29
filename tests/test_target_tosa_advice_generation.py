@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for advice generation."""
 from __future__ import annotations
@@ -19,7 +19,7 @@ from mlia.target.tosa.data_analysis import ModelIsTOSACompatible
     [
         [
             ModelIsNotTOSACompatible(),
-            AdviceCategory.OPERATORS,
+            {AdviceCategory.COMPATIBILITY},
             [
                 Advice(
                     [
@@ -31,7 +31,7 @@ from mlia.target.tosa.data_analysis import ModelIsTOSACompatible
         ],
         [
             ModelIsTOSACompatible(),
-            AdviceCategory.OPERATORS,
+            {AdviceCategory.COMPATIBILITY},
             [Advice(["Model is fully TOSA compatible."])],
         ],
     ],
@@ -39,7 +39,7 @@ from mlia.target.tosa.data_analysis import ModelIsTOSACompatible
 def test_tosa_advice_producer(
     tmpdir: str,
     input_data: DataItem,
-    advice_category: AdviceCategory,
+    advice_category: set[AdviceCategory],
     expected_advice: list[Advice],
 ) -> None:
     """Test TOSA advice producer."""
