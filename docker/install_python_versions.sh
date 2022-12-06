@@ -27,7 +27,7 @@ function set_python_global_versions() {
 # available globally.
 py_versions=$1
 parameters=$2
-for i in $(echo "$py_versions" | tr ";" "\n")
+for i in $(echo "$py_versions" | tr "," "\n")
 do
     pyenv install "$i":latest
 done

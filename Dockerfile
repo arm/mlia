@@ -79,7 +79,7 @@ RUN curl https://pyenv.run | bash
 ENV PYENV_ROOT /home/foo/.pyenv
 ENV PATH $PYENV_ROOT/shims:$PYENV_ROOT/bin:$PATH
 
-# Python versions separated by semicolons. E.g. "3.8;3.9"
+# Python versions separated by commas, e.g. "3.8,3.9"
 ARG PYTHON_VERSIONS
 # Install Python versions and set them to be available globally
 COPY docker/install_python_versions.sh /home/foo
