@@ -106,7 +106,7 @@ COPY .pre-commit-config.yaml .
 # chosen pip index. By loading it as a secret, the secret information will not
 # be leaked into the final build or cache.
 RUN --mount=type=secret,id=pip_conf,mode=755,target=/home/foo/.pip/pip.conf \
-    pip3 install tox &&\
+    pip3 install -U tox~=3.27.1 &&\
     tox --workdir $TOX_WORK_DIR --notest --recreate -e lint &&\
     tox --workdir $TOX_WORK_DIR -e lint_setup
 
