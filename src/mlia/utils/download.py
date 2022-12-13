@@ -46,9 +46,10 @@ def download(
     show_progress: bool = False,
     label: str | None = None,
     chunk_size: int = 8192,
+    timeout: int = 30,
 ) -> None:
     """Download the file."""
-    with requests.get(url, stream=True, timeout=10.0) as resp:
+    with requests.get(url, stream=True, timeout=timeout) as resp:
         resp.raise_for_status()
         content_chunks = resp.iter_content(chunk_size=chunk_size)
 

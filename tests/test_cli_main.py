@@ -15,10 +15,12 @@ from unittest.mock import MagicMock
 import pytest
 
 import mlia
+from mlia.backend.errors import BackendUnavailableError
 from mlia.cli.main import backend_main
 from mlia.cli.main import CommandInfo
 from mlia.cli.main import main
 from mlia.core.context import ExecutionContext
+from mlia.core.errors import InternalError
 from tests.utils.logging import clear_loggers
 
 
@@ -357,6 +359,33 @@ def test_commands_execution_backend_main(
             False,
             MagicMock(side_effect=KeyboardInterrupt()),
             ["Execution has been interrupted"],
+        ],
+        [
+            False,
+            MagicMock(
+                side_effect=BackendUnavailableError(
+                    "Backend sample is not available", "sample"
+                )
+            ),
+            ["Error: Backend sample is not available."],
+        ],
+        [
+            False,
+            MagicMock(
+                side_effect=BackendUnavailableError(
+                    "Backend tosa-checker is not available", "tosa-checker"
+                )
+            ),
+            [
+                "Error: Backend tosa-checker is not available.",
+                "Please use next command to install it: "
+                'mlia-backend install "tosa-checker"',
+            ],
+        ],
+        [
+            False,
+            MagicMock(side_effect=InternalError("Unknown error")),
+            ["Internal error: Unknown error"],
         ],
     ],
 )

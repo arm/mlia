@@ -3,10 +3,16 @@
 """Util functions for managing python packages."""
 from __future__ import annotations
 
+import logging
+import subprocess  # nosec
 import sys
 from importlib.metadata import distribution
 from importlib.metadata import PackageNotFoundError
-from subprocess import check_call  # nosec
+
+from mlia.core.errors import InternalError
+
+
+logger = logging.getLogger(__name__)
 
 
 class PyPackageManager:
@@ -45,16 +51,29 @@ class PyPackageManager:
         """Execute pip command."""
         assert sys.executable, "Unable to launch pip command"
 
-        check_call(
-            [
-                sys.executable,
-                "-m",
-                "pip",
-                "--disable-pip-version-check",
-                subcommand,
-                *params,
-            ]
-        )
+        try:
+            output = subprocess.check_output(  # nosec
+                [
+                    sys.executable,
+                    "-m",
+                    "pip",
+                    "--disable-pip-version-check",
+                    subcommand,
+                    *params,
+                ],
+                stderr=subprocess.STDOUT,
+                text=True,
+            )
+            returncode = 0
+        except subprocess.CalledProcessError as err:
+            output = err.output
+            returncode = err.returncode
+
+        for line in output.splitlines():
+            logger.debug(line.rstrip())
+
+        if returncode != 0:
+            raise InternalError("Unable to install python package")
 
 
 def get_package_manager() -> PyPackageManager:

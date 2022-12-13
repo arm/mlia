@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for python package manager."""
+import subprocess  # nosec
 import sys
 from unittest.mock import MagicMock
 
@@ -16,13 +17,16 @@ def test_get_package_manager() -> None:
     assert isinstance(manager, PyPackageManager)
 
 
-@pytest.fixture(name="mock_check_call")
-def mock_check_call_fixture(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
+@pytest.fixture(name="mock_check_output")
+def mock_check_output_fixture(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
     """Mock check_call function."""
-    mock_check_call = MagicMock()
-    monkeypatch.setattr("mlia.utils.py_manager.check_call", mock_check_call)
+    mock_check_output = MagicMock()
 
-    return mock_check_call
+    monkeypatch.setattr(
+        "mlia.utils.py_manager.subprocess.check_output", mock_check_output
+    )
+
+    return mock_check_output
 
 
 def test_py_package_manager_metadata() -> None:
@@ -32,14 +36,14 @@ def test_py_package_manager_metadata() -> None:
     assert manager.packages_installed(["pytest", "mlia"])
 
 
-def test_py_package_manager_install(mock_check_call: MagicMock) -> None:
+def test_py_package_manager_install(mock_check_output: MagicMock) -> None:
     """Test package installation."""
     manager = PyPackageManager()
     with pytest.raises(ValueError, match="No package names provided"):
         manager.install([])
 
     manager.install(["mlia", "pytest"])
-    mock_check_call.assert_called_once_with(
+    mock_check_output.assert_called_once_with(
         [
             sys.executable,
             "-m",
@@ -48,18 +52,20 @@ def test_py_package_manager_install(mock_check_call: MagicMock) -> None:
             "install",
             "mlia",
             "pytest",
-        ]
+        ],
+        stderr=subprocess.STDOUT,
+        text=True,
     )
 
 
-def test_py_package_manager_uninstall(mock_check_call: MagicMock) -> None:
+def test_py_package_manager_uninstall(mock_check_output: MagicMock) -> None:
     """Test package removal."""
     manager = PyPackageManager()
     with pytest.raises(ValueError, match="No package names provided"):
         manager.uninstall([])
 
     manager.uninstall(["mlia", "pytest"])
-    mock_check_call.assert_called_once_with(
+    mock_check_output.assert_called_once_with(
         [
             sys.executable,
             "-m",
@@ -69,5 +75,7 @@ def test_py_package_manager_uninstall(mock_check_call: MagicMock) -> None:
             "--yes",
             "mlia",
             "pytest",
-        ]
+        ],
+        stderr=subprocess.STDOUT,
+        text=True,
     )

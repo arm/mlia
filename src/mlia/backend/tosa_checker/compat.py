@@ -8,6 +8,7 @@ from typing import Any
 from typing import cast
 from typing import Protocol
 
+from mlia.backend.errors import BackendUnavailableError
 from mlia.core.typing import PathOrFileLike
 
 
@@ -45,9 +46,8 @@ def get_tosa_compatibility_info(
     checker = get_tosa_checker(tflite_model_path)
 
     if checker is None:
-        raise Exception(
-            "TOSA checker is not available. "
-            "Please make sure that 'tosa-checker' backend is installed."
+        raise BackendUnavailableError(
+            "Backend tosa-checker is not available", "tosa-checker"
         )
 
     ops = [

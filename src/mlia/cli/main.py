@@ -11,6 +11,7 @@ from inspect import signature
 from pathlib import Path
 
 from mlia import __version__
+from mlia.backend.errors import BackendUnavailableError
 from mlia.cli.commands import all_tests
 from mlia.cli.commands import backend_install
 from mlia.cli.commands import backend_list
@@ -225,6 +226,14 @@ def run_command(args: argparse.Namespace) -> int:
         logger.error("Internal error: %s", err)
     except ConfigurationError as err:
         logger.error(err)
+    except BackendUnavailableError as err:
+        logger.error("Error: Backend %s is not available.", err.backend)
+        # apart from tosa-checker all other backends are currently optional
+        if err.backend in ("tosa-checker",):
+            logger.error(
+                'Please use next command to install it: mlia-backend install "%s"',
+                err.backend,
+            )
     except Exception as err:  # pylint: disable=broad-except
         logger.error(
             "\nExecution finished with error: %s",

@@ -10,6 +10,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from mlia.backend.errors import BackendUnavailableError
 from mlia.backend.tosa_checker.compat import get_tosa_compatibility_info
 from mlia.backend.tosa_checker.compat import Operator
 from mlia.backend.tosa_checker.compat import TOSACompatibilityInfo
@@ -31,7 +32,9 @@ def test_compatibility_check_should_fail_if_checker_not_available(
     """Test that compatibility check should fail if TOSA checker is not available."""
     replace_get_tosa_checker_with_mock(monkeypatch, None)
 
-    with pytest.raises(Exception, match="TOSA checker is not available"):
+    with pytest.raises(
+        BackendUnavailableError, match="Backend tosa-checker is not available"
+    ):
         get_tosa_compatibility_info(test_tflite_model)
 
 
