@@ -27,10 +27,11 @@ class TOSAEventHandler(WorkflowEventsHandler, TOSAAdvisorEventHandler):
     def on_tosa_advisor_started(self, event: TOSAAdvisorStartedEvent) -> None:
         """Handle TOSAAdvisorStartedEvent event."""
         self.reporter.submit(event.device)
+        self.reporter.submit(event.tosa_metadata)
 
     def on_collected_data(self, event: CollectedDataEvent) -> None:
         """Handle CollectedDataEvent event."""
         data_item = event.data_item
 
         if isinstance(data_item, TOSACompatibilityInfo):
-            self.reporter.submit(data_item.operators, delay_print=True)
+            self.reporter.submit(data_item, delay_print=True)

@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for the logging utility functions."""
 from __future__ import annotations
@@ -13,6 +13,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from mlia.utils.logging import capture_raw_output
 from mlia.utils.logging import create_log_handler
 from mlia.utils.logging import redirect_output
 from mlia.utils.logging import redirect_raw_output
@@ -84,3 +85,15 @@ def test_output_redirection(redirect_context_manager: Callable) -> None:
     print("after redirect")
 
     logger_mock.log.assert_called_once_with(logging.INFO, "output redirected")
+
+
+def test_output_and_error_capture() -> None:
+    """Test output/error capturing."""
+    with capture_raw_output(sys.stdout) as std_output, capture_raw_output(
+        sys.stderr
+    ) as stderr_output:
+        print("hello from stdout")
+        print("hello from stderr", file=sys.stderr)
+
+    assert std_output == ["hello from stdout\n"]
+    assert stderr_output == ["hello from stderr\n"]

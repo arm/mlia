@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Logging utility functions."""
 from __future__ import annotations
@@ -54,10 +54,10 @@ def redirect_output(
 
 
 @contextmanager
-def redirect_raw(
-    logger: logging.Logger, output: TextIO, log_level: int
+def process_raw_output(
+    consumer: Callable[[str], None], output: TextIO
 ) -> Generator[None, None, None]:
-    """Redirect output using file descriptors."""
+    """Process output on file descriptor level."""
     with tempfile.TemporaryFile(mode="r+") as tmp:
         old_output_fd: int | None = None
         try:
@@ -73,7 +73,21 @@ def redirect_raw(
 
             tmp.seek(0)
             for line in tmp.readlines():
-                logger.log(log_level, line.rstrip())
+                consumer(line)
+
+
+@contextmanager
+def redirect_raw(
+    logger: logging.Logger, output: TextIO, log_level: int
+) -> Generator[None, None, None]:
+    """Redirect output using file descriptors."""
+
+    def consumer(line: str) -> None:
+        """Redirect output to the logger."""
+        logger.log(log_level, line.rstrip())
+
+    with process_raw_output(consumer, output):
+        yield
 
 
 @contextmanager
@@ -92,6 +106,19 @@ def redirect_raw_output(
                 exit_stack.enter_context(redirect_raw(logger, output, level))
 
         yield
+
+
+@contextmanager
+def capture_raw_output(output: TextIO) -> Generator[list[str], None, None]:
+    """Capture output as list of strings."""
+    result: list[str] = []
+
+    def consumer(line: str) -> None:
+        """Save output for later processing."""
+        result.append(line)
+
+    with process_raw_output(consumer, output):
+        yield result
 
 
 class LogFilter(logging.Filter):

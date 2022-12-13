@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for TOSA compatibility."""
 from __future__ import annotations
@@ -39,12 +39,13 @@ def test_compatibility_check_should_fail_if_checker_not_available(
 
 
 @pytest.mark.parametrize(
-    "is_tosa_compatible, operators, expected_result",
+    "is_tosa_compatible, operators, exception, expected_result",
     [
         [
             True,
             [],
-            TOSACompatibilityInfo(True, []),
+            None,
+            TOSACompatibilityInfo(True, [], None, None, None),
         ],
         [
             True,
@@ -55,18 +56,16 @@ def test_compatibility_check_should_fail_if_checker_not_available(
                     is_tosa_compatible=True,
                 )
             ],
-            TOSACompatibilityInfo(True, [Operator("op_location", "op_name", True)]),
+            None,
+            TOSACompatibilityInfo(
+                True, [Operator("op_location", "op_name", True)], None, [], []
+            ),
         ],
         [
             False,
-            [
-                SimpleNamespace(
-                    location="op_location",
-                    name="op_name",
-                    is_tosa_compatible=False,
-                )
-            ],
-            TOSACompatibilityInfo(False, [Operator("op_location", "op_name", False)]),
+            [],
+            ValueError("error_test"),
+            TOSACompatibilityInfo(False, [], ValueError("error_test"), [], []),
         ],
     ],
 )
@@ -75,6 +74,7 @@ def test_get_tosa_compatibility_info(
     test_tflite_model: Path,
     is_tosa_compatible: bool,
     operators: Any,
+    exception: Exception | None,
     expected_result: TOSACompatibilityInfo,
 ) -> None:
     """Test getting TOSA compatibility information."""
@@ -83,7 +83,17 @@ def test_get_tosa_compatibility_info(
     mock_checker._get_tosa_compatibility_for_ops.return_value = (  # pylint: disable=protected-access
         operators
     )
-
+    if exception:
+        mock_checker._get_tosa_compatibility_for_ops.side_effect = (  # pylint: disable=protected-access
+            exception
+        )
     replace_get_tosa_checker_with_mock(monkeypatch, mock_checker)
 
-    assert get_tosa_compatibility_info(test_tflite_model) == expected_result
+    returned_compatibility_info = get_tosa_compatibility_info(test_tflite_model)
+    assert repr(returned_compatibility_info.exception) == repr(
+        expected_result.exception
+    )
+    assert (
+        returned_compatibility_info.tosa_compatible == expected_result.tosa_compatible
+    )
+    assert returned_compatibility_info.operators == expected_result.operators

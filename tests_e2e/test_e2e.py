@@ -218,11 +218,16 @@ def get_all_commands_combinations(executions: Any) -> Generator[list[str], None,
         ExecutionConfiguration.from_dict(exec_info) for exec_info in executions
     )
 
-    return (
-        command_combination
-        for exec_config in exec_configs
-        for command_combination in exec_config.all_combinations
-    )
+    parser = get_args_parser()
+    for exec_config in exec_configs:
+        for command_combination in exec_config.all_combinations:
+            for idx, param in enumerate(command_combination):
+                if "{model_name}" in param:
+                    args = parser.parse_args(command_combination)
+                    model_name = Path(args.model).stem
+                    param = param.replace("{model_name}", model_name)
+                    command_combination[idx] = param
+            yield command_combination
 
 
 def check_args(args: list[str], no_skip: bool) -> None:
