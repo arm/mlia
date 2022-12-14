@@ -6,18 +6,18 @@ from pathlib import Path
 import pytest
 import tensorflow as tf
 
+from mlia.backend.armnn_tflite_delegate import compat
 from mlia.nn.tensorflow.tflite_graph import TFL_OP
 from mlia.nn.tensorflow.utils import convert_to_tflite
-from mlia.target.cortex_a import operator_compatibility as op_compat
 from mlia.target.cortex_a.operators import CortexACompatibilityInfo
 from mlia.target.cortex_a.operators import get_cortex_a_compatibility_info
 from mlia.target.cortex_a.operators import Operator
 
 
-def test_op_compat_data() -> None:
+def test_compat_data() -> None:
     """Make sure all data contains the necessary items."""
     builtin_tfl_ops = {op.name for op in TFL_OP}
-    for data in [op_compat.ARMNN_TFLITE_DELEGATE]:
+    for data in [compat.ARMNN_TFLITE_DELEGATE]:
         assert "metadata" in data
         assert "backend" in data["metadata"]
         assert "version" in data["metadata"]

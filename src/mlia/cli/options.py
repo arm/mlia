@@ -38,7 +38,7 @@ def add_target_options(
         help="Target profile that will set the target options "
         "such as target, mac value, memory mode, etc. "
         f"For the values associated with each target profile "
-        f" please refer to the documenation {default_help}.",
+        f" please refer to the documentation {default_help}.",
     )
 
 

@@ -5,6 +5,9 @@ from __future__ import annotations
 
 import pytest
 
+from mlia.backend.armnn_tflite_delegate.compat import (
+    ARMNN_TFLITE_DELEGATE,
+)
 from mlia.core.advice_generation import Advice
 from mlia.core.common import AdviceCategory
 from mlia.core.common import DataItem
@@ -16,7 +19,6 @@ from mlia.target.cortex_a.data_analysis import ModelIsCortexACompatible
 from mlia.target.cortex_a.data_analysis import ModelIsNotCortexACompatible
 from mlia.target.cortex_a.data_analysis import ModelIsNotTFLiteCompatible
 from mlia.target.cortex_a.data_analysis import TFLiteCompatibilityCheckFailed
-from mlia.target.cortex_a.operator_compatibility import ARMNN_TFLITE_DELEGATE
 
 BACKEND_INFO = (
     f"{ARMNN_TFLITE_DELEGATE['metadata']['backend']} "

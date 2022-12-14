@@ -12,6 +12,7 @@ from pathlib import Path
 
 from mlia import __version__
 from mlia.backend.errors import BackendUnavailableError
+from mlia.backend.registry import registry as backend_registry
 from mlia.cli.commands import all_tests
 from mlia.cli.commands import backend_install
 from mlia.cli.commands import backend_list
@@ -36,6 +37,7 @@ from mlia.cli.options import add_tflite_model_options
 from mlia.core.context import ExecutionContext
 from mlia.core.errors import ConfigurationError
 from mlia.core.errors import InternalError
+from mlia.target.registry import registry as target_registry
 
 
 logger = logging.getLogger(__name__)
@@ -46,11 +48,10 @@ ML Inference Advisor {__version__}
 Help the design and optimization of neural network models for efficient inference on a target CPU and NPU
 
 Supported targets:
+{target_registry}
 
- - Cortex-A  <op compatibility>
- - Ethos-U55 <op compatibility, perf estimation, model opt>
- - Ethos-U65 <op compatibility, perf estimation, model opt>
- - TOSA      <op compatibility>
+Supported backends:
+{backend_registry}
 
 """.strip()
 

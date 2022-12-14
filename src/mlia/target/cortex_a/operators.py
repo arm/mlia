@@ -9,12 +9,12 @@ from pathlib import Path
 from typing import Any
 from typing import ClassVar
 
+from mlia.backend.armnn_tflite_delegate.compat import (
+    ARMNN_TFLITE_DELEGATE as TFLITE_DELEGATE_COMPAT,
+)
 from mlia.nn.tensorflow.tflite_graph import Op
 from mlia.nn.tensorflow.tflite_graph import parse_subgraphs
 from mlia.nn.tensorflow.tflite_graph import TFL_ACTIVATION_FUNCTION
-from mlia.target.cortex_a.operator_compatibility import (
-    ARMNN_TFLITE_DELEGATE as TFLITE_DELEGATE_COMPAT,
-)
 
 
 @dataclass

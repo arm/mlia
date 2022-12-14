@@ -1,17 +1,16 @@
 # SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
-"""TOSA checker backend module."""
+"""Arm NN TensorFlow Lite delegate backend module."""
 from mlia.backend.config import BackendConfiguration
 from mlia.backend.config import BackendType
-from mlia.backend.config import System
 from mlia.backend.registry import registry
 from mlia.core.common import AdviceCategory
 
 registry.register(
-    "TOSA-Checker",
+    "ArmNNTFLiteDelegate",
     BackendConfiguration(
         supported_advice=[AdviceCategory.OPERATORS],
-        supported_systems=[System.LINUX_AMD64],
-        backend_type=BackendType.WHEEL,
+        supported_systems=None,
+        backend_type=BackendType.BUILTIN,
     ),
 )
