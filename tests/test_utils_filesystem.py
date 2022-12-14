@@ -1,21 +1,18 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for the filesystem module."""
 import contextlib
-import json
 from pathlib import Path
-from unittest.mock import MagicMock
 
 import pytest
 
 from mlia.utils.filesystem import all_files_exist
 from mlia.utils.filesystem import all_paths_valid
 from mlia.utils.filesystem import copy_all
+from mlia.utils.filesystem import get_builtin_supported_profile_names
 from mlia.utils.filesystem import get_mlia_resources
+from mlia.utils.filesystem import get_mlia_target_profiles_dir
 from mlia.utils.filesystem import get_profile
-from mlia.utils.filesystem import get_profiles_data
-from mlia.utils.filesystem import get_profiles_file
-from mlia.utils.filesystem import get_supported_profile_names
 from mlia.utils.filesystem import get_vela_config
 from mlia.utils.filesystem import sha256
 from mlia.utils.filesystem import temp_directory
@@ -34,50 +31,20 @@ def test_get_vela_config() -> None:
     assert get_vela_config().name == "vela.ini"
 
 
-def test_profiles_file() -> None:
-    """Test profiles file getter."""
-    assert get_profiles_file().is_file()
-    assert get_profiles_file().name == "profiles.json"
+def test_get_mlia_target_profiles() -> None:
+    """Test target profiles getter."""
+    assert get_mlia_target_profiles_dir().is_dir()
 
 
-def test_profiles_data() -> None:
-    """Test profiles data getter."""
-    assert list(get_profiles_data().keys()) == [
-        "ethos-u55-256",
-        "ethos-u55-128",
-        "ethos-u65-512",
-        "ethos-u65-256",
-        "tosa",
-        "cortex-a",
-    ]
-
-
-def test_profiles_data_wrong_format(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
-    """Test if profile data has wrong format."""
-    wrong_profile_data = tmp_path / "bad.json"
-    with open(wrong_profile_data, "w", encoding="utf-8") as file:
-        json.dump([], file)
-
-    monkeypatch.setattr(
-        "mlia.utils.filesystem.get_profiles_file",
-        MagicMock(return_value=wrong_profile_data),
-    )
-
-    with pytest.raises(Exception, match="Profiles data format is not valid"):
-        get_profiles_data()
-
-
-def test_get_supported_profile_names() -> None:
+def test_get_builtin_supported_profile_names() -> None:
     """Test profile names getter."""
-    assert list(get_supported_profile_names()) == [
-        "ethos-u55-256",
-        "ethos-u55-128",
-        "ethos-u65-512",
-        "ethos-u65-256",
-        "tosa",
+    assert get_builtin_supported_profile_names() == [
         "cortex-a",
+        "ethos-u55-128",
+        "ethos-u55-256",
+        "ethos-u65-256",
+        "ethos-u65-512",
+        "tosa",
     ]
 
 
@@ -86,11 +53,11 @@ def test_get_profile() -> None:
     assert get_profile("ethos-u55-256") == {
         "target": "ethos-u55",
         "mac": 256,
-        "system_config": "Ethos_U55_High_End_Embedded",
         "memory_mode": "Shared_Sram",
+        "system_config": "Ethos_U55_High_End_Embedded",
     }
 
-    with pytest.raises(Exception, match="Unable to find target profile unknown"):
+    with pytest.raises(Exception, match=r"File not found:*"):
         get_profile("unknown")
 
 

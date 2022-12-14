@@ -33,7 +33,7 @@ def test_performance_unknown_target(
     sample_context: ExecutionContext, test_tflite_model: Path
 ) -> None:
     """Test that command should fail if unknown target passed."""
-    with pytest.raises(Exception, match="Unable to find target profile unknown"):
+    with pytest.raises(Exception, match=r"File not found:*"):
         check(
             sample_context,
             model=str(test_tflite_model),

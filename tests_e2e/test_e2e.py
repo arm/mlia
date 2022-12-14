@@ -24,7 +24,7 @@ from mlia.cli.config import get_available_backends
 from mlia.cli.main import get_commands
 from mlia.cli.main import get_possible_command_names
 from mlia.cli.main import init_parser
-from mlia.utils.filesystem import get_supported_profile_names
+from mlia.utils.filesystem import get_builtin_supported_profile_names
 from mlia.utils.types import is_list_of
 
 
@@ -175,7 +175,7 @@ def resolve(params: list[str]) -> Generator[list[str], None, None]:
         if prev == "--target-profile" and param == "*":
             resolved = (
                 replace_element(params, idx, profile)
-                for profile in get_supported_profile_names()
+                for profile in get_builtin_supported_profile_names()
             )
         elif param.startswith("e2e_config") and (
             filenames := glob.glob(f"{Path.cwd()}/{param}", recursive=True)

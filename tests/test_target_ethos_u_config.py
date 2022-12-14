@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for config module."""
 from __future__ import annotations
@@ -45,7 +45,7 @@ def test_get_target() -> None:
     with pytest.raises(Exception, match="No target profile given"):
         get_target(None)  # type: ignore
 
-    with pytest.raises(Exception, match="Unable to find target profile unknown"):
+    with pytest.raises(Exception, match=r"File not found:*"):
         get_target("unknown")
 
     u65_device = get_target("ethos-u65-512")

@@ -79,7 +79,7 @@ def get_advice(
 
 def get_advisor(
     context: ExecutionContext,
-    target_profile: str,
+    target_profile: str | Path,
     model: str | Path,
     **extra_args: Any,
 ) -> InferenceAdvisor:

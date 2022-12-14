@@ -64,7 +64,7 @@ class CortexAInferenceAdvisor(DefaultInferenceAdvisor):
 
 def configure_and_get_cortexa_advisor(
     context: ExecutionContext,
-    target_profile: str,
+    target_profile: str | Path,
     model: str | Path,
     **_extra_args: Any,
 ) -> InferenceAdvisor:
@@ -78,7 +78,9 @@ def configure_and_get_cortexa_advisor(
     return CortexAInferenceAdvisor()
 
 
-def _get_config_parameters(model: str | Path, target_profile: str) -> dict[str, Any]:
+def _get_config_parameters(
+    model: str | Path, target_profile: str | Path
+) -> dict[str, Any]:
     """Get configuration parameters for the advisor."""
     advisor_parameters: dict[str, Any] = {
         "cortex_a_inference_advisor": {

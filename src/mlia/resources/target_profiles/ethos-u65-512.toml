@@ -1,0 +1,13 @@
+# SPDX-FileCopyrightText: Copyright 2023, Arm Limited and/or its affiliates.
+# SPDX-License-Identifier: Apache-2.0
+
+target="ethos-u65"
+
+# Number of MACs [256, 512]
+mac=512
+
+# Memory mode: [SRAM Only, Shared SRAM, Dedicated SRAM]
+memory_mode="Dedicated_Sram"
+
+# System configuration
+system_config="Ethos_U65_High_End"

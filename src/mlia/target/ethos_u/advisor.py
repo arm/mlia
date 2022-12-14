@@ -123,7 +123,7 @@ class EthosUInferenceAdvisor(DefaultInferenceAdvisor):
 
 def configure_and_get_ethosu_advisor(
     context: ExecutionContext,
-    target_profile: str,
+    target_profile: str | Path,
     model: str | Path,
     **extra_args: Any,
 ) -> InferenceAdvisor:
@@ -155,7 +155,7 @@ _DEFAULT_OPTIMIZATION_TARGETS = [
 
 def _get_config_parameters(
     model: str | Path,
-    target_profile: str,
+    target_profile: str | Path,
     **extra_args: Any,
 ) -> dict[str, Any]:
     """Get configuration parameters for the advisor."""

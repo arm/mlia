@@ -13,7 +13,7 @@ from mlia.cli.config import DEFAULT_PRUNING_TARGET
 from mlia.cli.config import get_available_backends
 from mlia.cli.config import is_corstone_backend
 from mlia.core.typing import OutputFormat
-from mlia.utils.filesystem import get_supported_profile_names
+from mlia.utils.filesystem import get_builtin_supported_profile_names
 
 
 def add_check_category_options(parser: argparse.ArgumentParser) -> None:
@@ -35,18 +35,21 @@ def add_target_options(
     required: bool = True,
 ) -> None:
     """Add target specific options."""
-    target_profiles = get_supported_profile_names()
+    target_profiles = get_builtin_supported_profile_names()
     if profiles_to_skip:
         target_profiles = [tp for tp in target_profiles if tp not in profiles_to_skip]
+
+    default_target_profile = "ethos-u55-256"
 
     target_group = parser.add_argument_group("target options")
     target_group.add_argument(
         "-t",
         "--target-profile",
-        choices=target_profiles,
         required=required,
-        default="",
-        help="Target profile that will set the target options "
+        default=default_target_profile,
+        help="Builtin target profile: {target_profiles}"
+        "or path to custom target profile"
+        "Target profile that will set the target options "
         "such as target, mac value, memory mode, etc. "
         "For the values associated with each target profile "
         "please refer to the documentation.",
