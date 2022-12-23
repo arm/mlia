@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Console output utility functions."""
 from __future__ import annotations
@@ -71,7 +71,7 @@ def _get_table(table_style: str) -> Table:
         return Table(
             show_header=False,
             box=None,
-            padding=(0, 1, 1, 0),
+            padding=(0, 1, 0, 0),  # (top, right, bottom, left)
         )
 
     if table_style == "no_borders":

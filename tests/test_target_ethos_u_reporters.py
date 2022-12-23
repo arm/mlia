@@ -62,7 +62,6 @@ Operators:
 │ 2 │ cpu_only        │ test_type     │ CPU       │ * CPU only operator           │
 ├───┼─────────────────┼───────────────┼───────────┼───────────────────────────────┤
 │ 3 │ npu_unsupported │ test_type     │ CPU       │ * Not supported operator      │
-│   │                 │               │           │                               │
 │   │                 │               │           │ * Reason why operator is not  │
 │   │                 │               │           │ supported                     │
 └───┴─────────────────┴───────────────┴───────────┴───────────────────────────────┘

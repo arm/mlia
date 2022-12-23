@@ -11,7 +11,6 @@ from inspect import signature
 
 from mlia import __version__
 from mlia.backend.errors import BackendUnavailableError
-from mlia.backend.registry import registry as backend_registry
 from mlia.cli.commands import backend_install
 from mlia.cli.commands import backend_list
 from mlia.cli.commands import backend_uninstall
@@ -35,7 +34,7 @@ from mlia.core.context import ExecutionContext
 from mlia.core.errors import ConfigurationError
 from mlia.core.errors import InternalError
 from mlia.core.logging import setup_logging
-from mlia.target.registry import registry as target_registry
+from mlia.target.registry import table as target_table
 
 
 logger = logging.getLogger(__name__)
@@ -43,14 +42,10 @@ logger = logging.getLogger(__name__)
 INFO_MESSAGE = f"""
 ML Inference Advisor {__version__}
 
-Help the design and optimization of neural network models for efficient inference on a target CPU and NPU
+Help the design and optimization of neural network models for efficient inference on a target CPU or NPU.
 
-Supported targets:
-{target_registry}
-
-Supported backends:
-{backend_registry}
-
+{target_table().to_plain_text(show_title=True, space=False)}
+Use command 'mlia-backend' to install backends.
 """.strip()
 
 
@@ -192,7 +187,7 @@ def run_command(args: argparse.Namespace) -> int:
     )
 
     try:
-        logger.info(INFO_MESSAGE)
+        logger.info("ML Inference Advisor %s", __version__)
         logger.info(
             "\nThis execution of MLIA uses output directory: %s", ctx.output_dir
         )

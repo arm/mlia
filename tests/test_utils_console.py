@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for console utility functions."""
 from __future__ import annotations
@@ -33,7 +33,7 @@ from mlia.utils.console import remove_ascii_codes
             [["1", "2", "3"]],
             ["Col 1", "Col 2", "Col 3"],
             "nested",
-            "Col 1 Col 2 Col 3 \n                  \n1     2     3",
+            "Col 1 Col 2 Col 3 \n1     2     3",
         ],
         [
             [["1", "2", "3"]],
