@@ -1,19 +1,21 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """TOSA target configuration."""
-from mlia.target.config import IPConfiguration
-from mlia.utils.filesystem import get_profile
+from typing import Any
+
+from mlia.target.config import TargetProfile
 
 
-class TOSAConfiguration(IPConfiguration):  # pylint: disable=too-few-public-methods
+class TOSAConfiguration(TargetProfile):
     """TOSA configuration."""
 
-    def __init__(self, target_profile: str) -> None:
+    def __init__(self, **kwargs: Any) -> None:
         """Init configuration."""
-        target_data = get_profile(target_profile)
-        target = target_data["target"]
-
-        if target != "tosa":
-            raise Exception(f"Wrong target {target} for TOSA configuration")
-
+        target = kwargs["target"]
         super().__init__(target)
+
+    def verify(self) -> None:
+        """Check the parameters."""
+        super().verify()
+        if self.target != "tosa":
+            raise ValueError(f"Wrong target {self.target} for TOSA configuration.")

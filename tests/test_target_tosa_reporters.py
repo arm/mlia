@@ -18,7 +18,7 @@ from mlia.target.tosa.reporters import tosa_formatters
 
 def test_tosa_report_device() -> None:
     """Test function report_device()."""
-    report = report_device(TOSAConfiguration("tosa"))
+    report = report_device(TOSAConfiguration.load_profile("tosa"))
     assert report.to_plain_text()
 
 

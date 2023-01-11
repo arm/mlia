@@ -79,7 +79,7 @@ def test_opt_valid_optimization_target(
 def mock_performance_estimation(monkeypatch: pytest.MonkeyPatch) -> None:
     """Mock performance estimation."""
     metrics = PerformanceMetrics(
-        EthosUConfiguration("ethos-u55-256"),
+        EthosUConfiguration.load_profile("ethos-u55-256"),
         NPUCycles(1, 2, 3, 4, 5, 6),
         MemoryUsage(1, 2, 3, 4, 5),
     )

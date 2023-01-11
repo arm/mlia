@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for module vela/compiler."""
 from pathlib import Path
@@ -146,7 +146,9 @@ def test_vela_compiler_with_parameters(test_resources_path: Path) -> None:
 
 def test_compile_model(test_tflite_model: Path) -> None:
     """Test model optimization."""
-    compiler = VelaCompiler(EthosUConfiguration("ethos-u55-256").compiler_options)
+    compiler = VelaCompiler(
+        EthosUConfiguration.load_profile("ethos-u55-256").compiler_options
+    )
 
     optimized_model = compiler.compile_model(test_tflite_model)
     assert isinstance(optimized_model, OptimizedModel)
@@ -156,7 +158,7 @@ def test_optimize_model(tmp_path: Path, test_tflite_model: Path) -> None:
     """Test model optimization and saving into file."""
     tmp_file = tmp_path / "temp.tflite"
 
-    device = EthosUConfiguration("ethos-u55-256")
+    device = EthosUConfiguration.load_profile("ethos-u55-256")
     optimize_model(test_tflite_model, device.compiler_options, tmp_file.absolute())
 
     assert tmp_file.is_file()

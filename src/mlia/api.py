@@ -10,10 +10,10 @@ from typing import Any
 from mlia.core.advisor import InferenceAdvisor
 from mlia.core.common import AdviceCategory
 from mlia.core.context import ExecutionContext
+from mlia.target.config import get_target
 from mlia.target.cortex_a.advisor import configure_and_get_cortexa_advisor
 from mlia.target.ethos_u.advisor import configure_and_get_ethosu_advisor
 from mlia.target.tosa.advisor import configure_and_get_tosa_advisor
-from mlia.utils.filesystem import get_target
 
 logger = logging.getLogger(__name__)
 

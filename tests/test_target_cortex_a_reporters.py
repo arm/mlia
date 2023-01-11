@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for Cortex-A reporters."""
 from typing import Any
@@ -18,7 +18,7 @@ from mlia.target.cortex_a.reporters import report_device
 
 def test_report_device() -> None:
     """Test function report_device()."""
-    report = report_device(CortexAConfiguration("cortex-a"))
+    report = report_device(CortexAConfiguration.load_profile("cortex-a"))
     assert report.to_plain_text()
 
 

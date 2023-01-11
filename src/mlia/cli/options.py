@@ -13,7 +13,7 @@ from mlia.cli.config import DEFAULT_PRUNING_TARGET
 from mlia.cli.config import get_available_backends
 from mlia.cli.config import is_corstone_backend
 from mlia.core.typing import OutputFormat
-from mlia.utils.filesystem import get_builtin_supported_profile_names
+from mlia.target.config import get_builtin_supported_profile_names
 
 
 def add_check_category_options(parser: argparse.ArgumentParser) -> None:

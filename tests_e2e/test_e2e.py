@@ -24,7 +24,7 @@ from mlia.cli.config import get_available_backends
 from mlia.cli.main import get_commands
 from mlia.cli.main import get_possible_command_names
 from mlia.cli.main import init_parser
-from mlia.utils.filesystem import get_builtin_supported_profile_names
+from mlia.target.config import get_builtin_supported_profile_names
 from mlia.utils.types import is_list_of
 
 

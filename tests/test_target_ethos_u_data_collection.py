@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for the data collection module for Ethos-U."""
 from pathlib import Path
@@ -50,7 +50,7 @@ def test_operator_compatibility_collector(
     sample_context: Context, test_tflite_model: Path
 ) -> None:
     """Test operator compatibility data collector."""
-    device = EthosUConfiguration("ethos-u55-256")
+    device = EthosUConfiguration.load_profile("ethos-u55-256")
 
     collector = EthosUOperatorCompatibility(test_tflite_model, device)
     collector.set_context(sample_context)
@@ -63,7 +63,7 @@ def test_performance_collector(
     monkeypatch: pytest.MonkeyPatch, sample_context: Context, test_tflite_model: Path
 ) -> None:
     """Test performance data collector."""
-    device = EthosUConfiguration("ethos-u55-256")
+    device = EthosUConfiguration.load_profile("ethos-u55-256")
 
     mock_performance_estimation(monkeypatch, device)
 
@@ -81,7 +81,7 @@ def test_optimization_performance_collector(
     test_tflite_model: Path,
 ) -> None:
     """Test optimization performance data collector."""
-    device = EthosUConfiguration("ethos-u55-256")
+    device = EthosUConfiguration.load_profile("ethos-u55-256")
 
     mock_performance_estimation(monkeypatch, device)
     collector = EthosUOptimizationPerformance(

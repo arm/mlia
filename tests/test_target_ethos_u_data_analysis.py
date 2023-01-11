@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for Ethos-U data analysis module."""
 from __future__ import annotations
@@ -84,7 +84,7 @@ def test_perf_metrics_diff() -> None:
         [
             OptimizationPerformanceMetrics(
                 PerformanceMetrics(
-                    EthosUConfiguration("ethos-u55-256"),
+                    EthosUConfiguration.load_profile("ethos-u55-256"),
                     NPUCycles(1, 2, 3, 4, 5, 6),
                     # memory metrics are in kilobytes
                     MemoryUsage(*[i * 1024 for i in range(1, 6)]),  # type: ignore
@@ -95,7 +95,7 @@ def test_perf_metrics_diff() -> None:
                             OptimizationSettings("pruning", 0.5, None),
                         ],
                         PerformanceMetrics(
-                            EthosUConfiguration("ethos-u55-256"),
+                            EthosUConfiguration.load_profile("ethos-u55-256"),
                             NPUCycles(1, 2, 3, 4, 5, 6),
                             # memory metrics are in kilobytes
                             MemoryUsage(
@@ -127,7 +127,7 @@ def test_perf_metrics_diff() -> None:
         [
             OptimizationPerformanceMetrics(
                 PerformanceMetrics(
-                    EthosUConfiguration("ethos-u55-256"),
+                    EthosUConfiguration.load_profile("ethos-u55-256"),
                     NPUCycles(1, 2, 3, 4, 5, 6),
                     # memory metrics are in kilobytes
                     MemoryUsage(*[i * 1024 for i in range(1, 6)]),  # type: ignore

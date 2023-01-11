@@ -66,7 +66,7 @@ class TOSAInferenceAdvisor(DefaultInferenceAdvisor):
         return [
             TOSAAdvisorStartedEvent(
                 model,
-                TOSAConfiguration(target_profile),
+                TOSAConfiguration.load_profile(target_profile),
                 MetadataDisplay(
                     TOSAMetadata("tosa-checker"),
                     MLIAMetadata("mlia"),

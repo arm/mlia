@@ -118,7 +118,7 @@ def test_report_operators(
     "device, expected_plain_text, expected_json_dict",
     [
         [
-            EthosUConfiguration("ethos-u55-256"),
+            EthosUConfiguration.load_profile("ethos-u55-256"),
             """Device information:
   Target                                                     ethos-u55
   MAC                                                              256

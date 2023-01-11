@@ -11,15 +11,8 @@ from contextlib import contextmanager
 from pathlib import Path
 from tempfile import mkstemp
 from tempfile import TemporaryDirectory
-from typing import Any
-from typing import cast
 from typing import Generator
 from typing import Iterable
-
-try:
-    import tomllib
-except ModuleNotFoundError:
-    import tomli as tomllib  # type: ignore
 
 
 def get_mlia_resources() -> Path:
@@ -37,50 +30,6 @@ def get_vela_config() -> Path:
 def get_mlia_target_profiles_dir() -> Path:
     """Get the profiles file."""
     return get_mlia_resources() / "target_profiles"
-
-
-def get_profile_toml_file(target_profile: str | Path) -> str | Path:
-    """Get the target profile toml file."""
-    if not target_profile:
-        raise Exception("Target profile is not provided")
-
-    profile_toml_file = Path(get_mlia_target_profiles_dir() / f"{target_profile}.toml")
-    if not profile_toml_file.is_file():
-        profile_toml_file = Path(target_profile)
-
-    if not profile_toml_file.exists():
-        raise Exception(f"File not found: {profile_toml_file}.")
-    return profile_toml_file
-
-
-def get_profile(target_profile: str | Path) -> dict[str, Any]:
-    """Get settings for the provided target profile."""
-    if not target_profile:
-        raise Exception("Target profile is not provided")
-
-    toml_file = get_profile_toml_file(target_profile)
-
-    with open(toml_file, "rb") as file:
-        profile = tomllib.load(file)
-
-    return cast(dict, profile)
-
-
-def get_builtin_supported_profile_names() -> list[str]:
-    """Return list of default profiles in the target profiles directory."""
-    return sorted(
-        [
-            item.stem
-            for item in get_mlia_target_profiles_dir().iterdir()
-            if item.is_file() and item.suffix == ".toml"
-        ]
-    )
-
-
-def get_target(target_profile: str | Path) -> str:
-    """Return target for the provided target_profile."""
-    profile = get_profile(target_profile)
-    return cast(str, profile["target"])
 
 
 @contextmanager

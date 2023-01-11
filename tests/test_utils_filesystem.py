@@ -9,10 +9,8 @@ import pytest
 from mlia.utils.filesystem import all_files_exist
 from mlia.utils.filesystem import all_paths_valid
 from mlia.utils.filesystem import copy_all
-from mlia.utils.filesystem import get_builtin_supported_profile_names
 from mlia.utils.filesystem import get_mlia_resources
 from mlia.utils.filesystem import get_mlia_target_profiles_dir
-from mlia.utils.filesystem import get_profile
 from mlia.utils.filesystem import get_vela_config
 from mlia.utils.filesystem import sha256
 from mlia.utils.filesystem import temp_directory
@@ -34,31 +32,6 @@ def test_get_vela_config() -> None:
 def test_get_mlia_target_profiles() -> None:
     """Test target profiles getter."""
     assert get_mlia_target_profiles_dir().is_dir()
-
-
-def test_get_builtin_supported_profile_names() -> None:
-    """Test profile names getter."""
-    assert get_builtin_supported_profile_names() == [
-        "cortex-a",
-        "ethos-u55-128",
-        "ethos-u55-256",
-        "ethos-u65-256",
-        "ethos-u65-512",
-        "tosa",
-    ]
-
-
-def test_get_profile() -> None:
-    """Test getting profile data."""
-    assert get_profile("ethos-u55-256") == {
-        "target": "ethos-u55",
-        "mac": 256,
-        "memory_mode": "Shared_Sram",
-        "system_config": "Ethos_U55_High_End_Embedded",
-    }
-
-    with pytest.raises(Exception, match=r"File not found:*"):
-        get_profile("unknown")
 
 
 @pytest.mark.parametrize("raise_exception", [True, False])

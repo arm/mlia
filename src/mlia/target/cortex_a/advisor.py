@@ -58,7 +58,9 @@ class CortexAInferenceAdvisor(DefaultInferenceAdvisor):
         target_profile = self.get_target_profile(context)
 
         return [
-            CortexAAdvisorStartedEvent(model, CortexAConfiguration(target_profile)),
+            CortexAAdvisorStartedEvent(
+                model, CortexAConfiguration.load_profile(target_profile)
+            ),
         ]
 
 

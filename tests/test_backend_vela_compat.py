@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for module vela/compat."""
 from pathlib import Path
@@ -55,7 +55,7 @@ from mlia.utils.filesystem import working_directory
 )
 def test_operators(test_models_path: Path, model: str, expected_ops: Operators) -> None:
     """Test operators function."""
-    device = EthosUConfiguration("ethos-u55-256")
+    device = EthosUConfiguration.load_profile("ethos-u55-256")
 
     operators = supported_operators(test_models_path / model, device.compiler_options)
     for expected, actual in zip(expected_ops.ops, operators.ops):

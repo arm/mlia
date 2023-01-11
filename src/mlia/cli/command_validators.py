@@ -8,8 +8,8 @@ import logging
 import sys
 
 from mlia.cli.config import get_default_backends
+from mlia.target.config import get_target
 from mlia.target.registry import supported_backends
-from mlia.utils.filesystem import get_target
 
 logger = logging.getLogger(__name__)
 
