@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Module for installation process."""
 from __future__ import annotations
@@ -26,17 +26,20 @@ from mlia.utils.filesystem import temp_directory
 from mlia.utils.filesystem import working_directory
 from mlia.utils.py_manager import get_package_manager
 
-
 logger = logging.getLogger(__name__)
 
 
 # Mapping backend -> device_type -> system_name
 _SUPPORTED_SYSTEMS = {
     "Corstone-300": {
+        "Ethos-U55": "Corstone-300: Cortex-M55+Ethos-U55",
+        "Ethos-U65": "Corstone-300: Cortex-M55+Ethos-U65",
         "ethos-u55": "Corstone-300: Cortex-M55+Ethos-U55",
         "ethos-u65": "Corstone-300: Cortex-M55+Ethos-U65",
     },
     "Corstone-310": {
+        "Ethos-U55": "Corstone-310: Cortex-M85+Ethos-U55",
+        "Ethos-U65": "Corstone-310: Cortex-M85+Ethos-U65",
         "ethos-u55": "Corstone-310: Cortex-M85+Ethos-U55",
         "ethos-u65": "Corstone-310: Cortex-M85+Ethos-U65",
     },
@@ -59,23 +62,6 @@ def get_system_name(backend: str, device_type: str) -> str:
 def get_application_name(system_name: str) -> str:
     """Get application name for the provided system name."""
     return _SYSTEM_TO_APP_MAP[system_name]
-
-
-def is_supported(backend: str, device_type: str | None = None) -> bool:
-    """Check if the backend (and optionally device type) is supported."""
-    if device_type is None:
-        return backend in _SUPPORTED_SYSTEMS
-
-    try:
-        get_system_name(backend, device_type)
-        return True
-    except KeyError:
-        return False
-
-
-def supported_backends() -> list[str]:
-    """Get a list of all backends supported by the backend manager."""
-    return list(_SUPPORTED_SYSTEMS.keys())
 
 
 def get_all_system_names(backend: str) -> list[str]:

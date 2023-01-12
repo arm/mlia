@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Performance estimation."""
 from __future__ import annotations
@@ -14,14 +14,14 @@ import mlia.backend.vela.performance as vela_perf
 from mlia.backend.corstone.performance import DeviceInfo
 from mlia.backend.corstone.performance import estimate_performance
 from mlia.backend.corstone.performance import ModelInfo
-from mlia.backend.install import is_supported
-from mlia.backend.install import supported_backends
+from mlia.backend.registry import get_supported_backends
 from mlia.core.context import Context
 from mlia.core.performance import PerformanceEstimator
 from mlia.nn.tensorflow.config import get_tflite_model
 from mlia.nn.tensorflow.config import ModelConfiguration
 from mlia.nn.tensorflow.optimizations.select import OptimizationSettings
 from mlia.target.ethos_u.config import EthosUConfiguration
+from mlia.target.registry import is_supported
 from mlia.utils.logging import log_action
 
 
@@ -226,7 +226,7 @@ class EthosUPerformanceEstimator(
             if backend != "Vela" and not is_supported(backend):
                 raise ValueError(
                     f"Unsupported backend '{backend}'. "
-                    f"Only 'Vela' and {supported_backends()} "
+                    f"Only 'Vela' and {get_supported_backends()} "
                     "are supported."
                 )
         self.backends = set(backends)
@@ -246,7 +246,7 @@ class EthosUPerformanceEstimator(
             if backend == "Vela":
                 vela_estimator = VelaPerformanceEstimator(self.context, self.device)
                 memory_usage = vela_estimator.estimate(tflite_model)
-            elif backend in supported_backends():
+            elif backend in get_supported_backends():
                 corstone_estimator = CorstonePerformanceEstimator(
                     self.context, self.device, backend
                 )

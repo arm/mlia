@@ -7,7 +7,7 @@ import argparse
 import logging
 import sys
 
-from mlia.cli.config import get_default_backends
+from mlia.cli.config import get_default_backends_dict
 from mlia.target.config import get_target
 from mlia.target.registry import supported_backends
 
@@ -32,7 +32,7 @@ def validate_backend(
     target = get_target(target_profile)
 
     if not backend:
-        return get_default_backends()[target]
+        return get_default_backends_dict()[target]
 
     compatible_backends = supported_backends(target_map[target])
 

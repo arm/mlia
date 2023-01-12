@@ -32,6 +32,30 @@ def supported_backends(target: str) -> list[str]:
     return registry.items[target].filter_supported_backends(check_system=False)
 
 
+def get_backend_to_supported_targets() -> dict[str, list]:
+    """Get a dict that maps a list of supported targets given backend."""
+    targets = dict(registry.items)
+    supported_backends_dict: dict[str, list] = {}
+    for target, info in targets.items():
+        target_backends = info.supported_backends
+        for backend in target_backends:
+            supported_backends_dict.setdefault(backend, []).append(target)
+    return supported_backends_dict
+
+
+def is_supported(backend: str, target: str | None = None) -> bool:
+    """Check if the backend (and optionally target) is supported."""
+    backends = get_backend_to_supported_targets()
+    if target is None:
+        if backend in backends:
+            return True
+        return False
+    try:
+        return target in backends[backend]
+    except KeyError:
+        return False
+
+
 def supported_targets(advice: AdviceCategory) -> list[str]:
     """Get a list of all targets supporting the given advice category."""
     return [

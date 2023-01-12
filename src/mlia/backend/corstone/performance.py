@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Module for backend integration."""
 from __future__ import annotations
@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 class DeviceInfo:
     """Device information."""
 
-    device_type: Literal["ethos-u55", "ethos-u65"]
+    device_type: Literal["Ethos-U55", "Ethos-U65", "ethos-u55", "ethos-u65"]
     mac: int
 
 

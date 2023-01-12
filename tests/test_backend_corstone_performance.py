@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for module backend/manager."""
 from __future__ import annotations
@@ -25,9 +25,8 @@ from mlia.backend.executor.application import get_application
 from mlia.backend.executor.execution import ExecutionContext
 from mlia.backend.executor.output_consumer import Base64OutputConsumer
 from mlia.backend.executor.system import get_system
-from mlia.backend.install import get_system_name
-from mlia.backend.install import is_supported
-from mlia.backend.install import supported_backends
+from mlia.backend.registry import get_supported_backends
+from mlia.target.registry import is_supported
 
 
 def _mock_encode_b64(data: dict[str, int]) -> str:
@@ -150,14 +149,14 @@ def test_generic_inference_output_parser(
     "device, system, application, backend, expected_error",
     [
         (
-            DeviceInfo(device_type="ethos-u55", mac=32),
+            DeviceInfo(device_type="Ethos-U55", mac=32),
             ("Corstone-300: Cortex-M55+Ethos-U55", True),
             ("Generic Inference Runner: Ethos-U55", True),
             "Corstone-300",
             does_not_raise(),
         ),
         (
-            DeviceInfo(device_type="ethos-u55", mac=32),
+            DeviceInfo(device_type="Ethos-U55", mac=32),
             ("Corstone-300: Cortex-M55+Ethos-U55", False),
             ("Generic Inference Runner: Ethos-U55", False),
             "Corstone-300",
@@ -167,7 +166,7 @@ def test_generic_inference_output_parser(
             ),
         ),
         (
-            DeviceInfo(device_type="ethos-u55", mac=32),
+            DeviceInfo(device_type="Ethos-U55", mac=32),
             ("Corstone-300: Cortex-M55+Ethos-U55", True),
             ("Generic Inference Runner: Ethos-U55", False),
             "Corstone-300",
@@ -178,14 +177,14 @@ def test_generic_inference_output_parser(
             ),
         ),
         (
-            DeviceInfo(device_type="ethos-u55", mac=32),
+            DeviceInfo(device_type="Ethos-U55", mac=32),
             ("Corstone-310: Cortex-M85+Ethos-U55", True),
             ("Generic Inference Runner: Ethos-U55", True),
             "Corstone-310",
             does_not_raise(),
         ),
         (
-            DeviceInfo(device_type="ethos-u55", mac=32),
+            DeviceInfo(device_type="Ethos-U55", mac=32),
             ("Corstone-310: Cortex-M85+Ethos-U55", False),
             ("Generic Inference Runner: Ethos-U55", False),
             "Corstone-310",
@@ -195,7 +194,7 @@ def test_generic_inference_output_parser(
             ),
         ),
         (
-            DeviceInfo(device_type="ethos-u55", mac=32),
+            DeviceInfo(device_type="Ethos-U55", mac=32),
             ("Corstone-310: Cortex-M85+Ethos-U55", True),
             ("Generic Inference Runner: Ethos-U55", False),
             "Corstone-310",
@@ -206,14 +205,14 @@ def test_generic_inference_output_parser(
             ),
         ),
         (
-            DeviceInfo(device_type="ethos-u65", mac=512),
+            DeviceInfo(device_type="Ethos-U65", mac=512),
             ("Corstone-300: Cortex-M55+Ethos-U65", True),
             ("Generic Inference Runner: Ethos-U65", True),
             "Corstone-300",
             does_not_raise(),
         ),
         (
-            DeviceInfo(device_type="ethos-u65", mac=512),
+            DeviceInfo(device_type="Ethos-U65", mac=512),
             ("Corstone-300: Cortex-M55+Ethos-U65", False),
             ("Generic Inference Runner: Ethos-U65", False),
             "Corstone-300",
@@ -223,7 +222,7 @@ def test_generic_inference_output_parser(
             ),
         ),
         (
-            DeviceInfo(device_type="ethos-u65", mac=512),
+            DeviceInfo(device_type="Ethos-U65", mac=512),
             ("Corstone-300: Cortex-M55+Ethos-U65", True),
             ("Generic Inference Runner: Ethos-U65", False),
             "Corstone-300",
@@ -234,14 +233,14 @@ def test_generic_inference_output_parser(
             ),
         ),
         (
-            DeviceInfo(device_type="ethos-u65", mac=512),
+            DeviceInfo(device_type="Ethos-U65", mac=512),
             ("Corstone-310: Cortex-M85+Ethos-U65", True),
             ("Generic Inference Runner: Ethos-U65", True),
             "Corstone-310",
             does_not_raise(),
         ),
         (
-            DeviceInfo(device_type="ethos-u65", mac=512),
+            DeviceInfo(device_type="Ethos-U65", mac=512),
             ("Corstone-310: Cortex-M85+Ethos-U65", False),
             ("Generic Inference Runner: Ethos-U65", False),
             "Corstone-310",
@@ -251,7 +250,7 @@ def test_generic_inference_output_parser(
             ),
         ),
         (
-            DeviceInfo(device_type="ethos-u65", mac=512),
+            DeviceInfo(device_type="Ethos-U65", mac=512),
             ("Corstone-310: Cortex-M85+Ethos-U65", True),
             ("Generic Inference Runner: Ethos-U65", False),
             "Corstone-310",
@@ -349,7 +348,7 @@ def test_estimate_performance_insufficient_data(
     with pytest.raises(
         Exception, match="Unable to get performance metrics, insufficient data"
     ):
-        device = DeviceInfo(device_type="ethos-u55", mac=32)
+        device = DeviceInfo(device_type="Ethos-U55", mac=32)
         estimate_performance(ModelInfo(test_tflite_model), device, backend)
 
 
@@ -388,7 +387,7 @@ def test_estimate_performance_invalid_output(
     with pytest.raises(Exception, match="Unable to get performance metrics"):
         estimate_performance(
             ModelInfo(test_tflite_model),
-            DeviceInfo(device_type="ethos-u55", mac=256),
+            DeviceInfo(device_type="Ethos-U55", mac=256),
             backend=backend,
         )
 
@@ -396,7 +395,7 @@ def test_estimate_performance_invalid_output(
 @pytest.mark.parametrize("backend", ("Corstone-300", "Corstone-310"))
 def test_get_generic_runner(backend: str) -> None:
     """Test function get_generic_runner()."""
-    device_info = DeviceInfo("ethos-u55", 256)
+    device_info = DeviceInfo("Ethos-U55", 256)
 
     runner = get_generic_runner(device_info=device_info, backend=backend)
     assert isinstance(runner, GenericInferenceRunnerEthosU)
@@ -408,9 +407,12 @@ def test_get_generic_runner(backend: str) -> None:
 @pytest.mark.parametrize(
     ("backend", "device_type"),
     (
-        ("Corstone-300", "ethos-u55"),
-        ("Corstone-300", "ethos-u65"),
-        ("Corstone-310", "ethos-u55"),
+        ("Corstone-300", "Ethos-U55"),
+        ("Corstone-300", "Ethos-U65"),
+        ("Corstone-310", "Ethos-U55"),
+        ("ArmNNTFLiteDelegate", "Cortex-A"),
+        ("TOSA-Checker", "TOSA"),
+        ("Corstone-300", None),
     ),
 )
 def test_backend_support(backend: str, device_type: str) -> None:
@@ -418,9 +420,7 @@ def test_backend_support(backend: str, device_type: str) -> None:
     assert is_supported(backend)
     assert is_supported(backend, device_type)
 
-    assert get_system_name(backend, device_type)
-
-    assert backend in supported_backends()
+    assert backend in get_supported_backends()
 
 
 class TestGenericInferenceRunnerEthosU:
@@ -431,25 +431,25 @@ class TestGenericInferenceRunnerEthosU:
         "device, backend, expected_system, expected_app",
         [
             [
-                DeviceInfo("ethos-u55", 256),
+                DeviceInfo("Ethos-U55", 256),
                 "Corstone-300",
                 "Corstone-300: Cortex-M55+Ethos-U55",
                 "Generic Inference Runner: Ethos-U55",
             ],
             [
-                DeviceInfo("ethos-u65", 256),
+                DeviceInfo("Ethos-U65", 256),
                 "Corstone-300",
                 "Corstone-300: Cortex-M55+Ethos-U65",
                 "Generic Inference Runner: Ethos-U65",
             ],
             [
-                DeviceInfo("ethos-u55", 256),
+                DeviceInfo("Ethos-U55", 256),
                 "Corstone-310",
                 "Corstone-310: Cortex-M85+Ethos-U55",
                 "Generic Inference Runner: Ethos-U55",
             ],
             [
-                DeviceInfo("ethos-u65", 256),
+                DeviceInfo("Ethos-U65", 256),
                 "Corstone-310",
                 "Corstone-310: Cortex-M85+Ethos-U65",
                 "Generic Inference Runner: Ethos-U65",
@@ -470,9 +470,9 @@ class TestGenericInferenceRunnerEthosU:
     def test_artifact_resolver_unsupported_backend() -> None:
         """Test that it should be not possible to use unsupported backends."""
         with pytest.raises(
-            RuntimeError, match="Unsupported device ethos-u65 for backend test_backend"
+            RuntimeError, match="Unsupported device Ethos-U65 for backend test_backend"
         ):
-            get_generic_runner(DeviceInfo("ethos-u65", 256), "test_backend")
+            get_generic_runner(DeviceInfo("Ethos-U65", 256), "test_backend")
 
     @staticmethod
     @pytest.mark.parametrize("backend", ("Corstone-300", "Corstone-310"))
@@ -482,7 +482,7 @@ class TestGenericInferenceRunnerEthosU:
         """Test that inference should fail if system is not installed."""
         backend_runner.is_system_installed.return_value = False
 
-        generic_runner = get_generic_runner(DeviceInfo("ethos-u55", 256), backend)
+        generic_runner = get_generic_runner(DeviceInfo("Ethos-U55", 256), backend)
         with pytest.raises(
             Exception,
             match=r"System Corstone-3[01]0: Cortex-M[58]5\+Ethos-U55 is not installed",
@@ -498,7 +498,7 @@ class TestGenericInferenceRunnerEthosU:
         backend_runner.is_system_installed.return_value = True
         backend_runner.is_application_installed.return_value = False
 
-        generic_runner = get_generic_runner(DeviceInfo("ethos-u55", 256), backend)
+        generic_runner = get_generic_runner(DeviceInfo("Ethos-U55", 256), backend)
         with pytest.raises(
             Exception,
             match="Application Generic Inference Runner: Ethos-U55"

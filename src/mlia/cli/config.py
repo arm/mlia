@@ -10,9 +10,9 @@ from typing import Optional
 from typing import TypedDict
 
 from mlia.backend.corstone.install import get_corstone_installations
-from mlia.backend.install import supported_backends
 from mlia.backend.manager import DefaultInstallationManager
 from mlia.backend.manager import InstallationManager
+from mlia.backend.registry import get_supported_backends
 from mlia.backend.tosa_checker.install import get_tosa_backend_installation
 
 logger = logging.getLogger(__name__)
@@ -32,25 +32,28 @@ def get_installation_manager(noninteractive: bool = False) -> InstallationManage
 @lru_cache
 def get_available_backends() -> list[str]:
     """Return list of the available backends."""
-    available_backends = ["Vela", "tosa-checker", "armnn-tflitedelegate"]
-
     # Add backends using backend manager
     manager = get_installation_manager()
-    available_backends.extend(
+    available_backends = [
         backend
-        for backend in supported_backends()
+        for backend in get_supported_backends()
         if manager.backend_installed(backend)
-    )
+    ]
 
     return available_backends
 
 
 # List of mutually exclusive Corstone backends ordered by priority
 _CORSTONE_EXCLUSIVE_PRIORITY = ("Corstone-310", "Corstone-300")
-_NON_ETHOS_U_BACKENDS = ("tosa-checker", "armnn-tflitedelegate")
+_NON_ETHOS_U_BACKENDS = ("TOSA-Checker", "ArmNNTFLiteDelegate")
 
 
-def get_ethos_u_default_backends() -> list[str]:
+def get_ethos_u_default_backends(backends: list[str]) -> list[str]:
+    """Get Ethos-U default backends for evaluation."""
+    return [x for x in backends if x not in _NON_ETHOS_U_BACKENDS]
+
+
+def get_default_backends() -> list[str]:
     """Get default backends for evaluation."""
     backends = get_available_backends()
 
@@ -64,8 +67,6 @@ def get_ethos_u_default_backends() -> list[str]:
             ]
             break
 
-    # Filter out non ethos-u backends
-    backends = [x for x in backends if x not in _NON_ETHOS_U_BACKENDS]
     return backends
 
 
@@ -86,9 +87,9 @@ BackendCompatibility = TypedDict(
 )
 
 
-def get_default_backends() -> dict[str, list[str]]:
+def get_default_backends_dict() -> dict[str, list[str]]:
     """Return default backends for all targets."""
-    ethos_u_defaults = get_ethos_u_default_backends()
+    ethos_u_defaults = get_ethos_u_default_backends(get_default_backends())
     return {
         "ethos-u55": ethos_u_defaults,
         "ethos-u65": ethos_u_defaults,
