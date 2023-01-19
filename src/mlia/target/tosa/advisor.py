@@ -16,8 +16,6 @@ from mlia.core.context import ExecutionContext
 from mlia.core.data_analysis import DataAnalyzer
 from mlia.core.data_collection import DataCollector
 from mlia.core.events import Event
-from mlia.core.metadata import MLIAMetadata
-from mlia.core.metadata import ModelMetadata
 from mlia.target.registry import profile
 from mlia.target.tosa.advice_generation import TOSAAdviceProducer
 from mlia.target.tosa.config import TOSAConfiguration
@@ -25,7 +23,6 @@ from mlia.target.tosa.data_analysis import TOSADataAnalyzer
 from mlia.target.tosa.data_collection import TOSAOperatorCompatibility
 from mlia.target.tosa.events import TOSAAdvisorStartedEvent
 from mlia.target.tosa.handlers import TOSAEventHandler
-from mlia.target.tosa.metadata import TOSAMetadata
 from mlia.target.tosa.reporters import MetadataDisplay
 
 
@@ -69,11 +66,7 @@ class TOSAInferenceAdvisor(DefaultInferenceAdvisor):
             TOSAAdvisorStartedEvent(
                 model,
                 cast(TOSAConfiguration, profile(target_profile)),
-                MetadataDisplay(
-                    TOSAMetadata("tosa-checker"),
-                    MLIAMetadata("mlia"),
-                    ModelMetadata(model),
-                ),
+                MetadataDisplay(model),
             )
         ]
 

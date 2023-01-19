@@ -3,12 +3,14 @@
 """Reports module."""
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 from typing import Callable
 
 from mlia.backend.tosa_checker.compat import Operator
 from mlia.backend.tosa_checker.compat import TOSACompatibilityInfo
 from mlia.core.advice_generation import Advice
+from mlia.core.metadata import Metadata
 from mlia.core.metadata import MLIAMetadata
 from mlia.core.metadata import ModelMetadata
 from mlia.core.reporters import report_advice
@@ -26,20 +28,25 @@ from mlia.utils.console import style_improvement
 from mlia.utils.types import is_list_of
 
 
-class MetadataDisplay:  # pylint: disable=too-few-public-methods
-    """TOSA metadata."""
+class MetadataDisplay(Metadata):  # pylint: disable=too-few-public-methods
+    """TOSA metadata display items."""
 
-    def __init__(
-        self,
-        tosa_meta: TOSAMetadata,
-        mlia_meta: MLIAMetadata,
-        model_meta: ModelMetadata,
-    ) -> None:
-        """Init TOSAMetadata."""
-        self.tosa_version = tosa_meta.version
-        self.mlia_version = mlia_meta.version
-        self.model_check_sum = model_meta.checksum
-        self.model_name = model_meta.model_name
+    def __init__(self, model_path: Path) -> None:
+        """Init MetadataDisplay."""
+        self.model_path = model_path
+        super().__init__("Metadata")
+
+    def get_metadata(self) -> dict:
+        """Combine all necessary elements for display."""
+        all_data = {
+            data_dict.name: data_dict.data_dict
+            for data_dict in (
+                TOSAMetadata(),
+                MLIAMetadata(),
+                ModelMetadata(self.model_path),
+            )
+        }
+        return all_data
 
 
 def report_target(target_config: TOSAConfiguration) -> Report:
@@ -54,31 +61,16 @@ def report_target(target_config: TOSAConfiguration) -> Report:
 
 
 def report_metadata(data: MetadataDisplay) -> Report:
-    """Generate report for the package version."""
-    return NestedReport(
-        "Metadata",
-        "metadata",
-        [
-            ReportItem(
-                "TOSA checker",
-                alias="tosa-checker",
-                nested_items=[ReportItem("version", "version", data.tosa_version)],
-            ),
-            ReportItem(
-                "MLIA",
-                "MLIA",
-                nested_items=[ReportItem("version", "version", data.mlia_version)],
-            ),
-            ReportItem(
-                "Model",
-                "Model",
-                nested_items=[
-                    ReportItem("name", "name", data.model_name),
-                    ReportItem("checksum", "checksum", data.model_check_sum),
-                ],
-            ),
-        ],
-    )
+    """Generate report for the metadata."""
+    items: list[ReportItem] = []
+
+    for key, sub_dict in data.data_dict.items():
+        nested_items = [
+            ReportItem(key, alias=key, value=val) for key, val in sub_dict.items()
+        ]
+        items.append(ReportItem(key, alias=key, nested_items=nested_items))
+
+    return NestedReport("Metadata", "metadata", items)
 
 
 def report_tosa_operators(ops: list[Operator]) -> Report:

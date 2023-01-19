@@ -6,11 +6,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from mlia.core.metadata import MLIAMetadata
-from mlia.core.metadata import ModelMetadata
 from mlia.core.reporting import Report
 from mlia.target.tosa.config import TOSAConfiguration
-from mlia.target.tosa.metadata import TOSAMetadata
 from mlia.target.tosa.reporters import MetadataDisplay
 from mlia.target.tosa.reporters import report_target
 from mlia.target.tosa.reporters import tosa_formatters
@@ -28,18 +25,14 @@ def test_tosa_formatters(
     """Test function tosa_formatters() with valid input."""
     mock_version = MagicMock()
     monkeypatch.setattr(
-        "mlia.core.metadata.get_pkg_version",
+        "mlia.target.tosa.metadata.get_pkg_version",
         MagicMock(return_value=mock_version),
     )
 
-    data = MetadataDisplay(
-        TOSAMetadata("tosa-checker"),
-        MLIAMetadata("mlia"),
-        ModelMetadata(test_tflite_model),
-    )
-    formatter = tosa_formatters(data)
-    report = formatter(data)
-    assert data.tosa_version == mock_version
+    display_data = MetadataDisplay(test_tflite_model)
+    formatter = tosa_formatters(MetadataDisplay(test_tflite_model))
+    report = formatter(display_data)
+    assert display_data.data_dict["tosa-checker"]["tosa_version"] == mock_version
     assert isinstance(report, Report)
 
 
