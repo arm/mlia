@@ -193,8 +193,11 @@ mlia optimize --help
 
 # Target profiles
 
-All sub-commands require the name of a target profile as input parameter. The
-profiles currently available are described in the following sections.
+The targets currently supported are described in the sections below.
+All MLIA sub-commands require a target profile as input parameter.
+That target profile can be either a name of a built-in target profile
+or a custom file. MLIA saves the target profile that was used for a run
+in the output directory.
 
 The support of the above sub-commands for different targets is provided via
 backends that need to be installed separately, see
@@ -247,6 +250,21 @@ For more information, see TOSA Checker's:
 
 * [repository](https://review.mlplatform.org/plugins/gitiles/tosa/tosa_checker/+/refs/heads/main)
 * [pypi.org page](https://pypi.org/project/tosa-checker/)
+
+## Custom target profiles
+
+For the _custom target profiles_, the configuration file for a custom
+target profile is passed as path and needs to conform to the TOML file format.
+Each target in MLIA has a pre-defined set of parameters which need to be present
+in the config file. The built-in target profiles (in `src/mlia/resources/target_profiles`)
+can be used to understand what parameters apply for each target.
+
+*Example:*
+
+``` bash
+# for custom profiles
+mlia ops --target-profile ~/my_custom_profile.toml sample_model.tflite
+```
 
 # Backend installation
 
