@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Module for installation process."""
 from __future__ import annotations
@@ -9,10 +9,12 @@ from abc import abstractmethod
 from pathlib import Path
 from typing import Callable
 
+from mlia.backend.corstone.install import get_corstone_installations
 from mlia.backend.install import DownloadAndInstall
 from mlia.backend.install import Installation
 from mlia.backend.install import InstallationType
 from mlia.backend.install import InstallFromPath
+from mlia.backend.tosa_checker.install import get_tosa_backend_installation
 from mlia.core.errors import ConfigurationError
 from mlia.core.errors import InternalError
 from mlia.utils.misc import yes
@@ -269,3 +271,11 @@ class DefaultInstallationManager(InstallationManager, InstallationFiltersMixin):
         installations = self.already_installed(backend_name)
 
         return len(installations) == 1
+
+
+def get_installation_manager(noninteractive: bool = False) -> InstallationManager:
+    """Return installation manager."""
+    backends = get_corstone_installations()
+    backends.append(get_tosa_backend_installation())
+
+    return DefaultInstallationManager(backends, noninteractive=noninteractive)

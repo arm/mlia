@@ -8,10 +8,10 @@ from pathlib import Path
 from typing import Any
 from typing import Callable
 
+from mlia.backend.corstone import is_corstone_backend
 from mlia.cli.config import DEFAULT_CLUSTERING_TARGET
 from mlia.cli.config import DEFAULT_PRUNING_TARGET
 from mlia.cli.config import get_available_backends
-from mlia.cli.config import is_corstone_backend
 from mlia.core.typing import OutputFormat
 from mlia.target.config import get_builtin_supported_profile_names
 
@@ -47,12 +47,12 @@ def add_target_options(
         "--target-profile",
         required=required,
         default=default_target_profile,
-        help="Builtin target profile: {target_profiles}"
-        "or path to custom target profile"
+        help="Built-in target profile or path to the custom target profile. "
+        f"Built-in target profiles are {', '.join(target_profiles)}. "
         "Target profile that will set the target options "
         "such as target, mac value, memory mode, etc. "
         "For the values associated with each target profile "
-        "please refer to the documentation.",
+        "please refer to the documentation. ",
     )
 
 

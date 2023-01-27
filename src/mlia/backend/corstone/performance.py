@@ -3,37 +3,22 @@
 """Module for backend integration."""
 from __future__ import annotations
 
+import base64
+import json
 import logging
-from abc import ABC
-from abc import abstractmethod
+import re
+import subprocess  # nosec
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal
 
-from mlia.backend.executor.output_consumer import Base64OutputConsumer
-from mlia.backend.executor.output_consumer import OutputConsumer
-from mlia.backend.executor.runner import BackendRunner
-from mlia.backend.executor.runner import ExecutionParams
-from mlia.backend.install import get_application_name
-from mlia.backend.install import get_system_name
+from mlia.backend.errors import BackendExecutionFailed
+from mlia.backend.repo import get_backend_repository
+from mlia.utils.filesystem import get_mlia_resources
+from mlia.utils.proc import Command
+from mlia.utils.proc import process_command_output
 
 
 logger = logging.getLogger(__name__)
-
-
-@dataclass
-class DeviceInfo:
-    """Device information."""
-
-    device_type: Literal["Ethos-U55", "Ethos-U65", "ethos-u55", "ethos-u65"]
-    mac: int
-
-
-@dataclass
-class ModelInfo:
-    """Model info."""
-
-    model_path: Path
 
 
 @dataclass
@@ -48,186 +33,188 @@ class PerformanceMetrics:
     npu_axi1_rd_data_beat_received: int
 
 
-class LogWriter(OutputConsumer):
-    """Redirect output to the logger."""
+class GenericInferenceOutputParser:
+    """Generic inference runner output parser."""
 
-    def feed(self, line: str) -> bool:
-        """Process line from the output."""
-        logger.debug(line.strip())
-        return False
-
-
-class GenericInferenceOutputParser(Base64OutputConsumer):
-    """Generic inference app output parser."""
+    pattern = re.compile(r"<metrics>(.*)</metrics>")
 
     def __init__(self) -> None:
-        """Init generic inference output parser instance."""
-        super().__init__()
-        self._map = {
-            "NPU ACTIVE": "npu_active_cycles",
-            "NPU IDLE": "npu_idle_cycles",
-            "NPU TOTAL": "npu_total_cycles",
-            "NPU AXI0_RD_DATA_BEAT_RECEIVED": "npu_axi0_rd_data_beat_received",
-            "NPU AXI0_WR_DATA_BEAT_WRITTEN": "npu_axi0_wr_data_beat_written",
-            "NPU AXI1_RD_DATA_BEAT_RECEIVED": "npu_axi1_rd_data_beat_received",
-        }
+        """Init parser."""
+        self.base64_data: list[str] = []
 
-    @property
-    def result(self) -> dict:
-        """Merge the raw results and map the names to the right output names."""
-        merged_result = {}
-        for raw_result in self.parsed_output:
-            for profiling_result in raw_result:
-                for sample in profiling_result["samples"]:
-                    name, values = (sample["name"], sample["value"])
-                    if name in merged_result:
-                        raise KeyError(
-                            f"Duplicate key '{name}' in base64 output.",
-                        )
-                    new_name = self._map[name]
-                    merged_result[new_name] = values[0]
-        return merged_result
+    def __call__(self, line: str) -> None:
+        """Extract base64 strings from the app output."""
+        if res_b64 := self.pattern.search(line):
+            self.base64_data.append(res_b64.group(1))
 
-    def is_ready(self) -> bool:
-        """Return true if all expected data has been parsed."""
-        return set(self.result.keys()) == set(self._map.values())
+    def get_metrics(self) -> PerformanceMetrics:
+        """Parse the collected data and return perf metrics."""
+        try:
+            parsed_metrics = self._parse_data()
 
-    def missed_keys(self) -> set[str]:
-        """Return a set of the keys that have not been found in the output."""
-        return set(self._map.values()) - set(self.result.keys())
-
-
-class GenericInferenceRunner(ABC):
-    """Abstract class for generic inference runner."""
-
-    def __init__(self, backend_runner: BackendRunner):
-        """Init generic inference runner instance."""
-        self.backend_runner = backend_runner
-
-    def run(
-        self, model_info: ModelInfo, output_consumers: list[OutputConsumer]
-    ) -> None:
-        """Run generic inference for the provided device/model."""
-        execution_params = self.get_execution_params(model_info)
-
-        ctx = self.backend_runner.run_application(execution_params)
-        if ctx.stdout is not None:
-            ctx.stdout = self.consume_output(ctx.stdout, output_consumers)
-
-    @abstractmethod
-    def get_execution_params(self, model_info: ModelInfo) -> ExecutionParams:
-        """Get execution params for the provided model."""
-
-    def check_system_and_application(self, system_name: str, app_name: str) -> None:
-        """Check if requested system and application installed."""
-        if not self.backend_runner.is_system_installed(system_name):
-            raise Exception(f"System {system_name} is not installed")
-
-        if not self.backend_runner.is_application_installed(app_name, system_name):
-            raise Exception(
-                f"Application {app_name} for the system {system_name} "
-                "is not installed"
+            return PerformanceMetrics(
+                parsed_metrics["NPU ACTIVE"],
+                parsed_metrics["NPU IDLE"],
+                parsed_metrics["NPU TOTAL"],
+                parsed_metrics["NPU AXI0_RD_DATA_BEAT_RECEIVED"],
+                parsed_metrics["NPU AXI0_WR_DATA_BEAT_WRITTEN"],
+                parsed_metrics["NPU AXI1_RD_DATA_BEAT_RECEIVED"],
             )
+        except Exception as err:
+            raise ValueError("Unable to parse output and get metrics.") from err
 
-    @staticmethod
-    def consume_output(output: bytearray, consumers: list[OutputConsumer]) -> bytearray:
-        """
-        Pass program's output to the consumers and filter it.
+    def _parse_data(self) -> dict[str, int]:
+        """Parse the data."""
+        parsed_metrics: dict[str, int] = {}
 
-        Returns the filtered output.
-        """
-        filtered_output = bytearray()
-        for line_bytes in output.splitlines():
-            line = line_bytes.decode("utf-8")
-            remove_line = False
-            for consumer in consumers:
-                if consumer.feed(line):
-                    remove_line = True
-            if not remove_line:
-                filtered_output.extend(line_bytes)
+        for base64_item in self.base64_data:
+            res_json = base64.b64decode(base64_item, validate=True)
 
-        return filtered_output
+            for profiling_group in json.loads(res_json):
+                for metric in profiling_group["samples"]:
+                    metric_name = metric["name"]
+                    metric_value = int(metric["value"][0])
+
+                    if metric_name in parsed_metrics:
+                        raise KeyError(f"Duplicate key {metric_name}")
+
+                    parsed_metrics[metric_name] = metric_value
+
+        return parsed_metrics
 
 
-class GenericInferenceRunnerEthosU(GenericInferenceRunner):
-    """Generic inference runner on U55/65."""
+@dataclass
+class FVPMetadata:
+    """Metadata for FVP."""
 
-    def __init__(
-        self, backend_runner: BackendRunner, device_info: DeviceInfo, backend: str
-    ) -> None:
-        """Init generic inference runner instance."""
-        super().__init__(backend_runner)
+    executable: str
+    generic_inf_app: Path
 
-        system_name, app_name = self.resolve_system_and_app(device_info, backend)
-        self.system_name = system_name
-        self.app_name = app_name
-        self.device_info = device_info
 
-    @staticmethod
-    def resolve_system_and_app(
-        device_info: DeviceInfo, backend: str
-    ) -> tuple[str, str]:
-        """Find appropriate system and application for the provided device/backend."""
-        try:
-            system_name = get_system_name(backend, device_info.device_type)
-        except KeyError as ex:
-            raise RuntimeError(
-                f"Unsupported device {device_info.device_type} "
-                f"for backend {backend}"
-            ) from ex
+def get_generic_inference_app_path(fvp: str, target: str) -> Path:
+    """Return path to the generic inference runner binary."""
+    apps_path = get_mlia_resources() / "backends/applications"
 
-        try:
-            app_name = get_application_name(system_name)
-        except KeyError as err:
-            raise RuntimeError(f"System {system_name} is not installed") from err
+    fvp_mapping = {"Corstone-300": "300", "Corstone-310": "310"}
+    target_mapping = {"ethos-u55": "U55", "ethos-u65": "U65"}
 
-        return system_name, app_name
+    fvp_version = f"sse-{fvp_mapping[fvp]}"
+    app_version = f"22.08.02-ethos-{target_mapping[target]}-Default-noTA"
 
-    def get_execution_params(self, model_info: ModelInfo) -> ExecutionParams:
-        """Get execution params for Ethos-U55/65."""
-        self.check_system_and_application(self.system_name, self.app_name)
+    app_dir = f"inference_runner-{fvp_version}-{app_version}"
+    return apps_path.joinpath(app_dir, "ethos-u-inference_runner.axf")
 
-        system_params = [
-            f"mac={self.device_info.mac}",
-            f"input_file={model_info.model_path.absolute()}",
-        ]
 
-        return ExecutionParams(
-            self.app_name,
-            self.system_name,
-            [],
-            system_params,
+def get_executable_name(fvp: str, profile: str, target: str) -> str:
+    """Return name of the executable for selected FVP and profile."""
+    executable_name_mapping = {
+        ("Corstone-300", "AVH", "ethos-u55"): "VHT_Corstone_SSE-300_Ethos-U55",
+        ("Corstone-300", "AVH", "ethos-u65"): "VHT_Corstone_SSE-300_Ethos-U65",
+        ("Corstone-300", "default", "ethos-u55"): "FVP_Corstone_SSE-300_Ethos-U55",
+        ("Corstone-300", "default", "ethos-u65"): "FVP_Corstone_SSE-300_Ethos-U65",
+        ("Corstone-310", "AVH", "ethos-u55"): "VHT_Corstone_SSE-310",
+        ("Corstone-310", "AVH", "ethos-u65"): "VHT_Corstone_SSE-310_Ethos-U65",
+    }
+
+    return executable_name_mapping[(fvp, profile, target)]
+
+
+def get_fvp_metadata(fvp: str, profile: str, target: str) -> FVPMetadata:
+    """Return metadata for selected Corstone backend."""
+    executable_name = get_executable_name(fvp, profile, target)
+    app = get_generic_inference_app_path(fvp, target)
+
+    return FVPMetadata(executable_name, app)
+
+
+def build_corstone_command(
+    backend_path: Path,
+    fvp: str,
+    target: str,
+    mac: int,
+    model: Path,
+    profile: str,
+) -> Command:
+    """Build command to run Corstone FVP."""
+    fvp_metadata = get_fvp_metadata(fvp, profile, target)
+
+    cmd = [
+        backend_path.joinpath(fvp_metadata.executable).as_posix(),
+        "-a",
+        fvp_metadata.generic_inf_app.as_posix(),
+        "--data",
+        f"{model}@0x90000000",
+        "-C",
+        f"ethosu.num_macs={mac}",
+        "-C",
+        "mps3_board.telnetterminal0.start_telnet=0",
+        "-C",
+        "mps3_board.uart0.out_file='-'",
+        "-C",
+        "mps3_board.uart0.shutdown_on_eot=1",
+        "-C",
+        "mps3_board.visualisation.disable-visualisation=1",
+        "--stat",
+    ]
+
+    return Command(cmd)
+
+
+def get_metrics(
+    backend_path: Path,
+    fvp: str,
+    target: str,
+    mac: int,
+    model: Path,
+    profile: str = "default",
+) -> PerformanceMetrics:
+    """Run generic inference and return perf metrics."""
+    try:
+        command = build_corstone_command(
+            backend_path,
+            fvp,
+            target,
+            mac,
+            model,
+            profile,
         )
+    except Exception as err:
+        raise BackendExecutionFailed(
+            f"Unable to construct a command line for {fvp}"
+        ) from err
 
+    output_parser = GenericInferenceOutputParser()
 
-def get_generic_runner(device_info: DeviceInfo, backend: str) -> GenericInferenceRunner:
-    """Get generic runner for provided device and backend."""
-    backend_runner = get_backend_runner()
-    return GenericInferenceRunnerEthosU(backend_runner, device_info, backend)
+    def redirect_to_log(line: str) -> None:
+        """Redirect FVP output to the logger."""
+        logger.debug(line.strip())
+
+    try:
+        process_command_output(
+            command,
+            [output_parser, redirect_to_log],
+        )
+    except subprocess.CalledProcessError as err:
+        raise BackendExecutionFailed("Backend execution failed.") from err
+
+    return output_parser.get_metrics()
 
 
 def estimate_performance(
-    model_info: ModelInfo, device_info: DeviceInfo, backend: str
+    target: str, mac: int, model: Path, backend: str
 ) -> PerformanceMetrics:
     """Get performance estimations."""
-    output_parser = GenericInferenceOutputParser()
-    output_consumers = [output_parser, LogWriter()]
+    backend_repo = get_backend_repository()
+    backend_path, settings = backend_repo.get_backend_settings(backend)
 
-    generic_runner = get_generic_runner(device_info, backend)
-    generic_runner.run(model_info, output_consumers)
+    if not settings or "profile" not in settings:
+        raise BackendExecutionFailed(f"Unable to configure backend {backend}.")
 
-    if not output_parser.is_ready():
-        missed_data = ",".join(output_parser.missed_keys())
-        logger.debug("Unable to get performance metrics, missed data %s", missed_data)
-        raise Exception("Unable to get performance metrics, insufficient data")
-
-    return PerformanceMetrics(**output_parser.result)
-
-
-def get_backend_runner() -> BackendRunner:
-    """
-    Return BackendRunner instance.
-
-    Note: This is needed for the unit tests.
-    """
-    return BackendRunner()
+    return get_metrics(
+        backend_path,
+        backend,
+        target,
+        mac,
+        model,
+        settings["profile"],
+    )

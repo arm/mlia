@@ -74,7 +74,7 @@ def get_commands() -> list[CommandInfo]:
                 partial(add_target_options, profiles_to_skip=["tosa", "cortex-a"]),
                 partial(
                     add_backend_options,
-                    backends_to_skip=["tosa-checker", "armnn-tflitedelegate"],
+                    backends_to_skip=["tosa-checker", "ArmNNTFLiteDelegate"],
                 ),
                 add_multi_optimization_options,
                 add_output_options,

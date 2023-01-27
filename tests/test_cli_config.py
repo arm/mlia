@@ -8,7 +8,6 @@ from unittest.mock import MagicMock
 import pytest
 
 from mlia.cli.config import get_default_backends
-from mlia.cli.config import is_corstone_backend
 
 
 @pytest.mark.parametrize(
@@ -28,7 +27,7 @@ from mlia.cli.config import is_corstone_backend
             ["Vela", "Corstone-300", "New backend"],
         ],
         [["ArmNNTFLiteDelegate"], ["ArmNNTFLiteDelegate"]],
-        [["TOSA-Checker"], ["TOSA-Checker"]],
+        [["tosa-checker"], ["tosa-checker"]],
         [
             ["ArmNNTFLiteDelegate", "Corstone-300"],
             ["ArmNNTFLiteDelegate", "Corstone-300"],
@@ -47,10 +46,3 @@ def test_get_default_backends(
     )
 
     assert get_default_backends() == expected_default_backends
-
-
-def test_is_corstone_backend() -> None:
-    """Test function is_corstone_backend."""
-    assert is_corstone_backend("Corstone-300") is True
-    assert is_corstone_backend("Corstone-310") is True
-    assert is_corstone_backend("New backend") is False

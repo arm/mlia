@@ -6,6 +6,7 @@ from __future__ import annotations
 import pytest
 
 from mlia.core.common import AdviceCategory
+from mlia.target.registry import all_supported_backends
 from mlia.target.registry import registry
 from mlia.target.registry import supported_advice
 from mlia.target.registry import supported_backends
@@ -13,7 +14,7 @@ from mlia.target.registry import supported_targets
 
 
 @pytest.mark.parametrize(
-    "expected_target", ("Cortex-A", "Ethos-U55", "Ethos-U65", "TOSA")
+    "expected_target", ("cortex-a", "ethos-u55", "ethos-u65", "tosa")
 )
 def test_target_registry(expected_target: str) -> None:
     """Test the target registry."""
@@ -26,9 +27,9 @@ def test_target_registry(expected_target: str) -> None:
 @pytest.mark.parametrize(
     ("target_name", "expected_advices"),
     (
-        ("Cortex-A", [AdviceCategory.COMPATIBILITY]),
+        ("cortex-a", [AdviceCategory.COMPATIBILITY]),
         (
-            "Ethos-U55",
+            "ethos-u55",
             [
                 AdviceCategory.COMPATIBILITY,
                 AdviceCategory.OPTIMIZATION,
@@ -36,14 +37,14 @@ def test_target_registry(expected_target: str) -> None:
             ],
         ),
         (
-            "Ethos-U65",
+            "ethos-u65",
             [
                 AdviceCategory.COMPATIBILITY,
                 AdviceCategory.OPTIMIZATION,
                 AdviceCategory.PERFORMANCE,
             ],
         ),
-        ("TOSA", [AdviceCategory.COMPATIBILITY]),
+        ("tosa", [AdviceCategory.COMPATIBILITY]),
     ),
 )
 def test_supported_advice(
@@ -58,10 +59,10 @@ def test_supported_advice(
 @pytest.mark.parametrize(
     ("target_name", "expected_backends"),
     (
-        ("Cortex-A", ["ArmNNTFLiteDelegate"]),
-        ("Ethos-U55", ["Corstone-300", "Corstone-310", "Vela"]),
-        ("Ethos-U65", ["Corstone-300", "Corstone-310", "Vela"]),
-        ("TOSA", ["TOSA-Checker"]),
+        ("cortex-a", ["ArmNNTFLiteDelegate"]),
+        ("ethos-u55", ["Corstone-300", "Corstone-310", "Vela"]),
+        ("ethos-u65", ["Corstone-300", "Corstone-310", "Vela"]),
+        ("tosa", ["tosa-checker"]),
     ),
 )
 def test_supported_backends(target_name: str, expected_backends: list[str]) -> None:
@@ -72,11 +73,22 @@ def test_supported_backends(target_name: str, expected_backends: list[str]) -> N
 @pytest.mark.parametrize(
     ("advice", "expected_targets"),
     (
-        (AdviceCategory.COMPATIBILITY, ["Cortex-A", "Ethos-U55", "Ethos-U65", "TOSA"]),
-        (AdviceCategory.OPTIMIZATION, ["Ethos-U55", "Ethos-U65"]),
-        (AdviceCategory.PERFORMANCE, ["Ethos-U55", "Ethos-U65"]),
+        (AdviceCategory.COMPATIBILITY, ["cortex-a", "ethos-u55", "ethos-u65", "tosa"]),
+        (AdviceCategory.OPTIMIZATION, ["ethos-u55", "ethos-u65"]),
+        (AdviceCategory.PERFORMANCE, ["ethos-u55", "ethos-u65"]),
     ),
 )
 def test_supported_targets(advice: AdviceCategory, expected_targets: list[str]) -> None:
     """Test function supported_targets()."""
     assert sorted(expected_targets) == sorted(supported_targets(advice))
+
+
+def test_all_supported_backends() -> None:
+    """Test function all_supported_backends."""
+    assert all_supported_backends() == {
+        "Vela",
+        "tosa-checker",
+        "ArmNNTFLiteDelegate",
+        "Corstone-310",
+        "Corstone-300",
+    }

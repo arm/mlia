@@ -23,18 +23,12 @@ def validate_backend(
     compatible with each other.
     It assumes that prior checks where made on the validity of the target-profile.
     """
-    target_map = {
-        "ethos-u55": "Ethos-U55",
-        "ethos-u65": "Ethos-U65",
-        "cortex-a": "Cortex-A",
-        "tosa": "TOSA",
-    }
     target = get_target(target_profile)
 
     if not backend:
         return get_default_backends_dict()[target]
 
-    compatible_backends = supported_backends(target_map[target])
+    compatible_backends = supported_backends(target)
 
     nor_backend = list(map(normalize_string, backend))
     nor_compat_backend = list(map(normalize_string, compatible_backends))

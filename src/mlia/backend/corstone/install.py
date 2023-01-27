@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Module for Corstone based FVPs.
 
@@ -12,9 +12,7 @@ import logging
 import subprocess  # nosec
 from pathlib import Path
 
-from mlia.backend.executor.runner import BackendRunner
 from mlia.backend.install import BackendInstallation
-from mlia.backend.install import BackendMetadata
 from mlia.backend.install import CompoundPathChecker
 from mlia.backend.install import Installation
 from mlia.backend.install import PackagePathChecker
@@ -33,6 +31,7 @@ class Corstone300Installer:
         """Install Corstone-300 and return path to the models."""
         with working_directory(dist_dir):
             install_dir = "corstone-300"
+
             try:
                 fvp_install_cmd = [
                     "./FVP_Corstone_SSE-300.sh",
@@ -62,23 +61,18 @@ class Corstone300Installer:
 def get_corstone_300_installation() -> Installation:
     """Get Corstone-300 installation."""
     corstone_300 = BackendInstallation(
-        backend_runner=BackendRunner(),
         # pylint: disable=line-too-long
-        metadata=BackendMetadata(
-            name="Corstone-300",
-            description="Corstone-300 FVP",
-            system_config="backend_configs/systems/corstone-300/backend-config.json",
-            apps_resources=[],
-            fvp_dir_name="corstone_300",
-            download_artifact=DownloadArtifact(
-                name="Corstone-300 FVP",
-                url="https://developer.arm.com/-/media/Arm%20Developer%20Community/Downloads/OSS/FVP/Corstone-300/FVP_Corstone_SSE-300_11.16_26.tgz",
-                filename="FVP_Corstone_SSE-300_11.16_26.tgz",
-                version="11.16_26",
-                sha256_hash="e26139be756b5003a30d978c629de638aed1934d597dc24a17043d4708e934d7",
-            ),
-            supported_platforms=["Linux"],
+        name="Corstone-300",
+        description="Corstone-300 FVP",
+        fvp_dir_name="corstone_300",
+        download_artifact=DownloadArtifact(
+            name="Corstone-300 FVP",
+            url="https://developer.arm.com/-/media/Arm%20Developer%20Community/Downloads/OSS/FVP/Corstone-300/FVP_Corstone_SSE-300_11.16_26.tgz",
+            filename="FVP_Corstone_SSE-300_11.16_26.tgz",
+            version="11.16_26",
+            sha256_hash="e26139be756b5003a30d978c629de638aed1934d597dc24a17043d4708e934d7",
         ),
+        supported_platforms=["Linux"],
         # pylint: enable=line-too-long
         path_checker=CompoundPathChecker(
             PackagePathChecker(
@@ -87,6 +81,7 @@ def get_corstone_300_installation() -> Installation:
                     "models/Linux64_GCC-6.4/FVP_Corstone_SSE-300_Ethos-U65",
                 ],
                 backend_subfolder="models/Linux64_GCC-6.4",
+                settings={"profile": "default"},
             ),
             StaticPathChecker(
                 static_backend_path=Path("/opt/VHT"),
@@ -95,9 +90,7 @@ def get_corstone_300_installation() -> Installation:
                     "VHT_Corstone_SSE-300_Ethos-U65",
                 ],
                 copy_source=False,
-                system_config=(
-                    "backend_configs/systems/corstone-300-vht/backend-config.json"
-                ),
+                settings={"profile": "AVH"},
             ),
         ),
         backend_installer=Corstone300Installer(),
@@ -109,18 +102,11 @@ def get_corstone_300_installation() -> Installation:
 def get_corstone_310_installation() -> Installation:
     """Get Corstone-310 installation."""
     corstone_310 = BackendInstallation(
-        backend_runner=BackendRunner(),
-        # pylint: disable=line-too-long
-        metadata=BackendMetadata(
-            name="Corstone-310",
-            description="Corstone-310 FVP",
-            system_config="backend_configs/systems/corstone-310/backend-config.json",
-            apps_resources=[],
-            fvp_dir_name="corstone_310",
-            download_artifact=None,
-            supported_platforms=["Linux"],
-        ),
-        # pylint: enable=line-too-long
+        name="Corstone-310",
+        description="Corstone-310 FVP",
+        fvp_dir_name="corstone_310",
+        download_artifact=None,
+        supported_platforms=["Linux"],
         path_checker=CompoundPathChecker(
             PackagePathChecker(
                 expected_files=[
@@ -128,6 +114,7 @@ def get_corstone_310_installation() -> Installation:
                     "models/Linux64_GCC-9.3/FVP_Corstone_SSE-310_Ethos-U65",
                 ],
                 backend_subfolder="models/Linux64_GCC-9.3",
+                settings={"profile": "default"},
             ),
             StaticPathChecker(
                 static_backend_path=Path("/opt/VHT"),
@@ -136,9 +123,7 @@ def get_corstone_310_installation() -> Installation:
                     "VHT_Corstone_SSE-310_Ethos-U65",
                 ],
                 copy_source=False,
-                system_config=(
-                    "backend_configs/systems/corstone-310-vht/backend-config.json"
-                ),
+                settings={"profile": "AVH"},
             ),
         ),
         backend_installer=None,

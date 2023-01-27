@@ -4,16 +4,9 @@
 from __future__ import annotations
 
 import logging
-from functools import lru_cache
-from typing import List
-from typing import Optional
-from typing import TypedDict
 
-from mlia.backend.corstone.install import get_corstone_installations
-from mlia.backend.manager import DefaultInstallationManager
-from mlia.backend.manager import InstallationManager
-from mlia.backend.registry import get_supported_backends
-from mlia.backend.tosa_checker.install import get_tosa_backend_installation
+from mlia.backend.manager import get_installation_manager
+from mlia.target.registry import all_supported_backends
 
 logger = logging.getLogger(__name__)
 
@@ -21,31 +14,24 @@ DEFAULT_PRUNING_TARGET = 0.5
 DEFAULT_CLUSTERING_TARGET = 32
 
 
-def get_installation_manager(noninteractive: bool = False) -> InstallationManager:
-    """Return installation manager."""
-    backends = get_corstone_installations()
-    backends.append(get_tosa_backend_installation())
-
-    return DefaultInstallationManager(backends, noninteractive=noninteractive)
-
-
-@lru_cache
 def get_available_backends() -> list[str]:
     """Return list of the available backends."""
+    available_backends = ["Vela", "ArmNNTFLiteDelegate"]
+
     # Add backends using backend manager
     manager = get_installation_manager()
-    available_backends = [
+    available_backends.extend(
         backend
-        for backend in get_supported_backends()
+        for backend in all_supported_backends()
         if manager.backend_installed(backend)
-    ]
+    )
 
     return available_backends
 
 
 # List of mutually exclusive Corstone backends ordered by priority
 _CORSTONE_EXCLUSIVE_PRIORITY = ("Corstone-310", "Corstone-300")
-_NON_ETHOS_U_BACKENDS = ("TOSA-Checker", "ArmNNTFLiteDelegate")
+_NON_ETHOS_U_BACKENDS = ("tosa-checker", "ArmNNTFLiteDelegate")
 
 
 def get_ethos_u_default_backends(backends: list[str]) -> list[str]:
@@ -70,29 +56,14 @@ def get_default_backends() -> list[str]:
     return backends
 
 
-def is_corstone_backend(backend: str) -> bool:
-    """Check if the given backend is a Corstone backend."""
-    return backend in _CORSTONE_EXCLUSIVE_PRIORITY
-
-
-BackendCompatibility = TypedDict(
-    "BackendCompatibility",
-    {
-        "partial-match": bool,
-        "backends": List[str],
-        "default-return": Optional[List[str]],
-        "use-custom-return": bool,
-        "custom-return": Optional[List[str]],
-    },
-)
-
-
 def get_default_backends_dict() -> dict[str, list[str]]:
     """Return default backends for all targets."""
-    ethos_u_defaults = get_ethos_u_default_backends(get_default_backends())
+    default_backends = get_default_backends()
+    ethos_u_defaults = get_ethos_u_default_backends(default_backends)
+
     return {
         "ethos-u55": ethos_u_defaults,
         "ethos-u65": ethos_u_defaults,
         "tosa": ["tosa-checker"],
-        "cortex-a": ["armnn-tflitedelegate"],
+        "cortex-a": ["ArmNNTFLiteDelegate"],
     }

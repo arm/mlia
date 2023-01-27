@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for installation manager."""
 from __future__ import annotations
@@ -16,6 +16,8 @@ from mlia.backend.install import Installation
 from mlia.backend.install import InstallationType
 from mlia.backend.install import InstallFromPath
 from mlia.backend.manager import DefaultInstallationManager
+from mlia.core.errors import ConfigurationError
+from mlia.core.errors import InternalError
 
 
 def get_default_installation_manager_mock(
@@ -255,6 +257,25 @@ def test_installation_manager_install_from(
         install_mock.uninstall.assert_not_called()
 
 
+def test_installation_manager_unsupported_install_type(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Test that installation could not be installed via unsupported type."""
+    download_install_mock = _could_be_downloaded_and_installed_mock()
+    install_from_mock = _could_be_installed_from_mock()
+    install_mocks = [download_install_mock, install_from_mock]
+
+    manager = get_installation_manager(False, install_mocks, monkeypatch)
+    manager.install_from(tmp_path, "could_be_downloaded_and_installed")
+
+    manager.download_and_install("could_be_installed_from")
+
+    for mock in install_mocks:
+        mock.install.assert_not_called()
+        mock.uninstall.assert_not_called()
+
+
 @pytest.mark.parametrize("noninteractive", [True, False])
 @pytest.mark.parametrize(
     "install_mock, backend_name, expected_call",
@@ -280,3 +301,39 @@ def test_installation_manager_uninstall(
     manager.uninstall(backend_name)
 
     assert install_mock.uninstall.mock_calls == expected_call
+
+
+def test_installation_internal_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test that manager should be able to detect wrong state."""
+    install_mock = _ready_for_uninstall_mock()
+    manager = get_installation_manager(False, [install_mock, install_mock], monkeypatch)
+
+    with pytest.raises(
+        InternalError,
+        match="More than one installed backend with name already_installed found",
+    ):
+        manager.uninstall("already_installed")
+
+
+def test_uninstall_unknown_backend(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test that uninstall should fail for uknown backend."""
+    install_mock = _ready_for_uninstall_mock()
+    manager = get_installation_manager(False, [install_mock, install_mock], monkeypatch)
+
+    with pytest.raises(
+        ConfigurationError, match="Backend 'some_backend' is not installed"
+    ):
+        manager.uninstall("some_backend")
+
+
+def test_show_env_details(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test method show_env_details."""
+    ready_to_install_mock = _ready_for_installation_mock()
+    could_be_installed_mock = _could_be_installed_from_mock()
+
+    manager = get_installation_manager(
+        False,
+        [ready_to_install_mock, could_be_installed_mock],
+        monkeypatch,
+    )
+    manager.show_env_details()

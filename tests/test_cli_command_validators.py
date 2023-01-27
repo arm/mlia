@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+from contextlib import ExitStack
 from unittest.mock import MagicMock
 
 import pytest
@@ -125,9 +126,9 @@ def test_validate_check_target_profile(
             None,
         ],
         ["tosa", None, False, None, ["tosa-checker"]],
-        ["cortex-a", None, False, None, ["armnn-tflitedelegate"]],
+        ["cortex-a", None, False, None, ["ArmNNTFLiteDelegate"]],
         ["tosa", ["tosa-checker"], False, None, ["tosa-checker"]],
-        ["cortex-a", ["armnn-tflitedelegate"], False, None, ["armnn-tflitedelegate"]],
+        ["cortex-a", ["ArmNNTFLiteDelegate"], False, None, ["ArmNNTFLiteDelegate"]],
         [
             "ethos-u55-256",
             ["Vela", "Corstone-300"],
@@ -158,10 +159,11 @@ def test_validate_backend(
         MagicMock(return_value=["Vela", "Corstone-300"]),
     )
 
+    exit_stack = ExitStack()
     if throws_exception:
-        with pytest.raises(argparse.ArgumentError) as err:
-            validate_backend(input_target_profile, input_backends)
-        assert str(err.value.message) == exception_message
-        return
+        exit_stack.enter_context(
+            pytest.raises(argparse.ArgumentError, match=exception_message)
+        )
 
-    assert validate_backend(input_target_profile, input_backends) == output_backends
+    with exit_stack:
+        assert validate_backend(input_target_profile, input_backends) == output_backends

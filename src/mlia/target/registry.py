@@ -3,12 +3,9 @@
 """Target module."""
 from __future__ import annotations
 
-from typing import cast
-
 from mlia.backend.config import BackendType
-from mlia.backend.manager import DefaultInstallationManager
+from mlia.backend.manager import get_installation_manager
 from mlia.backend.registry import registry as backend_registry
-from mlia.cli.config import get_installation_manager
 from mlia.core.common import AdviceCategory
 from mlia.core.reporting import Column
 from mlia.core.reporting import Table
@@ -65,14 +62,23 @@ def supported_targets(advice: AdviceCategory) -> list[str]:
     ]
 
 
+def all_supported_backends() -> set[str]:
+    """Return set of all supported backends by all targets."""
+    return {
+        backend
+        for item in registry.items.values()
+        for backend in item.supported_backends
+    }
+
+
 def table() -> Table:
     """Get a table representation of registered targets with backends."""
 
     def get_status(backend: str) -> str:
         if backend_registry.items[backend].type == BackendType.BUILTIN:
             return BackendType.BUILTIN.name
-        mgr = cast(DefaultInstallationManager, get_installation_manager())
-        return "INSTALLED" if mgr.already_installed(backend) else "NOT INSTALLED"
+        mgr = get_installation_manager()
+        return "INSTALLED" if mgr.backend_installed(backend) else "NOT INSTALLED"
 
     def get_advice(target: str) -> tuple[str, str, str]:
         supported = supported_advice(target)

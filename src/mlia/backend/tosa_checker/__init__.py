@@ -8,7 +8,7 @@ from mlia.backend.registry import registry
 from mlia.core.common import AdviceCategory
 
 registry.register(
-    "TOSA-Checker",
+    "tosa-checker",
     BackendConfiguration(
         supported_advice=[AdviceCategory.COMPATIBILITY],
         supported_systems=[System.LINUX_AMD64],

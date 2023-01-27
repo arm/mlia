@@ -9,6 +9,8 @@ import pytest
 
 from mlia.backend.config import BackendType
 from mlia.backend.config import System
+from mlia.backend.registry import get_supported_backends
+from mlia.backend.registry import get_supported_systems
 from mlia.backend.registry import registry
 from mlia.core.common import AdviceCategory
 
@@ -35,7 +37,7 @@ from mlia.core.common import AdviceCategory
             BackendType.CUSTOM,
         ),
         (
-            "TOSA-Checker",
+            "tosa-checker",
             [AdviceCategory.COMPATIBILITY],
             [System.LINUX_AMD64],
             BackendType.WHEEL,
@@ -79,3 +81,19 @@ def test_backend_registry(
             cfg.supported_systems
         ), f"Supported systems differs: {advices} != {cfg.supported_advice}"
     assert cfg.type == type_
+
+
+def test_get_supported_backends() -> None:
+    """Test function get_supported_backends."""
+    assert get_supported_backends() == [
+        "ArmNNTFLiteDelegate",
+        "Corstone-300",
+        "Corstone-310",
+        "Vela",
+        "tosa-checker",
+    ]
+
+
+def test_get_supported_systems() -> None:
+    """Test function get_supported_systems."""
+    assert get_supported_systems()
