@@ -11,6 +11,7 @@ from collections import defaultdict
 from contextlib import contextmanager
 from contextlib import ExitStack
 from dataclasses import dataclass
+from enum import Enum
 from functools import partial
 from io import TextIOWrapper
 from pathlib import Path
@@ -491,12 +492,15 @@ class CustomJSONEncoder(json.JSONEncoder):
     """Custom JSON encoder."""
 
     def default(self, o: Any) -> Any:
-        """Support numpy types."""
+        """Support custom types."""
         if isinstance(o, np.integer):
             return int(o)
 
         if isinstance(o, np.floating):
             return float(o)
+
+        if isinstance(o, Enum) and isinstance(o.value, str):
+            return o.value
 
         return json.JSONEncoder.default(self, o)
 

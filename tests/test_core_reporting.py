@@ -3,6 +3,11 @@
 """Tests for reporting module."""
 from __future__ import annotations
 
+import io
+import json
+from enum import Enum
+
+import numpy as np
 import pytest
 
 from mlia.core.reporting import BytesCell
@@ -11,6 +16,7 @@ from mlia.core.reporting import ClockCell
 from mlia.core.reporting import Column
 from mlia.core.reporting import CyclesCell
 from mlia.core.reporting import Format
+from mlia.core.reporting import json_reporter
 from mlia.core.reporting import NestedReport
 from mlia.core.reporting import ReportItem
 from mlia.core.reporting import SingleRow
@@ -335,3 +341,37 @@ Single row example:
             alias="simple_row_example",
         )
         wrong_single_row.to_plain_text()
+
+
+def test_custom_json_serialization() -> None:
+    """Test JSON serialization for custom types."""
+
+    class TestEnum(Enum):
+        """Test enum."""
+
+        VALUE1 = "value1"
+        VALUE2 = "value2"
+
+    table = Table(
+        [Column("Column1", alias="column1")],
+        rows=[
+            [TestEnum.VALUE1],
+            [np.float64(10)],
+            [np.int64(10)],
+            [10],
+        ],
+        name="sample_table",
+        alias="sample_table",
+    )
+
+    output = io.StringIO()
+    json_reporter(table, output)
+
+    assert json.loads(output.getvalue()) == {
+        "sample_table": [
+            {"column1": "value1"},
+            {"column1": 10.0},
+            {"column1": 10},
+            {"column1": 10},
+        ]
+    }
