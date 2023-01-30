@@ -203,7 +203,7 @@ def add_backend_options(
         "-b",
         "--backend",
         help="Backends to use for evaluation.",
-        nargs="+",
+        action="append",
         choices=available_backends,
         type=only_one_corstone_checker(),
     )

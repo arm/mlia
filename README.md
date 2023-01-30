@@ -144,11 +144,13 @@ mlia check ~/models/mobilenet_v1_1.0_224_quant.tflite \
     --target-profile ethos-u55-256 \
     --performance
 
-# Explicitly specify the target profile and backend(s) to use with --backend
+# Explicitly specify the target profile and backend(s) to use
+# with --backend option
 mlia check ~/models/ds_cnn_large_fully_quantized_int8.tflite \
     --target-profile ethos-u65-512 \
     --performance \
-    --backend "Vela" "Corstone-310"
+    --backend "Vela" \
+    --backend "Corstone-300"
 
 # Get help and further information
 mlia check --help
