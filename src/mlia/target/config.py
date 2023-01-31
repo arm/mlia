@@ -7,6 +7,7 @@ from abc import ABC
 from abc import abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
+from shutil import copy
 from typing import Any
 from typing import cast
 from typing import TypeVar
@@ -59,6 +60,19 @@ def get_target(target_profile: str | Path) -> str:
     profile_file = get_profile_file(target_profile)
     profile = load_profile(profile_file)
     return cast(str, profile["target"])
+
+
+def copy_profile_file_to_output_dir(
+    target_profile: str | Path, output_dir: str | Path
+) -> bool:
+    """Copy the target profile file to output directory."""
+    profile_file_path = get_profile_file(target_profile)
+    output_file_path = f"{output_dir}/{profile_file_path.stem}.toml"
+    try:
+        copy(profile_file_path, output_file_path)
+        return True
+    except OSError as err:
+        raise RuntimeError("Failed to copy profile file:", err.strerror) from err
 
 
 T = TypeVar("T", bound="TargetProfile")

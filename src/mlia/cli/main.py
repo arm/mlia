@@ -34,6 +34,7 @@ from mlia.core.context import ExecutionContext
 from mlia.core.errors import ConfigurationError
 from mlia.core.errors import InternalError
 from mlia.core.logging import setup_logging
+from mlia.target.config import copy_profile_file_to_output_dir
 from mlia.target.registry import table as target_table
 
 
@@ -174,7 +175,6 @@ def setup_context(
         if param_name not in skipped_params
         and (param_name not in expected_params or param_name in func_params)
     }
-
     return (ctx, func_args)
 
 
@@ -191,6 +191,11 @@ def run_command(args: argparse.Namespace) -> int:
         logger.info(
             "\nThis execution of MLIA uses output directory: %s", ctx.output_dir
         )
+        if copy_profile_file(ctx, func_args):
+            logger.info(
+                "Target profile information copied to %s/target_profile.toml",
+                ctx.output_dir,
+            )
         args.func(**func_args)
         return 0
     except KeyboardInterrupt:
@@ -259,6 +264,16 @@ def init_and_run(commands: list[CommandInfo], argv: list[str] | None = None) -> 
     args = parser.parse_args(argv)
 
     return run_command(args)
+
+
+def copy_profile_file(ctx: ExecutionContext, func_args: dict) -> bool:
+    """If present, copy the target profile file to the output directory."""
+    if func_args.get("target_profile"):
+        return copy_profile_file_to_output_dir(
+            func_args["target_profile"], ctx.output_dir
+        )
+
+    return False
 
 
 def main(argv: list[str] | None = None) -> int:

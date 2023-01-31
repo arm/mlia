@@ -3,18 +3,30 @@
 """Tests for the backend config module."""
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 from mlia.backend.config import BackendConfiguration
 from mlia.backend.config import BackendType
 from mlia.backend.config import System
 from mlia.core.common import AdviceCategory
+from mlia.target.config import copy_profile_file_to_output_dir
 from mlia.target.config import get_builtin_supported_profile_names
 from mlia.target.config import get_profile_file
 from mlia.target.config import load_profile
 from mlia.target.config import TargetInfo
 from mlia.target.config import TargetProfile
 from mlia.utils.registry import Registry
+
+
+def test_copy_profile_file_to_output_dir(tmp_path: Path) -> None:
+    """Test if the profile file is copied into the output directory."""
+    test_target_profile_name = "ethos-u55-128"
+    test_file_path = Path(f"{tmp_path}/{test_target_profile_name}.toml")
+
+    copy_profile_file_to_output_dir(test_target_profile_name, tmp_path)
+    assert Path.is_file(test_file_path)
 
 
 def test_get_builtin_supported_profile_names() -> None:
