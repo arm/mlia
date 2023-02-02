@@ -3,6 +3,8 @@
 """Tests for Ethos-U data analysis module."""
 from __future__ import annotations
 
+from typing import cast
+
 import pytest
 
 from mlia.backend.vela.compat import NpuSupported
@@ -23,6 +25,7 @@ from mlia.target.ethos_u.performance import MemoryUsage
 from mlia.target.ethos_u.performance import NPUCycles
 from mlia.target.ethos_u.performance import OptimizationPerformanceMetrics
 from mlia.target.ethos_u.performance import PerformanceMetrics
+from mlia.target.registry import profile
 
 
 def test_perf_metrics_diff() -> None:
@@ -84,7 +87,7 @@ def test_perf_metrics_diff() -> None:
         [
             OptimizationPerformanceMetrics(
                 PerformanceMetrics(
-                    EthosUConfiguration.load_profile("ethos-u55-256"),
+                    cast(EthosUConfiguration, profile("ethos-u55-256")),
                     NPUCycles(1, 2, 3, 4, 5, 6),
                     # memory metrics are in kilobytes
                     MemoryUsage(*[i * 1024 for i in range(1, 6)]),  # type: ignore
@@ -95,7 +98,7 @@ def test_perf_metrics_diff() -> None:
                             OptimizationSettings("pruning", 0.5, None),
                         ],
                         PerformanceMetrics(
-                            EthosUConfiguration.load_profile("ethos-u55-256"),
+                            cast(EthosUConfiguration, profile("ethos-u55-256")),
                             NPUCycles(1, 2, 3, 4, 5, 6),
                             # memory metrics are in kilobytes
                             MemoryUsage(
@@ -127,7 +130,7 @@ def test_perf_metrics_diff() -> None:
         [
             OptimizationPerformanceMetrics(
                 PerformanceMetrics(
-                    EthosUConfiguration.load_profile("ethos-u55-256"),
+                    cast(EthosUConfiguration, profile("ethos-u55-256")),
                     NPUCycles(1, 2, 3, 4, 5, 6),
                     # memory metrics are in kilobytes
                     MemoryUsage(*[i * 1024 for i in range(1, 6)]),  # type: ignore

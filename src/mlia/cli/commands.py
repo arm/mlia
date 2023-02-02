@@ -23,9 +23,9 @@ from pathlib import Path
 
 from mlia.api import ExecutionContext
 from mlia.api import get_advice
+from mlia.backend.manager import get_installation_manager
 from mlia.cli.command_validators import validate_backend
 from mlia.cli.command_validators import validate_check_target_profile
-from mlia.cli.config import get_installation_manager
 from mlia.cli.options import parse_optimization_parameters
 from mlia.utils.console import create_section_header
 

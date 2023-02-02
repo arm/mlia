@@ -20,7 +20,7 @@ from typing import Sequence
 
 import pytest
 
-from mlia.cli.config import get_available_backends
+from mlia.backend.manager import get_available_backends
 from mlia.cli.main import get_commands
 from mlia.cli.main import get_possible_command_names
 from mlia.cli.main import init_parser

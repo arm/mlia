@@ -1,14 +1,19 @@
 # SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
-"""Module for various helper classes."""
+"""Module for various helpers."""
 from __future__ import annotations
 
+from pathlib import Path
+from shutil import copy
 from typing import Any
+from typing import cast
 
 from mlia.cli.options import get_target_profile_opts
 from mlia.core.helpers import ActionResolver
 from mlia.nn.tensorflow.optimizations.select import OptimizationSettings
 from mlia.nn.tensorflow.utils import is_keras_model
+from mlia.target.config import get_builtin_profile_path
+from mlia.target.config import is_builtin_profile
 from mlia.utils.types import is_list_of
 
 
@@ -108,3 +113,20 @@ class CLIActionResolver(ActionResolver):
 
         model_path = self.args.get("model")
         return model_path, device_opts
+
+
+def copy_profile_file_to_output_dir(
+    target_profile: str | Path, output_dir: str | Path
+) -> bool:
+    """Copy the target profile file to the output directory."""
+    profile_file_path = (
+        get_builtin_profile_path(cast(str, target_profile))
+        if is_builtin_profile(target_profile)
+        else Path(target_profile)
+    )
+    output_file_path = f"{output_dir}/{profile_file_path.stem}.toml"
+    try:
+        copy(profile_file_path, output_file_path)
+        return True
+    except OSError as err:
+        raise RuntimeError("Failed to copy profile file:", err.strerror) from err

@@ -6,7 +6,11 @@ from __future__ import annotations
 import pytest
 
 from mlia.core.common import AdviceCategory
+from mlia.target.config import get_builtin_profile_path
 from mlia.target.registry import all_supported_backends
+from mlia.target.registry import default_backends
+from mlia.target.registry import is_supported
+from mlia.target.registry import profile
 from mlia.target.registry import registry
 from mlia.target.registry import supported_advice
 from mlia.target.registry import supported_backends
@@ -57,6 +61,23 @@ def test_supported_advice(
 
 
 @pytest.mark.parametrize(
+    ("backend", "target", "expected_result"),
+    (
+        ("ArmNNTFLiteDelegate", None, True),
+        ("ArmNNTFLiteDelegate", "cortex-a", True),
+        ("ArmNNTFLiteDelegate", "tosa", False),
+        ("Corstone-310", None, True),
+        ("Corstone-310", "ethos-u55", True),
+        ("Corstone-310", "ethos-u65", True),
+        ("Corstone-310", "cortex-a", False),
+    ),
+)
+def test_is_supported(backend: str, target: str | None, expected_result: bool) -> None:
+    """Test function is_supported()."""
+    assert is_supported(backend, target) == expected_result
+
+
+@pytest.mark.parametrize(
     ("target_name", "expected_backends"),
     (
         ("cortex-a", ["ArmNNTFLiteDelegate"]),
@@ -92,3 +113,39 @@ def test_all_supported_backends() -> None:
         "Corstone-310",
         "Corstone-300",
     }
+
+
+@pytest.mark.parametrize(
+    ("target", "expected_default_backends", "is_subset_only"),
+    [
+        ["cortex-a", ["ArmNNTFLiteDelegate"], False],
+        ["tosa", ["tosa-checker"], False],
+        ["ethos-u55", ["Vela"], True],
+        ["ethos-u65", ["Vela"], True],
+    ],
+)
+def test_default_backends(
+    target: str,
+    expected_default_backends: list[str],
+    is_subset_only: bool,
+) -> None:
+    """Test function default_backends()."""
+    if is_subset_only:
+        assert set(expected_default_backends).issubset(default_backends(target))
+    else:
+        assert default_backends(target) == expected_default_backends
+
+
+@pytest.mark.parametrize(
+    "target_profile", ("cortex-a", "tosa", "ethos-u55-128", "ethos-u65-256")
+)
+def test_profile(target_profile: str) -> None:
+    """Test function profile()."""
+    # Test loading by built-in profile name
+    cfg = profile(target_profile)
+    assert target_profile.startswith(cfg.target)
+
+    # Test loading the file directly
+    profile_file = get_builtin_profile_path(target_profile)
+    cfg = profile(profile_file)
+    assert target_profile.startswith(cfg.target)

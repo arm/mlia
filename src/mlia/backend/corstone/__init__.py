@@ -7,24 +7,20 @@ from mlia.backend.config import System
 from mlia.backend.registry import registry
 from mlia.core.common import AdviceCategory
 
-registry.register(
-    "Corstone-300",
-    BackendConfiguration(
-        supported_advice=[AdviceCategory.PERFORMANCE, AdviceCategory.OPTIMIZATION],
-        supported_systems=[System.LINUX_AMD64],
-        backend_type=BackendType.CUSTOM,
-    ),
-)
-registry.register(
-    "Corstone-310",
-    BackendConfiguration(
-        supported_advice=[AdviceCategory.PERFORMANCE, AdviceCategory.OPTIMIZATION],
-        supported_systems=[System.LINUX_AMD64],
-        backend_type=BackendType.CUSTOM,
-    ),
-)
+# List of mutually exclusive Corstone backends ordered by priority
+CORSTONE_PRIORITY = ("Corstone-310", "Corstone-300")
+
+for corstone_name in CORSTONE_PRIORITY:
+    registry.register(
+        corstone_name,
+        BackendConfiguration(
+            supported_advice=[AdviceCategory.PERFORMANCE, AdviceCategory.OPTIMIZATION],
+            supported_systems=[System.LINUX_AMD64],
+            backend_type=BackendType.CUSTOM,
+        ),
+    )
 
 
 def is_corstone_backend(backend_name: str) -> bool:
     """Check if backend belongs to Corstone."""
-    return backend_name in ["Corstone-300", "Corstone-310"]
+    return backend_name in CORSTONE_PRIORITY

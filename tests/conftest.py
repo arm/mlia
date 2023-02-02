@@ -83,8 +83,11 @@ def fixture_test_models_path(
     save_tflite_model(tflite_model, tflite_model_path)
 
     tflite_vela_model = tmp_path / "test_model_vela.tflite"
-    device = EthosUConfiguration.load_profile("ethos-u55-256")
-    optimize_model(tflite_model_path, device.compiler_options, tflite_vela_model)
+
+    target_profile = EthosUConfiguration.load_profile("ethos-u55-256")
+    optimize_model(
+        tflite_model_path, target_profile.compiler_options, tflite_vela_model
+    )
 
     tf.saved_model.save(keras_model, str(tmp_path / "tf_model_test_model"))
 

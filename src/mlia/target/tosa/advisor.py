@@ -5,6 +5,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
+from typing import cast
 
 from mlia.core.advice_generation import AdviceCategory
 from mlia.core.advice_generation import AdviceProducer
@@ -17,6 +18,7 @@ from mlia.core.data_collection import DataCollector
 from mlia.core.events import Event
 from mlia.core.metadata import MLIAMetadata
 from mlia.core.metadata import ModelMetadata
+from mlia.target.registry import profile
 from mlia.target.tosa.advice_generation import TOSAAdviceProducer
 from mlia.target.tosa.config import TOSAConfiguration
 from mlia.target.tosa.data_analysis import TOSADataAnalyzer
@@ -66,7 +68,7 @@ class TOSAInferenceAdvisor(DefaultInferenceAdvisor):
         return [
             TOSAAdvisorStartedEvent(
                 model,
-                TOSAConfiguration.load_profile(target_profile),
+                cast(TOSAConfiguration, profile(target_profile)),
                 MetadataDisplay(
                     TOSAMetadata("tosa-checker"),
                     MLIAMetadata("mlia"),

@@ -5,6 +5,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
+from typing import cast
 
 from mlia.core.advice_generation import AdviceProducer
 from mlia.core.advisor import DefaultInferenceAdvisor
@@ -25,6 +26,7 @@ from mlia.target.ethos_u.data_collection import EthosUOptimizationPerformance
 from mlia.target.ethos_u.data_collection import EthosUPerformance
 from mlia.target.ethos_u.events import EthosUAdvisorStartedEvent
 from mlia.target.ethos_u.handlers import EthosUEventHandler
+from mlia.target.registry import profile
 from mlia.utils.types import is_list_of
 
 
@@ -96,7 +98,7 @@ class EthosUInferenceAdvisor(DefaultInferenceAdvisor):
     def _get_device_cfg(self, context: Context) -> EthosUConfiguration:
         """Get device configuration."""
         target_profile = self.get_target_profile(context)
-        return EthosUConfiguration.load_profile(target_profile)
+        return cast(EthosUConfiguration, profile(target_profile))
 
     def _get_optimization_settings(self, context: Context) -> list[list[dict]]:
         """Get optimization settings."""

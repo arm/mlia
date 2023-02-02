@@ -5,6 +5,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
+from typing import cast
 
 from mlia.core.advice_generation import AdviceProducer
 from mlia.core.advisor import DefaultInferenceAdvisor
@@ -21,6 +22,7 @@ from mlia.target.cortex_a.data_analysis import CortexADataAnalyzer
 from mlia.target.cortex_a.data_collection import CortexAOperatorCompatibility
 from mlia.target.cortex_a.events import CortexAAdvisorStartedEvent
 from mlia.target.cortex_a.handlers import CortexAEventHandler
+from mlia.target.registry import profile
 
 
 class CortexAInferenceAdvisor(DefaultInferenceAdvisor):
@@ -59,7 +61,7 @@ class CortexAInferenceAdvisor(DefaultInferenceAdvisor):
 
         return [
             CortexAAdvisorStartedEvent(
-                model, CortexAConfiguration.load_profile(target_profile)
+                model, cast(CortexAConfiguration, profile(target_profile))
             ),
         ]
 

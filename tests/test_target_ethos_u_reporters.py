@@ -3,6 +3,8 @@
 """Tests for reports module."""
 from __future__ import annotations
 
+from typing import cast
+
 import pytest
 
 from mlia.backend.vela.compat import NpuSupported
@@ -12,6 +14,7 @@ from mlia.core.reporting import Table
 from mlia.target.ethos_u.config import EthosUConfiguration
 from mlia.target.ethos_u.reporters import report_device_details
 from mlia.target.ethos_u.reporters import report_operators
+from mlia.target.registry import profile
 from mlia.utils.console import remove_ascii_codes
 
 
@@ -118,7 +121,7 @@ def test_report_operators(
     "device, expected_plain_text, expected_json_dict",
     [
         [
-            EthosUConfiguration.load_profile("ethos-u55-256"),
+            cast(EthosUConfiguration, profile("ethos-u55-256")),
             """Device information:
   Target                                                     ethos-u55
   MAC                                                              256

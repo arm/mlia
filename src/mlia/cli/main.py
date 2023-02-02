@@ -18,6 +18,7 @@ from mlia.cli.commands import check
 from mlia.cli.commands import optimize
 from mlia.cli.common import CommandInfo
 from mlia.cli.helpers import CLIActionResolver
+from mlia.cli.helpers import copy_profile_file_to_output_dir
 from mlia.cli.options import add_backend_install_options
 from mlia.cli.options import add_backend_options
 from mlia.cli.options import add_backend_uninstall_options
@@ -30,11 +31,11 @@ from mlia.cli.options import add_output_directory
 from mlia.cli.options import add_output_options
 from mlia.cli.options import add_target_options
 from mlia.cli.options import get_output_format
+from mlia.core.common import AdviceCategory
 from mlia.core.context import ExecutionContext
 from mlia.core.errors import ConfigurationError
 from mlia.core.errors import InternalError
 from mlia.core.logging import setup_logging
-from mlia.target.config import copy_profile_file_to_output_dir
 from mlia.target.registry import table as target_table
 
 
@@ -59,7 +60,13 @@ def get_commands() -> list[CommandInfo]:
             [
                 add_output_directory,
                 add_model_options,
-                add_target_options,
+                partial(
+                    add_target_options,
+                    supported_advice=[
+                        AdviceCategory.COMPATIBILITY,
+                        AdviceCategory.PERFORMANCE,
+                    ],
+                ),
                 add_backend_options,
                 add_check_category_options,
                 add_output_options,
@@ -72,7 +79,9 @@ def get_commands() -> list[CommandInfo]:
             [
                 add_output_directory,
                 add_keras_model_options,
-                partial(add_target_options, profiles_to_skip=["tosa", "cortex-a"]),
+                partial(
+                    add_target_options, supported_advice=[AdviceCategory.OPTIMIZATION]
+                ),
                 partial(
                     add_backend_options,
                     backends_to_skip=["tosa-checker", "ArmNNTFLiteDelegate"],

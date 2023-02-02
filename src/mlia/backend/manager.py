@@ -9,11 +9,13 @@ from abc import abstractmethod
 from pathlib import Path
 from typing import Callable
 
+from mlia.backend.config import BackendType
 from mlia.backend.corstone.install import get_corstone_installations
 from mlia.backend.install import DownloadAndInstall
 from mlia.backend.install import Installation
 from mlia.backend.install import InstallationType
 from mlia.backend.install import InstallFromPath
+from mlia.backend.registry import registry as backend_registry
 from mlia.backend.tosa_checker.install import get_tosa_backend_installation
 from mlia.core.errors import ConfigurationError
 from mlia.core.errors import InternalError
@@ -279,3 +281,14 @@ def get_installation_manager(noninteractive: bool = False) -> InstallationManage
     backends.append(get_tosa_backend_installation())
 
     return DefaultInstallationManager(backends, noninteractive=noninteractive)
+
+
+def get_available_backends() -> list[str]:
+    """Return list of the available backends."""
+    manager = get_installation_manager()
+    available_backends = [
+        backend
+        for backend, cfg in backend_registry.items.items()
+        if cfg.type == BackendType.BUILTIN or manager.backend_installed(backend)
+    ]
+    return available_backends

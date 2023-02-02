@@ -3,11 +3,13 @@
 """Tests for the helper classes."""
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 import pytest
 
 from mlia.cli.helpers import CLIActionResolver
+from mlia.cli.helpers import copy_profile_file_to_output_dir
 from mlia.nn.tensorflow.optimizations.select import OptimizationSettings
 
 
@@ -139,3 +141,12 @@ class TestCliActionResolver:
         """Test checking operator compatibility info."""
         resolver = CLIActionResolver(args)
         assert resolver.check_operator_compatibility() == expected_result
+
+
+def test_copy_profile_file_to_output_dir(tmp_path: Path) -> None:
+    """Test if the profile file is copied into the output directory."""
+    test_target_profile_name = "ethos-u55-128"
+    test_file_path = Path(f"{tmp_path}/{test_target_profile_name}.toml")
+
+    copy_profile_file_to_output_dir(test_target_profile_name, tmp_path)
+    assert Path.is_file(test_file_path)

@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import argparse
 from contextlib import ExitStack
-from unittest.mock import MagicMock
 
 import pytest
 
@@ -93,72 +92,66 @@ def test_validate_check_target_profile(
 
 
 @pytest.mark.parametrize(
-    "input_target_profile, input_backends, throws_exception,"
-    "exception_message, output_backends",
+    (
+        "input_target_profile",
+        "input_backends",
+        "throws_exception",
+        "exception_message",
+        "output_backends",
+    ),
     [
         [
             "tosa",
-            ["Vela"],
-            True,
-            "Vela backend not supported with target-profile tosa.",
+            ["tosa-checker"],
+            False,
             None,
+            ["tosa-checker"],
         ],
         [
             "tosa",
-            ["Corstone-300, Vela"],
+            ["Corstone-310"],
             True,
-            "Corstone-300, Vela backend not supported with target-profile tosa.",
+            "Backend Corstone-310 not supported with target-profile tosa.",
             None,
         ],
         [
             "cortex-a",
-            ["Corstone-310", "tosa-checker"],
-            True,
-            "Corstone-310, tosa-checker backend not supported "
-            "with target-profile cortex-a.",
-            None,
-        ],
-        [
-            "ethos-u55-256",
-            ["tosa-checker", "Corstone-310"],
-            True,
-            "tosa-checker backend not supported with target-profile ethos-u55-256.",
-            None,
-        ],
-        ["tosa", None, False, None, ["tosa-checker"]],
-        ["cortex-a", None, False, None, ["ArmNNTFLiteDelegate"]],
-        ["tosa", ["tosa-checker"], False, None, ["tosa-checker"]],
-        ["cortex-a", ["ArmNNTFLiteDelegate"], False, None, ["ArmNNTFLiteDelegate"]],
-        [
-            "ethos-u55-256",
-            ["Vela", "Corstone-300"],
+            ["ArmNNTFLiteDelegate"],
             False,
             None,
-            ["Vela", "Corstone-300"],
+            ["ArmNNTFLiteDelegate"],
+        ],
+        [
+            "cortex-a",
+            ["tosa-checker"],
+            True,
+            "Backend tosa-checker not supported with target-profile cortex-a.",
+            None,
         ],
         [
             "ethos-u55-256",
-            None,
+            ["Vela", "Corstone-310"],
             False,
             None,
-            ["Vela", "Corstone-300"],
+            ["Vela", "Corstone-310"],
+        ],
+        [
+            "ethos-u65-256",
+            ["Vela", "Corstone-310", "tosa-checker"],
+            True,
+            "Backend tosa-checker not supported with target-profile ethos-u65-256.",
+            None,
         ],
     ],
 )
 def test_validate_backend(
-    monkeypatch: pytest.MonkeyPatch,
     input_target_profile: str,
-    input_backends: list[str] | None,
+    input_backends: list[str],
     throws_exception: bool,
     exception_message: str,
     output_backends: list[str] | None,
 ) -> None:
     """Test backend validation with target-profiles and backends."""
-    monkeypatch.setattr(
-        "mlia.cli.config.get_available_backends",
-        MagicMock(return_value=["Vela", "Corstone-300"]),
-    )
-
     exit_stack = ExitStack()
     if throws_exception:
         exit_stack.enter_context(
