@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for Cortex-A data collection module."""
 from pathlib import Path
@@ -22,7 +22,7 @@ def check_cortex_a_data_collection(
         MagicMock(return_value=CortexACompatibilityInfo(True, [])),
     )
 
-    context = ExecutionContext(working_dir=tmpdir)
+    context = ExecutionContext(output_dir=tmpdir)
     collector = CortexAOperatorCompatibility(model)
     collector.set_context(context)
 

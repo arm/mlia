@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for TOSA data collection module."""
 from pathlib import Path
@@ -19,7 +19,7 @@ def test_tosa_data_collection(
         "mlia.target.tosa.data_collection.get_tosa_compatibility_info",
         MagicMock(return_value=TOSACompatibilityInfo(True, [])),
     )
-    context = ExecutionContext(working_dir=tmpdir)
+    context = ExecutionContext(output_dir=tmpdir)
     collector = TOSAOperatorCompatibility(test_tflite_model)
     collector.set_context(context)
 

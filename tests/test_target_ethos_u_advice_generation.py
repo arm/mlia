@@ -370,7 +370,7 @@ def test_ethosu_advice_producer(
 
     context = ExecutionContext(
         advice_category=advice_category,
-        working_dir=tmpdir,
+        output_dir=tmpdir,
         action_resolver=action_resolver,
     )
 
@@ -475,7 +475,7 @@ def test_ethosu_static_advice_producer(
 
     context = ExecutionContext(
         advice_category=advice_category,
-        working_dir=tmpdir,
+        output_dir=tmpdir,
         action_resolver=action_resolver,
     )
     producer.set_context(context)

@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 from functools import wraps
+from pathlib import Path
 from typing import Any
 from typing import Callable
 from unittest.mock import ANY
@@ -18,6 +19,8 @@ from mlia.backend.errors import BackendUnavailableError
 from mlia.cli.main import backend_main
 from mlia.cli.main import CommandInfo
 from mlia.cli.main import main
+from mlia.cli.options import add_output_directory
+from mlia.core.context import ExecutionContext
 from mlia.core.errors import InternalError
 from tests.utils.logging import clear_loggers
 
@@ -44,59 +47,16 @@ def test_option_version(capfd: pytest.CaptureFixture) -> None:
     assert stderr == ""
 
 
-@pytest.mark.parametrize(
-    "is_default, expected_command_help",
-    [(True, "Test command [default]"), (False, "Test command")],
-)
-def test_command_info(is_default: bool, expected_command_help: str) -> None:
+def test_command_info() -> None:
     """Test properties of CommandInfo object."""
 
     def test_command() -> None:
         """Test command."""
 
-    command_info = CommandInfo(test_command, ["test"], [], is_default)
+    command_info = CommandInfo(test_command, ["test"], [])
     assert command_info.command_name == "test_command"
     assert command_info.command_name_and_aliases == ["test_command", "test"]
-    assert command_info.command_help == expected_command_help
-
-
-def test_default_command(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Test adding default command."""
-
-    def mock_command(func_mock: MagicMock, name: str) -> Callable[..., None]:
-        """Mock cli command."""
-
-        def sample_cmd_1(*args: Any, **kwargs: Any) -> None:
-            """Sample command."""
-            func_mock(*args, **kwargs)
-
-        ret_func = sample_cmd_1
-        ret_func.__name__ = name
-
-        return ret_func
-
-    non_default_command = MagicMock()
-
-    def non_default_command_params(parser: argparse.ArgumentParser) -> None:
-        """Add parameters for non default command."""
-        parser.add_argument("--param")
-
-    monkeypatch.setattr(
-        "mlia.cli.main.get_commands",
-        MagicMock(
-            return_value=[
-                CommandInfo(
-                    func=mock_command(non_default_command, "non_default_command"),
-                    aliases=["command2"],
-                    opt_groups=[non_default_command_params],
-                    is_default=False,
-                ),
-            ]
-        ),
-    )
-
-    main(["command2", "--param", "test"])
-    non_default_command.assert_called_once_with(param="test")
+    assert command_info.command_help == "Test command"
 
 
 def wrap_mock_command(mock: MagicMock, command: Callable) -> Callable:
@@ -291,6 +251,29 @@ def test_commands_execution(
     main(params)
 
     mock.assert_called_once_with(*expected_call.args, **expected_call.kwargs)
+
+
+def test_passing_output_directory_parameter(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Test passing parameter --output-dir."""
+    passed_context: ExecutionContext | None = None
+
+    def sample_command(ctx: ExecutionContext) -> None:
+        """Sample command."""
+        nonlocal passed_context
+        passed_context = ctx
+
+    monkeypatch.setattr(
+        "mlia.cli.main.get_commands",
+        lambda: [CommandInfo(sample_command, [], [add_output_directory])],
+    )
+
+    output_dir = tmp_path / "output"
+    main(["sample_command", "--output-dir", output_dir.as_posix()])
+
+    assert passed_context is not None
+    assert passed_context.output_dir == output_dir
 
 
 @pytest.mark.parametrize(

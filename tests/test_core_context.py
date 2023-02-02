@@ -52,7 +52,7 @@ def test_execution_context(tmpdir: str) -> None:
     context = ExecutionContext(
         advice_category=category,
         config_parameters={"param": "value"},
-        working_dir=tmpdir,
+        output_dir=tmpdir,
         event_handlers=[],
         event_publisher=publisher,
         verbose=True,
@@ -72,14 +72,14 @@ def test_execution_context(tmpdir: str) -> None:
     assert context.output_format == "json"
     assert str(context) == (
         f"ExecutionContext: "
-        f"working_dir={tmpdir}, "
+        f"output_dir={tmpdir}, "
         "advice_category={'COMPATIBILITY'}, "
         "config_parameters={'param': 'value'}, "
         "verbose=True, "
         "output_format=json"
     )
 
-    context_with_default_params = ExecutionContext(working_dir=tmpdir)
+    context_with_default_params = ExecutionContext(output_dir=tmpdir)
     assert context_with_default_params.advice_category == {AdviceCategory.COMPATIBILITY}
     assert context_with_default_params.config_parameters is None
     assert context_with_default_params.event_handlers is None
@@ -94,7 +94,7 @@ def test_execution_context(tmpdir: str) -> None:
     assert context_with_default_params.output_format == "plain_text"
 
     expected_str = (
-        f"ExecutionContext: working_dir={tmpdir}, "
+        f"ExecutionContext: output_dir={tmpdir}, "
         "advice_category={'COMPATIBILITY'}, "
         "config_parameters=None, "
         "verbose=False, "

@@ -23,9 +23,7 @@ import pytest
 from mlia.cli.config import get_available_backends
 from mlia.cli.main import get_commands
 from mlia.cli.main import get_possible_command_names
-from mlia.cli.main import init_commands
-from mlia.cli.main import init_common_parser
-from mlia.cli.main import init_subcommand_parser
+from mlia.cli.main import init_parser
 from mlia.utils.filesystem import get_supported_profile_names
 from mlia.utils.types import is_list_of
 
@@ -155,11 +153,8 @@ def get_config_file() -> Path:
 
 def get_args_parser() -> Any:
     """Return MLIA argument parser."""
-    common_parser = init_common_parser()
-    subcommand_parser = init_subcommand_parser(common_parser)
-    init_commands(subcommand_parser, get_commands())
-
-    return subcommand_parser
+    commands = get_commands()
+    return init_parser(commands)
 
 
 def replace_element(params: list[str], idx: int, value: str) -> list[str]:

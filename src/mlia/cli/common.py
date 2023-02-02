@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """CLI common module."""
 from __future__ import annotations
@@ -15,7 +15,6 @@ class CommandInfo:
     func: Callable
     aliases: list[str]
     opt_groups: list[Callable[[argparse.ArgumentParser], None]]
-    is_default: bool = False
     name: str | None = None
 
     @property
@@ -32,9 +31,4 @@ class CommandInfo:
     def command_help(self) -> str:
         """Return help message for the command."""
         assert self.func.__doc__, "Command function does not have a docstring"
-        func_help = self.func.__doc__.splitlines()[0].rstrip(".")
-
-        if self.is_default:
-            func_help = f"{func_help} [default]"
-
-        return func_help
+        return self.func.__doc__.splitlines()[0].rstrip(".")

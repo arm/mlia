@@ -202,6 +202,18 @@ def add_backend_options(
     )
 
 
+def add_output_directory(parser: argparse.ArgumentParser) -> None:
+    """Add parameter for the output directory."""
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+        help="Path to the directory where MLIA "
+        "stores artifacts, e.g. logs, target profiles and model files. "
+        "If not specified then MLIA will use temporary "
+        "directory instead.",
+    )
+
+
 def parse_optimization_parameters(
     pruning: bool = False,
     clustering: bool = False,

@@ -105,7 +105,7 @@ class ExecutionContext(Context):
         *,
         advice_category: set[AdviceCategory] = None,
         config_parameters: Mapping[str, Any] | None = None,
-        working_dir: str | Path | None = None,
+        output_dir: str | Path | None = None,
         event_handlers: list[EventHandler] | None = None,
         event_publisher: EventPublisher | None = None,
         verbose: bool = False,
@@ -118,16 +118,16 @@ class ExecutionContext(Context):
 
         :param advice_category: requested advice categories
         :param config_parameters: dictionary like object with input parameters
-        :param working_dir: path to the directory that will be used as a place
+        :param output_dir: path to the directory that will be used as a place
                to store temporary files, logs, models. If not provided then
-               current working directory will be used instead
+               temporary directory will be used instead
         :param event_handlers: optional list of event handlers
         :param event_publisher: optional event publisher instance. If not provided
                then default implementation of event publisher will be used
         :param verbose: enable verbose output
-        :param logs_dir: name of the directory inside working directory where
+        :param logs_dir: name of the directory inside output directory where
                log files will be stored
-        :param models_dir: name of the directory inside working directory where
+        :param models_dir: name of the directory inside output directory where
                temporary models will be stored
         :param action_resolver: instance of the action resolver that could make
                advice actionable
@@ -135,10 +135,11 @@ class ExecutionContext(Context):
         self._advice_category = advice_category or {AdviceCategory.COMPATIBILITY}
         self._config_parameters = config_parameters
 
-        if working_dir:
-            self._working_dir_path = Path(working_dir)
+        if output_dir:
+            self._output_dir_path = Path(output_dir)
+            self._output_dir_path.mkdir(exist_ok=True)
         else:
-            self._working_dir_path = generate_temp_workdir()
+            self._output_dir_path = generate_temp_output_dir()
 
         self._event_handlers = event_handlers
         self._event_publisher = event_publisher or DefaultEventPublisher()
@@ -149,9 +150,9 @@ class ExecutionContext(Context):
         self._output_format = output_format
 
     @property
-    def working_dir(self) -> Path:
-        """Return working dir path."""
-        return self._working_dir_path
+    def output_dir(self) -> Path:
+        """Return output dir path."""
+        return self._output_dir_path
 
     @property
     def advice_category(self) -> set[AdviceCategory]:
@@ -195,7 +196,7 @@ class ExecutionContext(Context):
 
     def get_model_path(self, model_filename: str) -> Path:
         """Return path for the model."""
-        models_dir_path = self._working_dir_path / self.models_dir
+        models_dir_path = self._output_dir_path / self.models_dir
         models_dir_path.mkdir(exist_ok=True)
 
         return models_dir_path / model_filename
@@ -203,7 +204,7 @@ class ExecutionContext(Context):
     @property
     def logs_path(self) -> Path:
         """Return path to the logs directory."""
-        return self._working_dir_path / self.logs_dir
+        return self._output_dir_path / self.logs_dir
 
     @property
     def output_format(self) -> OutputFormat:
@@ -231,7 +232,7 @@ class ExecutionContext(Context):
         )
 
         return (
-            f"ExecutionContext: working_dir={self._working_dir_path}, "
+            f"ExecutionContext: output_dir={self._output_dir_path}, "
             f"advice_category={category}, "
             f"config_parameters={self.config_parameters}, "
             f"verbose={self.verbose}, "
@@ -239,7 +240,7 @@ class ExecutionContext(Context):
         )
 
 
-def generate_temp_workdir() -> Path:
-    """Generate a temporary working dir and returns the path."""
-    working_dir = tempfile.mkdtemp(suffix=None, prefix="mlia-", dir=None)
-    return Path(working_dir)
+def generate_temp_output_dir() -> Path:
+    """Generate a temporary output dir and returns the path."""
+    output_dir = tempfile.mkdtemp(suffix=None, prefix="mlia-", dir=None)
+    return Path(output_dir)

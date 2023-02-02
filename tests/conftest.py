@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Pytest conf module."""
 import shutil
@@ -27,7 +27,7 @@ def fixture_test_resources_path() -> Path:
 @pytest.fixture(name="sample_context")
 def fixture_sample_context(tmpdir: str) -> ExecutionContext:
     """Return sample context fixture."""
-    return ExecutionContext(working_dir=tmpdir)
+    return ExecutionContext(output_dir=tmpdir)
 
 
 @pytest.fixture(scope="session")

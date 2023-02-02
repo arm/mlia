@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for module workflow."""
 from dataclasses import dataclass
@@ -62,7 +62,7 @@ def test_workflow_executor(tmpdir: str) -> None:
     advice_producer_mock2.get_advice.return_value = [Advice(["Good advice!"])]
 
     context = ExecutionContext(
-        working_dir=tmpdir,
+        output_dir=tmpdir,
         event_handlers=[handler_mock],
         event_publisher=DefaultEventPublisher(),
     )
@@ -127,7 +127,7 @@ def test_workflow_executor_failed(tmpdir: str) -> None:
     handler_mock = MagicMock(spec=EventHandler)
 
     context = ExecutionContext(
-        working_dir=tmpdir,
+        output_dir=tmpdir,
         event_handlers=[handler_mock],
         event_publisher=DefaultEventPublisher(),
     )

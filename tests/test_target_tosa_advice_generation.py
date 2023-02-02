@@ -47,7 +47,7 @@ def test_tosa_advice_producer(
 
     context = ExecutionContext(
         advice_category=advice_category,
-        working_dir=tmpdir,
+        output_dir=tmpdir,
     )
 
     producer.set_context(context)
