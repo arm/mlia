@@ -5,16 +5,14 @@ from __future__ import annotations
 
 import argparse
 from contextlib import ExitStack as does_not_raise
-from pathlib import Path
 from typing import Any
 
 import pytest
 
-from mlia.cli.options import add_output_options
+from mlia.cli.options import get_output_format
 from mlia.cli.options import get_target_profile_opts
 from mlia.cli.options import parse_optimization_parameters
-from mlia.cli.options import parse_output_parameters
-from mlia.core.common import FormattedFilePath
+from mlia.core.typing import OutputFormat
 
 
 @pytest.mark.parametrize(
@@ -164,54 +162,24 @@ def test_get_target_opts(args: dict | None, expected_opts: list[str]) -> None:
 
 
 @pytest.mark.parametrize(
-    "output_parameters,  expected_path",
-    [
-        [["--output", "report.json"], "report.json"],
-        [["--output", "REPORT.JSON"], "REPORT.JSON"],
-        [["--output", "some_folder/report.json"], "some_folder/report.json"],
-    ],
-)
-def test_output_options(output_parameters: list[str], expected_path: str) -> None:
-    """Test output options resolving."""
-    parser = argparse.ArgumentParser()
-    add_output_options(parser)
-
-    args = parser.parse_args(output_parameters)
-    assert str(args.output) == expected_path
-
-
-@pytest.mark.parametrize(
-    "path, json, expected_error, output",
+    "args, expected_output_format",
     [
         [
-            None,
-            True,
-            pytest.raises(
-                argparse.ArgumentError,
-                match=r"To enable JSON output you need to specify the output path. "
-                r"\(e.g. --output out.json --json\)",
-            ),
-            None,
-        ],
-        [None, False, does_not_raise(), None],
-        [
-            Path("test_path"),
-            False,
-            does_not_raise(),
-            FormattedFilePath(Path("test_path"), "plain_text"),
+            {},
+            "plain_text",
         ],
         [
-            Path("test_path"),
-            True,
-            does_not_raise(),
-            FormattedFilePath(Path("test_path"), "json"),
+            {"json": True},
+            "json",
+        ],
+        [
+            {"json": False},
+            "plain_text",
         ],
     ],
 )
-def test_parse_output_parameters(
-    path: Path | None, json: bool, expected_error: Any, output: FormattedFilePath | None
-) -> None:
-    """Test parsing for output parameters."""
-    with expected_error:
-        formatted_output = parse_output_parameters(path, json)
-        assert formatted_output == output
+def test_get_output_format(args: dict, expected_output_format: OutputFormat) -> None:
+    """Test get_output_format function."""
+    arguments = argparse.Namespace(**args)
+    output_format = get_output_format(arguments)
+    assert output_format == expected_output_format

@@ -12,7 +12,7 @@ from mlia.cli.config import DEFAULT_CLUSTERING_TARGET
 from mlia.cli.config import DEFAULT_PRUNING_TARGET
 from mlia.cli.config import get_available_backends
 from mlia.cli.config import is_corstone_backend
-from mlia.core.common import FormattedFilePath
+from mlia.core.typing import OutputFormat
 from mlia.utils.filesystem import get_supported_profile_names
 
 
@@ -89,16 +89,9 @@ def add_output_options(parser: argparse.ArgumentParser) -> None:
     """Add output specific options."""
     output_group = parser.add_argument_group("output options")
     output_group.add_argument(
-        "-o",
-        "--output",
-        type=Path,
-        help=("Name of the file where the report will be saved."),
-    )
-
-    output_group.add_argument(
         "--json",
         action="store_true",
-        help=("Format to use for the output (requires --output argument to be set)."),
+        help=("Print the output in JSON format."),
     )
 
 
@@ -209,22 +202,6 @@ def add_backend_options(
     )
 
 
-def parse_output_parameters(path: Path | None, json: bool) -> FormattedFilePath | None:
-    """Parse and return path and file format as FormattedFilePath."""
-    if not path and json:
-        raise argparse.ArgumentError(
-            None,
-            "To enable JSON output you need to specify the output path. "
-            "(e.g. --output out.json --json)",
-        )
-    if not path:
-        return None
-    if json:
-        return FormattedFilePath(path, "json")
-
-    return FormattedFilePath(path, "plain_text")
-
-
 def parse_optimization_parameters(
     pruning: bool = False,
     clustering: bool = False,
@@ -301,3 +278,11 @@ def get_target_profile_opts(device_args: dict | None) -> list[str]:
         for name in non_default
         for item in construct_param(params_name[name], device_args[name])
     ]
+
+
+def get_output_format(args: argparse.Namespace) -> OutputFormat:
+    """Return the OutputFormat depending on the CLI flags."""
+    output_format: OutputFormat = "plain_text"
+    if "json" in args and args.json:
+        output_format = "json"
+    return output_format

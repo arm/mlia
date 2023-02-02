@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for the module cli.logging."""
 from __future__ import annotations
@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from mlia.cli.logging import setup_logging
+from mlia.core.logging import setup_logging
 from tests.utils.logging import clear_loggers
 
 
@@ -33,20 +33,21 @@ def teardown_function() -> None:
         (
             None,
             True,
-            """mlia.backend.manager - backends debug
-cli info
-mlia.cli - cli debug
+            """mlia.backend.manager - DEBUG - backends debug
+mlia.cli - INFO - cli info
+mlia.cli - DEBUG - cli debug
 """,
             None,
         ),
         (
             "logs",
             True,
-            """mlia.backend.manager - backends debug
-cli info
-mlia.cli - cli debug
+            """mlia.backend.manager - DEBUG - backends debug
+mlia.cli - INFO - cli info
+mlia.cli - DEBUG - cli debug
 """,
             """mlia.backend.manager - DEBUG - backends debug
+mlia.cli - INFO - cli info
 mlia.cli - DEBUG - cli debug
 """,
         ),

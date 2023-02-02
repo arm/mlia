@@ -18,6 +18,8 @@ from typing import Generator
 from typing import Iterable
 from typing import TextIO
 
+from mlia.utils.console import remove_ascii_codes
+
 
 class LoggerWriter:
     """Redirect printed messages to the logger."""
@@ -152,12 +154,21 @@ class LogFilter(logging.Filter):
         return cls(skip_by_level)
 
 
+class NoASCIIFormatter(logging.Formatter):
+    """Custom Formatter for logging into file."""
+
+    def format(self, record: logging.LogRecord) -> str:
+        """Overwrite format method to remove ascii codes from record."""
+        result = super().format(record)
+        return remove_ascii_codes(result)
+
+
 def create_log_handler(
     *,
     file_path: Path | None = None,
     stream: Any | None = None,
     log_level: int | None = None,
-    log_format: str | None = None,
+    log_format: str | logging.Formatter | None = None,
     log_filter: logging.Filter | None = None,
     delay: bool = True,
 ) -> logging.Handler:
@@ -176,7 +187,9 @@ def create_log_handler(
         handler.setLevel(log_level)
 
     if log_format:
-        handler.setFormatter(logging.Formatter(log_format))
+        if isinstance(log_format, str):
+            log_format = logging.Formatter(log_format)
+        handler.setFormatter(log_format)
 
     if log_filter:
         handler.addFilter(log_filter)

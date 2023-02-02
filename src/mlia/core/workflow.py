@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Module for executors.
 
@@ -198,6 +198,7 @@ class DefaultWorkflowExecutor(WorkflowExecutor):
                 self.collectors,
                 self.analyzers,
                 self.producers,
+                self.context.event_handlers or [],
             )
             if isinstance(comp, ContextMixin)
         )

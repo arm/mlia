@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import argparse
 from functools import wraps
-from pathlib import Path
 from typing import Any
 from typing import Callable
 from unittest.mock import ANY
@@ -122,8 +121,6 @@ def wrap_mock_command(mock: MagicMock, command: Callable) -> Callable:
                 model="sample_model.tflite",
                 compatibility=False,
                 performance=False,
-                output=None,
-                json=False,
                 backend=None,
             ),
         ],
@@ -135,8 +132,6 @@ def wrap_mock_command(mock: MagicMock, command: Callable) -> Callable:
                 model="sample_model.tflite",
                 compatibility=False,
                 performance=False,
-                output=None,
-                json=False,
                 backend=None,
             ),
         ],
@@ -153,8 +148,6 @@ def wrap_mock_command(mock: MagicMock, command: Callable) -> Callable:
                 ctx=ANY,
                 target_profile="ethos-u55-256",
                 model="sample_model.h5",
-                output=None,
-                json=False,
                 compatibility=True,
                 performance=True,
                 backend=None,
@@ -167,9 +160,6 @@ def wrap_mock_command(mock: MagicMock, command: Callable) -> Callable:
                 "--performance",
                 "--target-profile",
                 "ethos-u55-256",
-                "--output",
-                "result.json",
-                "--json",
             ],
             call(
                 ctx=ANY,
@@ -177,8 +167,6 @@ def wrap_mock_command(mock: MagicMock, command: Callable) -> Callable:
                 model="sample_model.h5",
                 performance=True,
                 compatibility=False,
-                output=Path("result.json"),
-                json=True,
                 backend=None,
             ),
         ],
@@ -196,8 +184,6 @@ def wrap_mock_command(mock: MagicMock, command: Callable) -> Callable:
                 model="sample_model.h5",
                 compatibility=False,
                 performance=True,
-                output=None,
-                json=False,
                 backend=None,
             ),
         ],
@@ -218,8 +204,6 @@ def wrap_mock_command(mock: MagicMock, command: Callable) -> Callable:
                 clustering=True,
                 pruning_target=None,
                 clustering_target=None,
-                output=None,
-                json=False,
                 backend=None,
             ),
         ],
@@ -244,8 +228,6 @@ def wrap_mock_command(mock: MagicMock, command: Callable) -> Callable:
                 clustering=True,
                 pruning_target=0.5,
                 clustering_target=32,
-                output=None,
-                json=False,
                 backend=None,
             ),
         ],
@@ -267,8 +249,6 @@ def wrap_mock_command(mock: MagicMock, command: Callable) -> Callable:
                 clustering=False,
                 pruning_target=None,
                 clustering_target=None,
-                output=None,
-                json=False,
                 backend=["some_backend"],
             ),
         ],
@@ -286,8 +266,6 @@ def wrap_mock_command(mock: MagicMock, command: Callable) -> Callable:
                 model="sample_model.h5",
                 compatibility=True,
                 performance=False,
-                output=None,
-                json=False,
                 backend=None,
             ),
         ],

@@ -19,7 +19,6 @@ from mlia.cli.commands import check
 from mlia.cli.commands import optimize
 from mlia.cli.common import CommandInfo
 from mlia.cli.helpers import CLIActionResolver
-from mlia.cli.logging import setup_logging
 from mlia.cli.options import add_backend_install_options
 from mlia.cli.options import add_backend_options
 from mlia.cli.options import add_backend_uninstall_options
@@ -30,9 +29,11 @@ from mlia.cli.options import add_model_options
 from mlia.cli.options import add_multi_optimization_options
 from mlia.cli.options import add_output_options
 from mlia.cli.options import add_target_options
+from mlia.cli.options import get_output_format
 from mlia.core.context import ExecutionContext
 from mlia.core.errors import ConfigurationError
 from mlia.core.errors import InternalError
+from mlia.core.logging import setup_logging
 from mlia.target.registry import registry as target_registry
 
 
@@ -162,10 +163,13 @@ def setup_context(
     ctx = ExecutionContext(
         verbose="debug" in args and args.debug,
         action_resolver=CLIActionResolver(vars(args)),
+        output_format=get_output_format(args),
     )
 
+    setup_logging(ctx.logs_path, ctx.verbose, ctx.output_format)
+
     # these parameters should not be passed into command function
-    skipped_params = ["func", "command", "debug"]
+    skipped_params = ["func", "command", "debug", "json"]
 
     # pass these parameters only if command expects them
     expected_params = [context_var_name]
@@ -186,7 +190,6 @@ def setup_context(
 def run_command(args: argparse.Namespace) -> int:
     """Run command."""
     ctx, func_args = setup_context(args)
-    setup_logging(ctx.logs_path, ctx.verbose)
 
     logger.debug(
         "*** This is the beginning of the command '%s' execution ***", args.command

@@ -9,7 +9,6 @@ from typing import Any
 
 from mlia.core.advisor import InferenceAdvisor
 from mlia.core.common import AdviceCategory
-from mlia.core.common import FormattedFilePath
 from mlia.core.context import ExecutionContext
 from mlia.target.cortex_a.advisor import configure_and_get_cortexa_advisor
 from mlia.target.ethos_u.advisor import configure_and_get_ethosu_advisor
@@ -24,7 +23,6 @@ def get_advice(
     model: str | Path,
     category: set[str],
     optimization_targets: list[dict[str, Any]] | None = None,
-    output: FormattedFilePath | None = None,
     context: ExecutionContext | None = None,
     backends: list[str] | None = None,
 ) -> None:
@@ -42,8 +40,6 @@ def get_advice(
            category "compatibility" is used by default.
     :param optimization_targets: optional model optimization targets that
            could be used for generating advice in "optimization" category.
-    :param output: path to the report file. If provided, MLIA will save
-           report in this location.
     :param context: optional parameter which represents execution context,
            could be used for advanced use cases
     :param backends: A list of backends that should be used for the given
@@ -57,11 +53,9 @@ def get_advice(
         >>> get_advice("ethos-u55-256", "path/to/the/model",
                        {"optimization", "compatibility"})
 
-        Getting the advice for the category "performance" and save result report in file
-        "report.json"
+        Getting the advice for the category "performance".
 
-        >>> get_advice("ethos-u55-256", "path/to/the/model", {"performance"},
-                       output=FormattedFilePath("report.json")
+        >>> get_advice("ethos-u55-256", "path/to/the/model", {"performance"})
 
     """
     advice_category = AdviceCategory.from_string(category)
@@ -76,7 +70,6 @@ def get_advice(
         context,
         target_profile,
         model,
-        output,
         optimization_targets=optimization_targets,
         backends=backends,
     )
@@ -88,7 +81,6 @@ def get_advisor(
     context: ExecutionContext,
     target_profile: str,
     model: str | Path,
-    output: FormattedFilePath | None = None,
     **extra_args: Any,
 ) -> InferenceAdvisor:
     """Find appropriate advisor for the target."""
@@ -109,6 +101,5 @@ def get_advisor(
         context,
         target_profile,
         model,
-        output,
         **extra_args,
     )

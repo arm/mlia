@@ -7,10 +7,10 @@ functionality.
 
 Before running them from scripts 'logging' module should
 be configured. Function 'setup_logging' from module
-'mli.cli.logging' could be used for that, e.g.
+'mli.core.logging' could be used for that, e.g.
 
 >>> from mlia.api import ExecutionContext
->>> from mlia.cli.logging import setup_logging
+>>> from mlia.core.logging import setup_logging
 >>> setup_logging(verbose=True)
 >>> import mlia.cli.commands as mlia
 >>> mlia.check(ExecutionContext(), "ethos-u55-256",
@@ -27,7 +27,6 @@ from mlia.cli.command_validators import validate_backend
 from mlia.cli.command_validators import validate_check_target_profile
 from mlia.cli.config import get_installation_manager
 from mlia.cli.options import parse_optimization_parameters
-from mlia.cli.options import parse_output_parameters
 from mlia.utils.console import create_section_header
 
 logger = logging.getLogger(__name__)
@@ -41,8 +40,6 @@ def check(
     model: str | None = None,
     compatibility: bool = False,
     performance: bool = False,
-    output: Path | None = None,
-    json: bool = False,
     backend: list[str] | None = None,
 ) -> None:
     """Generate a full report on the input model.
@@ -61,7 +58,6 @@ def check(
     :param model: path to the Keras model
     :param compatibility: flag that identifies whether to run compatibility checks
     :param performance: flag that identifies whether to run performance checks
-    :param output: path to the file where the report will be saved
     :param backend: list of the backends to use for evaluation
 
     Example:
@@ -69,17 +65,14 @@ def check(
         and operator compatibility.
 
         >>> from mlia.api import ExecutionContext
-        >>> from mlia.cli.logging import setup_logging
+        >>> from mlia.core.logging import setup_logging
         >>> setup_logging()
         >>> from mlia.cli.commands import check
         >>> check(ExecutionContext(), "ethos-u55-256",
-                      "model.h5", compatibility=True, performance=True,
-                       output="report.json")
+                      "model.h5", compatibility=True, performance=True)
     """
     if not model:
         raise Exception("Model is not provided")
-
-    formatted_output = parse_output_parameters(output, json)
 
     # Set category based on checks to perform (i.e. "compatibility" and/or
     # "performance").
@@ -98,7 +91,6 @@ def check(
         target_profile,
         model,
         category,
-        output=formatted_output,
         context=ctx,
         backends=validated_backend,
     )
@@ -113,8 +105,6 @@ def optimize(  # pylint: disable=too-many-arguments
     pruning_target: float | None,
     clustering_target: int | None,
     layers_to_optimize: list[str] | None = None,
-    output: Path | None = None,
-    json: bool = False,
     backend: list[str] | None = None,
 ) -> None:
     """Show the performance improvements (if any) after applying the optimizations.
@@ -133,15 +123,13 @@ def optimize(  # pylint: disable=too-many-arguments
     :param pruning_target: pruning optimization target
     :param layers_to_optimize: list of the layers of the model which should be
            optimized, if None then all layers are used
-    :param output: path to the file where the report will be saved
-    :param json: set the output format to json
     :param backend: list of the backends to use for evaluation
 
     Example:
         Run command for the target profile ethos-u55-256 and
         the provided TensorFlow Lite model and print report on the standard output
 
-        >>> from mlia.cli.logging import setup_logging
+        >>> from mlia.core.logging import setup_logging
         >>> from mlia.api import ExecutionContext
         >>> setup_logging()
         >>> from mlia.cli.commands import optimize
@@ -161,7 +149,6 @@ def optimize(  # pylint: disable=too-many-arguments
         )
     )
 
-    formatted_output = parse_output_parameters(output, json)
     validated_backend = validate_backend(target_profile, backend)
 
     get_advice(
@@ -169,7 +156,6 @@ def optimize(  # pylint: disable=too-many-arguments
         model,
         {"optimization"},
         optimization_targets=opt_params,
-        output=formatted_output,
         context=ctx,
         backends=validated_backend,
     )

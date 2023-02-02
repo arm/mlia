@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import logging
 
-from mlia.core.common import FormattedFilePath
 from mlia.core.events import CollectedDataEvent
 from mlia.core.handlers import WorkflowEventsHandler
 from mlia.nn.tensorflow.tflite_compat import TFLiteCompatibilityInfo
@@ -20,9 +19,9 @@ logger = logging.getLogger(__name__)
 class CortexAEventHandler(WorkflowEventsHandler, CortexAAdvisorEventHandler):
     """CLI event handler."""
 
-    def __init__(self, output: FormattedFilePath | None = None) -> None:
+    def __init__(self) -> None:
         """Init event handler."""
-        super().__init__(cortex_a_formatters, output)
+        super().__init__(cortex_a_formatters)
 
     def on_collected_data(self, event: CollectedDataEvent) -> None:
         """Handle CollectedDataEvent event."""

@@ -10,7 +10,6 @@ from mlia.core.advice_generation import AdviceCategory
 from mlia.core.advice_generation import AdviceProducer
 from mlia.core.advisor import DefaultInferenceAdvisor
 from mlia.core.advisor import InferenceAdvisor
-from mlia.core.common import FormattedFilePath
 from mlia.core.context import Context
 from mlia.core.context import ExecutionContext
 from mlia.core.data_analysis import DataAnalyzer
@@ -81,12 +80,11 @@ def configure_and_get_tosa_advisor(
     context: ExecutionContext,
     target_profile: str,
     model: str | Path,
-    output: FormattedFilePath | None = None,
     **_extra_args: Any,
 ) -> InferenceAdvisor:
     """Create and configure TOSA advisor."""
     if context.event_handlers is None:
-        context.event_handlers = [TOSAEventHandler(output)]
+        context.event_handlers = [TOSAEventHandler()]
 
     if context.config_parameters is None:
         context.config_parameters = _get_config_parameters(model, target_profile)

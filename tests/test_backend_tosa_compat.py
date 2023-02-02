@@ -27,7 +27,7 @@ def replace_get_tosa_checker_with_mock(
 
 
 def test_compatibility_check_should_fail_if_checker_not_available(
-    monkeypatch: pytest.MonkeyPatch, test_tflite_model: Path
+    monkeypatch: pytest.MonkeyPatch, test_tflite_model: str | Path
 ) -> None:
     """Test that compatibility check should fail if TOSA checker is not available."""
     replace_get_tosa_checker_with_mock(monkeypatch, None)
@@ -71,7 +71,7 @@ def test_compatibility_check_should_fail_if_checker_not_available(
 )
 def test_get_tosa_compatibility_info(
     monkeypatch: pytest.MonkeyPatch,
-    test_tflite_model: Path,
+    test_tflite_model: str | Path,
     is_tosa_compatible: bool,
     operators: Any,
     exception: Exception | None,

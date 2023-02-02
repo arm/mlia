@@ -20,7 +20,11 @@ from mlia.target.tosa.advisor import TOSAInferenceAdvisor
 def test_get_advice_no_target_provided(test_keras_model: Path) -> None:
     """Test getting advice when no target provided."""
     with pytest.raises(Exception, match="Target profile is not provided"):
-        get_advice(None, test_keras_model, {"compatibility"})  # type: ignore
+        get_advice(
+            None,  # type:ignore
+            test_keras_model,
+            {"compatibility"},
+        )
 
 
 def test_get_advice_wrong_category(test_keras_model: Path) -> None:

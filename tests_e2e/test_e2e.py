@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Any
 from typing import Generator
 from typing import Iterable
+from typing import Sequence
 
 import pytest
 
@@ -75,30 +76,48 @@ class ExecutionConfiguration:
         )
 
 
-def launch_and_wait(cmd: list[str], stdin: Any | None = None) -> None:
+def launch_and_wait(
+    cmd: list[str],
+    output_file: Path | None = None,
+    print_output: bool = True,
+    stdin: Any | None = None,
+) -> None:
     """Launch command and wait for the completion."""
     with subprocess.Popen(  # nosec
         cmd,
         stdin=stdin,
         stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,  # redirect command stderr to stdout
+        stderr=subprocess.PIPE,
         universal_newlines=True,
         bufsize=1,
     ) as process:
-        if process.stdout is None:
+        # Process stdout
+        if process.stdout:
+            # Store the output in a variable
+            output = process.stdout.read()
+            # Save the output into a file
+            if output_file:
+                output_file.write_text(output)
+                print(f"Output saved to {output_file}")
+            # Show the output to stdout
+            if print_output:
+                print(output)
+        else:
             raise Exception("Unable to get process output")
 
-        # redirect output of the process into current process stdout
-        for line in process.stdout:
-            print(line, end="")
-
+        # Wait for the process to terminate
         process.wait()
 
         if (exit_code := process.poll()) != 0:
             raise Exception(f"Command failed with exit_code {exit_code}")
 
 
-def run_command(cmd: list[str], cmd_input: str | None = None) -> None:
+def run_command(
+    cmd: list[str],
+    output_file: Path | None = None,
+    print_output: bool = True,
+    cmd_input: str | None = None,
+) -> None:
     """Run command."""
     print(f"Run command: {' '.join(cmd)}")
 
@@ -118,7 +137,7 @@ def run_command(cmd: list[str], cmd_input: str | None = None) -> None:
             cmd_input_file.write(cmd_input)
             cmd_input_file.seek(0)
 
-        launch_and_wait(cmd, cmd_input_file)
+        launch_and_wait(cmd, output_file, print_output, cmd_input_file)
 
 
 def get_config_file() -> Path:
@@ -209,10 +228,15 @@ def get_config_content(config_file: Path) -> Any:
     executions = json_data.get("executions", [])
     assert is_list_of(executions, dict), "List of the dictionaries expected"
 
-    return executions
+    settings = json_data.get("settings", {})
+    assert isinstance(settings, dict)
+
+    return settings, executions
 
 
-def get_all_commands_combinations(executions: Any) -> Generator[list[str], None, None]:
+def get_all_commands_combinations(
+    executions: Any,
+) -> Generator[dict[str, Sequence[str]], None, None]:
     """Return all commands combinations."""
     exec_configs = (
         ExecutionConfiguration.from_dict(exec_info) for exec_info in executions
@@ -221,13 +245,12 @@ def get_all_commands_combinations(executions: Any) -> Generator[list[str], None,
     parser = get_args_parser()
     for exec_config in exec_configs:
         for command_combination in exec_config.all_combinations:
-            for idx, param in enumerate(command_combination):
-                if "{model_name}" in param:
-                    args = parser.parse_args(command_combination)
-                    model_name = Path(args.model).stem
-                    param = param.replace("{model_name}", model_name)
-                    command_combination[idx] = param
-            yield command_combination
+            args = parser.parse_args(command_combination)
+            model_name = Path(args.model).stem
+            yield {
+                "model_name": model_name,
+                "command_combination": command_combination,
+            }
 
 
 def check_args(args: list[str], no_skip: bool) -> None:
@@ -249,21 +272,31 @@ def check_args(args: list[str], no_skip: bool) -> None:
             pytest.skip(f"Missing backend(s): {','.join(missing_backends)}")
 
 
-def get_execution_definitions() -> Generator[list[str], None, None]:
+def get_execution_definitions(
+    executions: dict,
+) -> Generator[dict[str, Sequence[str]], None, None]:
     """Collect all execution definitions from configuration file."""
-    config_file = get_config_file()
-    executions = get_config_content(config_file)
-    executions = resolve_parameters(executions)
-
-    return get_all_commands_combinations(executions)
+    resolved_executions = resolve_parameters(executions)
+    return get_all_commands_combinations(resolved_executions)
 
 
 class TestEndToEnd:
     """End to end command tests."""
 
-    @pytest.mark.parametrize("command", get_execution_definitions(), ids=str)
-    def test_e2e(self, command: list[str], no_skip: bool) -> None:
+    configuration_file = get_config_file()
+    settings, executions = get_config_content(configuration_file)
+
+    @pytest.mark.parametrize(
+        "command_data", get_execution_definitions(executions), ids=str
+    )
+    def test_e2e(self, command_data: dict[str, list[str]], no_skip: bool) -> None:
         """Test MLIA command with the provided parameters."""
+        command = command_data["command_combination"]
+        model_name = command_data["model_name"]
         check_args(command, no_skip)
         mlia_command = ["mlia", *command]
-        run_command(mlia_command)
+        print_output = self.settings.get("print_output", True)
+        output_file = self.settings.get("output_file", None)
+        if output_file:
+            output_file = Path(output_file.replace("{model_name}", model_name))
+        run_command(mlia_command, output_file, print_output)

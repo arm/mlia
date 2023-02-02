@@ -23,6 +23,7 @@ from mlia.core.events import EventHandler
 from mlia.core.events import EventPublisher
 from mlia.core.helpers import ActionResolver
 from mlia.core.helpers import APIActionResolver
+from mlia.core.typing import OutputFormat
 
 logger = logging.getLogger(__name__)
 
@@ -68,6 +69,11 @@ class Context(ABC):
     def action_resolver(self) -> ActionResolver:
         """Return action resolver."""
 
+    @property
+    @abstractmethod
+    def output_format(self) -> OutputFormat:
+        """Return the output format."""
+
     @abstractmethod
     def update(
         self,
@@ -106,6 +112,7 @@ class ExecutionContext(Context):
         logs_dir: str = "logs",
         models_dir: str = "models",
         action_resolver: ActionResolver | None = None,
+        output_format: OutputFormat = "plain_text",
     ) -> None:
         """Init execution context.
 
@@ -139,6 +146,7 @@ class ExecutionContext(Context):
         self.logs_dir = logs_dir
         self.models_dir = models_dir
         self._action_resolver = action_resolver or APIActionResolver()
+        self._output_format = output_format
 
     @property
     def working_dir(self) -> Path:
@@ -197,6 +205,11 @@ class ExecutionContext(Context):
         """Return path to the logs directory."""
         return self._working_dir_path / self.logs_dir
 
+    @property
+    def output_format(self) -> OutputFormat:
+        """Return the output format."""
+        return self._output_format
+
     def update(
         self,
         *,
@@ -221,7 +234,8 @@ class ExecutionContext(Context):
             f"ExecutionContext: working_dir={self._working_dir_path}, "
             f"advice_category={category}, "
             f"config_parameters={self.config_parameters}, "
-            f"verbose={self.verbose}"
+            f"verbose={self.verbose}, "
+            f"output_format={self.output_format}"
         )
 
 

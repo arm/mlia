@@ -1,103 +1,18 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for reports module."""
 from __future__ import annotations
-
-import json
-import sys
-from contextlib import ExitStack as doesnt_raise
-from pathlib import Path
-from typing import Any
-from typing import Callable
-from typing import Literal
 
 import pytest
 
 from mlia.backend.vela.compat import NpuSupported
 from mlia.backend.vela.compat import Operator
-from mlia.backend.vela.compat import Operators
-from mlia.core.reporting import get_reporter
-from mlia.core.reporting import produce_report
 from mlia.core.reporting import Report
-from mlia.core.reporting import Reporter
 from mlia.core.reporting import Table
 from mlia.target.ethos_u.config import EthosUConfiguration
-from mlia.target.ethos_u.performance import MemoryUsage
-from mlia.target.ethos_u.performance import NPUCycles
-from mlia.target.ethos_u.performance import PerformanceMetrics
-from mlia.target.ethos_u.reporters import ethos_u_formatters
 from mlia.target.ethos_u.reporters import report_device_details
 from mlia.target.ethos_u.reporters import report_operators
-from mlia.target.ethos_u.reporters import report_perf_metrics
 from mlia.utils.console import remove_ascii_codes
-
-
-@pytest.mark.parametrize(
-    "data, formatters",
-    [
-        (
-            [Operator("test_operator", "test_type", NpuSupported(False, []))],
-            [report_operators],
-        ),
-        (
-            PerformanceMetrics(
-                EthosUConfiguration("ethos-u55-256"),
-                NPUCycles(0, 0, 0, 0, 0, 0),
-                MemoryUsage(0, 0, 0, 0, 0),
-            ),
-            [report_perf_metrics],
-        ),
-    ],
-)
-@pytest.mark.parametrize(
-    "fmt, output, expected_error",
-    [
-        [
-            "unknown_format",
-            sys.stdout,
-            pytest.raises(Exception, match="Unknown format unknown_format"),
-        ],
-        [
-            "plain_text",
-            sys.stdout,
-            doesnt_raise(),
-        ],
-        [
-            "json",
-            sys.stdout,
-            doesnt_raise(),
-        ],
-        [
-            "plain_text",
-            "report.txt",
-            doesnt_raise(),
-        ],
-        [
-            "json",
-            "report.json",
-            doesnt_raise(),
-        ],
-    ],
-)
-def test_report(
-    data: Any,
-    formatters: list[Callable],
-    fmt: Literal["plain_text", "json"],
-    output: Any,
-    expected_error: Any,
-    tmp_path: Path,
-) -> None:
-    """Test report function."""
-    if is_file := isinstance(output, str):
-        output = tmp_path / output
-
-    for formatter in formatters:
-        with expected_error:
-            produce_report(data, formatter, fmt, output)
-
-            if is_file:
-                assert output.is_file()
-                assert output.stat().st_size > 0
 
 
 @pytest.mark.parametrize(
@@ -314,40 +229,3 @@ def test_report_device_details(
 
     json_dict = report.to_json()
     assert json_dict == expected_json_dict
-
-
-def test_get_reporter(tmp_path: Path) -> None:
-    """Test reporter functionality."""
-    ops = Operators(
-        [
-            Operator(
-                "npu_supported",
-                "op_type",
-                NpuSupported(True, []),
-            ),
-        ]
-    )
-
-    output = tmp_path / "output.json"
-    with get_reporter("json", output, ethos_u_formatters) as reporter:
-        assert isinstance(reporter, Reporter)
-
-        with pytest.raises(
-            Exception, match="Unable to find appropriate formatter for some_data"
-        ):
-            reporter.submit("some_data")
-
-        reporter.submit(ops)
-
-    with open(output, encoding="utf-8") as file:
-        json_data = json.load(file)
-
-        assert json_data == {
-            "operators_stats": [
-                {
-                    "npu_unsupported_ratio": 0.0,
-                    "num_of_npu_supported_operators": 1,
-                    "num_of_operators": 1,
-                }
-            ]
-        }

@@ -5,12 +5,12 @@ from __future__ import annotations
 
 import sys
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 from typing import cast
 from typing import Protocol
 
 from mlia.backend.errors import BackendUnavailableError
-from mlia.core.typing import PathOrFileLike
 from mlia.utils.logging import capture_raw_output
 
 
@@ -45,7 +45,7 @@ class TOSACompatibilityInfo:
 
 
 def get_tosa_compatibility_info(
-    tflite_model_path: PathOrFileLike,
+    tflite_model_path: str | Path,
 ) -> TOSACompatibilityInfo:
     """Return list of the operators."""
     # Capture the possible exception in running get_tosa_checker
@@ -100,7 +100,7 @@ def get_tosa_compatibility_info(
     )
 
 
-def get_tosa_checker(tflite_model_path: PathOrFileLike) -> TOSAChecker | None:
+def get_tosa_checker(tflite_model_path: str | Path) -> TOSAChecker | None:
     """Return instance of the TOSA checker."""
     try:
         import tosa_checker as tc  # pylint: disable=import-outside-toplevel

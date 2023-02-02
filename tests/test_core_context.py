@@ -58,6 +58,7 @@ def test_execution_context(tmpdir: str) -> None:
         verbose=True,
         logs_dir="logs_directory",
         models_dir="models_directory",
+        output_format="json",
     )
 
     assert context.advice_category == category
@@ -68,12 +69,14 @@ def test_execution_context(tmpdir: str) -> None:
     expected_model_path = Path(tmpdir) / "models_directory/sample.model"
     assert context.get_model_path("sample.model") == expected_model_path
     assert context.verbose is True
+    assert context.output_format == "json"
     assert str(context) == (
         f"ExecutionContext: "
         f"working_dir={tmpdir}, "
         "advice_category={'COMPATIBILITY'}, "
         "config_parameters={'param': 'value'}, "
-        "verbose=True"
+        "verbose=True, "
+        "output_format=json"
     )
 
     context_with_default_params = ExecutionContext(working_dir=tmpdir)
@@ -88,11 +91,13 @@ def test_execution_context(tmpdir: str) -> None:
     default_model_path = context_with_default_params.get_model_path("sample.model")
     expected_default_model_path = Path(tmpdir) / "models/sample.model"
     assert default_model_path == expected_default_model_path
+    assert context_with_default_params.output_format == "plain_text"
 
     expected_str = (
         f"ExecutionContext: working_dir={tmpdir}, "
         "advice_category={'COMPATIBILITY'}, "
         "config_parameters=None, "
-        "verbose=False"
+        "verbose=False, "
+        "output_format=plain_text"
     )
     assert str(context_with_default_params) == expected_str

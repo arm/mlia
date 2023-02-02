@@ -10,7 +10,6 @@ from mlia.core.advice_generation import AdviceProducer
 from mlia.core.advisor import DefaultInferenceAdvisor
 from mlia.core.advisor import InferenceAdvisor
 from mlia.core.common import AdviceCategory
-from mlia.core.common import FormattedFilePath
 from mlia.core.context import Context
 from mlia.core.context import ExecutionContext
 from mlia.core.data_analysis import DataAnalyzer
@@ -126,12 +125,11 @@ def configure_and_get_ethosu_advisor(
     context: ExecutionContext,
     target_profile: str,
     model: str | Path,
-    output: FormattedFilePath | None = None,
     **extra_args: Any,
 ) -> InferenceAdvisor:
     """Create and configure Ethos-U advisor."""
     if context.event_handlers is None:
-        context.event_handlers = [EthosUEventHandler(output)]
+        context.event_handlers = [EthosUEventHandler()]
 
     if context.config_parameters is None:
         context.config_parameters = _get_config_parameters(
