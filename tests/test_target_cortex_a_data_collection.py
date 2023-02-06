@@ -7,8 +7,12 @@ from unittest.mock import MagicMock
 import pytest
 
 from mlia.core.context import ExecutionContext
+from mlia.target.cortex_a.config import CortexAConfiguration
 from mlia.target.cortex_a.data_collection import CortexAOperatorCompatibility
 from mlia.target.cortex_a.operators import CortexACompatibilityInfo
+
+CORTEX_A_CONFIG = CortexAConfiguration.load_profile("cortex-a")
+VERSION = CORTEX_A_CONFIG.armnn_tflite_delegate_version
 
 
 def check_cortex_a_data_collection(
@@ -19,11 +23,11 @@ def check_cortex_a_data_collection(
 
     monkeypatch.setattr(
         "mlia.target.cortex_a.data_collection.get_cortex_a_compatibility_info",
-        MagicMock(return_value=CortexACompatibilityInfo(True, [])),
+        MagicMock(return_value=CortexACompatibilityInfo([], VERSION)),
     )
 
     context = ExecutionContext(output_dir=tmpdir)
-    collector = CortexAOperatorCompatibility(model)
+    collector = CortexAOperatorCompatibility(model, CORTEX_A_CONFIG)
     collector.set_context(context)
 
     data_item = collector.collect_data()

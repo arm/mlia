@@ -36,11 +36,13 @@ class CortexAInferenceAdvisor(DefaultInferenceAdvisor):
     def get_collectors(self, context: Context) -> list[DataCollector]:
         """Return list of the data collectors."""
         model = self.get_model(context)
+        target_profile = self.get_target_profile(context)
+        target_config = cast(CortexAConfiguration, profile(target_profile))
 
         collectors: list[DataCollector] = []
 
         if context.category_enabled(AdviceCategory.COMPATIBILITY):
-            collectors.append(CortexAOperatorCompatibility(model))
+            collectors.append(CortexAOperatorCompatibility(model, target_config))
 
         return collectors
 

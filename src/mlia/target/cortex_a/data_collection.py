@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Data collection module for Cortex-A."""
 from __future__ import annotations
@@ -11,6 +11,7 @@ from mlia.nn.tensorflow.config import get_tflite_model
 from mlia.nn.tensorflow.tflite_compat import TFLiteChecker
 from mlia.nn.tensorflow.tflite_compat import TFLiteCompatibilityInfo
 from mlia.nn.tensorflow.utils import is_tflite_model
+from mlia.target.cortex_a.config import CortexAConfiguration
 from mlia.target.cortex_a.operators import CortexACompatibilityInfo
 from mlia.target.cortex_a.operators import get_cortex_a_compatibility_info
 from mlia.utils.logging import log_action
@@ -22,9 +23,10 @@ logger = logging.getLogger(__name__)
 class CortexAOperatorCompatibility(ContextAwareDataCollector):
     """Collect operator compatibility information."""
 
-    def __init__(self, model: Path) -> None:
+    def __init__(self, model: Path, target_config: CortexAConfiguration) -> None:
         """Init operator compatibility data collector."""
         self.model = model
+        self.target_config = target_config
 
     def collect_data(self) -> TFLiteCompatibilityInfo | CortexACompatibilityInfo | None:
         """Collect operator compatibility information."""
@@ -41,7 +43,8 @@ class CortexAOperatorCompatibility(ContextAwareDataCollector):
         with log_action("Checking operator compatibility ..."):
             return (
                 get_cortex_a_compatibility_info(  # pylint: disable=assignment-from-none
-                    Path(tflite_model.model_path)
+                    Path(tflite_model.model_path),
+                    self.target_config,
                 )
             )
 

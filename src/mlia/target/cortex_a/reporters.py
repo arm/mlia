@@ -18,7 +18,7 @@ from mlia.core.reporting import ReportItem
 from mlia.core.reporting import Table
 from mlia.nn.tensorflow.tflite_compat import TFLiteCompatibilityInfo
 from mlia.target.cortex_a.config import CortexAConfiguration
-from mlia.target.cortex_a.operators import Operator
+from mlia.target.cortex_a.operators import CortexACompatibilityInfo
 from mlia.utils.console import style_improvement
 from mlia.utils.types import is_list_of
 
@@ -85,7 +85,7 @@ def report_tflite_compatiblity(compat_info: TFLiteCompatibilityInfo) -> Report:
     )
 
 
-def report_cortex_a_operators(ops: list[Operator]) -> Report:
+def report_cortex_a_operators(op_compat: CortexACompatibilityInfo) -> Report:
     """Generate report for the operators."""
     return Table(
         [
@@ -108,15 +108,15 @@ def report_cortex_a_operators(ops: list[Operator]) -> Report:
                 op.location,
                 op.full_name,
                 Cell(
-                    op.support_type,
+                    op_compat.get_support_type(op),
                     Format(
                         wrap_width=30,
-                        style=style_improvement(op.is_cortex_a_compatible),
+                        style=style_improvement(op_compat.is_op_compatible(op)),
                         str_fmt=lambda v: cast(str, v.value),
                     ),
                 ),
             )
-            for index, op in enumerate(ops)
+            for index, op in enumerate(op_compat.operators)
         ],
         name="Operators",
         alias="operators",
@@ -134,7 +134,7 @@ def cortex_a_formatters(data: Any) -> Callable[[Any], Report]:
     if isinstance(data, TFLiteCompatibilityInfo):
         return report_tflite_compatiblity
 
-    if is_list_of(data, Operator):
+    if isinstance(data, CortexACompatibilityInfo):
         return report_cortex_a_operators
 
-    raise Exception(f"Unable to find appropriate formatter for {data}")
+    raise Exception(f"Unable to find appropriate formatter for {data}.")

@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for Cortex-A data analysis module."""
 from __future__ import annotations
@@ -15,6 +15,7 @@ from mlia.nn.tensorflow.tflite_compat import TFLiteCompatibilityStatus
 from mlia.nn.tensorflow.tflite_compat import TFLiteConversionError
 from mlia.nn.tensorflow.tflite_compat import TFLiteConversionErrorCode
 from mlia.nn.tensorflow.tflite_graph import TFL_ACTIVATION_FUNCTION
+from mlia.target.cortex_a.config import CortexAConfiguration
 from mlia.target.cortex_a.data_analysis import CortexADataAnalyzer
 from mlia.target.cortex_a.data_analysis import ModelHasCustomOperators
 from mlia.target.cortex_a.data_analysis import ModelIsCortexACompatible
@@ -24,65 +25,58 @@ from mlia.target.cortex_a.data_analysis import TFLiteCompatibilityCheckFailed
 from mlia.target.cortex_a.operators import CortexACompatibilityInfo
 from mlia.target.cortex_a.operators import Operator
 
-BACKEND_INFO = (
-    f"{ARMNN_TFLITE_DELEGATE['metadata']['backend']} "
-    f"{ARMNN_TFLITE_DELEGATE['metadata']['version']}"
-)
+VERSION = CortexAConfiguration.load_profile("cortex-a").armnn_tflite_delegate_version
+BACKEND_INFO = f"{ARMNN_TFLITE_DELEGATE['backend']} {VERSION}"
 
 
 @pytest.mark.parametrize(
     "input_data, expected_facts",
     [
         [
-            CortexACompatibilityInfo(True, []),
+            CortexACompatibilityInfo([], VERSION),
             [ModelIsCortexACompatible(BACKEND_INFO)],
         ],
         [
             CortexACompatibilityInfo(
-                True,
                 [
                     Operator(
                         "CONV_2D",
                         "somewhere",
-                        support_type=Operator.SupportType.COMPATIBLE,
                         activation_func=TFL_ACTIVATION_FUNCTION.NONE,
                     ),
                     Operator(
                         "CUSTOM",
                         "somewhere else",
-                        support_type=Operator.SupportType.COMPATIBLE,
                         activation_func=TFL_ACTIVATION_FUNCTION.SIGN_BIT,
                         custom_name="MaxPool3D",
                     ),
                 ],
+                VERSION,
             ),
             [ModelIsCortexACompatible(BACKEND_INFO)],
         ],
         [
             # pylint: disable=line-too-long
             CortexACompatibilityInfo(
-                False,
                 [
                     Operator(
                         "UNSUPPORTED_OP",
                         "somewhere",
-                        support_type=Operator.SupportType.OP_NOT_SUPPORTED,
                         activation_func=TFL_ACTIVATION_FUNCTION.NONE,
                     ),
                     Operator(
                         "CUSTOM",
                         "somewhere",
-                        support_type=Operator.SupportType.OP_NOT_SUPPORTED,
                         activation_func=TFL_ACTIVATION_FUNCTION.NONE,
                         custom_name="UNSUPPORTED_OP",
                     ),
                     Operator(
                         "CONV_2D",
                         "somewhere else",
-                        support_type=Operator.SupportType.ACTIVATION_NOT_SUPPORTED,
                         activation_func=TFL_ACTIVATION_FUNCTION.SIGN_BIT,
                     ),
                 ],
+                VERSION,
             ),
             [
                 ModelIsNotCortexACompatible(
@@ -161,4 +155,5 @@ def test_cortex_a_data_analyzer(
     """Test Cortex-A data analyzer."""
     analyzer = CortexADataAnalyzer()
     analyzer.analyze_data(input_data)
-    assert analyzer.get_analyzed_data() == expected_facts
+    analyzed_data = analyzer.get_analyzed_data()
+    assert analyzed_data == expected_facts

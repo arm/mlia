@@ -11,6 +11,7 @@ from mlia.nn.tensorflow.tflite_compat import TFLiteCompatibilityInfo
 from mlia.nn.tensorflow.tflite_compat import TFLiteCompatibilityStatus
 from mlia.nn.tensorflow.tflite_graph import TFL_ACTIVATION_FUNCTION
 from mlia.target.cortex_a.config import CortexAConfiguration
+from mlia.target.cortex_a.operators import CortexACompatibilityInfo
 from mlia.target.cortex_a.operators import Operator
 from mlia.target.cortex_a.reporters import cortex_a_formatters
 from mlia.target.cortex_a.reporters import report_target
@@ -27,14 +28,16 @@ def test_report_target() -> None:
     (
         [Advice(["Sample", "Advice"])],
         TFLiteCompatibilityInfo(status=TFLiteCompatibilityStatus.COMPATIBLE),
-        [
-            Operator(
-                name="Test",
-                location="loc",
-                support_type=Operator.SupportType.OP_NOT_SUPPORTED,
-                activation_func=TFL_ACTIVATION_FUNCTION.NONE,
-            )
-        ],
+        CortexACompatibilityInfo(
+            [
+                Operator(
+                    name="Test",
+                    location="loc",
+                    activation_func=TFL_ACTIVATION_FUNCTION.NONE,
+                )
+            ],
+            CortexAConfiguration.load_profile("cortex-a").armnn_tflite_delegate_version,
+        ),
     ),
 )
 def test_cortex_a_formatters(data: Any) -> None:

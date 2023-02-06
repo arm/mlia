@@ -28,7 +28,7 @@ class CortexAEventHandler(WorkflowEventsHandler, CortexAAdvisorEventHandler):
         data_item = event.data_item
 
         if isinstance(data_item, CortexACompatibilityInfo):
-            self.reporter.submit(data_item.operators, delay_print=True)
+            self.reporter.submit(data_item, delay_print=True)
 
         if isinstance(data_item, TFLiteCompatibilityInfo) and not data_item.compatible:
             self.reporter.submit(data_item, delay_print=True)
