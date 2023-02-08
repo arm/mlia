@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Vela performance module."""
 from __future__ import annotations
@@ -42,7 +42,7 @@ class PerformanceMetrics:  # pylint: disable=too-many-instance-attributes
 def estimate_performance(
     model_path: Path, compiler_options: VelaCompilerOptions
 ) -> PerformanceMetrics:
-    """Return performance estimations for the model/device.
+    """Return performance estimations for the model/target.
 
     Logic for this function comes from Vela module stats_writer.py
     """

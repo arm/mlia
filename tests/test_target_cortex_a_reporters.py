@@ -13,12 +13,12 @@ from mlia.nn.tensorflow.tflite_graph import TFL_ACTIVATION_FUNCTION
 from mlia.target.cortex_a.config import CortexAConfiguration
 from mlia.target.cortex_a.operators import Operator
 from mlia.target.cortex_a.reporters import cortex_a_formatters
-from mlia.target.cortex_a.reporters import report_device
+from mlia.target.cortex_a.reporters import report_target
 
 
-def test_report_device() -> None:
-    """Test function report_device()."""
-    report = report_device(CortexAConfiguration.load_profile("cortex-a"))
+def test_report_target() -> None:
+    """Test function report_target()."""
+    report = report_target(CortexAConfiguration.load_profile("cortex-a"))
     assert report.to_plain_text()
 
 

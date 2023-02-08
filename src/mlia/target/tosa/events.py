@@ -17,7 +17,7 @@ class TOSAAdvisorStartedEvent(Event):
     """Event with TOSA advisor parameters."""
 
     model: Path
-    device: TOSAConfiguration
+    target: TOSAConfiguration
     tosa_metadata: MetadataDisplay | None
 
 

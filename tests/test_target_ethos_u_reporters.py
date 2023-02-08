@@ -12,8 +12,8 @@ from mlia.backend.vela.compat import Operator
 from mlia.core.reporting import Report
 from mlia.core.reporting import Table
 from mlia.target.ethos_u.config import EthosUConfiguration
-from mlia.target.ethos_u.reporters import report_device_details
 from mlia.target.ethos_u.reporters import report_operators
+from mlia.target.ethos_u.reporters import report_target_details
 from mlia.target.registry import profile
 from mlia.utils.console import remove_ascii_codes
 
@@ -118,11 +118,11 @@ def test_report_operators(
 
 
 @pytest.mark.parametrize(
-    "device, expected_plain_text, expected_json_dict",
+    "target, expected_plain_text, expected_json_dict",
     [
         [
             cast(EthosUConfiguration, profile("ethos-u55-256")),
-            """Device information:
+            """Target information:
   Target                                                     ethos-u55
   MAC                                                              256
 
@@ -167,7 +167,7 @@ def test_report_operators(
     Feature map storage mem area                                  Sram
     Fast storage mem area                                         Sram""",
             {
-                "device": {
+                "target": {
                     "target": "ethos-u55",
                     "mac": 256,
                     "memory_mode": {
@@ -217,13 +217,13 @@ def test_report_operators(
         ],
     ],
 )
-def test_report_device_details(
-    device: EthosUConfiguration,
+def test_report_target_details(
+    target: EthosUConfiguration,
     expected_plain_text: str,
     expected_json_dict: dict,
 ) -> None:
     """Test report_operatos formatter."""
-    report = report_device_details(device)
+    report = report_target_details(target)
     assert isinstance(report, Report)
 
     plain_text = report.to_plain_text()

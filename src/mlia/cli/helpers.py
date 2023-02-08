@@ -42,7 +42,7 @@ class CLIActionResolver(ActionResolver):
     @staticmethod
     def _specific_optimization_command(
         model_path: str,
-        device_opts: str,
+        target_opts: str,
         opt_settings: list[OptimizationSettings],
     ) -> list[str]:
         """Return specific optimization command description."""
@@ -56,43 +56,43 @@ class CLIActionResolver(ActionResolver):
         return [
             "For more info: mlia optimize --help",
             "Optimization command: "
-            f"mlia optimize {model_path}{device_opts} {opt_types} {opt_targs}",
+            f"mlia optimize {model_path}{target_opts} {opt_types} {opt_targs}",
         ]
 
     def apply_optimizations(self, **kwargs: Any) -> list[str]:
         """Return command details for applying optimizations."""
-        model_path, device_opts = self._get_model_and_device_opts()
+        model_path, target_opts = self._get_model_and_target_opts()
 
         if (opt_settings := kwargs.pop("opt_settings", None)) is None:
             return self._general_optimization_command(model_path)
 
         if is_list_of(opt_settings, OptimizationSettings) and model_path:
             return self._specific_optimization_command(
-                model_path, device_opts, opt_settings
+                model_path, target_opts, opt_settings
             )
 
         return []
 
     def check_performance(self) -> list[str]:
         """Return command details for checking performance."""
-        model_path, device_opts = self._get_model_and_device_opts()
+        model_path, target_opts = self._get_model_and_target_opts()
         if not model_path:
             return []
 
         return [
             "Check the estimated performance by running the following command: ",
-            f"mlia check {model_path}{device_opts} --performance",
+            f"mlia check {model_path}{target_opts} --performance",
         ]
 
     def check_operator_compatibility(self) -> list[str]:
         """Return command details for op compatibility."""
-        model_path, device_opts = self._get_model_and_device_opts()
+        model_path, target_opts = self._get_model_and_target_opts()
         if not model_path:
             return []
 
         return [
             "Try running the following command to verify that:",
-            f"mlia check {model_path}{device_opts}",
+            f"mlia check {model_path}{target_opts}",
         ]
 
     def operator_compatibility_details(self) -> list[str]:
@@ -103,16 +103,16 @@ class CLIActionResolver(ActionResolver):
         """Return command details for optimization."""
         return ["For more info, see: mlia optimize --help"]
 
-    def _get_model_and_device_opts(
-        self, separate_device_opts: bool = True
+    def _get_model_and_target_opts(
+        self, separate_target_opts: bool = True
     ) -> tuple[str | None, str]:
-        """Get model and device options."""
-        device_opts = " ".join(get_target_profile_opts(self.args))
-        if separate_device_opts and device_opts:
-            device_opts = f" {device_opts}"
+        """Get model and target options."""
+        target_opts = " ".join(get_target_profile_opts(self.args))
+        if separate_target_opts and target_opts:
+            target_opts = f" {target_opts}"
 
         model_path = self.args.get("model")
-        return model_path, device_opts
+        return model_path, target_opts
 
 
 def copy_profile_file_to_output_dir(

@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Cortex-A MLIA module events."""
 from dataclasses import dataclass
@@ -14,7 +14,7 @@ class CortexAAdvisorStartedEvent(Event):
     """Event with Cortex-A advisor parameters."""
 
     model: Path
-    device: CortexAConfiguration
+    target: CortexAConfiguration
 
 
 class CortexAAdvisorEventHandler(EventDispatcher):

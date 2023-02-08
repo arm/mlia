@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Ethos-U MLIA module events."""
 from dataclasses import dataclass
@@ -14,7 +14,7 @@ class EthosUAdvisorStartedEvent(Event):
     """Event with Ethos-U advisor parameters."""
 
     model: Path
-    device: EthosUConfiguration
+    target: EthosUConfiguration
 
 
 class EthosUAdvisorEventHandler(EventDispatcher):

@@ -50,9 +50,9 @@ def test_operator_compatibility_collector(
     sample_context: Context, test_tflite_model: Path
 ) -> None:
     """Test operator compatibility data collector."""
-    device = EthosUConfiguration.load_profile("ethos-u55-256")
+    target = EthosUConfiguration.load_profile("ethos-u55-256")
 
-    collector = EthosUOperatorCompatibility(test_tflite_model, device)
+    collector = EthosUOperatorCompatibility(test_tflite_model, target)
     collector.set_context(sample_context)
 
     result = collector.collect_data()
@@ -63,11 +63,11 @@ def test_performance_collector(
     monkeypatch: pytest.MonkeyPatch, sample_context: Context, test_tflite_model: Path
 ) -> None:
     """Test performance data collector."""
-    device = EthosUConfiguration.load_profile("ethos-u55-256")
+    target = EthosUConfiguration.load_profile("ethos-u55-256")
 
-    mock_performance_estimation(monkeypatch, device)
+    mock_performance_estimation(monkeypatch, target)
 
-    collector = EthosUPerformance(test_tflite_model, device)
+    collector = EthosUPerformance(test_tflite_model, target)
     collector.set_context(sample_context)
 
     result = collector.collect_data()
@@ -81,12 +81,12 @@ def test_optimization_performance_collector(
     test_tflite_model: Path,
 ) -> None:
     """Test optimization performance data collector."""
-    device = EthosUConfiguration.load_profile("ethos-u55-256")
+    target = EthosUConfiguration.load_profile("ethos-u55-256")
 
-    mock_performance_estimation(monkeypatch, device)
+    mock_performance_estimation(monkeypatch, target)
     collector = EthosUOptimizationPerformance(
         test_keras_model,
-        device,
+        target,
         [
             [
                 {"optimization_type": "pruning", "optimization_target": 0.5},
@@ -107,7 +107,7 @@ def test_optimization_performance_collector(
 
     collector_no_optimizations = EthosUOptimizationPerformance(
         test_keras_model,
-        device,
+        target,
         [],
     )
     with pytest.raises(FunctionalityNotSupportedError):
@@ -115,7 +115,7 @@ def test_optimization_performance_collector(
 
     collector_tflite = EthosUOptimizationPerformance(
         test_tflite_model,
-        device,
+        target,
         [
             [
                 {"optimization_type": "pruning", "optimization_target": 0.5},
@@ -130,18 +130,18 @@ def test_optimization_performance_collector(
         Exception, match="Optimization parameters expected to be a list"
     ):
         collector_bad_config = EthosUOptimizationPerformance(
-            test_keras_model, device, {"optimization_type": "pruning"}  # type: ignore
+            test_keras_model, target, {"optimization_type": "pruning"}  # type: ignore
         )
         collector.set_context(sample_context)
         collector_bad_config.collect_data()
 
 
 def mock_performance_estimation(
-    monkeypatch: pytest.MonkeyPatch, device: EthosUConfiguration
+    monkeypatch: pytest.MonkeyPatch, target: EthosUConfiguration
 ) -> None:
     """Mock performance estimation."""
     metrics = PerformanceMetrics(
-        device,
+        target,
         NPUCycles(1, 2, 3, 4, 5, 6),
         MemoryUsage(1, 2, 3, 4, 5),
     )

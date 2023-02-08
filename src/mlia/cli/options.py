@@ -282,9 +282,9 @@ def parse_optimization_parameters(
     return optimizer_params
 
 
-def get_target_profile_opts(device_args: dict | None) -> list[str]:
+def get_target_profile_opts(target_args: dict | None) -> list[str]:
     """Get non default values passed as parameters for the target profile."""
-    if not device_args:
+    if not target_args:
         return []
 
     parser = argparse.ArgumentParser()
@@ -298,7 +298,7 @@ def get_target_profile_opts(device_args: dict | None) -> list[str]:
 
     non_default = [
         arg_name
-        for arg_name, arg_value in device_args.items()
+        for arg_name, arg_value in target_args.items()
         if arg_name in args and vars(args)[arg_name] != arg_value
     ]
 
@@ -312,7 +312,7 @@ def get_target_profile_opts(device_args: dict | None) -> list[str]:
     return [
         item
         for name in non_default
-        for item in construct_param(params_name[name], device_args[name])
+        for item in construct_param(params_name[name], target_args[name])
     ]
 
 

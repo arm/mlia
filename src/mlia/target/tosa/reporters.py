@@ -42,13 +42,13 @@ class MetadataDisplay:  # pylint: disable=too-few-public-methods
         self.model_name = model_meta.model_name
 
 
-def report_device(device: TOSAConfiguration) -> Report:
-    """Generate report for the device."""
+def report_target(target: TOSAConfiguration) -> Report:
+    """Generate report for the target."""
     return NestedReport(
-        "Device information",
-        "device",
+        "Target information",
+        "target",
         [
-            ReportItem("Target", alias="target", value=device.target),
+            ReportItem("Target", alias="target", value=target.target),
         ],
     )
 
@@ -160,7 +160,7 @@ def tosa_formatters(data: Any) -> Callable[[Any], Report]:
         return report_advice
 
     if isinstance(data, TOSAConfiguration):
-        return report_device
+        return report_target
 
     if isinstance(data, MetadataDisplay):
         return report_metadata

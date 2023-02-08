@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Reports module."""
 from __future__ import annotations
@@ -110,9 +110,9 @@ def report_operators(ops: list[Operator]) -> Report:
     return Table(columns, rows, name="Operators", alias="operators")
 
 
-def report_device_details(device: EthosUConfiguration) -> Report:
-    """Return table representation for the device."""
-    compiler_config = device.resolved_compiler_config
+def report_target_details(target: EthosUConfiguration) -> Report:
+    """Return table representation for the target."""
+    compiler_config = target.resolved_compiler_config
 
     memory_settings = [
         ReportItem(
@@ -208,11 +208,11 @@ def report_device_details(device: EthosUConfiguration) -> Report:
     ]
 
     return NestedReport(
-        "Device information",
-        "device",
+        "Target information",
+        "target",
         [
-            ReportItem("Target", alias="target", value=device.target),
-            ReportItem("MAC", alias="mac", value=device.mac),
+            ReportItem("Target", alias="target", value=target.target),
+            ReportItem("MAC", alias="mac", value=target.mac),
             ReportItem(
                 "Memory mode",
                 alias="memory_mode",
@@ -376,7 +376,7 @@ def ethos_u_formatters(data: Any) -> Callable[[Any], Report]:
         return report_operators_stat
 
     if isinstance(data, EthosUConfiguration):
-        return report_device_details
+        return report_target_details
 
     if isinstance(data, (list, tuple)):
         formatters = [ethos_u_formatters(item) for item in data]

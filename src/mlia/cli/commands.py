@@ -48,7 +48,7 @@ def check(
     comprehensive report/advice:
 
         - converts the input Keras model into TensorFlow Lite format
-        - checks the model for operator compatibility on the specified device
+        - checks the model for operator compatibility on the specified target
         - generates a final report on the steps above
         - provides advice on how to (possibly) improve the inference performance
 

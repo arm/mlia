@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Reports module."""
 from __future__ import annotations
@@ -23,13 +23,13 @@ from mlia.utils.console import style_improvement
 from mlia.utils.types import is_list_of
 
 
-def report_device(device: CortexAConfiguration) -> Report:
-    """Generate report for the device."""
+def report_target(target: CortexAConfiguration) -> Report:
+    """Generate report for the target."""
     return NestedReport(
-        "Device information",
-        "device",
+        "Target information",
+        "target",
         [
-            ReportItem("Target", alias="target", value=device.target),
+            ReportItem("Target", alias="target", value=target.target),
         ],
     )
 
@@ -129,7 +129,7 @@ def cortex_a_formatters(data: Any) -> Callable[[Any], Report]:
         return report_advice
 
     if isinstance(data, CortexAConfiguration):
-        return report_device
+        return report_target
 
     if isinstance(data, TFLiteCompatibilityInfo):
         return report_tflite_compatiblity

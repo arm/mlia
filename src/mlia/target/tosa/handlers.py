@@ -25,7 +25,7 @@ class TOSAEventHandler(WorkflowEventsHandler, TOSAAdvisorEventHandler):
 
     def on_tosa_advisor_started(self, event: TOSAAdvisorStartedEvent) -> None:
         """Handle TOSAAdvisorStartedEvent event."""
-        self.reporter.submit(event.device)
+        self.reporter.submit(event.target)
         self.reporter.submit(event.tosa_metadata)
 
     def on_collected_data(self, event: CollectedDataEvent) -> None:

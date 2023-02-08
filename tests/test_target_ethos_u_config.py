@@ -63,7 +63,7 @@ def test_ethosu_target() -> None:
             },
             pytest.raises(
                 Exception,
-                match=r"Mac value for selected device should be in \[256, 512\]",
+                match=r"Mac value for selected target should be in \[256, 512\]",
             ),
         ],
         [
@@ -75,7 +75,7 @@ def test_ethosu_target() -> None:
             },
             pytest.raises(
                 Exception,
-                match="Mac value for selected device should be "
+                match="Mac value for selected target should be "
                 r"in \[32, 64, 128, 256\]",
             ),
         ],

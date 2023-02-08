@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Vela compiler wrapper module."""
 from __future__ import annotations
@@ -268,7 +268,7 @@ def optimize_model(
 ) -> None:
     """Optimize model and return it's path after optimization."""
     logger.debug(
-        "Optimize model %s for device %s",
+        "Optimize model %s for target %s",
         model_path,
         compiler_options.accelerator_config,
     )

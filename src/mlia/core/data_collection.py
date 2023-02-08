@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Module for data collection.
 
@@ -20,7 +20,7 @@ class DataCollector(NamedEntity):
     generation.
 
     Different implementations of this class can provide various
-    information about model or device. This information is being used
+    information about model or target. This information is being used
     at later stages.
     """
 

@@ -12,13 +12,13 @@ from mlia.core.reporting import Report
 from mlia.target.tosa.config import TOSAConfiguration
 from mlia.target.tosa.metadata import TOSAMetadata
 from mlia.target.tosa.reporters import MetadataDisplay
-from mlia.target.tosa.reporters import report_device
+from mlia.target.tosa.reporters import report_target
 from mlia.target.tosa.reporters import tosa_formatters
 
 
-def test_tosa_report_device() -> None:
-    """Test function report_device()."""
-    report = report_device(TOSAConfiguration.load_profile("tosa"))
+def test_tosa_report_target() -> None:
+    """Test function report_target()."""
+    report = report_target(TOSAConfiguration.load_profile("tosa"))
     assert report.to_plain_text()
 
 

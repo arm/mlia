@@ -49,7 +49,7 @@ class EthosUConfiguration(TargetProfile):
         target_mac_range = target_mac_ranges[self.target]
         if self.mac not in target_mac_range:
             raise ValueError(
-                f"Mac value for selected device should be in {target_mac_range}."
+                f"Mac value for selected target should be in {target_mac_range}."
             )
 
     @property

@@ -51,4 +51,4 @@ class EthosUEventHandler(WorkflowEventsHandler, EthosUAdvisorEventHandler):
 
     def on_ethos_u_advisor_started(self, event: EthosUAdvisorStartedEvent) -> None:
         """Handle EthosUAdvisorStarted event."""
-        self.reporter.submit(event.device)
+        self.reporter.submit(event.target)

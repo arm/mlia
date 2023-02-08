@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Data collection module for Ethos-U."""
 from __future__ import annotations
@@ -31,10 +31,10 @@ logger = logging.getLogger(__name__)
 class EthosUOperatorCompatibility(ContextAwareDataCollector):
     """Collect operator compatibility information."""
 
-    def __init__(self, model: Path, device: EthosUConfiguration) -> None:
+    def __init__(self, model: Path, target: EthosUConfiguration) -> None:
         """Init operator compatibility data collector."""
         self.model = model
-        self.device = device
+        self.target = target
 
     def collect_data(self) -> Operators:
         """Collect operator compatibility information."""
@@ -42,7 +42,7 @@ class EthosUOperatorCompatibility(ContextAwareDataCollector):
 
         with log_action("Checking operator compatibility ..."):
             return supported_operators(
-                Path(tflite_model.model_path), self.device.compiler_options
+                Path(tflite_model.model_path), self.target.compiler_options
             )
 
     @classmethod
@@ -57,12 +57,12 @@ class EthosUPerformance(ContextAwareDataCollector):
     def __init__(
         self,
         model: Path,
-        device: EthosUConfiguration,
+        target: EthosUConfiguration,
         backends: list[str] | None = None,
     ) -> None:
         """Init performance data collector."""
         self.model = model
-        self.device = device
+        self.target = target
         self.backends = backends
 
     def collect_data(self) -> PerformanceMetrics:
@@ -70,7 +70,7 @@ class EthosUPerformance(ContextAwareDataCollector):
         tflite_model = get_tflite_model(self.model, self.context)
         estimator = EthosUPerformanceEstimator(
             self.context,
-            self.device,
+            self.target,
             self.backends,
         )
 
@@ -113,13 +113,13 @@ class EthosUOptimizationPerformance(ContextAwareDataCollector):
     def __init__(
         self,
         model: Path,
-        device: EthosUConfiguration,
+        target: EthosUConfiguration,
         optimizations: list[list[dict]],
         backends: list[str] | None = None,
     ) -> None:
         """Init performance optimizations data collector."""
         self.model = model
-        self.device = device
+        self.target = target
         self.optimizations = optimizations
         self.backends = backends
 
@@ -148,7 +148,7 @@ class EthosUOptimizationPerformance(ContextAwareDataCollector):
 
         estimator = EthosUPerformanceEstimator(
             self.context,
-            self.device,
+            self.target,
             self.backends,
         )
         original_metrics, *optimized_metrics = estimate_performance(

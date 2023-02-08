@@ -92,17 +92,17 @@ class MemoryUsage:
 class PerformanceMetrics:
     """Performance metrics."""
 
-    device: EthosUConfiguration
+    target: EthosUConfiguration
     npu_cycles: NPUCycles | None
     memory_usage: MemoryUsage | None
 
     def in_kilobytes(self) -> PerformanceMetrics:
         """Return metrics with memory usage in KiB."""
         if self.memory_usage is None:
-            return PerformanceMetrics(self.device, self.npu_cycles, self.memory_usage)
+            return PerformanceMetrics(self.target, self.npu_cycles, self.memory_usage)
 
         return PerformanceMetrics(
-            self.device, self.npu_cycles, self.memory_usage.in_kilobytes()
+            self.target, self.npu_cycles, self.memory_usage.in_kilobytes()
         )
 
 
@@ -121,10 +121,10 @@ class VelaPerformanceEstimator(
 ):
     """Vela based performance estimator."""
 
-    def __init__(self, context: Context, device: EthosUConfiguration) -> None:
+    def __init__(self, context: Context, target: EthosUConfiguration) -> None:
         """Init Vela based performance estimator."""
         self.context = context
-        self.device = device
+        self.target = target
 
     def estimate(self, model: Path | ModelConfiguration) -> MemoryUsage:
         """Estimate performance."""
@@ -136,7 +136,7 @@ class VelaPerformanceEstimator(
             )
 
             vela_perf_metrics = vela_perf.estimate_performance(
-                model_path, self.device.compiler_options
+                model_path, self.target.compiler_options
             )
 
             return MemoryUsage(
@@ -154,11 +154,11 @@ class CorstonePerformanceEstimator(
     """Corstone-based performance estimator."""
 
     def __init__(
-        self, context: Context, device: EthosUConfiguration, backend: str
+        self, context: Context, target: EthosUConfiguration, backend: str
     ) -> None:
         """Init Corstone-based performance estimator."""
         self.context = context
-        self.device = device
+        self.target = target
         self.backend = backend
 
     def estimate(self, model: Path | ModelConfiguration) -> NPUCycles:
@@ -180,12 +180,12 @@ class CorstonePerformanceEstimator(
             )
 
             vela_comp.optimize_model(
-                model_path, self.device.compiler_options, optimized_model_path
+                model_path, self.target.compiler_options, optimized_model_path
             )
 
             corstone_perf_metrics = estimate_performance(
-                self.device.target,
-                self.device.mac,
+                self.target.target,
+                self.target.mac,
                 optimized_model_path,
                 self.backend,
             )
@@ -208,15 +208,15 @@ class EthosUPerformanceEstimator(
     def __init__(
         self,
         context: Context,
-        device: EthosUConfiguration,
+        target: EthosUConfiguration,
         backends: list[str] | None = None,
     ) -> None:
         """Init performance estimator."""
         self.context = context
-        self.device = device
+        self.target = target
         if backends is None:
             backends = ["Vela"]  # Only Vela is always available as default
-        ethos_u_backends = supported_backends(device.target)
+        ethos_u_backends = supported_backends(target.target)
         for backend in backends:
             if backend != "Vela" and backend not in ethos_u_backends:
                 raise ValueError(
@@ -238,11 +238,11 @@ class EthosUPerformanceEstimator(
         npu_cycles = None
         for backend in self.backends:
             if backend == "Vela":
-                vela_estimator = VelaPerformanceEstimator(self.context, self.device)
+                vela_estimator = VelaPerformanceEstimator(self.context, self.target)
                 memory_usage = vela_estimator.estimate(tflite_model)
             elif is_corstone_backend(backend):
                 corstone_estimator = CorstonePerformanceEstimator(
-                    self.context, self.device, backend
+                    self.context, self.target, backend
                 )
                 npu_cycles = corstone_estimator.estimate(tflite_model)
             else:
@@ -252,4 +252,4 @@ class EthosUPerformanceEstimator(
                     backend,
                 )
 
-        return PerformanceMetrics(self.device, npu_cycles, memory_usage)
+        return PerformanceMetrics(self.target, npu_cycles, memory_usage)
