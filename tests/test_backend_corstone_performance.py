@@ -81,7 +81,7 @@ def test_generic_inference_output_parser_failure(wrong_fvp_output: list[str]) ->
     [
         [
             Path("backend_path"),
-            "Corstone-300",
+            "corstone-300",
             "ethos-u55",
             256,
             Path("model.tflite"),
@@ -163,7 +163,7 @@ def test_estimate_performance(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr("mlia.utils.proc.command_output", command_output_mock)
 
     result = estimate_performance(
-        "ethos-u55", 256, Path("model.tflite"), "Corstone-300"
+        "ethos-u55", 256, Path("model.tflite"), "corstone-300"
     )
     assert result == PerformanceMetrics(1, 2, 3, 4, 5, 6)
 

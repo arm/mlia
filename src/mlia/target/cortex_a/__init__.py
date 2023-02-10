@@ -9,9 +9,10 @@ from mlia.target.registry import TargetInfo
 registry.register(
     "cortex-a",
     TargetInfo(
-        supported_backends=["ArmNNTFLiteDelegate"],
-        default_backends=["ArmNNTFLiteDelegate"],
+        supported_backends=["armnn-tflite-delegate"],
+        default_backends=["armnn-tflite-delegate"],
         advisor_factory_func=configure_and_get_cortexa_advisor,
         target_profile_cls=CortexAConfiguration,
     ),
+    pretty_name="Cortex-A",
 )

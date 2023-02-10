@@ -14,7 +14,7 @@ class CortexAAdvisorStartedEvent(Event):
     """Event with Cortex-A advisor parameters."""
 
     model: Path
-    target: CortexAConfiguration
+    target_config: CortexAConfiguration
 
 
 class CortexAAdvisorEventHandler(EventDispatcher):

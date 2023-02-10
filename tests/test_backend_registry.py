@@ -19,19 +19,19 @@ from mlia.core.common import AdviceCategory
     ("backend", "advices", "systems", "type_"),
     (
         (
-            "ArmNNTFLiteDelegate",
+            "armnn-tflite-delegate",
             [AdviceCategory.COMPATIBILITY],
             None,
             BackendType.BUILTIN,
         ),
         (
-            "Corstone-300",
+            "corstone-300",
             [AdviceCategory.PERFORMANCE, AdviceCategory.OPTIMIZATION],
             [System.LINUX_AMD64],
             BackendType.CUSTOM,
         ),
         (
-            "Corstone-310",
+            "corstone-310",
             [AdviceCategory.PERFORMANCE, AdviceCategory.OPTIMIZATION],
             [System.LINUX_AMD64],
             BackendType.CUSTOM,
@@ -43,7 +43,7 @@ from mlia.core.common import AdviceCategory
             BackendType.WHEEL,
         ),
         (
-            "Vela",
+            "vela",
             [
                 AdviceCategory.COMPATIBILITY,
                 AdviceCategory.PERFORMANCE,
@@ -86,11 +86,11 @@ def test_backend_registry(
 def test_get_supported_backends() -> None:
     """Test function get_supported_backends."""
     assert get_supported_backends() == [
-        "ArmNNTFLiteDelegate",
-        "Corstone-300",
-        "Corstone-310",
-        "Vela",
+        "armnn-tflite-delegate",
+        "corstone-300",
+        "corstone-310",
         "tosa-checker",
+        "vela",
     ]
 
 

@@ -55,9 +55,11 @@ from mlia.utils.filesystem import working_directory
 )
 def test_operators(test_models_path: Path, model: str, expected_ops: Operators) -> None:
     """Test operators function."""
-    target = EthosUConfiguration.load_profile("ethos-u55-256")
+    target_config = EthosUConfiguration.load_profile("ethos-u55-256")
 
-    operators = supported_operators(test_models_path / model, target.compiler_options)
+    operators = supported_operators(
+        test_models_path / model, target_config.compiler_options
+    )
     for expected, actual in zip(expected_ops.ops, operators.ops):
         # do not compare names as they could be different on each model generation
         assert expected.op_type == actual.op_type

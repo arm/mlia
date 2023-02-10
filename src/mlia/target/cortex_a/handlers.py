@@ -35,4 +35,4 @@ class CortexAEventHandler(WorkflowEventsHandler, CortexAAdvisorEventHandler):
 
     def on_cortex_a_advisor_started(self, event: CortexAAdvisorStartedEvent) -> None:
         """Handle CortexAAdvisorStarted event."""
-        self.reporter.submit(event.target)
+        self.reporter.submit(event.target_config)

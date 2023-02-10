@@ -84,7 +84,7 @@ def get_commands() -> list[CommandInfo]:
                 ),
                 partial(
                     add_backend_options,
-                    backends_to_skip=["tosa-checker", "ArmNNTFLiteDelegate"],
+                    backends_to_skip=["tosa-checker", "armnn-tflite-delegate"],
                 ),
                 add_multi_optimization_options,
                 add_output_options,
@@ -197,12 +197,9 @@ def run_command(args: argparse.Namespace) -> int:
 
     try:
         logger.info("ML Inference Advisor %s", __version__)
-        logger.info(
-            "\nThis execution of MLIA uses output directory: %s", ctx.output_dir
-        )
         if copy_profile_file(ctx, func_args):
             logger.info(
-                "Target profile information copied to %s/target_profile.toml",
+                "\nThe target profile (.toml) is copied to the output directory: %s",
                 ctx.output_dir,
             )
         args.func(**func_args)

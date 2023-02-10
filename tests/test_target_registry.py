@@ -63,13 +63,13 @@ def test_supported_advice(
 @pytest.mark.parametrize(
     ("backend", "target", "expected_result"),
     (
-        ("ArmNNTFLiteDelegate", None, True),
-        ("ArmNNTFLiteDelegate", "cortex-a", True),
-        ("ArmNNTFLiteDelegate", "tosa", False),
-        ("Corstone-310", None, True),
-        ("Corstone-310", "ethos-u55", True),
-        ("Corstone-310", "ethos-u65", True),
-        ("Corstone-310", "cortex-a", False),
+        ("armnn-tflite-delegate", None, True),
+        ("armnn-tflite-delegate", "cortex-a", True),
+        ("armnn-tflite-delegate", "tosa", False),
+        ("corstone-310", None, True),
+        ("corstone-310", "ethos-u55", True),
+        ("corstone-310", "ethos-u65", True),
+        ("corstone-310", "cortex-a", False),
     ),
 )
 def test_is_supported(backend: str, target: str | None, expected_result: bool) -> None:
@@ -80,9 +80,9 @@ def test_is_supported(backend: str, target: str | None, expected_result: bool) -
 @pytest.mark.parametrize(
     ("target_name", "expected_backends"),
     (
-        ("cortex-a", ["ArmNNTFLiteDelegate"]),
-        ("ethos-u55", ["Corstone-300", "Corstone-310", "Vela"]),
-        ("ethos-u65", ["Corstone-300", "Corstone-310", "Vela"]),
+        ("cortex-a", ["armnn-tflite-delegate"]),
+        ("ethos-u55", ["corstone-300", "corstone-310", "vela"]),
+        ("ethos-u65", ["corstone-300", "corstone-310", "vela"]),
         ("tosa", ["tosa-checker"]),
     ),
 )
@@ -107,21 +107,21 @@ def test_supported_targets(advice: AdviceCategory, expected_targets: list[str]) 
 def test_all_supported_backends() -> None:
     """Test function all_supported_backends."""
     assert all_supported_backends() == {
-        "Vela",
+        "vela",
         "tosa-checker",
-        "ArmNNTFLiteDelegate",
-        "Corstone-310",
-        "Corstone-300",
+        "armnn-tflite-delegate",
+        "corstone-310",
+        "corstone-300",
     }
 
 
 @pytest.mark.parametrize(
     ("target", "expected_default_backends", "is_subset_only"),
     [
-        ["cortex-a", ["ArmNNTFLiteDelegate"], False],
+        ["cortex-a", ["armnn-tflite-delegate"], False],
         ["tosa", ["tosa-checker"], False],
-        ["ethos-u55", ["Vela"], True],
-        ["ethos-u65", ["Vela"], True],
+        ["ethos-u55", ["vela"], True],
+        ["ethos-u65", ["vela"], True],
     ],
 )
 def test_default_backends(

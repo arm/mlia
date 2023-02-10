@@ -14,7 +14,7 @@ class EthosUAdvisorStartedEvent(Event):
     """Event with Ethos-U advisor parameters."""
 
     model: Path
-    target: EthosUConfiguration
+    target_config: EthosUConfiguration
 
 
 class EthosUAdvisorEventHandler(EventDispatcher):

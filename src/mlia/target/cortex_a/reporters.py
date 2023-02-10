@@ -23,13 +23,13 @@ from mlia.utils.console import style_improvement
 from mlia.utils.types import is_list_of
 
 
-def report_target(target: CortexAConfiguration) -> Report:
+def report_target(target_config: CortexAConfiguration) -> Report:
     """Generate report for the target."""
     return NestedReport(
         "Target information",
         "target",
         [
-            ReportItem("Target", alias="target", value=target.target),
+            ReportItem("Target", alias="target", value=target_config.target),
         ],
     )
 

@@ -14,4 +14,5 @@ registry.register(
         supported_systems=[System.LINUX_AMD64],
         backend_type=BackendType.WHEEL,
     ),
+    pretty_name="TOSA Checker",
 )

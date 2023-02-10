@@ -239,7 +239,7 @@ def test_commands_execution(
 
     monkeypatch.setattr(
         "mlia.cli.options.get_available_backends",
-        MagicMock(return_value=["Vela", "some_backend"]),
+        MagicMock(return_value=["vela", "some_backend"]),
     )
 
     for command in ["check", "optimize"]:

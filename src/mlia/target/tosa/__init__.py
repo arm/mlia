@@ -14,4 +14,5 @@ registry.register(
         advisor_factory_func=configure_and_get_tosa_advisor,
         target_profile_cls=TOSAConfiguration,
     ),
+    pretty_name="TOSA",
 )

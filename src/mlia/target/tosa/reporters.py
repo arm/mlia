@@ -42,13 +42,13 @@ class MetadataDisplay:  # pylint: disable=too-few-public-methods
         self.model_name = model_meta.model_name
 
 
-def report_target(target: TOSAConfiguration) -> Report:
+def report_target(target_config: TOSAConfiguration) -> Report:
     """Generate report for the target."""
     return NestedReport(
         "Target information",
         "target",
         [
-            ReportItem("Target", alias="target", value=target.target),
+            ReportItem("Target", alias="target", value=target_config.target),
         ],
     )
 

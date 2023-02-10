@@ -62,7 +62,7 @@ def get_corstone_300_installation() -> Installation:
     """Get Corstone-300 installation."""
     corstone_300 = BackendInstallation(
         # pylint: disable=line-too-long
-        name="Corstone-300",
+        name="corstone-300",
         description="Corstone-300 FVP",
         fvp_dir_name="corstone_300",
         download_artifact=DownloadArtifact(
@@ -102,7 +102,7 @@ def get_corstone_300_installation() -> Installation:
 def get_corstone_310_installation() -> Installation:
     """Get Corstone-310 installation."""
     corstone_310 = BackendInstallation(
-        name="Corstone-310",
+        name="corstone-310",
         description="Corstone-310 FVP",
         fvp_dir_name="corstone_310",
         download_artifact=None,

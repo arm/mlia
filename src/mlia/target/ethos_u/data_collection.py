@@ -31,10 +31,10 @@ logger = logging.getLogger(__name__)
 class EthosUOperatorCompatibility(ContextAwareDataCollector):
     """Collect operator compatibility information."""
 
-    def __init__(self, model: Path, target: EthosUConfiguration) -> None:
+    def __init__(self, model: Path, target_config: EthosUConfiguration) -> None:
         """Init operator compatibility data collector."""
         self.model = model
-        self.target = target
+        self.target_config = target_config
 
     def collect_data(self) -> Operators:
         """Collect operator compatibility information."""
@@ -42,7 +42,7 @@ class EthosUOperatorCompatibility(ContextAwareDataCollector):
 
         with log_action("Checking operator compatibility ..."):
             return supported_operators(
-                Path(tflite_model.model_path), self.target.compiler_options
+                Path(tflite_model.model_path), self.target_config.compiler_options
             )
 
     @classmethod
@@ -57,12 +57,12 @@ class EthosUPerformance(ContextAwareDataCollector):
     def __init__(
         self,
         model: Path,
-        target: EthosUConfiguration,
+        target_config: EthosUConfiguration,
         backends: list[str] | None = None,
     ) -> None:
         """Init performance data collector."""
         self.model = model
-        self.target = target
+        self.target_config = target_config
         self.backends = backends
 
     def collect_data(self) -> PerformanceMetrics:
@@ -70,7 +70,7 @@ class EthosUPerformance(ContextAwareDataCollector):
         tflite_model = get_tflite_model(self.model, self.context)
         estimator = EthosUPerformanceEstimator(
             self.context,
-            self.target,
+            self.target_config,
             self.backends,
         )
 
@@ -113,13 +113,13 @@ class EthosUOptimizationPerformance(ContextAwareDataCollector):
     def __init__(
         self,
         model: Path,
-        target: EthosUConfiguration,
+        target_config: EthosUConfiguration,
         optimizations: list[list[dict]],
         backends: list[str] | None = None,
     ) -> None:
         """Init performance optimizations data collector."""
         self.model = model
-        self.target = target
+        self.target = target_config
         self.optimizations = optimizations
         self.backends = backends
 

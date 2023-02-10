@@ -95,7 +95,7 @@ def get_generic_inference_app_path(fvp: str, target: str) -> Path:
     """Return path to the generic inference runner binary."""
     apps_path = get_mlia_resources() / "backends/applications"
 
-    fvp_mapping = {"Corstone-300": "300", "Corstone-310": "310"}
+    fvp_mapping = {"corstone-300": "300", "corstone-310": "310"}
     target_mapping = {"ethos-u55": "U55", "ethos-u65": "U65"}
 
     fvp_version = f"sse-{fvp_mapping[fvp]}"
@@ -108,12 +108,12 @@ def get_generic_inference_app_path(fvp: str, target: str) -> Path:
 def get_executable_name(fvp: str, profile: str, target: str) -> str:
     """Return name of the executable for selected FVP and profile."""
     executable_name_mapping = {
-        ("Corstone-300", "AVH", "ethos-u55"): "VHT_Corstone_SSE-300_Ethos-U55",
-        ("Corstone-300", "AVH", "ethos-u65"): "VHT_Corstone_SSE-300_Ethos-U65",
-        ("Corstone-300", "default", "ethos-u55"): "FVP_Corstone_SSE-300_Ethos-U55",
-        ("Corstone-300", "default", "ethos-u65"): "FVP_Corstone_SSE-300_Ethos-U65",
-        ("Corstone-310", "AVH", "ethos-u55"): "VHT_Corstone_SSE-310",
-        ("Corstone-310", "AVH", "ethos-u65"): "VHT_Corstone_SSE-310_Ethos-U65",
+        ("corstone-300", "AVH", "ethos-u55"): "VHT_Corstone_SSE-300_Ethos-U55",
+        ("corstone-300", "AVH", "ethos-u65"): "VHT_Corstone_SSE-300_Ethos-U65",
+        ("corstone-300", "default", "ethos-u55"): "FVP_Corstone_SSE-300_Ethos-U55",
+        ("corstone-300", "default", "ethos-u65"): "FVP_Corstone_SSE-300_Ethos-U65",
+        ("corstone-310", "AVH", "ethos-u55"): "VHT_Corstone_SSE-310",
+        ("corstone-310", "AVH", "ethos-u65"): "VHT_Corstone_SSE-310_Ethos-U65",
     }
 
     return executable_name_mapping[(fvp, profile, target)]

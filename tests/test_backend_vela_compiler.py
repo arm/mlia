@@ -158,8 +158,10 @@ def test_optimize_model(tmp_path: Path, test_tflite_model: Path) -> None:
     """Test model optimization and saving into file."""
     tmp_file = tmp_path / "temp.tflite"
 
-    target = EthosUConfiguration.load_profile("ethos-u55-256")
-    optimize_model(test_tflite_model, target.compiler_options, tmp_file.absolute())
+    target_config = EthosUConfiguration.load_profile("ethos-u55-256")
+    optimize_model(
+        test_tflite_model, target_config.compiler_options, tmp_file.absolute()
+    )
 
     assert tmp_file.is_file()
     assert tmp_file.stat().st_size > 0

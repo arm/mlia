@@ -110,9 +110,9 @@ def report_operators(ops: list[Operator]) -> Report:
     return Table(columns, rows, name="Operators", alias="operators")
 
 
-def report_target_details(target: EthosUConfiguration) -> Report:
+def report_target_details(target_config: EthosUConfiguration) -> Report:
     """Return table representation for the target."""
-    compiler_config = target.resolved_compiler_config
+    compiler_config = target_config.resolved_compiler_config
 
     memory_settings = [
         ReportItem(
@@ -211,8 +211,8 @@ def report_target_details(target: EthosUConfiguration) -> Report:
         "Target information",
         "target",
         [
-            ReportItem("Target", alias="target", value=target.target),
-            ReportItem("MAC", alias="mac", value=target.mac),
+            ReportItem("Target", alias="target", value=target_config.target),
+            ReportItem("MAC", alias="mac", value=target_config.mac),
             ReportItem(
                 "Memory mode",
                 alias="memory_mode",

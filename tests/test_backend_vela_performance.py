@@ -14,8 +14,10 @@ from mlia.target.ethos_u.config import EthosUConfiguration
 
 def test_estimate_performance(test_tflite_model: Path) -> None:
     """Test getting performance estimations."""
-    target = EthosUConfiguration.load_profile("ethos-u55-256")
-    perf_metrics = estimate_performance(test_tflite_model, target.compiler_options)
+    target_config = EthosUConfiguration.load_profile("ethos-u55-256")
+    perf_metrics = estimate_performance(
+        test_tflite_model, target_config.compiler_options
+    )
 
     assert isinstance(perf_metrics, PerformanceMetrics)
 
@@ -24,16 +26,18 @@ def test_estimate_performance_already_optimized(
     tmp_path: Path, test_tflite_model: Path
 ) -> None:
     """Test that performance estimation should fail for already optimized model."""
-    target = EthosUConfiguration.load_profile("ethos-u55-256")
+    target_config = EthosUConfiguration.load_profile("ethos-u55-256")
 
     optimized_model_path = tmp_path / "optimized_model.tflite"
 
-    optimize_model(test_tflite_model, target.compiler_options, optimized_model_path)
+    optimize_model(
+        test_tflite_model, target_config.compiler_options, optimized_model_path
+    )
 
     with pytest.raises(
         Exception, match="Unable to estimate performance for the given optimized model"
     ):
-        estimate_performance(optimized_model_path, target.compiler_options)
+        estimate_performance(optimized_model_path, target_config.compiler_options)
 
 
 def test_read_invalid_model(test_tflite_invalid_model: Path) -> None:
@@ -41,8 +45,8 @@ def test_read_invalid_model(test_tflite_invalid_model: Path) -> None:
     with pytest.raises(
         Exception, match=f"Unable to read model {test_tflite_invalid_model}"
     ):
-        target = EthosUConfiguration.load_profile("ethos-u55-256")
-        estimate_performance(test_tflite_invalid_model, target.compiler_options)
+        target_config = EthosUConfiguration.load_profile("ethos-u55-256")
+        estimate_performance(test_tflite_invalid_model, target_config.compiler_options)
 
 
 def test_compile_invalid_model(
@@ -58,7 +62,7 @@ def test_compile_invalid_model(
     with pytest.raises(
         Exception, match="Model could not be optimized with Vela compiler"
     ):
-        target = EthosUConfiguration.load_profile("ethos-u55-256")
-        optimize_model(test_tflite_model, target.compiler_options, model_path)
+        target_config = EthosUConfiguration.load_profile("ethos-u55-256")
+        optimize_model(test_tflite_model, target_config.compiler_options, model_path)
 
     assert not model_path.exists()

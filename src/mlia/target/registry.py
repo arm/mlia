@@ -25,12 +25,14 @@ from mlia.utils.registry import Registry
 class TargetRegistry(Registry[TargetInfo]):
     """Registry for targets."""
 
-    def register(self, name: str, item: TargetInfo) -> bool:
+    def register(
+        self, name: str, item: TargetInfo, pretty_name: str | None = None
+    ) -> bool:
         """Register an item: returns `False` if already registered."""
         assert all(
             backend in backend_registry.items for backend in item.supported_backends
         )
-        return super().register(name, item)
+        return super().register(name, item, pretty_name)
 
 
 # All supported targets are required to be registered here.
@@ -159,15 +161,12 @@ def table() -> Table:
 
     rows = [
         (
-            name,
-            Table(
-                columns=[Column("Backend"), Column("Status")],
-                rows=[
-                    (backend, get_status(backend))
-                    for backend in info.supported_backends
-                ],
-                name="Backends",
+            f"{registry.pretty_name(name)}\n<{name}>",
+            "\n".join(
+                f"{backend_registry.pretty_name(backend)}\n<{backend}>"
+                for backend in info.supported_backends
             ),
+            "\n\n".join(get_status(backend) for backend in info.supported_backends),
             "/".join(get_advice(name)),
         )
         for name, info in registry.items.items()
@@ -177,6 +176,7 @@ def table() -> Table:
         columns=[
             Column("Target"),
             Column("Backend(s)"),
+            Column("Status"),
             Column("Advice: comp/perf/opt"),
         ],
         rows=rows,

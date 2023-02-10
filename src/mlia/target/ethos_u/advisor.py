@@ -41,13 +41,13 @@ class EthosUInferenceAdvisor(DefaultInferenceAdvisor):
     def get_collectors(self, context: Context) -> list[DataCollector]:
         """Return list of the data collectors."""
         model = self.get_model(context)
-        target = self._get_target_cfg(context)
+        target_config = self._get_target_config(context)
         backends = self._get_backends(context)
 
         collectors: list[DataCollector] = []
 
         if context.category_enabled(AdviceCategory.COMPATIBILITY):
-            collectors.append(EthosUOperatorCompatibility(model, target))
+            collectors.append(EthosUOperatorCompatibility(model, target_config))
 
         # Performance and optimization are mutually exclusive.
         # Decide which one to use (taking into account the model format).
@@ -58,18 +58,18 @@ class EthosUInferenceAdvisor(DefaultInferenceAdvisor):
                     "Command 'optimization' is not supported for TensorFlow Lite files."
                 )
             if context.category_enabled(AdviceCategory.PERFORMANCE):
-                collectors.append(EthosUPerformance(model, target, backends))
+                collectors.append(EthosUPerformance(model, target_config, backends))
         else:
             # Keras/SavedModel: Prefer optimization
             if context.category_enabled(AdviceCategory.OPTIMIZATION):
                 optimization_settings = self._get_optimization_settings(context)
                 collectors.append(
                     EthosUOptimizationPerformance(
-                        model, target, optimization_settings, backends
+                        model, target_config, optimization_settings, backends
                     )
                 )
             elif context.category_enabled(AdviceCategory.PERFORMANCE):
-                collectors.append(EthosUPerformance(model, target, backends))
+                collectors.append(EthosUPerformance(model, target_config, backends))
 
         return collectors
 
@@ -89,13 +89,13 @@ class EthosUInferenceAdvisor(DefaultInferenceAdvisor):
     def get_events(self, context: Context) -> list[Event]:
         """Return list of the startup events."""
         model = self.get_model(context)
-        target = self._get_target_cfg(context)
+        target_config = self._get_target_config(context)
 
         return [
-            EthosUAdvisorStartedEvent(target=target, model=model),
+            EthosUAdvisorStartedEvent(target_config=target_config, model=model),
         ]
 
-    def _get_target_cfg(self, context: Context) -> EthosUConfiguration:
+    def _get_target_config(self, context: Context) -> EthosUConfiguration:
         """Get target configuration."""
         target_profile = self.get_target_profile(context)
         return cast(EthosUConfiguration, profile(target_profile))

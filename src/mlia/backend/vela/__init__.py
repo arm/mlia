@@ -8,7 +8,7 @@ from mlia.backend.registry import registry
 from mlia.core.common import AdviceCategory
 
 registry.register(
-    "Vela",
+    "vela",
     BackendConfiguration(
         supported_advice=[
             AdviceCategory.COMPATIBILITY,
@@ -23,4 +23,5 @@ registry.register(
         ],
         backend_type=BackendType.BUILTIN,
     ),
+    pretty_name="Vela",
 )
