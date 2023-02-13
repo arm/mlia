@@ -237,13 +237,13 @@ def get_all_commands_combinations(
         ExecutionConfiguration.from_dict(exec_info) for exec_info in executions
     )
 
-    parser = get_args_parser()
     for exec_config in exec_configs:
         for command_combination in exec_config.all_combinations:
+            parser = get_args_parser()
             args = parser.parse_args(command_combination)
-            model_name = Path(args.model).stem
+
             yield {
-                "model_name": model_name,
+                "model_name": Path(args.model).stem,
                 "command_combination": command_combination,
             }
 
