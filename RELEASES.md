@@ -18,9 +18,39 @@ scheme.
 
 ## Release 0.6.0
 
+### Feature changes
+
+* Add metadata to the output console display and json file
+  (MLIA-741/2 and MLIA-775)
+* Support using TOML format for target profile and loading custom target
+  profiles (MLIA-590)
+* Support displaying a table of supported targets, backends and advice
+  in the help text (MLIA-737)
+
 ### Interface changes
 
 * **Breaking change:** Implement new CLI changes (MLIA-650)
+* Create an interface to load/save/verify target profiles (MLIA-591)
+* Remove the --output parameter (MLIA-782)
+* Add the CLI parameter --output-dir (MLIA-461)
+
+### Issues fixed
+
+* Fix issues so that all available backends can be listed using CLI (MLIA-770)
+* Provide a command for backend installation when it is not available and fix
+  the issue of connection timeout (MLIA-460)
+
+### Internal changes
+
+* Update the compatibility list of TensorFlow Lite delegates operators
+  for Arm NN 22.11 (MLIA-709)
+* Expand the use of target/backend registries to avoid hardcoded names and
+  cache target profiles (MLIA-769)
+* Create an API to get target information (MLIA-589)
+* Remove previous backend configuration mechanism (MLIA-595)
+* Upgrade dependencies with Vela 3.6 (MLIA-669)
+* Move tosa-checker functions into a separate module
+* Migrate e2e tests to tox (MLIA-676)
 
 ## Release 0.5.0
 
