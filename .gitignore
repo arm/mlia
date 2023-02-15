@@ -10,7 +10,7 @@ src/*.egg-info
 .vscode
 venv
 e2e_config
-mlia_output
+mlia-output
 report
 .ipynb_checkpoints
 .tox

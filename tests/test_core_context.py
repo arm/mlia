@@ -3,13 +3,16 @@
 """Tests for the module context."""
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import pytest
 
 from mlia.core.common import AdviceCategory
+from mlia.core.context import create_output_dir_with_timestamp
 from mlia.core.context import ExecutionContext
 from mlia.core.events import DefaultEventPublisher
+from mlia.utils.filesystem import working_directory
 
 
 @pytest.mark.parametrize(
@@ -39,9 +42,8 @@ def test_execution_context_category_enabled(
 ) -> None:
     """Test category enabled method of execution context."""
     for category in expected_enabled_categories:
-        assert ExecutionContext(
-            advice_category=context_advice_category
-        ).category_enabled(category)
+        ctx = ExecutionContext(advice_category=context_advice_category)
+        assert ctx.category_enabled(category)
 
 
 def test_execution_context(tmpdir: str) -> None:
@@ -79,6 +81,9 @@ def test_execution_context(tmpdir: str) -> None:
         "output_format=json"
     )
 
+
+def test_execution_context_with_default_params(tmpdir: str) -> None:
+    """Test execution context with the default parameters."""
     context_with_default_params = ExecutionContext(output_dir=tmpdir)
     assert context_with_default_params.advice_category == {AdviceCategory.COMPATIBILITY}
     assert context_with_default_params.config_parameters is None
@@ -101,3 +106,29 @@ def test_execution_context(tmpdir: str) -> None:
         "output_format=plain_text"
     )
     assert str(context_with_default_params) == expected_str
+
+
+def test_create_output_dir_with_timestamp(tmp_path: Path) -> None:
+    """Test function generate_output_dir_with_timestamp."""
+    working_dir = tmp_path / "sample"
+    with working_directory(working_dir, create_dir=True):
+        create_output_dir_with_timestamp()
+
+    working_dir_content = list(working_dir.iterdir())
+    assert len(working_dir_content) == 1
+
+    parent_dir = working_dir_content[0]
+    assert parent_dir.is_dir()
+    assert parent_dir.name == "mlia-output"
+
+    parent_dir_content = list(parent_dir.iterdir())
+    assert len(parent_dir_content) == 1
+
+    output_dir = parent_dir_content[0]
+    assert output_dir.is_dir()
+
+    pattern = re.compile(r"mlia-output-\d{4}-\d{2}-\d{2}T\d+[.]\d+")
+    assert pattern.match(output_dir.name)
+
+    output_dir_content = list(output_dir.iterdir())
+    assert not output_dir_content

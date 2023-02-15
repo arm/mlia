@@ -233,8 +233,8 @@ def add_output_directory(parser: argparse.ArgumentParser) -> None:
         type=Path,
         help="Path to the directory where MLIA "
         "stores artifacts, e.g. logs, target profiles and model files. "
-        "If not specified then MLIA will use temporary "
-        "directory instead.",
+        "If not specified then MLIA will use "
+        "directory 'mlia-output' in the current working directory instead.",
     )
 
 

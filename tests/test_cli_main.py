@@ -311,7 +311,7 @@ def test_commands_execution_backend_main(
             MagicMock(side_effect=Exception("Error")),
             [
                 "Execution finished with error: Error",
-                "Please check the log files in the /tmp/mlia-",
+                "Please check the log files in the",
                 "/logs for more details",
             ],
         ],
@@ -320,7 +320,7 @@ def test_commands_execution_backend_main(
             MagicMock(side_effect=Exception("Error")),
             [
                 "Execution finished with error: Error",
-                "Please check the log files in the /tmp/mlia-",
+                "Please check the log files in the",
                 "/logs for more details, or enable debug mode (--debug)",
             ],
         ],
