@@ -43,6 +43,14 @@ class TOSAInferenceAdvisor(DefaultInferenceAdvisor):
         if context.category_enabled(AdviceCategory.COMPATIBILITY):
             collectors.append(TOSAOperatorCompatibility(model))
 
+        if context.category_enabled(AdviceCategory.PERFORMANCE):
+            raise Exception(
+                "Performance estimation is currently not supported for TOSA."
+            )
+
+        if context.category_enabled(AdviceCategory.OPTIMIZATION):
+            raise Exception("Model optimizations are currently not supported for TOSA.")
+
         return collectors
 
     def get_analyzers(self, context: Context) -> list[DataAnalyzer]:

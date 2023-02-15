@@ -1,8 +1,11 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for Cortex-A MLIA module."""
 from pathlib import Path
 
+import pytest
+
+from mlia.core.common import AdviceCategory
 from mlia.core.context import ExecutionContext
 from mlia.core.workflow import DefaultWorkflowExecutor
 from mlia.target.cortex_a.advisor import configure_and_get_cortexa_advisor
@@ -32,3 +35,30 @@ def test_configure_and_get_cortex_a_advisor(test_tflite_model: Path) -> None:
     }
 
     assert isinstance(workflow, DefaultWorkflowExecutor)
+
+
+@pytest.mark.parametrize(
+    "category, expected_error",
+    [
+        [
+            AdviceCategory.PERFORMANCE,
+            "Performance estimation is currently not supported for Cortex-A.",
+        ],
+        [
+            AdviceCategory.OPTIMIZATION,
+            "Model optimizations are currently not supported for Cortex-A.",
+        ],
+    ],
+)
+def test_unsupported_advice_categories(
+    tmp_path: Path,
+    category: AdviceCategory,
+    expected_error: str,
+    test_tflite_model: Path,
+) -> None:
+    """Test that advisor should throw an exception for unsupported categories."""
+    with pytest.raises(Exception, match=expected_error):
+        ctx = ExecutionContext(output_dir=tmp_path, advice_category={category})
+
+        advisor = configure_and_get_cortexa_advisor(ctx, "cortex-a", test_tflite_model)
+        advisor.configure(ctx)

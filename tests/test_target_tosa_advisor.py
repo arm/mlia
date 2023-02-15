@@ -6,6 +6,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from mlia.core.common import AdviceCategory
 from mlia.core.context import ExecutionContext
 from mlia.core.workflow import DefaultWorkflowExecutor
 from mlia.target.tosa.advisor import configure_and_get_tosa_advisor
@@ -38,3 +39,30 @@ def test_configure_and_get_tosa_advisor(
     }
 
     assert isinstance(workflow, DefaultWorkflowExecutor)
+
+
+@pytest.mark.parametrize(
+    "category, expected_error",
+    [
+        [
+            AdviceCategory.PERFORMANCE,
+            "Performance estimation is currently not supported for TOSA.",
+        ],
+        [
+            AdviceCategory.OPTIMIZATION,
+            "Model optimizations are currently not supported for TOSA.",
+        ],
+    ],
+)
+def test_unsupported_advice_categories(
+    tmp_path: Path,
+    category: AdviceCategory,
+    expected_error: str,
+    test_tflite_model: Path,
+) -> None:
+    """Test that advisor should throw an exception for unsupported categories."""
+    with pytest.raises(Exception, match=expected_error):
+        ctx = ExecutionContext(output_dir=tmp_path, advice_category={category})
+
+        advisor = configure_and_get_tosa_advisor(ctx, "tosa", test_tflite_model)
+        advisor.configure(ctx)
