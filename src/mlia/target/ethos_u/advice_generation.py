@@ -11,7 +11,7 @@ from mlia.core.advice_generation import ContextAwareAdviceProducer
 from mlia.core.advice_generation import FactBasedAdviceProducer
 from mlia.core.common import AdviceCategory
 from mlia.core.common import DataItem
-from mlia.nn.tensorflow.optimizations.select import OptimizationSettings
+from mlia.nn.select import OptimizationSettings
 from mlia.target.common.reporters import handle_model_is_not_tflite_compatible_common
 from mlia.target.common.reporters import handle_tflite_check_failed_common
 from mlia.target.common.reporters import ModelIsNotTFLiteCompatible

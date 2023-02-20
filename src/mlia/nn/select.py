@@ -4,16 +4,21 @@
 from __future__ import annotations
 
 import math
+from pathlib import Path
+from typing import Any
 from typing import NamedTuple
 
 import tensorflow as tf
 
 from mlia.core.errors import ConfigurationError
+from mlia.nn.common import Optimizer
+from mlia.nn.common import OptimizerConfiguration
+from mlia.nn.rewrite.core.rewrite import RewriteConfiguration
+from mlia.nn.rewrite.core.rewrite import Rewriter
 from mlia.nn.tensorflow.config import KerasModel
+from mlia.nn.tensorflow.config import TFLiteModel
 from mlia.nn.tensorflow.optimizations.clustering import Clusterer
 from mlia.nn.tensorflow.optimizations.clustering import ClusteringConfiguration
-from mlia.nn.tensorflow.optimizations.common import Optimizer
-from mlia.nn.tensorflow.optimizations.common import OptimizerConfiguration
 from mlia.nn.tensorflow.optimizations.pruning import Pruner
 from mlia.nn.tensorflow.optimizations.pruning import PruningConfiguration
 from mlia.utils.types import is_list_of
@@ -25,11 +30,13 @@ class OptimizationSettings(NamedTuple):
     optimization_type: str
     optimization_target: int | float
     layers_to_optimize: list[str] | None
+    dataset: Path | None = None
 
     @staticmethod
     def create_from(
         optimizer_params: list[tuple[str, float]],
         layers_to_optimize: list[str] | None = None,
+        dataset: Path | None = None,
     ) -> list[OptimizationSettings]:
         """Create optimization settings from the provided parameters."""
         return [
@@ -37,6 +44,7 @@ class OptimizationSettings(NamedTuple):
                 optimization_type=opt_type,
                 optimization_target=opt_target,
                 layers_to_optimize=layers_to_optimize,
+                dataset=dataset,
             )
             for opt_type, opt_target in optimizer_params
         ]
@@ -64,6 +72,14 @@ class OptimizationSettings(NamedTuple):
                 self.optimization_type, next_target, self.layers_to_optimize
             )
 
+        if self.optimization_type == "rewrite":
+            return OptimizationSettings(
+                self.optimization_type,
+                self.optimization_target,
+                self.layers_to_optimize,
+                self.dataset,
+            )
+
         raise ValueError(f"Optimization type {self.optimization_type} is unknown.")
 
 
@@ -83,7 +99,7 @@ class MultiStageOptimizer(Optimizer):
         """Return string representation of the optimization config."""
         return " - ".join(str(opt) for opt in self.optimizations)
 
-    def get_model(self) -> tf.keras.Model:
+    def get_model(self) -> Any:
         """Return optimized model."""
         return self.model
 
@@ -96,18 +112,24 @@ class MultiStageOptimizer(Optimizer):
 
 
 def get_optimizer(
-    model: tf.keras.Model | KerasModel,
+    model: tf.keras.Model | KerasModel | TFLiteModel,
     config: OptimizerConfiguration | OptimizationSettings | list[OptimizationSettings],
 ) -> Optimizer:
     """Get optimizer for provided configuration."""
     if isinstance(model, KerasModel):
         model = model.get_keras_model()
 
+    if isinstance(model, TFLiteModel):
+        model = model.model_path
+
     if isinstance(config, PruningConfiguration):
         return Pruner(model, config)
 
     if isinstance(config, ClusteringConfiguration):
         return Clusterer(model, config)
+
+    if isinstance(config, RewriteConfiguration):
+        return Rewriter(model, config)  # type: ignore
 
     if isinstance(config, OptimizationSettings) or is_list_of(
         config, OptimizationSettings
@@ -118,18 +140,18 @@ def get_optimizer(
 
 
 def _get_optimizer(
-    model: tf.keras.Model,
+    model: tf.keras.Model | Path,
     optimization_settings: OptimizationSettings | list[OptimizationSettings],
 ) -> Optimizer:
     if isinstance(optimization_settings, OptimizationSettings):
         optimization_settings = [optimization_settings]
 
     optimizer_configs = []
-    for opt_type, opt_target, layers_to_optimize in optimization_settings:
+    for opt_type, opt_target, layers_to_optimize, dataset in optimization_settings:
         _check_optimizer_params(opt_type, opt_target)
 
         opt_config = _get_optimizer_configuration(
-            opt_type, opt_target, layers_to_optimize
+            opt_type, opt_target, layers_to_optimize, dataset
         )
         optimizer_configs.append(opt_config)
 
@@ -141,15 +163,16 @@ def _get_optimizer(
 
 def _get_optimizer_configuration(
     optimization_type: str,
-    optimization_target: int | float,
+    optimization_target: int | float | str,
     layers_to_optimize: list[str] | None = None,
+    dataset: Path | None = None,
 ) -> OptimizerConfiguration:
     """Get optimizer configuration for provided parameters."""
     _check_optimizer_params(optimization_type, optimization_target)
 
     opt_type = optimization_type.lower()
     if opt_type == "pruning":
-        return PruningConfiguration(optimization_target, layers_to_optimize)
+        return PruningConfiguration(float(optimization_target), layers_to_optimize)
 
     if opt_type == "clustering":
         # make sure an integer is given as clustering target
@@ -161,11 +184,23 @@ def _get_optimizer_configuration(
             f"Optimization target provided: {optimization_target}"
         )
 
+    if opt_type == "rewrite":
+        if isinstance(optimization_target, str):
+            return RewriteConfiguration(  # type: ignore
+                str(optimization_target), layers_to_optimize, dataset
+            )
+
+        raise ConfigurationError(
+            "Optimization target should be a string indicating a"
+            "choice from rewrite library. "
+            f"Optimization target provided: {optimization_target}"
+        )
+
     raise ConfigurationError(f"Unsupported optimization type: {optimization_type}")
 
 
 def _check_optimizer_params(
-    optimization_type: str, optimization_target: int | float
+    optimization_type: str, optimization_target: int | float | str
 ) -> None:
     """Check optimizer params."""
     if not optimization_target:

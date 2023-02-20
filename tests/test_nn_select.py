@@ -11,13 +11,13 @@ import pytest
 import tensorflow as tf
 
 from mlia.core.errors import ConfigurationError
+from mlia.nn.select import get_optimizer
+from mlia.nn.select import MultiStageOptimizer
+from mlia.nn.select import OptimizationSettings
 from mlia.nn.tensorflow.optimizations.clustering import Clusterer
 from mlia.nn.tensorflow.optimizations.clustering import ClusteringConfiguration
 from mlia.nn.tensorflow.optimizations.pruning import Pruner
 from mlia.nn.tensorflow.optimizations.pruning import PruningConfiguration
-from mlia.nn.tensorflow.optimizations.select import get_optimizer
-from mlia.nn.tensorflow.optimizations.select import MultiStageOptimizer
-from mlia.nn.tensorflow.optimizations.select import OptimizationSettings
 
 
 @pytest.mark.parametrize(

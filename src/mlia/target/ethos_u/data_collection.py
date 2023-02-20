@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
+from typing import Any
 
 from mlia.backend.vela.compat import Operators
 from mlia.backend.vela.compat import supported_operators
@@ -12,15 +13,17 @@ from mlia.core.context import Context
 from mlia.core.data_collection import ContextAwareDataCollector
 from mlia.core.errors import FunctionalityNotSupportedError
 from mlia.core.performance import estimate_performance
+from mlia.nn.select import get_optimizer
+from mlia.nn.select import OptimizationSettings
 from mlia.nn.tensorflow.config import get_keras_model
 from mlia.nn.tensorflow.config import get_tflite_model
 from mlia.nn.tensorflow.config import KerasModel
-from mlia.nn.tensorflow.optimizations.select import get_optimizer
-from mlia.nn.tensorflow.optimizations.select import OptimizationSettings
+from mlia.nn.tensorflow.config import TFLiteModel
 from mlia.nn.tensorflow.tflite_compat import TFLiteChecker
 from mlia.nn.tensorflow.tflite_compat import TFLiteCompatibilityInfo
 from mlia.nn.tensorflow.utils import is_tflite_model
 from mlia.nn.tensorflow.utils import save_keras_model
+from mlia.nn.tensorflow.utils import save_tflite_model
 from mlia.target.ethos_u.config import EthosUConfiguration
 from mlia.target.ethos_u.performance import EthosUPerformanceEstimator
 from mlia.target.ethos_u.performance import OptimizationPerformanceMetrics
@@ -103,7 +106,7 @@ class OptimizeModel:
         self.context = context
         self.opt_settings = opt_settings
 
-    def __call__(self, keras_model: KerasModel) -> KerasModel:
+    def __call__(self, keras_model: KerasModel) -> Any:
         """Run optimization."""
         optimizer = get_optimizer(keras_model, self.opt_settings)
 
@@ -112,9 +115,19 @@ class OptimizeModel:
         optimizer.apply_optimization()
 
         model = optimizer.get_model()
+
+        if isinstance(model, Path):
+            return model
+
+        if isinstance(model, TFLiteModel):
+            model_path = self.context.get_model_path("optimized_model.tflite")
+            with open(model.model_path, "rb") as file_handle:
+                model_data = bytearray(file_handle.read())
+            save_tflite_model(model_data, model_path)
+            return TFLiteModel(model_path)
+
         model_path = self.context.get_model_path("optimized_model.h5")
         save_keras_model(model, model_path)
-
         return KerasModel(model_path)
 
 
@@ -146,14 +159,17 @@ class EthosUOptimizationPerformance(ContextAwareDataCollector):
 
         opt_settings = self._parse_optimization_params(self.optimizations)
 
-        try:
-            keras_model = get_keras_model(self.model, self.context)
-        except NotImplementedError as err:
-            raise FunctionalityNotSupportedError(
-                reason="Unable to run model optimizations",
-                description=f"{self.model} is not a Keras model and "
-                "could not be converted to a Keras model",
-            ) from err
+        if opt_settings[0][0].optimization_type != "rewrite":
+            try:
+                model = get_keras_model(self.model, self.context)
+            except NotImplementedError as err:
+                raise FunctionalityNotSupportedError(
+                    reason="Unable to run model optimizations",
+                    description=f"{self.model} is not a Keras model and "
+                    "could not be converted to a Keras model",
+                ) from err
+        else:
+            model = self.model  # type: ignore
 
         optimizers = [OptimizeModel(self.context, opts) for opts in opt_settings]
 
@@ -163,7 +179,7 @@ class EthosUOptimizationPerformance(ContextAwareDataCollector):
             self.backends,
         )
         original_metrics, *optimized_metrics = estimate_performance(
-            keras_model, estimator, optimizers  # type: ignore
+            model, estimator, optimizers  # type: ignore
         )
 
         result = OptimizationPerformanceMetrics(

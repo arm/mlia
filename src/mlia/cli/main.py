@@ -23,6 +23,7 @@ from mlia.cli.options import add_backend_install_options
 from mlia.cli.options import add_backend_options
 from mlia.cli.options import add_backend_uninstall_options
 from mlia.cli.options import add_check_category_options
+from mlia.cli.options import add_dataset_options
 from mlia.cli.options import add_debug_options
 from mlia.cli.options import add_keras_model_options
 from mlia.cli.options import add_model_options
@@ -89,6 +90,7 @@ def get_commands() -> list[CommandInfo]:
                 add_multi_optimization_options,
                 add_output_options,
                 add_debug_options,
+                add_dataset_options,
             ],
         ),
     ]

@@ -10,7 +10,7 @@ from typing import cast
 
 from mlia.cli.options import get_target_profile_opts
 from mlia.core.helpers import ActionResolver
-from mlia.nn.tensorflow.optimizations.select import OptimizationSettings
+from mlia.nn.select import OptimizationSettings
 from mlia.nn.tensorflow.utils import is_keras_model
 from mlia.target.config import get_builtin_profile_path
 from mlia.target.config import is_builtin_profile
@@ -47,7 +47,11 @@ class CLIActionResolver(ActionResolver):
     ) -> list[str]:
         """Return specific optimization command description."""
         opt_types = " ".join("--" + opt.optimization_type for opt in opt_settings)
-        opt_targs_strings = ["--pruning-target", "--clustering-target"]
+        opt_targs_strings = [
+            "--pruning-target",
+            "--clustering-target",
+            "--rewrite-target",
+        ]
         opt_targs = ",".join(
             f"{opt_targs_strings[i]} {opt.optimization_target}"
             for i, opt in enumerate(opt_settings)

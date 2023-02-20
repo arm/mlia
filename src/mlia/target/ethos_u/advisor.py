@@ -54,8 +54,20 @@ class EthosUInferenceAdvisor(DefaultInferenceAdvisor):
         if is_tflite_model(model):
             # TensorFlow Lite models do not support optimization (only performance)!
             if context.category_enabled(AdviceCategory.OPTIMIZATION):
-                raise RuntimeError(
-                    "Optimizations are not supported for TensorFlow Lite files."
+                optimization_settings = self._get_optimization_settings(context)
+
+                optimization_types = {
+                    opt["optimization_type"] for opt in optimization_settings[0]
+                }
+                if optimization_types != {"rewrite"}:
+                    raise RuntimeError(
+                        "Only 'rewrite' is supported for TensorFlow Lite files."
+                    )
+
+                collectors.append(
+                    EthosUOptimizationPerformance(
+                        model, target_config, optimization_settings, backends
+                    )
                 )
             if context.category_enabled(AdviceCategory.PERFORMANCE):
                 collectors.append(EthosUPerformance(model, target_config, backends))

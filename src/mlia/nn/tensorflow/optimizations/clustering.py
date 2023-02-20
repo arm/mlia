@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """
 Contains class Clusterer that clusters unique weights per layer to a specified number.
@@ -18,8 +18,8 @@ from tensorflow_model_optimization.python.core.clustering.keras.experimental imp
     cluster as experimental_cluster,
 )
 
-from mlia.nn.tensorflow.optimizations.common import Optimizer
-from mlia.nn.tensorflow.optimizations.common import OptimizerConfiguration
+from mlia.nn.common import Optimizer
+from mlia.nn.common import OptimizerConfiguration
 
 
 @dataclass

@@ -158,10 +158,11 @@ mlia check --help
 
 ## **optimize**
 
-This sub-command applies optimizations to a Keras model (.h5 or SavedModel) and
-shows the performance improvements compared to the original unoptimized model.
+This sub-command applies optimizations to a Keras model (.h5 or SavedModel) or
+a TensorFlow Lite model and shows the performance improvements compared to
+the original unoptimized model.
 
-There are currently two optimization techniques available to apply:
+There are currently three optimization techniques available to apply:
 
 * **pruning**: Sets insignificant model weights to zero until the specified
     sparsity is reached.
@@ -172,9 +173,13 @@ More information about these techniques can be found online in the TensorFlow
 documentation, e.g. in the
 [TensorFlow model optimization guides](https://www.tensorflow.org/model_optimization/guide).
 
+* **rewrite**: Replaces certain subgraph/layer of the pre-trained model with
+    candidates from the rewrite library, with or without training using a
+    small portion of the training data, to achieve local performance gains.
+
 **Note:** A ***Keras model*** (.h5 or SavedModel) is required as input to
-perform the optimizations. Models in the TensorFlow Lite format are **not**
-supported.
+perform pruning and clustering. A ***TensorFlow Lite model*** is required as input
+to perform a rewrite.
 
 *Examples:*
 
@@ -189,6 +194,15 @@ mlia optimize ~/models/ds_cnn_l.h5 \
 
 # Get help and further information
 mlia optimize --help
+
+# An example for using rewrite
+mlia optimize ~/models/ds_cnn_large_fp32.tflite \
+    --target-profile ethos-u55-256 \
+    --rewrite \
+    --dataset input.tfrec \
+    --rewrite-target fully_connected \
+    --rewrite-start MobileNet/avg_pool/AvgPool \
+    --rewrite-end MobileNet/fc1/BiasAdd
 ```
 
 # Target profiles

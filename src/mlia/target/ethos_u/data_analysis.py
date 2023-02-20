@@ -10,7 +10,7 @@ from mlia.backend.vela.compat import Operators
 from mlia.core.common import DataItem
 from mlia.core.data_analysis import Fact
 from mlia.core.data_analysis import FactExtractor
-from mlia.nn.tensorflow.optimizations.select import OptimizationSettings
+from mlia.nn.select import OptimizationSettings
 from mlia.nn.tensorflow.tflite_compat import TFLiteCompatibilityInfo
 from mlia.target.common.reporters import analyze_tflite_compatibility_common
 from mlia.target.ethos_u.performance import OptimizationPerformanceMetrics

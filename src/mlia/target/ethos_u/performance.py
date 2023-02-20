@@ -15,9 +15,9 @@ from mlia.backend.corstone import is_corstone_backend
 from mlia.backend.corstone.performance import estimate_performance
 from mlia.core.context import Context
 from mlia.core.performance import PerformanceEstimator
+from mlia.nn.select import OptimizationSettings
 from mlia.nn.tensorflow.config import get_tflite_model
 from mlia.nn.tensorflow.config import ModelConfiguration
-from mlia.nn.tensorflow.optimizations.select import OptimizationSettings
 from mlia.target.ethos_u.config import EthosUConfiguration
 from mlia.target.registry import supported_backends
 from mlia.utils.logging import log_action

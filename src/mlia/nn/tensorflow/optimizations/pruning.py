@@ -24,8 +24,8 @@ from tensorflow_model_optimization.python.core.sparsity.keras import (  # pylint
     pruning_wrapper,
 )
 
-from mlia.nn.tensorflow.optimizations.common import Optimizer
-from mlia.nn.tensorflow.optimizations.common import OptimizerConfiguration
+from mlia.nn.common import Optimizer
+from mlia.nn.common import OptimizerConfiguration
 
 logger = logging.getLogger(__name__)
 

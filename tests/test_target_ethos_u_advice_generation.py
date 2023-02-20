@@ -12,7 +12,7 @@ from mlia.core.common import DataItem
 from mlia.core.context import ExecutionContext
 from mlia.core.helpers import ActionResolver
 from mlia.core.helpers import APIActionResolver
-from mlia.nn.tensorflow.optimizations.select import OptimizationSettings
+from mlia.nn.select import OptimizationSettings
 from mlia.target.ethos_u.advice_generation import EthosUAdviceProducer
 from mlia.target.ethos_u.advice_generation import EthosUStaticAdviceProducer
 from mlia.target.ethos_u.data_analysis import AllOperatorsSupportedOnNPU

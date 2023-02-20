@@ -10,7 +10,7 @@ from mlia.backend.vela.compat import Operators
 from mlia.core.context import Context
 from mlia.core.data_collection import DataCollector
 from mlia.core.errors import FunctionalityNotSupportedError
-from mlia.nn.tensorflow.optimizations.select import OptimizationSettings
+from mlia.nn.select import OptimizationSettings
 from mlia.target.ethos_u.config import EthosUConfiguration
 from mlia.target.ethos_u.data_collection import EthosUOperatorCompatibility
 from mlia.target.ethos_u.data_collection import EthosUOptimizationPerformance

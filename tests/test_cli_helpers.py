@@ -10,7 +10,7 @@ import pytest
 
 from mlia.cli.helpers import CLIActionResolver
 from mlia.cli.helpers import copy_profile_file_to_output_dir
-from mlia.nn.tensorflow.optimizations.select import OptimizationSettings
+from mlia.nn.select import OptimizationSettings
 
 
 class TestCliActionResolver:

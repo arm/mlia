@@ -12,7 +12,7 @@ from mlia.backend.vela.compat import Operator
 from mlia.backend.vela.compat import Operators
 from mlia.core.common import DataItem
 from mlia.core.data_analysis import Fact
-from mlia.nn.tensorflow.optimizations.select import OptimizationSettings
+from mlia.nn.select import OptimizationSettings
 from mlia.nn.tensorflow.tflite_compat import TFLiteCompatibilityInfo
 from mlia.nn.tensorflow.tflite_compat import TFLiteCompatibilityStatus
 from mlia.nn.tensorflow.tflite_compat import TFLiteConversionError

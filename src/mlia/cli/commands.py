@@ -96,7 +96,7 @@ def check(
     )
 
 
-def optimize(  # pylint: disable=too-many-arguments
+def optimize(  # pylint: disable=too-many-locals,too-many-arguments
     ctx: ExecutionContext,
     target_profile: str,
     model: str,
@@ -104,8 +104,13 @@ def optimize(  # pylint: disable=too-many-arguments
     clustering: bool,
     pruning_target: float | None,
     clustering_target: int | None,
+    rewrite: bool | None = None,
+    rewrite_target: str | None = None,
+    rewrite_start: str | None = None,
+    rewrite_end: str | None = None,
     layers_to_optimize: list[str] | None = None,
     backend: list[str] | None = None,
+    dataset: Path | None = None,
 ) -> None:
     """Show the performance improvements (if any) after applying the optimizations.
 
@@ -145,7 +150,12 @@ def optimize(  # pylint: disable=too-many-arguments
             clustering,
             pruning_target,
             clustering_target,
+            rewrite,
+            rewrite_target,
+            rewrite_start,
+            rewrite_end,
             layers_to_optimize,
+            dataset,
         )
     )
 
