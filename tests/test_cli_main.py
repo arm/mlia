@@ -273,7 +273,7 @@ def test_passing_output_directory_parameter(
     main(["sample_command", "--output-dir", output_dir.as_posix()])
 
     assert passed_context is not None
-    assert passed_context.output_dir == output_dir
+    assert passed_context.output_dir == output_dir / "mlia-output"
 
 
 @pytest.mark.parametrize(

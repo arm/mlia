@@ -12,18 +12,20 @@ from __future__ import annotations
 import logging
 from abc import ABC
 from abc import abstractmethod
-from datetime import datetime
 from pathlib import Path
 from typing import Any
 from typing import Mapping
 
 from mlia.core.common import AdviceCategory
+from mlia.core.errors import ConfigurationError
 from mlia.core.events import DefaultEventPublisher
 from mlia.core.events import EventHandler
 from mlia.core.events import EventPublisher
 from mlia.core.helpers import ActionResolver
 from mlia.core.helpers import APIActionResolver
 from mlia.core.typing import OutputFormat
+from mlia.utils.filesystem import recreate_directory
+from mlia.utils.filesystem import USER_ONLY_PERM_MASK
 
 logger = logging.getLogger(__name__)
 
@@ -95,18 +97,6 @@ class Context(ABC):
     def register_event_handlers(self) -> None:
         """Register event handlers."""
         self.event_publisher.register_event_handlers(self.event_handlers)
-
-
-def create_output_dir_with_timestamp() -> Path:
-    """Generate output directory for the MLIA."""
-    base_dir = Path.cwd() / "mlia-output"
-    base_dir.mkdir(exist_ok=True)
-
-    timestamp = datetime.now().isoformat().replace(":", "")
-    output_dir = base_dir / f"mlia-output-{timestamp}"
-    output_dir.mkdir()
-
-    return output_dir
 
 
 class ExecutionContext(Context):
@@ -250,10 +240,18 @@ class ExecutionContext(Context):
 
     def _init_output_directory(self, output_dir: str | Path | None) -> None:
         """Init output directory for the execution."""
-        if output_dir:
-            output_dir_path = Path(output_dir)
-            output_dir_path.mkdir(exist_ok=True)
-        else:
-            output_dir_path = create_output_dir_with_timestamp()
+        try:
+            if output_dir:
+                output_dir_location = Path(output_dir)
+                output_dir_location.mkdir(exist_ok=True, mode=USER_ONLY_PERM_MASK)
+            else:
+                output_dir_location = Path.cwd()
 
-        self._output_dir_path = output_dir_path
+            output_dir_path = output_dir_location / "mlia-output"
+            recreate_directory(output_dir_path)
+
+            self._output_dir_path = output_dir_path
+        except OSError as err:
+            raise ConfigurationError(
+                f"Unable to create output directory: {err}."
+            ) from err

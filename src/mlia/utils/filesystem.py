@@ -14,6 +14,8 @@ from tempfile import TemporaryDirectory
 from typing import Generator
 from typing import Iterable
 
+USER_ONLY_PERM_MASK = 0o700
+
 
 def get_mlia_resources() -> Path:
     """Get the path to the resources directory."""
@@ -94,6 +96,17 @@ def copy_all(*paths: Path, dest: Path) -> None:
 
         if path.is_dir():
             shutil.copytree(path, dest, dirs_exist_ok=True)
+
+
+def recreate_directory(dir_path: Path, mode: int = USER_ONLY_PERM_MASK) -> None:
+    """Recreate directory."""
+    if dir_path.exists():
+        if not dir_path.is_dir():
+            raise ValueError(f"Path {dir_path} is not a directory.")
+
+        shutil.rmtree(dir_path)
+
+    dir_path.mkdir(exist_ok=True, mode=mode)
 
 
 @contextmanager

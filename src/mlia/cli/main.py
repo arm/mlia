@@ -160,12 +160,16 @@ def setup_context(
     args: argparse.Namespace, context_var_name: str = "ctx"
 ) -> tuple[ExecutionContext, dict]:
     """Set up context and resolve function parameters."""
-    ctx = ExecutionContext(
-        verbose="debug" in args and args.debug,
-        action_resolver=CLIActionResolver(vars(args)),
-        output_format=get_output_format(args),
-        output_dir=args.output_dir if "output_dir" in args else None,
-    )
+    try:
+        ctx = ExecutionContext(
+            verbose="debug" in args and args.debug,
+            action_resolver=CLIActionResolver(vars(args)),
+            output_format=get_output_format(args),
+            output_dir=args.output_dir if "output_dir" in args else None,
+        )
+    except Exception as err:  # pylint: disable=broad-except
+        print(f"Error: {err}", file=sys.stderr)
+        sys.exit(1)
 
     setup_logging(ctx.logs_path, ctx.verbose, ctx.output_format)
 

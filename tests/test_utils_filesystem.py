@@ -12,10 +12,13 @@ from mlia.utils.filesystem import copy_all
 from mlia.utils.filesystem import get_mlia_resources
 from mlia.utils.filesystem import get_mlia_target_profiles_dir
 from mlia.utils.filesystem import get_vela_config
+from mlia.utils.filesystem import recreate_directory
 from mlia.utils.filesystem import sha256
 from mlia.utils.filesystem import temp_directory
 from mlia.utils.filesystem import temp_file
+from mlia.utils.filesystem import USER_ONLY_PERM_MASK
 from mlia.utils.filesystem import working_directory
+from tests.utils.common import check_expected_permissions
 
 
 def test_get_mlia_resources() -> None:
@@ -135,3 +138,38 @@ def test_working_directory_context_manager(
         assert Path.cwd() == current_working_dir
 
     assert Path.cwd() == prev_wd
+
+
+def test_recreate_directory(tmp_path: Path) -> None:
+    """Test function recreate_directory."""
+    sample_dir = tmp_path / "sample"
+    sample_dir.mkdir()
+
+    test_dir1 = sample_dir / "test_dir1"
+    test_dir1.mkdir()
+
+    test_file1 = test_dir1 / "sample_file1.txt"
+    test_file1.touch()
+
+    test_dir2 = sample_dir / "test_dir2"
+    recreate_directory(test_dir2)
+
+    assert test_dir1.is_dir()
+    assert test_file1.is_file()
+    assert test_dir2.is_dir()
+    check_expected_permissions(test_dir2, USER_ONLY_PERM_MASK)
+
+    recreate_directory(test_dir1)
+    assert test_dir2.is_dir()
+    assert not test_file1.exists()
+    assert test_dir1.is_dir()
+    check_expected_permissions(test_dir1, USER_ONLY_PERM_MASK)
+
+
+def test_recreate_directory_wrong_path(tmp_path: Path) -> None:
+    """Test that function should fail if provided path is not a directory."""
+    sample_file = tmp_path / "sample_file.txt"
+    sample_file.touch()
+
+    with pytest.raises(ValueError, match=rf"Path {sample_file} is not a directory."):
+        recreate_directory(sample_file)
