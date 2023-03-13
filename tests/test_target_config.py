@@ -30,6 +30,7 @@ def test_builtin_supported_profile_names() -> None:
         "ethos-u55-256",
         "ethos-u65-256",
         "ethos-u65-512",
+        "hydra",
         "tosa",
     ]
     for profile_name in BUILTIN_SUPPORTED_PROFILE_NAMES:
@@ -112,7 +113,7 @@ def test_target_info(
             [AdviceCategory.COMPATIBILITY],
             [System.CURRENT],
             BackendType.BUILTIN,
-            None,
+            installation=None,
         ),
     )
     monkeypatch.setattr("mlia.target.config.backend_registry", backend_registry)

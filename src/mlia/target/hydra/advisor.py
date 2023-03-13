@@ -1,0 +1,106 @@
+# SPDX-FileCopyrightText: Copyright 2023, Arm Limited and/or its affiliates.
+# SPDX-License-Identifier: LicenseRef-LICENSE
+"""Hydra advisor module."""
+from __future__ import annotations
+
+from pathlib import Path
+from typing import Any
+
+from mlia.core.advice_generation import AdviceProducer
+from mlia.core.advisor import DefaultInferenceAdvisor
+from mlia.core.advisor import InferenceAdvisor
+from mlia.core.common import AdviceCategory
+from mlia.core.context import Context
+from mlia.core.context import ExecutionContext
+from mlia.core.data_analysis import DataAnalyzer
+from mlia.core.data_collection import DataCollector
+from mlia.core.events import Event
+from mlia.target.hydra.advice_generation import HydraAdviceProducer
+from mlia.target.hydra.config import HydraConfiguration
+from mlia.target.hydra.data_analysis import HydraDataAnalyzer
+from mlia.target.hydra.data_collection import HydraPerformance
+from mlia.target.hydra.events import HydraAdvisorStartedEvent
+from mlia.target.hydra.handlers import HydraEventHandler
+
+
+class HydraInferenceAdvisor(DefaultInferenceAdvisor):
+    """Hydra Inference Advisor."""
+
+    @classmethod
+    def name(cls) -> str:
+        """Return name of the advisor."""
+        return "hydra_inference_advisor"
+
+    def get_collectors(self, context: Context) -> list[DataCollector]:
+        """Return list of the data collectors."""
+        model = self.get_model(context)
+        target_cfg = self._get_target_cfg(context)
+
+        collectors: list[DataCollector] = []
+
+        if context.category_enabled(AdviceCategory.PERFORMANCE):
+            collectors.append(HydraPerformance(model, target_cfg))
+        if context.any_category_enabled(
+            AdviceCategory.COMPATIBILITY, AdviceCategory.OPTIMIZATION
+        ):
+            raise ValueError(
+                "Only advice category 'PERFORMANCE' is currently supported by Hydra."
+            )
+
+        return collectors
+
+    def get_analyzers(self, context: Context) -> list[DataAnalyzer]:
+        """Return list of the data analyzers."""
+        return [
+            HydraDataAnalyzer(),
+        ]
+
+    def get_producers(self, context: Context) -> list[AdviceProducer]:
+        """Return list of the advice producers."""
+        return [HydraAdviceProducer()]
+
+    def get_events(self, context: Context) -> list[Event]:
+        """Return list of the startup events."""
+        model = self.get_model(context)
+        target_profile = self.get_target_profile(context)
+
+        return [
+            HydraAdvisorStartedEvent(
+                model, HydraConfiguration.load_profile(target_profile)
+            ),
+        ]
+
+    def _get_target_cfg(self, context: Context) -> HydraConfiguration:
+        """Get target configuration."""
+        target_profile = self.get_target_profile(context)
+        return HydraConfiguration.load_profile(target_profile)
+
+
+def configure_and_get_hydra_advisor(
+    context: ExecutionContext,
+    target_profile: str | Path,
+    model: str | Path,
+    **_extra_args: Any,
+) -> InferenceAdvisor:
+    """Create and configure Hydra advisor."""
+    if context.event_handlers is None:
+        context.event_handlers = [HydraEventHandler()]
+
+    if context.config_parameters is None:
+        context.config_parameters = _get_config_parameters(model, target_profile)
+
+    return HydraInferenceAdvisor()
+
+
+def _get_config_parameters(
+    model: str | Path, target_profile: str | Path
+) -> dict[str, Any]:
+    """Get configuration parameters for the advisor."""
+    advisor_parameters: dict[str, Any] = {
+        "hydra_inference_advisor": {
+            "model": str(model),
+            "target_profile": target_profile,
+        },
+    }
+
+    return advisor_parameters

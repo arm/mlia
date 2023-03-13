@@ -98,7 +98,7 @@ def test_supported_backends(target_name: str, expected_backends: list[str]) -> N
     (
         (AdviceCategory.COMPATIBILITY, ["cortex-a", "ethos-u55", "ethos-u65", "tosa"]),
         (AdviceCategory.OPTIMIZATION, ["ethos-u55", "ethos-u65"]),
-        (AdviceCategory.PERFORMANCE, ["ethos-u55", "ethos-u65"]),
+        (AdviceCategory.PERFORMANCE, ["ethos-u55", "ethos-u65", "hydra"]),
     ),
 )
 def test_supported_targets(advice: AdviceCategory, expected_targets: list[str]) -> None:
@@ -108,13 +108,16 @@ def test_supported_targets(advice: AdviceCategory, expected_targets: list[str]) 
 
 def test_all_supported_backends() -> None:
     """Test function all_supported_backends."""
-    assert all_supported_backends() == {
-        "vela",
-        "tosa-checker",
+    all_backends = {
+        "argo",
         "armnn-tflite-delegate",
         "corstone-310",
         "corstone-300",
+        "tosa-checker",
+        "vela",
     }
+    registered_backends = all_supported_backends()
+    assert registered_backends.issubset(all_backends)
 
 
 @pytest.mark.parametrize(

@@ -23,7 +23,7 @@ def test_backend_config() -> None:
         [AdviceCategory.COMPATIBILITY],
         [System.CURRENT],
         BackendType.CUSTOM,
-        None,
+        installation=None,
     )
     assert cfg.supported_advice == [AdviceCategory.COMPATIBILITY]
     assert cfg.supported_systems == [System.CURRENT]

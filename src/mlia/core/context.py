@@ -92,7 +92,7 @@ class Context(ABC):
 
     def any_category_enabled(self, *categories: AdviceCategory) -> bool:
         """Return true if any category is enabled."""
-        return all(category in self.advice_category for category in categories)
+        return any(category in self.advice_category for category in categories)
 
     def register_event_handlers(self) -> None:
         """Register event handlers."""
