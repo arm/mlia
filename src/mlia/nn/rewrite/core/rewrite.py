@@ -42,4 +42,5 @@ class Rewriter(Optimizer):
         return self.model
 
     def optimization_config(self) -> str:
-        """Optimization configirations."""
+        """Optimization configurations."""
+        return str(self.optimizer_configuration)

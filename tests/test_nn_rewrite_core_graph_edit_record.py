@@ -7,7 +7,7 @@ import pytest
 import tensorflow as tf
 
 from mlia.nn.rewrite.core.graph_edit.record import record_model
-from mlia.nn.rewrite.core.utils.numpy_tfrecord import NumpyTFReader
+from mlia.nn.rewrite.core.utils.numpy_tfrecord import numpytf_read
 
 
 @pytest.mark.parametrize("batch_size", (None, 1, 2))
@@ -46,7 +46,7 @@ def test_record_model(
     # any of the model outputs
     interpreter = tf.lite.Interpreter(str(test_tflite_model))
     model_outputs = interpreter.get_output_details()
-    dataset = NumpyTFReader(str(output_file))
+    dataset = numpytf_read(str(output_file))
     for data in dataset:
         for name, tensor in data.items():
             assert data_matches_outputs(name, tensor, model_outputs)

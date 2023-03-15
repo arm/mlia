@@ -13,11 +13,11 @@ def test_cut_model(test_tflite_model: Path, tmp_path: Path) -> None:
     """Test the function cut_model()."""
     output_file = tmp_path / "out.tflite"
     cut_model(
-        model_file=test_tflite_model,
+        model_file=str(test_tflite_model),
         input_names=["serving_default_input:0"],
         output_names=["sequential/flatten/Reshape"],
         subgraph_index=0,
-        output_file=output_file,
+        output_file=str(output_file),
     )
     assert output_file.is_file()
 
