@@ -76,6 +76,11 @@ class Context(ABC):
     def output_format(self) -> OutputFormat:
         """Return the output format."""
 
+    @property
+    @abstractmethod
+    def output_dir(self) -> Path:
+        """Return the path to the output directory."""
+
     @abstractmethod
     def update(
         self,

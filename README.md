@@ -1,6 +1,7 @@
 <!---
 SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
 SPDX-License-Identifier: Apache-2.0
+SPDX-License-Identifier: LicenseRef-LICENSE
 --->
 # ML Inference Advisor - Introduction
 
@@ -443,6 +444,11 @@ operators for Cortex-A CPUs when using the Arm NN TensorFlow Lite Delegate.
 Please, find more details in the section for the
 [corresponding backend](#arm-nn-tensorflow-lite-delegate).
 
+## Hydra
+
+The profile *hydra* can be used for performance analysis of your model on Hydra.
+It requires the [Argo](#argo) backend.
+
 ## TOSA
 
 The target profile *tosa* can be used for TOSA compatibility checks of your
@@ -521,6 +527,41 @@ the following table shows some compatibility information:
 +-----------------------------------------------------------------------------
 | Vela          | x86_64 and  AArch64    | Windows 10     | Python~=3.7      |
 +----------------------------------------------------------------------------+
+```
+
+### Argo
+
+Argo provides detailed performance information about the input model (in
+TensorFlow Lite format).
+
+Argo is used from the docker image 'argo-app'. It can either be
+
+* pulled from the internal docker registry or
+* built locally from the Argo source (see docs there).
+
+To pull Argo from the internal docker registry use the following steps:
+
+1. You have to provide your credentials as env vars. This means  \
+  1.1 Go to
+  [Artifactory](https://artifactory.eu02.arm.com/ui/repos/tree/General)  \
+  1.2 Login via Azure (SSO)  \
+  1.3 Go to *"Edit profile"*  \
+  1.4 Create an API Key or copy an existing one  \
+  1.5 Assign the API Key to the env var MLIA_BACKEND_PASSWORD  \
+  1.6 Assign your email address to MLIA_BACKEND_USERNAME  \
+
+1. Run this command: `mlia-backend install argo`
+
+After the installation was successful you can get a performance report using
+Argo as shown in the following example.
+
+*Examples:*
+
+```bash
+# Download and install Argo (requires credentials to be set as described above)
+mlia-backend install argo
+# Get a performance report for the Hydra target using Argo.
+mlia check --performance -t hydra ~/model_file.tflite
 ```
 
 ### Arm NN TensorFlow Lite Delegate

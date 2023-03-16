@@ -12,6 +12,8 @@ from mlia.backend.install import DownloadAndInstall
 from mlia.backend.install import Installation
 from mlia.backend.install import InstallationType
 
+DOCKER_IMAGE_NAME = "argo-app"
+
 
 class DockerInstallation(Installation):
     """Define installation process for docker images."""
@@ -146,6 +148,6 @@ def get_argo_installation() -> Installation:
     return DockerInstallation(
         name="argo",
         description="Argo performance backend",
-        image_name="argo-app",
+        image_name=DOCKER_IMAGE_NAME,
         registry="ml-tooling--docker-local.artifactory.geo.arm.com",
     )

@@ -9,15 +9,15 @@ import pytest
 
 from mlia.target.hydra.config import HydraConfiguration
 from mlia.target.hydra.data_analysis import HydraDataAnalyzer
-from mlia.target.hydra.performance import ArgoStats
+from mlia.target.hydra.performance import HydraPerformanceMetrics
 
 
 def test_hydra_data_analyzer() -> None:
     """Test Hydra data analyzer."""
     analyzer = HydraDataAnalyzer()
-    argo_stats = ArgoStats(
-        device=HydraConfiguration(target="Hydra"),
+    metrics = HydraPerformanceMetrics(
+        target_config=HydraConfiguration(target="hydra"),
         metrics_file=Path("DOES_NOT_EXIST"),
     )
     with pytest.raises(NotImplementedError):
-        analyzer.analyze_data(argo_stats)
+        analyzer.analyze_data(metrics)

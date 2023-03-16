@@ -9,7 +9,7 @@ from functools import singledispatchmethod
 from mlia.core.common import DataItem
 from mlia.core.data_analysis import Fact
 from mlia.core.data_analysis import FactExtractor
-from mlia.target.hydra.performance import ArgoStats
+from mlia.target.hydra.performance import HydraPerformanceMetrics
 
 
 class HydraDataAnalyzer(FactExtractor):
@@ -20,7 +20,7 @@ class HydraDataAnalyzer(FactExtractor):
         """Analyse the data."""
 
     @analyze_data.register
-    def analyze_performance(self, data_item: ArgoStats) -> None:
+    def analyze_performance(self, data_item: HydraPerformanceMetrics) -> None:
         """Analyse operator compatibility information."""
         self.add_fact(ModelPerformanceAnalysed({}))
         raise NotImplementedError(f"TODO: Implement data analysis for: {data_item=}")

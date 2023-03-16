@@ -10,6 +10,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from mlia.backend.argo.install import DOCKER_IMAGE_NAME
 from mlia.backend.argo.install import DockerInstallation
 from mlia.backend.argo.install import get_argo_installation
 from mlia.backend.install import DownloadAndInstall
@@ -176,4 +177,4 @@ def test_get_argo_installation() -> None:
     """Test function get_argo_installation()."""
     installation = cast(DockerInstallation, get_argo_installation())
     assert installation.name == "argo"
-    assert installation.image_name == "argo-app"
+    assert installation.image_name == DOCKER_IMAGE_NAME

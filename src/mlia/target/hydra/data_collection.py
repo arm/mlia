@@ -10,8 +10,8 @@ from mlia.core.data_collection import ContextAwareDataCollector
 from mlia.core.errors import ConfigurationError
 from mlia.nn.tensorflow.utils import is_tflite_model
 from mlia.target.hydra.config import HydraConfiguration
-from mlia.target.hydra.performance import ArgoStats
 from mlia.target.hydra.performance import HydraPerformanceEstimator
+from mlia.target.hydra.performance import HydraPerformanceMetrics
 from mlia.utils.logging import log_action
 
 
@@ -26,18 +26,16 @@ class HydraPerformance(ContextAwareDataCollector):
         self.model = model
         self.cfg = cfg
 
-    def collect_data(self) -> ArgoStats:
+    def collect_data(self) -> HydraPerformanceMetrics:
         """Collect operator compatibility information."""
         if not is_tflite_model(self.model):
             raise ConfigurationError("Input must be a tflite file.")
 
         with log_action("Checking performance..."):
             estimator = HydraPerformanceEstimator(self.context, self.cfg)
-            argo_stats = (  # pylint: disable=assignment-from-no-return
-                estimator.estimate(self.model)
-            )
+            metrics = estimator.estimate(self.model)
 
-        return argo_stats
+        return metrics
 
     @classmethod
     def name(cls) -> str:

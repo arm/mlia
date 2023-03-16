@@ -2,3 +2,6 @@
 # SPDX-License-Identifier: LicenseRef-LICENSE
 
 target="hydra"
+
+[backend.argo]
+num_npu_cores=1

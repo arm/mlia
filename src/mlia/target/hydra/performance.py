@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Union
 
+from mlia.backend.argo.performance import estimate_performance
 from mlia.core.context import Context
 from mlia.core.performance import PerformanceEstimator
 from mlia.nn.tensorflow.config import ModelConfiguration
@@ -18,33 +19,36 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass
-class ArgoStats:
-    """Argo stats, including performance metrics."""
+class HydraPerformanceMetrics:
+    """Collection of Hydra configuration and performance metrics."""
 
-    device: HydraConfiguration
+    target_config: HydraConfiguration
     metrics_file: Path
 
 
 class HydraPerformanceEstimator(
-    PerformanceEstimator[Union[Path, ModelConfiguration], ArgoStats]
+    PerformanceEstimator[Union[Path, ModelConfiguration], HydraPerformanceMetrics]
 ):
-    """Argo-based performance estimator."""
+    """Performance estimator for Hydra."""
 
-    def __init__(self, context: Context, device: HydraConfiguration) -> None:
+    def __init__(self, context: Context, target_config: HydraConfiguration) -> None:
         """Init performance estimator."""
         self.context = context
-        self.device = device
+        self.target_config = target_config
+        self.output_dir = context.output_dir
 
-    def estimate(self, model: Path | ModelConfiguration) -> ArgoStats:
+    def estimate(self, model: Path | ModelConfiguration) -> HydraPerformanceMetrics:
         """Estimate performance."""
-        with log_action("Getting the Argo performance data..."):
+        with log_action("Getting the performance data..."):
             model_path = (
                 Path(model.model_path)
                 if isinstance(model, ModelConfiguration)
                 else model
             )
-            raise NotImplementedError(
-                f"TODO: Implement Argo performance estimation using {model_path}!"
+
+            metrics_file = estimate_performance(
+                model_path,
+                self.context.output_dir,
+                self.target_config.backend_config,
             )
-            # argo_stats_file = argo_perf.estimate_performance(model_path, ArgoConfig())
-            # return ArgoStats(self.device, argo_stats_file)
+            return HydraPerformanceMetrics(self.target_config, metrics_file)

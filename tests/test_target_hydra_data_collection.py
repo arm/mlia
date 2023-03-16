@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: LicenseRef-LICENSE
 """Tests for Hydra data collection module."""
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -12,18 +13,26 @@ from mlia.target.hydra.data_collection import HydraPerformance
 
 
 def test_hydra_data_collection(
+    monkeypatch: pytest.MonkeyPatch,
     test_tflite_model: Path,
     test_keras_model: Path,
 ) -> None:
     """Test Hydra data collection."""
+    test_metrics_file = Path("DOES_NOT_EXIST")
+    monkeypatch.setattr(
+        "mlia.target.hydra.performance.estimate_performance",
+        MagicMock(return_value=test_metrics_file),
+    )
+
     perf = HydraPerformance(
         model=test_tflite_model, cfg=HydraConfiguration(target="hydra")
     )
     perf.set_context(ExecutionContext(advice_category={AdviceCategory.PERFORMANCE}))
     assert perf.name() == "hydra_performance"
 
-    with pytest.raises(NotImplementedError):
-        perf.collect_data()
+    metrics = perf.collect_data()
+    assert metrics.metrics_file == test_metrics_file
+    assert metrics.target_config.target == "hydra"
 
     perf.model = test_keras_model
     with pytest.raises(Exception):

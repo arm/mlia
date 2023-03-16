@@ -21,3 +21,18 @@ class ArgoConfig:  # pylint: disable=too-many-instance-attributes
     l1_cache_size_kb: int | None = None
     l2_cache_size_kb: int | None = None
     system_sram_size_kb: int | None = None
+
+
+CONFIG_TO_CLI_OPTION = {
+    "accelerator_config": "--accelerator-config",
+    "system_config": "--system-config",
+    "npu_clock_mhz": "--npu-clock",
+    "num_npu_cores": "--n-npu-cores",
+    "num_active_npu_cores": "--n-active-npu-cores",
+    "num_cpu_cores": "--n-cpu-cores",
+    "dram_bandwidth_gb_per_sec": "--dram-bandwidth",
+    "gsb_size_kb": "--gsb-size",
+    "l1_cache_size_kb": "--l1-cache-size",
+    "l2_cache_size_kb": "--l2-cache-size",
+    "system_sram_size_kb": "--system-sram-size",
+}
