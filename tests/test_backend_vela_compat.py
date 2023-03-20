@@ -12,13 +12,14 @@ from mlia.backend.vela.compat import Operators
 from mlia.backend.vela.compat import supported_operators
 from mlia.target.ethos_u.config import EthosUConfiguration
 from mlia.utils.filesystem import working_directory
+from tests.conftest import TEST_MODEL_TFLITE_INT8_FILE
 
 
 @pytest.mark.parametrize(
     "model, expected_ops",
     [
         (
-            "test_model.tflite",
+            TEST_MODEL_TFLITE_INT8_FILE,
             Operators(
                 ops=[
                     Operator(

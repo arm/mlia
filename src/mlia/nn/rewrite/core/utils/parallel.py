@@ -3,10 +3,10 @@
 import math
 import os
 from collections import defaultdict
+from multiprocessing import cpu_count
 from multiprocessing import Pool
 
 import numpy as np
-from psutil import cpu_count
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 import tensorflow as tf
@@ -25,7 +25,7 @@ class ParallelTFLiteModel(TFLiteModel):
         self.pool = None
         self.filename = filename
         if not num_procs:
-            self.num_procs = cpu_count(logical=False)
+            self.num_procs = cpu_count()
         else:
             self.num_procs = int(num_procs)
 

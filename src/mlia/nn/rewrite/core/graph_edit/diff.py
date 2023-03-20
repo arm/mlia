@@ -13,36 +13,6 @@ from tensorflow.lite.python import interpreter as interpreter_wrapper
 from mlia.nn.rewrite.core.utils.numpy_tfrecord import NumpyTFReader, NumpyTFWriter
 
 
-def diff(file1, file2):
-    results = []
-
-    dataset1 = NumpyTFReader(file1)
-    dataset2 = NumpyTFReader(file2)
-
-    for i, (x1, x2) in enumerate(zip(dataset1, dataset2)):
-        assert x1.keys() == x2.keys(), (
-            "At input %d the files have different sets of tensors.\n%s: %s\n%s: %s\n"
-            % (
-                i,
-                file1,
-                ", ".join(x1.keys()),
-                file2,
-                ", ".join(x2.keys()),
-            )
-        )
-        results.append({})
-        for k in x1.keys():
-            v1 = x1[k].numpy().astype(np.double)
-            v2 = x2[k].numpy().astype(np.double)
-            mae = abs(v1 - v2).mean()
-            results[-1][k] = mae
-
-    total = sum(sum(x.values()) for x in results)
-    count = sum(len(x.values()) for x in results)
-    mean = total / count
-    return results, mean
-
-
 def diff_stats(file1, file2, per_tensor_and_channel=False):
     dataset1 = NumpyTFReader(file1)
     dataset2 = NumpyTFReader(file2)

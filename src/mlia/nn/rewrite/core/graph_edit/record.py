@@ -37,7 +37,6 @@ def record_model(
 
     total = numpytf_count(input_filename)
     dataset = NumpyTFReader(input_filename)
-    writer = NumpyTFWriter(output_filename)
 
     if batch_size > 1:
         # Collapse batch-size 1 items into batch-size n. I regret using batch-size 1 items in tfrecs now.
@@ -47,16 +46,22 @@ def record_model(
         dataset = dataset.batch(batch_size, drop_remainder=False)
         total = int(math.ceil(total / batch_size))
 
-    for j, named_x in enumerate(
-        tqdm(dataset.as_numpy_iterator(), total=total, disable=not show_progress)
-    ):
-        named_y = model(named_x)
-        if batch_size > 1:
-            for i in range(batch_size):
-                # Expand the batches and recreate each dict as a batch-size 1 item for the tfrec output
-                d = {k: v[i : i + 1] for k, v in named_y.items() if i < v.shape[0]}
-                if d:
-                    writer.write(d)
-        else:
-            writer.write(named_y)
-    model.close()
+    with NumpyTFWriter(output_filename) as writer:
+        for _, named_x in enumerate(
+            tqdm(dataset.as_numpy_iterator(), total=total, disable=not show_progress)
+        ):
+            named_y = model(named_x)
+            if batch_size > 1:
+                for i in range(batch_size):
+                    # Expand the batches and recreate each dict as a
+                    # batch-size 1 item for the tfrec output
+                    recreated_dict = {
+                        k: v[i : i + 1]  # noqa: E203
+                        for k, v in named_y.items()
+                        if i < v.shape[0]
+                    }
+                    if recreated_dict:
+                        writer.write(recreated_dict)
+            else:
+                writer.write(named_y)
+        model.close()

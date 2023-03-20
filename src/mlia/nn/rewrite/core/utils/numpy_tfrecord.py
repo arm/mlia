@@ -63,9 +63,6 @@ class NumpyTFWriter:
     def __exit__(self, type, value, traceback):
         self.close()
 
-    def __del__(self):
-        self.close()
-
     def write(self, array_dict):
         type_map = {n: str(a.dtype.name) for n, a in array_dict.items()}
         self.type_map.update(type_map)

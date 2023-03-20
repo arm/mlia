@@ -8,7 +8,7 @@ from tensorflow.lite.python import schema_py_generated as schema_fb
 
 def load(input_tflite_file):
     if not os.path.exists(input_tflite_file):
-        raise RuntimeError("TFLite file not found at %r\n" % input_tflite_file)
+        raise FileNotFoundError("TFLite file not found at %r\n" % input_tflite_file)
     with open(input_tflite_file, "rb") as file_handle:
         file_data = bytearray(file_handle.read())
     model_obj = schema_fb.Model.GetRootAsModel(file_data, 0)
