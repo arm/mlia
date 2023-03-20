@@ -12,6 +12,10 @@ from mlia.core.advice_generation import FactBasedAdviceProducer
 from mlia.core.common import AdviceCategory
 from mlia.core.common import DataItem
 from mlia.nn.tensorflow.optimizations.select import OptimizationSettings
+from mlia.target.common.reporters import handle_model_is_not_tflite_compatible_common
+from mlia.target.common.reporters import handle_tflite_check_failed_common
+from mlia.target.common.reporters import ModelIsNotTFLiteCompatible
+from mlia.target.common.reporters import TFLiteCompatibilityCheckFailed
 from mlia.target.ethos_u.data_analysis import AllOperatorsSupportedOnNPU
 from mlia.target.ethos_u.data_analysis import HasCPUOnlyOperators
 from mlia.target.ethos_u.data_analysis import HasUnsupportedOnNPUOperators
@@ -146,6 +150,22 @@ class EthosUAdviceProducer(FactBasedAdviceProducer):
                 "after any optimization."
             ]
         )
+
+    @produce_advice.register
+    @advice_category(AdviceCategory.COMPATIBILITY)
+    def handle_model_is_not_tflite_compatible(
+        self, data_item: ModelIsNotTFLiteCompatible
+    ) -> None:
+        """Advice for TensorFlow Lite compatibility."""
+        handle_model_is_not_tflite_compatible_common(self, data_item)
+
+    @produce_advice.register
+    @advice_category(AdviceCategory.COMPATIBILITY)
+    def handle_tflite_check_failed(
+        self, _data_item: TFLiteCompatibilityCheckFailed
+    ) -> None:
+        """Advice for the failed TensorFlow Lite compatibility checks."""
+        handle_tflite_check_failed_common(self, _data_item)
 
     @staticmethod
     def get_next_optimization_targets(

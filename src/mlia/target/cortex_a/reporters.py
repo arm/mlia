@@ -17,6 +17,7 @@ from mlia.core.reporting import Report
 from mlia.core.reporting import ReportItem
 from mlia.core.reporting import Table
 from mlia.nn.tensorflow.tflite_compat import TFLiteCompatibilityInfo
+from mlia.target.common.reporters import report_tflite_compatiblity
 from mlia.target.cortex_a.config import CortexAConfiguration
 from mlia.target.cortex_a.operators import CortexACompatibilityInfo
 from mlia.utils.console import style_improvement
@@ -31,57 +32,6 @@ def report_target(target_config: CortexAConfiguration) -> Report:
         [
             ReportItem("Target", alias="target", value=target_config.target),
         ],
-    )
-
-
-def report_tflite_compatiblity(compat_info: TFLiteCompatibilityInfo) -> Report:
-    """Generate report for the TensorFlow Lite compatibility information."""
-    if compat_info.conversion_errors:
-        return Table(
-            [
-                Column("#", only_for=["plain_text"]),
-                Column("Operator", alias="operator"),
-                Column(
-                    "Operator location",
-                    alias="operator_location",
-                    fmt=Format(wrap_width=25),
-                ),
-                Column("Error code", alias="error_code"),
-                Column(
-                    "Error message", alias="error_message", fmt=Format(wrap_width=25)
-                ),
-            ],
-            [
-                (
-                    index + 1,
-                    err.operator,
-                    ", ".join(err.location),
-                    err.code.name,
-                    err.message,
-                )
-                for index, err in enumerate(compat_info.conversion_errors)
-            ],
-            name="TensorFlow Lite conversion errors",
-            alias="tensorflow_lite_conversion_errors",
-        )
-
-    return Table(
-        columns=[
-            Column("Reason", alias="reason"),
-            Column(
-                "Exception details",
-                alias="exception_details",
-                fmt=Format(wrap_width=40),
-            ),
-        ],
-        rows=[
-            (
-                "TensorFlow Lite compatibility check failed with exception",
-                str(compat_info.conversion_exception),
-            ),
-        ],
-        name="TensorFlow Lite compatibility errors",
-        alias="tflite_compatibility",
     )
 
 
@@ -132,7 +82,7 @@ def cortex_a_formatters(data: Any) -> Callable[[Any], Report]:
         return report_target
 
     if isinstance(data, TFLiteCompatibilityInfo):
-        return report_tflite_compatiblity
+        return report_tflite_compatiblity  # type: ignore
 
     if isinstance(data, CortexACompatibilityInfo):
         return report_cortex_a_operators

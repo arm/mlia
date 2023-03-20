@@ -9,6 +9,7 @@ import logging
 from mlia.backend.tosa_checker.compat import TOSACompatibilityInfo
 from mlia.core.events import CollectedDataEvent
 from mlia.core.handlers import WorkflowEventsHandler
+from mlia.nn.tensorflow.tflite_compat import TFLiteCompatibilityInfo
 from mlia.target.tosa.events import TOSAAdvisorEventHandler
 from mlia.target.tosa.events import TOSAAdvisorStartedEvent
 from mlia.target.tosa.reporters import tosa_formatters
@@ -33,4 +34,7 @@ class TOSAEventHandler(WorkflowEventsHandler, TOSAAdvisorEventHandler):
         data_item = event.data_item
 
         if isinstance(data_item, TOSACompatibilityInfo):
+            self.reporter.submit(data_item, delay_print=True)
+
+        if isinstance(data_item, TFLiteCompatibilityInfo) and not data_item.compatible:
             self.reporter.submit(data_item, delay_print=True)

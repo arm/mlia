@@ -13,13 +13,13 @@ from mlia.core.common import AdviceCategory
 from mlia.core.common import DataItem
 from mlia.core.context import ExecutionContext
 from mlia.nn.tensorflow.tflite_graph import TFL_ACTIVATION_FUNCTION
+from mlia.target.common.reporters import ModelHasCustomOperators
+from mlia.target.common.reporters import ModelIsNotTFLiteCompatible
+from mlia.target.common.reporters import TFLiteCompatibilityCheckFailed
 from mlia.target.cortex_a.advice_generation import CortexAAdviceProducer
 from mlia.target.cortex_a.config import CortexAConfiguration
-from mlia.target.cortex_a.data_analysis import ModelHasCustomOperators
 from mlia.target.cortex_a.data_analysis import ModelIsCortexACompatible
 from mlia.target.cortex_a.data_analysis import ModelIsNotCortexACompatible
-from mlia.target.cortex_a.data_analysis import ModelIsNotTFLiteCompatible
-from mlia.target.cortex_a.data_analysis import TFLiteCompatibilityCheckFailed
 
 VERSION = CortexAConfiguration.load_profile("cortex-a").armnn_tflite_delegate_version
 BACKEND_INFO = (

@@ -12,6 +12,7 @@ from mlia.core.common import DataItem
 from mlia.core.data_analysis import Fact
 from mlia.core.data_analysis import FactExtractor
 from mlia.nn.tensorflow.tflite_compat import TFLiteCompatibilityInfo
+from mlia.target.common.reporters import analyze_tflite_compatibility_common
 from mlia.target.cortex_a.operators import CortexACompatibilityInfo
 
 
@@ -64,22 +65,7 @@ class CortexADataAnalyzer(FactExtractor):
     @analyze_data.register
     def analyze_tflite_compatibility(self, data_item: TFLiteCompatibilityInfo) -> None:
         """Analyze TensorFlow Lite compatibility information."""
-        if data_item.compatible:
-            return
-
-        if data_item.conversion_failed_with_errors:
-            self.add_fact(
-                ModelIsNotTFLiteCompatible(
-                    custom_ops=data_item.required_custom_ops,
-                    flex_ops=data_item.required_flex_ops,
-                )
-            )
-
-        if data_item.check_failed_with_unknown_error:
-            self.add_fact(TFLiteCompatibilityCheckFailed())
-
-        if data_item.conversion_failed_for_model_with_custom_ops:
-            self.add_fact(ModelHasCustomOperators())
+        analyze_tflite_compatibility_common(self, data_item)
 
 
 @dataclass
@@ -107,21 +93,3 @@ class ModelIsNotCortexACompatible(CortexACompatibility):
 
     unsupported_ops: set[str]
     activation_func_support: dict[str, ActivationFunctionSupport]
-
-
-@dataclass
-class ModelIsNotTFLiteCompatible(Fact):
-    """Model could not be converted into TensorFlow Lite format."""
-
-    custom_ops: list[str] | None = None
-    flex_ops: list[str] | None = None
-
-
-@dataclass
-class TFLiteCompatibilityCheckFailed(Fact):
-    """TensorFlow Lite compatibility check failed by unknown reason."""
-
-
-@dataclass
-class ModelHasCustomOperators(Fact):
-    """Model could not be loaded because it contains custom ops."""

@@ -22,6 +22,8 @@ from mlia.core.reporting import NestedReport
 from mlia.core.reporting import Report
 from mlia.core.reporting import ReportItem
 from mlia.core.reporting import Table
+from mlia.nn.tensorflow.tflite_compat import TFLiteCompatibilityInfo
+from mlia.target.common.reporters import report_tflite_compatiblity
 from mlia.target.tosa.config import TOSAConfiguration
 from mlia.target.tosa.metadata import TOSAMetadata
 from mlia.utils.console import style_improvement
@@ -162,5 +164,8 @@ def tosa_formatters(data: Any) -> Callable[[Any], Report]:
 
     if isinstance(data, TOSACompatibilityInfo):
         return report_tosa_compatibility
+
+    if isinstance(data, TFLiteCompatibilityInfo):
+        return report_tflite_compatiblity  # type: ignore
 
     raise Exception(f"Unable to find appropriate formatter for {data}")

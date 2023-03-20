@@ -13,6 +13,13 @@ from mlia.backend.vela.compat import Operators
 from mlia.core.common import DataItem
 from mlia.core.data_analysis import Fact
 from mlia.nn.tensorflow.optimizations.select import OptimizationSettings
+from mlia.nn.tensorflow.tflite_compat import TFLiteCompatibilityInfo
+from mlia.nn.tensorflow.tflite_compat import TFLiteCompatibilityStatus
+from mlia.nn.tensorflow.tflite_compat import TFLiteConversionError
+from mlia.nn.tensorflow.tflite_compat import TFLiteConversionErrorCode
+from mlia.target.common.reporters import ModelHasCustomOperators
+from mlia.target.common.reporters import ModelIsNotTFLiteCompatible
+from mlia.target.common.reporters import TFLiteCompatibilityCheckFailed
 from mlia.target.ethos_u.config import EthosUConfiguration
 from mlia.target.ethos_u.data_analysis import AllOperatorsSupportedOnNPU
 from mlia.target.ethos_u.data_analysis import EthosUDataAnalyzer
@@ -138,6 +145,51 @@ def test_perf_metrics_diff() -> None:
                 [],
             ),
             [],
+        ],
+        [
+            TFLiteCompatibilityInfo(status=TFLiteCompatibilityStatus.COMPATIBLE),
+            [],
+        ],
+        [
+            TFLiteCompatibilityInfo(
+                status=TFLiteCompatibilityStatus.MODEL_WITH_CUSTOM_OP_ERROR
+            ),
+            [ModelHasCustomOperators()],
+        ],
+        [
+            TFLiteCompatibilityInfo(status=TFLiteCompatibilityStatus.UNKNOWN_ERROR),
+            [TFLiteCompatibilityCheckFailed()],
+        ],
+        [
+            TFLiteCompatibilityInfo(
+                status=TFLiteCompatibilityStatus.TFLITE_CONVERSION_ERROR
+            ),
+            [ModelIsNotTFLiteCompatible(custom_ops=[], flex_ops=[])],
+        ],
+        [
+            TFLiteCompatibilityInfo(
+                status=TFLiteCompatibilityStatus.TFLITE_CONVERSION_ERROR,
+                conversion_errors=[
+                    TFLiteConversionError(
+                        "error",
+                        TFLiteConversionErrorCode.NEEDS_CUSTOM_OPS,
+                        "custom_op1",
+                        [],
+                    ),
+                    TFLiteConversionError(
+                        "error",
+                        TFLiteConversionErrorCode.NEEDS_FLEX_OPS,
+                        "flex_op1",
+                        [],
+                    ),
+                ],
+            ),
+            [
+                ModelIsNotTFLiteCompatible(
+                    custom_ops=["custom_op1"],
+                    flex_ops=["flex_op1"],
+                )
+            ],
         ],
     ],
 )

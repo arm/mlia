@@ -15,13 +15,13 @@ from mlia.nn.tensorflow.tflite_compat import TFLiteCompatibilityStatus
 from mlia.nn.tensorflow.tflite_compat import TFLiteConversionError
 from mlia.nn.tensorflow.tflite_compat import TFLiteConversionErrorCode
 from mlia.nn.tensorflow.tflite_graph import TFL_ACTIVATION_FUNCTION
+from mlia.target.common.reporters import ModelHasCustomOperators
+from mlia.target.common.reporters import ModelIsNotTFLiteCompatible
+from mlia.target.common.reporters import TFLiteCompatibilityCheckFailed
 from mlia.target.cortex_a.config import CortexAConfiguration
 from mlia.target.cortex_a.data_analysis import CortexADataAnalyzer
-from mlia.target.cortex_a.data_analysis import ModelHasCustomOperators
 from mlia.target.cortex_a.data_analysis import ModelIsCortexACompatible
 from mlia.target.cortex_a.data_analysis import ModelIsNotCortexACompatible
-from mlia.target.cortex_a.data_analysis import ModelIsNotTFLiteCompatible
-from mlia.target.cortex_a.data_analysis import TFLiteCompatibilityCheckFailed
 from mlia.target.cortex_a.operators import CortexACompatibilityInfo
 from mlia.target.cortex_a.operators import Operator
 

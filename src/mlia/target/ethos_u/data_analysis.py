@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Ethos-U data analysis module."""
 from __future__ import annotations
@@ -11,6 +11,8 @@ from mlia.core.common import DataItem
 from mlia.core.data_analysis import Fact
 from mlia.core.data_analysis import FactExtractor
 from mlia.nn.tensorflow.optimizations.select import OptimizationSettings
+from mlia.nn.tensorflow.tflite_compat import TFLiteCompatibilityInfo
+from mlia.target.common.reporters import analyze_tflite_compatibility_common
 from mlia.target.ethos_u.performance import OptimizationPerformanceMetrics
 
 
@@ -151,3 +153,8 @@ class EthosUDataAnalyzer(FactExtractor):
             diffs.append(diff)
 
         self.add_fact(OptimizationResults(diffs))
+
+    @analyze_data.register
+    def analyze_tflite_compatibility(self, data_item: TFLiteCompatibilityInfo) -> None:
+        """Analyze TensorFlow Lite compatibility information."""
+        analyze_tflite_compatibility_common(self, data_item)

@@ -3,6 +3,7 @@
 """Tests for reports module."""
 from __future__ import annotations
 
+from typing import Any
 from typing import cast
 
 import pytest
@@ -11,7 +12,10 @@ from mlia.backend.vela.compat import NpuSupported
 from mlia.backend.vela.compat import Operator
 from mlia.core.reporting import Report
 from mlia.core.reporting import Table
+from mlia.nn.tensorflow.tflite_compat import TFLiteCompatibilityInfo
+from mlia.nn.tensorflow.tflite_compat import TFLiteCompatibilityStatus
 from mlia.target.ethos_u.config import EthosUConfiguration
+from mlia.target.ethos_u.reporters import ethos_u_formatters
 from mlia.target.ethos_u.reporters import report_operators
 from mlia.target.ethos_u.reporters import report_target_details
 from mlia.target.registry import profile
@@ -231,3 +235,23 @@ def test_report_target_details(
 
     json_dict = report.to_json()
     assert json_dict == expected_json_dict
+
+
+@pytest.mark.parametrize(
+    "data",
+    (TFLiteCompatibilityInfo(status=TFLiteCompatibilityStatus.COMPATIBLE),),
+)
+def test_ethos_u_formatters(data: Any) -> None:
+    """Test function ethos_u_formatters() with valid input."""
+    formatter = ethos_u_formatters(data)
+    report = formatter(data)
+    assert isinstance(report, Report)
+
+
+def test_ethos_u_formatters_invalid_data() -> None:
+    """Test function ethos_u_formatters() with invalid input."""
+    with pytest.raises(
+        Exception,
+        match=r"^Unable to find appropriate formatter for .*",
+    ):
+        ethos_u_formatters(200)

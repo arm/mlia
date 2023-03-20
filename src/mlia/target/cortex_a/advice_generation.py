@@ -7,11 +7,13 @@ from mlia.core.advice_generation import advice_category
 from mlia.core.advice_generation import FactBasedAdviceProducer
 from mlia.core.common import AdviceCategory
 from mlia.core.common import DataItem
-from mlia.target.cortex_a.data_analysis import ModelHasCustomOperators
+from mlia.target.common.reporters import handle_model_is_not_tflite_compatible_common
+from mlia.target.common.reporters import handle_tflite_check_failed_common
+from mlia.target.common.reporters import ModelHasCustomOperators
+from mlia.target.common.reporters import ModelIsNotTFLiteCompatible
+from mlia.target.common.reporters import TFLiteCompatibilityCheckFailed
 from mlia.target.cortex_a.data_analysis import ModelIsCortexACompatible
 from mlia.target.cortex_a.data_analysis import ModelIsNotCortexACompatible
-from mlia.target.cortex_a.data_analysis import ModelIsNotTFLiteCompatible
-from mlia.target.cortex_a.data_analysis import TFLiteCompatibilityCheckFailed
 
 
 class CortexAAdviceProducer(FactBasedAdviceProducer):
@@ -88,43 +90,7 @@ class CortexAAdviceProducer(FactBasedAdviceProducer):
         self, data_item: ModelIsNotTFLiteCompatible
     ) -> None:
         """Advice for TensorFlow Lite compatibility."""
-        if data_item.flex_ops:
-            self.add_advice(
-                [
-                    "The following operators are not natively "
-                    "supported by TensorFlow Lite: "
-                    f"{', '.join(data_item.flex_ops)}.",
-                    "Using select TensorFlow operators in TensorFlow Lite model "
-                    "requires special initialization of TFLiteConverter and "
-                    "TensorFlow Lite run-time.",
-                    "Please refer to the TensorFlow documentation for more "
-                    "details: https://www.tensorflow.org/lite/guide/ops_select",
-                    "Note, such models are not supported by the ML Inference Advisor.",
-                ]
-            )
-
-        if data_item.custom_ops:
-            self.add_advice(
-                [
-                    "The following operators appear to be custom and not natively "
-                    "supported by TensorFlow Lite: "
-                    f"{', '.join(data_item.custom_ops)}.",
-                    "Using custom operators in TensorFlow Lite model "
-                    "requires special initialization of TFLiteConverter and "
-                    "TensorFlow Lite run-time.",
-                    "Please refer to the TensorFlow documentation for more "
-                    "details: https://www.tensorflow.org/lite/guide/ops_custom",
-                    "Note, such models are not supported by the ML Inference Advisor.",
-                ]
-            )
-
-        if not data_item.flex_ops and not data_item.custom_ops:
-            self.add_advice(
-                [
-                    "Model could not be converted into TensorFlow Lite format.",
-                    "Please refer to the table for more details.",
-                ]
-            )
+        handle_model_is_not_tflite_compatible_common(self, data_item)
 
     @produce_advice.register
     @advice_category(AdviceCategory.COMPATIBILITY)
@@ -132,12 +98,7 @@ class CortexAAdviceProducer(FactBasedAdviceProducer):
         self, _data_item: TFLiteCompatibilityCheckFailed
     ) -> None:
         """Advice for the failed TensorFlow Lite compatibility checks."""
-        self.add_advice(
-            [
-                "Model could not be converted into TensorFlow Lite format.",
-                "Please refer to the table for more details.",
-            ]
-        )
+        handle_tflite_check_failed_common(self, _data_item)
 
     @produce_advice.register
     @advice_category(AdviceCategory.COMPATIBILITY)

@@ -1,6 +1,8 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """TOSA data analysis module."""
+from __future__ import annotations
+
 from dataclasses import dataclass
 from functools import singledispatchmethod
 
@@ -8,6 +10,8 @@ from mlia.backend.tosa_checker.compat import TOSACompatibilityInfo
 from mlia.core.common import DataItem
 from mlia.core.data_analysis import Fact
 from mlia.core.data_analysis import FactExtractor
+from mlia.nn.tensorflow.tflite_compat import TFLiteCompatibilityInfo
+from mlia.target.common.reporters import analyze_tflite_compatibility_common
 
 
 @dataclass
@@ -34,3 +38,8 @@ class TOSADataAnalyzer(FactExtractor):
             self.add_fact(ModelIsTOSACompatible())
         else:
             self.add_fact(ModelIsNotTOSACompatible())
+
+    @analyze_data.register
+    def analyze_tflite_compatibility(self, data_item: TFLiteCompatibilityInfo) -> None:
+        """Analyze TensorFlow Lite compatibility information."""
+        analyze_tflite_compatibility_common(self, data_item)

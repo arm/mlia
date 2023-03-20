@@ -23,6 +23,8 @@ from mlia.core.reporting import Report
 from mlia.core.reporting import ReportItem
 from mlia.core.reporting import SingleRow
 from mlia.core.reporting import Table
+from mlia.nn.tensorflow.tflite_compat import TFLiteCompatibilityInfo
+from mlia.target.common.reporters import report_tflite_compatiblity
 from mlia.target.ethos_u.config import EthosUConfiguration
 from mlia.target.ethos_u.performance import PerformanceMetrics
 from mlia.utils.console import style_improvement
@@ -363,23 +365,31 @@ def report_perf_metrics(
 
 def ethos_u_formatters(data: Any) -> Callable[[Any], Report]:
     """Find appropriate formatter for the provided data."""
+    report: Callable[[Any], Report] | None = None
+
     if isinstance(data, PerformanceMetrics) or is_list_of(data, PerformanceMetrics, 2):
-        return report_perf_metrics
+        report = report_perf_metrics
 
-    if is_list_of(data, Advice):
-        return report_advice
+    elif is_list_of(data, Advice):
+        report = report_advice
 
-    if is_list_of(data, Operator):
-        return report_operators
+    elif is_list_of(data, Operator):
+        report = report_operators
 
-    if isinstance(data, Operators):
-        return report_operators_stat
+    elif isinstance(data, Operators):
+        report = report_operators_stat
 
-    if isinstance(data, EthosUConfiguration):
-        return report_target_details
+    elif isinstance(data, EthosUConfiguration):
+        report = report_target_details
 
-    if isinstance(data, (list, tuple)):
+    elif isinstance(data, (list, tuple)):
         formatters = [ethos_u_formatters(item) for item in data]
-        return CompoundFormatter(formatters)
+        report = CompoundFormatter(formatters)
 
-    raise Exception(f"Unable to find appropriate formatter for {data}")
+    elif isinstance(data, TFLiteCompatibilityInfo):
+        report = report_tflite_compatiblity
+
+    else:
+        raise Exception(f"Unable to find appropriate formatter for {data}")
+
+    return report  # type: ignore

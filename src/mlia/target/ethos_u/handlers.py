@@ -8,6 +8,7 @@ import logging
 from mlia.backend.vela.compat import Operators
 from mlia.core.events import CollectedDataEvent
 from mlia.core.handlers import WorkflowEventsHandler
+from mlia.nn.tensorflow.tflite_compat import TFLiteCompatibilityInfo
 from mlia.target.ethos_u.events import EthosUAdvisorEventHandler
 from mlia.target.ethos_u.events import EthosUAdvisorStartedEvent
 from mlia.target.ethos_u.performance import OptimizationPerformanceMetrics
@@ -48,6 +49,9 @@ class EthosUEventHandler(WorkflowEventsHandler, EthosUAdvisorEventHandler):
                 title="Performance metrics",
                 space=True,
             )
+
+        if isinstance(data_item, TFLiteCompatibilityInfo) and not data_item.compatible:
+            self.reporter.submit(data_item, delay_print=True)
 
     def on_ethos_u_advisor_started(self, event: EthosUAdvisorStartedEvent) -> None:
         """Handle EthosUAdvisorStarted event."""
