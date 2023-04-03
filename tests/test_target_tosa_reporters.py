@@ -32,7 +32,9 @@ def test_tosa_formatters(
     display_data = MetadataDisplay(test_tflite_model)
     formatter = tosa_formatters(MetadataDisplay(test_tflite_model))
     report = formatter(display_data)
-    assert display_data.data_dict["tosa-checker"]["tosa_version"] == mock_version
+    assert (
+        display_data.data_dict["tosa-checker"]["tosa_checker_version"] == mock_version
+    )
     assert isinstance(report, Report)
 
 

@@ -13,5 +13,5 @@ class TOSAMetadata(Metadata):  # pylint: disable=too-few-public-methods
         super().__init__("tosa-checker")
 
     def get_metadata(self) -> dict:
-        """Returen tosa version."""
-        return {"tosa_version": get_pkg_version(self.name)}
+        """Return TOSA checker version."""
+        return {"tosa_checker_version": get_pkg_version(self.name)}
