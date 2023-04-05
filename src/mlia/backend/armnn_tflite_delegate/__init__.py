@@ -15,6 +15,7 @@ registry.register(
         supported_advice=[AdviceCategory.COMPATIBILITY],
         supported_systems=None,
         backend_type=BackendType.BUILTIN,
+        installation=None,
     ),
     pretty_name=cast(str, ARMNN_TFLITE_DELEGATE["backend"]),
 )

@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Backend config module."""
 from __future__ import annotations
@@ -8,6 +8,7 @@ from enum import auto
 from enum import Enum
 from typing import cast
 
+from mlia.backend.install import Installation
 from mlia.core.common import AdviceCategory
 
 
@@ -59,11 +60,13 @@ class BackendConfiguration:
         supported_advice: list[AdviceCategory],
         supported_systems: list[System] | None,
         backend_type: BackendType,
+        installation: Installation | None,
     ) -> None:
         """Set up basic information about the backend."""
         self.supported_advice = supported_advice
         self.supported_systems = supported_systems
         self.type = backend_type
+        self.installation = installation
 
     def __str__(self) -> str:
         """List supported advice."""

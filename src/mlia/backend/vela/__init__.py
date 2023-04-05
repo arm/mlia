@@ -22,6 +22,7 @@ registry.register(
             System.WINDOWS_AARCH64,
         ],
         backend_type=BackendType.BUILTIN,
+        installation=None,
     ),
     pretty_name="Vela",
 )

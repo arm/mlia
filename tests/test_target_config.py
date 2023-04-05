@@ -112,6 +112,7 @@ def test_target_info(
             [AdviceCategory.COMPATIBILITY],
             [System.CURRENT],
             BackendType.BUILTIN,
+            None,
         ),
     )
     monkeypatch.setattr("mlia.target.config.backend_registry", backend_registry)

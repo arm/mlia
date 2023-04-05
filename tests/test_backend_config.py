@@ -20,7 +20,10 @@ def test_system() -> None:
 def test_backend_config() -> None:
     """Test the class 'BackendConfiguration'."""
     cfg = BackendConfiguration(
-        [AdviceCategory.COMPATIBILITY], [System.CURRENT], BackendType.CUSTOM
+        [AdviceCategory.COMPATIBILITY],
+        [System.CURRENT],
+        BackendType.CUSTOM,
+        None,
     )
     assert cfg.supported_advice == [AdviceCategory.COMPATIBILITY]
     assert cfg.supported_systems == [System.CURRENT]
