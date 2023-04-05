@@ -42,7 +42,15 @@ from mlia.target.registry import table as target_table
 
 logger = logging.getLogger(__name__)
 
-INFO_MESSAGE = f"""
+
+def info_message() -> str:
+    """
+    Get an info message with a table of all targets/backends.
+
+    Note: This should NOT be a static variable in this module as this can
+    cause problems with unavailable backends!
+    """
+    return f"""
 ML Inference Advisor {__version__}
 
 Help the design and optimization of neural network models for efficient inference on a target CPU or NPU.
@@ -252,7 +260,7 @@ def run_command(args: argparse.Namespace) -> int:
 def init_parser(commands: list[CommandInfo]) -> argparse.ArgumentParser:
     """Init subcommand parser."""
     parser = argparse.ArgumentParser(
-        description=INFO_MESSAGE,
+        description=info_message(),
         formatter_class=argparse.RawDescriptionHelpFormatter,
         add_help=False,
         allow_abbrev=False,

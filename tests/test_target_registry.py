@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import pytest
 
+from mlia.backend.registry import registry as backend_registry
 from mlia.core.common import AdviceCategory
 from mlia.target.config import get_builtin_optimization_profile_path
 from mlia.target.config import get_builtin_target_profile_path
@@ -98,7 +99,12 @@ def test_supported_backends(target_name: str, expected_backends: list[str]) -> N
     (
         (AdviceCategory.COMPATIBILITY, ["cortex-a", "ethos-u55", "ethos-u65", "tosa"]),
         (AdviceCategory.OPTIMIZATION, ["ethos-u55", "ethos-u65"]),
-        (AdviceCategory.PERFORMANCE, ["ethos-u55", "ethos-u65", "hydra"]),
+        (
+            AdviceCategory.PERFORMANCE,
+            ["ethos-u55", "ethos-u65", "hydra"]
+            if "argo" in backend_registry.items
+            else ["ethos-u55", "ethos-u65"],
+        ),
     ),
 )
 def test_supported_targets(advice: AdviceCategory, expected_targets: list[str]) -> None:

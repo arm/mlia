@@ -32,9 +32,6 @@ class TargetRegistry(Registry[TargetInfo]):
         self, name: str, item: TargetInfo, pretty_name: str | None = None
     ) -> bool:
         """Register an item: returns `False` if already registered."""
-        assert all(
-            backend in backend_registry.items for backend in item.supported_backends
-        )
         return super().register(name, item, pretty_name)
 
 
@@ -112,7 +109,8 @@ def supported_advice(target: str) -> list[AdviceCategory]:
     """Get a list of supported advice for the given target."""
     advice: set[AdviceCategory] = set()
     for supported_backend in registry.items[target].supported_backends:
-        advice.update(backend_registry.items[supported_backend].supported_advice)
+        if supported_backend in backend_registry.items:
+            advice.update(backend_registry.items[supported_backend].supported_advice)
     return list(advice)
 
 
@@ -172,6 +170,8 @@ def table() -> Table:
     """Get a table representation of registered targets with backends."""
 
     def get_status(backend: str) -> str:
+        if backend not in backend_registry.items:
+            return "NOT REGISTERED"
         if backend_registry.items[backend].type == BackendType.BUILTIN:
             return BackendType.BUILTIN.name
         mgr = get_installation_manager()

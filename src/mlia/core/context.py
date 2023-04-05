@@ -99,7 +99,7 @@ class Context(ABC):
         self.event_publisher.register_event_handlers(self.event_handlers)
 
 
-class ExecutionContext(Context):
+class ExecutionContext(Context):  # pylint: disable=too-many-instance-attributes
     """Execution context."""
 
     def __init__(

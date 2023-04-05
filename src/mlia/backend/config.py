@@ -49,6 +49,7 @@ class BackendType(Enum):
 
     BUILTIN = auto()
     WHEEL = auto()
+    DOCKER = auto()
     CUSTOM = auto()
 
 

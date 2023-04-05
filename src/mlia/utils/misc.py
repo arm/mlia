@@ -1,8 +1,11 @@
 # SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Various util functions."""
+from functools import lru_cache
 from importlib import metadata
 from pathlib import Path
+from subprocess import CalledProcessError  # nosec
+from subprocess import run  # nosec
 
 from mlia.utils.filesystem import sha256
 
@@ -27,5 +30,20 @@ def get_pkg_version(pkg_name: str) -> str:
 
 
 def get_file_checksum(input_path: Path) -> str:
-    """Retrun the checksum of the input model."""
+    """Return the checksum of the input model."""
     return sha256(input_path)
+
+
+def is_docker_available() -> bool:
+    """Check if we are running in a docker environment."""
+    try:
+        run(["docker", "version"], check=True, capture_output=True)  # nosec
+        return True
+    except (CalledProcessError, FileNotFoundError):
+        return False
+
+
+@lru_cache(maxsize=1)
+def is_docker_available_cached() -> bool:
+    """Cache result of is_docker_available()."""
+    return is_docker_available()
