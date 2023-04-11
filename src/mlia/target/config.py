@@ -16,7 +16,7 @@ from typing import TypeVar
 try:
     import tomllib
 except ModuleNotFoundError:
-    import tomli as tomllib  # type: ignore
+    import tomli as tomllib
 
 from mlia.backend.registry import registry as backend_registry
 from mlia.core.common import AdviceCategory

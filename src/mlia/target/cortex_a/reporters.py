@@ -82,7 +82,7 @@ def cortex_a_formatters(data: Any) -> Callable[[Any], Report]:
         return report_target
 
     if isinstance(data, TFLiteCompatibilityInfo):
-        return report_tflite_compatiblity  # type: ignore
+        return report_tflite_compatiblity
 
     if isinstance(data, CortexACompatibilityInfo):
         return report_cortex_a_operators

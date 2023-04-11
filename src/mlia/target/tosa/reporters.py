@@ -166,6 +166,6 @@ def tosa_formatters(data: Any) -> Callable[[Any], Report]:
         return report_tosa_compatibility
 
     if isinstance(data, TFLiteCompatibilityInfo):
-        return report_tflite_compatiblity  # type: ignore
+        return report_tflite_compatiblity
 
     raise Exception(f"Unable to find appropriate formatter for {data}")

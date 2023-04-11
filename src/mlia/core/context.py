@@ -105,7 +105,7 @@ class ExecutionContext(Context):
     def __init__(
         self,
         *,
-        advice_category: set[AdviceCategory] = None,
+        advice_category: set[AdviceCategory] | None = None,
         config_parameters: Mapping[str, Any] | None = None,
         output_dir: str | Path | None = None,
         event_handlers: list[EventHandler] | None = None,

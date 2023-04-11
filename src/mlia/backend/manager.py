@@ -111,7 +111,7 @@ class InstallationFiltersMixin:
         """Return list of the backends filtered by name."""
         return self.filter_by(SearchByNameFilter(backend_name))
 
-    def already_installed(self, backend_name: str = None) -> list[Installation]:
+    def already_installed(self, backend_name: str | None = None) -> list[Installation]:
         """Return list of backends that are already installed."""
         return self.filter_by(
             AlreadyInstalledFilter(),

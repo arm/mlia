@@ -201,7 +201,7 @@ class PackagePathChecker:
         self,
         expected_files: list[str],
         backend_subfolder: str | None = None,
-        settings: dict = None,
+        settings: dict | None = None,
     ) -> None:
         """Init the path checker."""
         self.expected_files = expected_files

@@ -392,4 +392,4 @@ def ethos_u_formatters(data: Any) -> Callable[[Any], Report]:
     else:
         raise Exception(f"Unable to find appropriate formatter for {data}")
 
-    return report  # type: ignore
+    return report
