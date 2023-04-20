@@ -135,6 +135,7 @@ def get_optimizer(
 
     if isinstance(config, OptimizationSettings):
         return _get_optimizer(model, cast(OptimizationSettings, config))
+
     if is_list_of(config, OptimizationSettings):
         return _get_optimizer(model, cast(List[OptimizationSettings], config))
 

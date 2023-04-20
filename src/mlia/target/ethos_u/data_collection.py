@@ -201,7 +201,8 @@ class EthosUOptimizationPerformance(ContextAwareDataCollector):
                 OptimizationSettings(
                     item.get("optimization_type"),  # type: ignore
                     item.get("optimization_target"),  # type: ignore
-                    item.get("layers_to_optimized"),
+                    item.get("layers_to_optimize"),
+                    item.get("dataset"),
                 )
                 for item in opt_configuration
             ]

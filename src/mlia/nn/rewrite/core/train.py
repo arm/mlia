@@ -33,6 +33,7 @@ from mlia.nn.rewrite.core.utils.utils import load
 from mlia.nn.rewrite.core.utils.utils import save
 from mlia.utils.logging import log_action
 
+
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
 logger = logging.getLogger(__name__)
