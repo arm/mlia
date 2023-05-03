@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for python package based installations."""
 from pathlib import Path
@@ -44,7 +44,7 @@ def test_get_tosa_backend_installation(
     mock_package_manager.install.assert_not_called()
 
     tosa_installation.install(DownloadAndInstall())
-    mock_package_manager.install.assert_called_once_with(["mlia[tosa]"])
+    mock_package_manager.install.assert_called_once_with(["tosa-checker"])
 
     tosa_installation.uninstall()
     mock_package_manager.uninstall.assert_called_once_with(["tosa-checker"])
