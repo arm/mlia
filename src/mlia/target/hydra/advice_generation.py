@@ -19,13 +19,11 @@ class HydraAdviceProducer(FactBasedAdviceProducer):
 
     @produce_advice.register
     @advice_category(AdviceCategory.PERFORMANCE)
-    def handle_model_is_hydra_compatible(
-        self, data_item: ModelPerformanceAnalysed
-    ) -> None:
+    def handle_model_is_hydra_compatible(self, _: ModelPerformanceAnalysed) -> None:
         """Advice for Hydra compatibility."""
         self.add_advice(
             [
-                "TODO: Model has performance. Argo said so.",
+                "Please refer to the performance metrics shown in the report",
+                "to find possible optimizations.",
             ]
         )
-        raise NotImplementedError(f"TODO: Implement hydra advice using: {data_item=}")

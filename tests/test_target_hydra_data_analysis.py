@@ -5,10 +5,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
-
 from mlia.target.hydra.config import HydraConfiguration
 from mlia.target.hydra.data_analysis import HydraDataAnalyzer
+from mlia.target.hydra.data_analysis import ModelPerformanceAnalysed
 from mlia.target.hydra.performance import HydraPerformanceMetrics
 
 
@@ -18,6 +17,7 @@ def test_hydra_data_analyzer() -> None:
     metrics = HydraPerformanceMetrics(
         target_config=HydraConfiguration(target="hydra"),
         metrics_file=Path("DOES_NOT_EXIST"),
+        operator_performance_data=[],
     )
-    with pytest.raises(NotImplementedError):
-        analyzer.analyze_data(metrics)
+    analyzer.analyze_data(metrics)
+    assert analyzer.get_analyzed_data() == [ModelPerformanceAnalysed(metrics)]

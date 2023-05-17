@@ -14,11 +14,15 @@ from mlia.target.hydra.data_collection import HydraPerformance
 
 def test_hydra_data_collection(
     monkeypatch: pytest.MonkeyPatch,
+    test_resources_path: Path,
     test_tflite_model: Path,
     test_keras_model: Path,
 ) -> None:
     """Test Hydra data collection."""
-    test_metrics_file = Path("DOES_NOT_EXIST")
+    test_metrics_file = Path(
+        test_resources_path
+        / "chrometrace/ds_cnn_large_fully_quantized_int8_chrome_trace.json"
+    )
     monkeypatch.setattr(
         "mlia.target.hydra.performance.estimate_performance",
         MagicMock(return_value=test_metrics_file),

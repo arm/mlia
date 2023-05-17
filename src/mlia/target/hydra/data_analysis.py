@@ -22,12 +22,11 @@ class HydraDataAnalyzer(FactExtractor):
     @analyze_data.register
     def analyze_performance(self, data_item: HydraPerformanceMetrics) -> None:
         """Analyse operator compatibility information."""
-        self.add_fact(ModelPerformanceAnalysed({}))
-        raise NotImplementedError(f"TODO: Implement data analysis for: {data_item=}")
+        self.add_fact(ModelPerformanceAnalysed(data_item))
 
 
 @dataclass
 class ModelPerformanceAnalysed(Fact):
     """Model performance was analyzed."""
 
-    metrics: dict
+    metrics: HydraPerformanceMetrics
