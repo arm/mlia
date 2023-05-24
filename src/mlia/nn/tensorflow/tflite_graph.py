@@ -162,3 +162,25 @@ def save_fb(model: ModelT, output_tflite_file: str | Path) -> None:
     model_data = builder.Output()
     with open(output_tflite_file, "wb") as out_file:
         out_file.write(model_data)
+
+
+def operator_names_to_types(model_path: Path) -> dict:
+    """Create a mapping between the output operator type and the layer name."""
+    if not Path(model_path).exists():
+        raise FileNotFoundError(f"TFLite file was not found at: {model_path}")
+
+    model = parse_subgraphs(model_path)
+    tensor_names = {}
+    for subgraph in model:
+        for layer in subgraph:
+            for output_tensor in layer.outputs:
+                tensor_names[output_tensor.name] = layer.type
+
+        for layer in subgraph:
+            for input_tensor in layer.inputs:
+                try:
+                    tensor_names.get(input_tensor.name)
+                except KeyError:
+                    tensor_names[input_tensor.name] = layer.type
+
+    return tensor_names

@@ -10,12 +10,14 @@ from tensorflow.lite.python.schema_py_generated import ModelT
 
 from mlia.nn.tensorflow.tflite_graph import load_fb
 from mlia.nn.tensorflow.tflite_graph import Op
+from mlia.nn.tensorflow.tflite_graph import operator_names_to_types
 from mlia.nn.tensorflow.tflite_graph import parse_subgraphs
 from mlia.nn.tensorflow.tflite_graph import save_fb
 from mlia.nn.tensorflow.tflite_graph import TensorInfo
 from mlia.nn.tensorflow.tflite_graph import TFL_ACTIVATION_FUNCTION
 from mlia.nn.tensorflow.tflite_graph import TFL_OP
 from mlia.nn.tensorflow.tflite_graph import TFL_TYPE
+from mlia.utils.filesystem import get_mlia_resources
 from tests.utils.rewrite import models_are_equal
 
 
@@ -107,3 +109,29 @@ def test_load_save(test_tflite_model: Path, tmp_path: Path) -> None:
 
     # Double check that the TensorFlow Lite Interpreter can still load the file.
     tf.lite.Interpreter(model_path=str(output_file))
+
+
+def test_operator_names_to_types_invalid_file() -> None:
+    """Test that a non-existing file returns a FileNotFoundError."""
+    with pytest.raises(
+        FileNotFoundError,
+        match=r"^TFLite file was not found at: *",
+    ):
+        operator_names_to_types(Path("DOES_NOT_EXIST"))
+
+
+def test_operator_names_to_types_output() -> None:
+    """Test that the output of the tests is as expected."""
+    resources_dir = get_mlia_resources()
+
+    test_model = Path(resources_dir / "argo/clampnet_v2_1-int8_qat_NE.tflite")
+
+    test_dict = operator_names_to_types(test_model)
+    assert (
+        test_dict["FusedBatchNormV3;BiasAdd/ReadVariableOp;BiasAdd;Conv2D"] == "CONV_2D"
+    )
+    assert (
+        test_dict["FusedBatchNormV3;BiasAdd/ReadVariableOp;BiasAdd;Conv2D1"]
+        == "CONV_2D"
+    )
+    assert test_dict["resize/ResizeNearestNeighbor1"] == "RESIZE_NEAREST_NEIGHBOR"
