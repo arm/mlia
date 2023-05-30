@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import os
 
-from rich.progress import Progress
+from rich.status import Status
 
 import docker
 from mlia.backend.install import DownloadAndInstall
@@ -78,33 +78,14 @@ class DockerInstallation(Installation):
         if self.registry:
             self._login(client)
 
-        with Progress() as progress:
-            tasks = {}
+        with Status(status="Installing argo backend...", spinner="dots") as status:
             for line in client.api.pull(
                 repository=self.repository, stream=True, decode=True
             ):
-                prog_id = line.get("id")
-                prog_detail = line.get("progressDetail")
-                if prog_detail is None:
-                    status = line.get("status")
-                    if status:
-                        progress.console.print(
-                            f"{status}: {prog_id}" if prog_id else status
-                        )
-                else:  # progressDetail is not None, but it might still be empty
-                    if prog_id not in tasks:
-                        tasks[prog_id] = progress.add_task(prog_id)
-                    task = tasks[prog_id]
-
-                    if prog_detail:
-                        progress.update(
-                            task,
-                            completed=prog_detail["current"],
-                            total=prog_detail["total"],
-                            description=line["status"],
-                        )
-                    else:
-                        progress.update(task, description=line["status"])
+                if line.get("status"):
+                    status.update(line["status"])
+                else:
+                    status.update("Installing argo backend...")
 
         if self.registry:
             # Tag the image without the registry URL as prefix, e.g. tag image
