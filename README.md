@@ -564,6 +564,17 @@ mlia-backend install argo
 mlia check --performance -t hydra ~/model_file.tflite
 ```
 
+**Running Argo from host machine**
+By assigning the Argo executable path to the env variable MLIA_BACKEND_ARGO_PATH,
+it is possible to use a local version of Argo from the host machine.
+MLIA will check if this variable is set, and if it is, run Argo using a
+subprocess, assuming the executable exists. If it is not set, it will assume
+the Docker image exists on the host and excute it
+using that image.
+
+In the Docker image that is installed using the `mlia-backend` call above above,
+that path is `/app/build-release/src/argo`
+
 ### Arm NN TensorFlow Lite Delegate
 
 This backend provides general information about the compatibility of operators
