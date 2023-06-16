@@ -1,5 +1,5 @@
 # SPDX-FileCopyrightText: Copyright 2023, Arm Limited and/or its affiliates.
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: LicenseRef-LICENSE
 """Module for the installation of Argo via Docker."""
 from __future__ import annotations
 
