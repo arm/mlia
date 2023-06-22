@@ -62,7 +62,7 @@ def check_train(
             train_params=train_params,
         )
         assert len(result) == 2
-        assert all(res >= 0.0 for res in result), f"Results out of bound: {result}"
+        assert all(res >= 0.0 for res in result[0]), f"Results out of bound: {result}"
         assert output_file.is_file()
 
 

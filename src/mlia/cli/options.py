@@ -14,6 +14,7 @@ from mlia.backend.manager import get_available_backends
 from mlia.core.common import AdviceCategory
 from mlia.core.errors import ConfigurationError
 from mlia.core.typing import OutputFormat
+from mlia.nn.rewrite.core.rewrite import RewritingOptimizer
 from mlia.target.registry import builtin_profile_names
 from mlia.target.registry import registry as target_registry
 
@@ -111,7 +112,10 @@ def add_multi_optimization_options(parser: argparse.ArgumentParser) -> None:
     multi_optimization_group.add_argument(
         "--rewrite-target",
         type=str,
-        help="Type of rewrite to apply to the subgraph/layer.",
+        help=(
+            "Type of rewrite to apply to the subgraph/layer. "
+            f"Available rewrites: {RewritingOptimizer.builtin_rewrite_names()}"
+        ),
     )
 
     multi_optimization_group.add_argument(
@@ -327,9 +331,10 @@ def parse_optimization_parameters(  # pylint: disable=too-many-arguments
     ]
 
     if rewrite:
-        if rewrite_target not in ["remove", "fully_connected"]:
+        if rewrite_target not in RewritingOptimizer.builtin_rewrite_names():
             raise ConfigurationError(
-                "Currently only remove and fully_connected are supported."
+                f"Invalid rewrite target: '{rewrite_target}'. "
+                f"Supported rewrites: {RewritingOptimizer.builtin_rewrite_names()}"
             )
         optimizer_params.append(
             {

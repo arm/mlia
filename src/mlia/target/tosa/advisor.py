@@ -16,6 +16,8 @@ from mlia.core.context import ExecutionContext
 from mlia.core.data_analysis import DataAnalyzer
 from mlia.core.data_collection import DataCollector
 from mlia.core.events import Event
+from mlia.target.common.optimization import add_common_optimization_params
+from mlia.target.common.optimization import OptimizingDataCollector
 from mlia.target.registry import profile
 from mlia.target.tosa.advice_generation import TOSAAdviceProducer
 from mlia.target.tosa.config import TOSAConfiguration
@@ -49,9 +51,9 @@ class TOSAInferenceAdvisor(DefaultInferenceAdvisor):
             )
 
         if context.category_enabled(AdviceCategory.OPTIMIZATION):
-            raise RuntimeError(
-                "Model optimizations are currently not supported for TOSA."
-            )
+            target_profile = self.get_target_profile(context)
+            target_config = profile(target_profile)
+            collectors.append(OptimizingDataCollector(model, target_config))
 
         return collectors
 
@@ -85,20 +87,22 @@ def configure_and_get_tosa_advisor(
     context: ExecutionContext,
     target_profile: str | Path,
     model: str | Path,
-    **_extra_args: Any,
+    **extra_args: Any,
 ) -> InferenceAdvisor:
     """Create and configure TOSA advisor."""
     if context.event_handlers is None:
         context.event_handlers = [TOSAEventHandler()]
 
     if context.config_parameters is None:
-        context.config_parameters = _get_config_parameters(model, target_profile)
+        context.config_parameters = _get_config_parameters(
+            model, target_profile, **extra_args
+        )
 
     return TOSAInferenceAdvisor()
 
 
 def _get_config_parameters(
-    model: str | Path, target_profile: str | Path
+    model: str | Path, target_profile: str | Path, **extra_args: Any
 ) -> dict[str, Any]:
     """Get configuration parameters for the advisor."""
     advisor_parameters: dict[str, Any] = {
@@ -107,5 +111,5 @@ def _get_config_parameters(
             "target_profile": target_profile,
         }
     }
-
+    add_common_optimization_params(advisor_parameters, extra_args)
     return advisor_parameters

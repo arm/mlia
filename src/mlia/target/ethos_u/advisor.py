@@ -17,6 +17,8 @@ from mlia.core.data_analysis import DataAnalyzer
 from mlia.core.data_collection import DataCollector
 from mlia.core.events import Event
 from mlia.nn.tensorflow.utils import is_tflite_model
+from mlia.target.common.optimization import add_common_optimization_params
+from mlia.target.common.optimization import OptimizingDataCollector
 from mlia.target.ethos_u.advice_generation import EthosUAdviceProducer
 from mlia.target.ethos_u.advice_generation import EthosUStaticAdviceProducer
 from mlia.target.ethos_u.config import EthosUConfiguration
@@ -65,9 +67,7 @@ class EthosUInferenceAdvisor(DefaultInferenceAdvisor):
                     )
 
                 collectors.append(
-                    EthosUOptimizationPerformance(
-                        model, target_config, optimization_settings, backends
-                    )
+                    EthosUOptimizationPerformance(model, target_config, backends)
                 )
             if context.category_enabled(AdviceCategory.PERFORMANCE):
                 collectors.append(EthosUPerformance(model, target_config, backends))
@@ -76,9 +76,7 @@ class EthosUInferenceAdvisor(DefaultInferenceAdvisor):
             if context.category_enabled(AdviceCategory.OPTIMIZATION):
                 optimization_settings = self._get_optimization_settings(context)
                 collectors.append(
-                    EthosUOptimizationPerformance(
-                        model, target_config, optimization_settings, backends
-                    )
+                    EthosUOptimizationPerformance(model, target_config, backends)
                 )
             elif context.category_enabled(AdviceCategory.PERFORMANCE):
                 collectors.append(EthosUPerformance(model, target_config, backends))
@@ -115,7 +113,7 @@ class EthosUInferenceAdvisor(DefaultInferenceAdvisor):
     def _get_optimization_settings(self, context: Context) -> list[list[dict]]:
         """Get optimization settings."""
         return self.get_parameter(  # type: ignore
-            EthosUOptimizationPerformance.name(),
+            OptimizingDataCollector.name(),
             "optimizations",
             expected_type=list,
             expected=False,
@@ -151,20 +149,6 @@ def configure_and_get_ethosu_advisor(
     return EthosUInferenceAdvisor()
 
 
-_DEFAULT_OPTIMIZATION_TARGETS = [
-    {
-        "optimization_type": "pruning",
-        "optimization_target": 0.5,
-        "layers_to_optimize": None,
-    },
-    {
-        "optimization_type": "clustering",
-        "optimization_target": 32,
-        "layers_to_optimize": None,
-    },
-]
-
-
 def _get_config_parameters(
     model: str | Path,
     target_profile: str | Path,
@@ -186,19 +170,6 @@ def _get_config_parameters(
 
         advisor_parameters["ethos_u_inference_advisor"]["backends"] = backends
 
-    optimization_targets = extra_args.get("optimization_targets")
-    if not optimization_targets:
-        optimization_targets = _DEFAULT_OPTIMIZATION_TARGETS
-
-    if not is_list_of(optimization_targets, dict):
-        raise ValueError("Optimization targets value has wrong format.")
-
-    advisor_parameters.update(
-        {
-            "ethos_u_model_optimizations": {
-                "optimizations": [optimization_targets],
-            },
-        }
-    )
+    add_common_optimization_params(advisor_parameters, extra_args)
 
     return advisor_parameters

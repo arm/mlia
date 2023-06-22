@@ -136,12 +136,27 @@ def train(
                     output_filename = output_model
                 join_in_dir(train_dir, filename, output_filename)
 
+        # Assess the output diff between the parts after the rewrite subgraph
+        # in original and optimized model
+        optimized_end_path = Path(train_dir, "optimized_end.tfrec")
+        end_path = Path(train_dir, "end.tfrec")
+
+        record_model(
+            str(input_tfrec),
+            output_filename,
+            optimized_end_path,
+            num_procs=train_params.num_procs,
+            num_threads=train_params.num_threads,
+        )
+        mae, nrmse = diff_stats(end_path, str(optimized_end_path))
+
     if unmodified_model_dir:
         cast(tempfile.TemporaryDirectory, unmodified_model_dir).cleanup()
 
-    return (
-        results if train_params.checkpoint_at else results[0]
-    )  # only return a list if multiple checkpoints are asked for
+    return (results if train_params.checkpoint_at else results[0]), [
+        mae,
+        nrmse,
+    ]  # only return a list if multiple checkpoints are asked for
 
 
 def eval_in_dir(

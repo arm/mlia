@@ -16,7 +16,7 @@ from mlia.core.errors import ConfigurationError
 from mlia.nn.common import Optimizer
 from mlia.nn.common import OptimizerConfiguration
 from mlia.nn.rewrite.core.rewrite import RewriteConfiguration
-from mlia.nn.rewrite.core.rewrite import Rewriter
+from mlia.nn.rewrite.core.rewrite import RewritingOptimizer
 from mlia.nn.rewrite.core.rewrite import TrainingParameters
 from mlia.nn.tensorflow.config import KerasModel
 from mlia.nn.tensorflow.config import TFLiteModel
@@ -132,7 +132,7 @@ def get_optimizer(
         return Clusterer(model, config)
 
     if isinstance(config, RewriteConfiguration):
-        return Rewriter(model, config)
+        return RewritingOptimizer(model, config)
 
     if isinstance(config, OptimizationSettings):
         return _get_optimizer(model, cast(OptimizationSettings, config))

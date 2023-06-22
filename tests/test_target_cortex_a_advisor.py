@@ -31,7 +31,23 @@ def test_configure_and_get_cortex_a_advisor(test_tflite_model: Path) -> None:
         "cortex_a_inference_advisor": {
             "model": str(test_tflite_model),
             "target_profile": "cortex-a",
-        }
+        },
+        "common_optimizations": {
+            "optimizations": [
+                [
+                    {
+                        "layers_to_optimize": None,
+                        "optimization_target": 0.5,
+                        "optimization_type": "pruning",
+                    },
+                    {
+                        "layers_to_optimize": None,
+                        "optimization_target": 32,
+                        "optimization_type": "clustering",
+                    },
+                ]
+            ]
+        },
     }
 
     assert isinstance(workflow, DefaultWorkflowExecutor)
@@ -43,11 +59,7 @@ def test_configure_and_get_cortex_a_advisor(test_tflite_model: Path) -> None:
         [
             AdviceCategory.PERFORMANCE,
             "Performance estimation is currently not supported for Cortex-A.",
-        ],
-        [
-            AdviceCategory.OPTIMIZATION,
-            "Model optimizations are currently not supported for Cortex-A.",
-        ],
+        ]
     ],
 )
 def test_unsupported_advice_categories(

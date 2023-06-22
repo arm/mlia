@@ -16,6 +16,8 @@ from mlia.core.context import ExecutionContext
 from mlia.core.data_analysis import DataAnalyzer
 from mlia.core.data_collection import DataCollector
 from mlia.core.events import Event
+from mlia.target.common.optimization import add_common_optimization_params
+from mlia.target.common.optimization import OptimizingDataCollector
 from mlia.target.cortex_a.advice_generation import CortexAAdviceProducer
 from mlia.target.cortex_a.config import CortexAConfiguration
 from mlia.target.cortex_a.data_analysis import CortexADataAnalyzer
@@ -50,9 +52,7 @@ class CortexAInferenceAdvisor(DefaultInferenceAdvisor):
             )
 
         if context.category_enabled(AdviceCategory.OPTIMIZATION):
-            raise RuntimeError(
-                "Model optimizations are currently not supported for Cortex-A."
-            )
+            collectors.append(OptimizingDataCollector(model, target_config))
 
         return collectors
 
@@ -82,20 +82,22 @@ def configure_and_get_cortexa_advisor(
     context: ExecutionContext,
     target_profile: str | Path,
     model: str | Path,
-    **_extra_args: Any,
+    **extra_args: Any,
 ) -> InferenceAdvisor:
     """Create and configure Cortex-A advisor."""
     if context.event_handlers is None:
         context.event_handlers = [CortexAEventHandler()]
 
     if context.config_parameters is None:
-        context.config_parameters = _get_config_parameters(model, target_profile)
+        context.config_parameters = _get_config_parameters(
+            model, target_profile, **extra_args
+        )
 
     return CortexAInferenceAdvisor()
 
 
 def _get_config_parameters(
-    model: str | Path, target_profile: str | Path
+    model: str | Path, target_profile: str | Path, **extra_args: Any
 ) -> dict[str, Any]:
     """Get configuration parameters for the advisor."""
     advisor_parameters: dict[str, Any] = {
@@ -104,5 +106,5 @@ def _get_config_parameters(
             "target_profile": target_profile,
         },
     }
-
+    add_common_optimization_params(advisor_parameters, extra_args)
     return advisor_parameters

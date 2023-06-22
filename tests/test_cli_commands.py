@@ -3,6 +3,7 @@
 """Tests for cli.commands module."""
 from __future__ import annotations
 
+import re
 from contextlib import ExitStack as does_not_raise
 from pathlib import Path
 from typing import Any
@@ -116,7 +117,10 @@ def test_performance_unknown_target(
             "node_y",
             pytest.raises(
                 Exception,
-                match=(r"Currently only remove and fully_connected are supported."),
+                match=re.escape(
+                    "Invalid rewrite target: 'random'. "
+                    "Supported rewrites: ['fully_connected']"
+                ),
             ),
         ],
         [

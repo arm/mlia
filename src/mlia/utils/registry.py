@@ -37,3 +37,7 @@ class Registry(Generic[T]):
     def pretty_name(self, name: str) -> str:
         """Get the pretty name (if available) or return the name as is otherwise."""
         return self.pretty_names[name] if name in self.pretty_names else name
+
+    def names(self) -> list[str]:
+        """Sorted list of registered item names."""
+        return sorted(list(self.items.keys()))
