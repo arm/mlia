@@ -111,3 +111,15 @@ def test_tflite_model_call(
     for named_input in data.as_numpy_iterator():
         res = model(named_input)
         assert res
+
+
+def test_tflite_model_is_tensor_quantized(test_tflite_model: Path) -> None:
+    """Test function TFLiteModel.is_tensor_quantized()."""
+    model = TFLiteModel(test_tflite_model)
+    input_details = model.input_details[0]
+    assert model.is_tensor_quantized(name=input_details["name"])
+    assert model.is_tensor_quantized(idx=input_details["index"])
+    with pytest.raises(ValueError):
+        assert model.is_tensor_quantized()
+    with pytest.raises(NameError):
+        assert model.is_tensor_quantized(name="NAME_DOES_NOT_EXIST")
