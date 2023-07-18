@@ -289,6 +289,30 @@ def fixture_test_tfrecord_fp32(
     yield from create_tfrecord(tmp_path_factory, random_data)
 
 
+@pytest.fixture(scope="session", name="test_tfrecord_float_list")
+def fixture_test_tfrecord_float_list(
+    tmp_path_factory: pytest.TempPathFactory,
+) -> Generator[Path, None, None]:
+    """Create tfrecord with random data matching fixture 'test_tflite_model_fp32'."""
+
+    def random_data() -> np.ndarray:
+        return np.random.rand(1, 28, 28, 1).astype(np.float32)
+
+    tmp_path = tmp_path_factory.mktemp("tfrecords")
+    tfrecord_file = tmp_path / "test_float_list.tfrecord"
+
+    with tf.io.TFRecordWriter(str(tfrecord_file)) as writer:
+        for _ in range(3):
+            feature = tf.train.Feature(
+                float_list=tf.train.FloatList(value=random_data())
+            )
+            features = tf.train.Features(feature={"input": feature})
+            example = tf.train.Example(features=features)
+            writer.write(example.SerializeToString())
+
+    yield tfrecord_file
+
+
 @pytest.fixture(scope="function", autouse=True)
 def set_training_steps(
     request: _pytest.fixtures.SubRequest,

@@ -57,7 +57,7 @@ def record_model(  # pylint: disable=too-many-arguments
         )  # automatically batch to the minimum effective size if not specified
 
     total = numpytf_count(input_filename)
-    dataset = numpytf_read(input_filename)
+    dataset = numpytf_read(input_filename, model_filename)
 
     if batch_size > 1:
         # Collapse batch-size 1 items into batch-size n.
