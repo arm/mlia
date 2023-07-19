@@ -4,13 +4,28 @@
 from contextlib import ExitStack as does_not_raise
 from pathlib import Path
 from typing import Any
+from typing import Generator
 
+import numpy as np
 import pytest
 
+from mlia.nn.rewrite.core.utils.numpy_tfrecord import numpytf_read
 from mlia.nn.tensorflow.config import get_model
 from mlia.nn.tensorflow.config import KerasModel
+from mlia.nn.tensorflow.config import ModelConfiguration
 from mlia.nn.tensorflow.config import TFLiteModel
 from mlia.nn.tensorflow.config import TfModel
+from tests.conftest import create_tfrecord
+
+
+def test_model_configuration(test_keras_model: Path) -> None:
+    """Test ModelConfiguration class."""
+    model = ModelConfiguration(model_path=test_keras_model)
+    assert test_keras_model.match(model.model_path)
+    with pytest.raises(NotImplementedError):
+        model.convert_to_keras("keras_model.h5")
+    with pytest.raises(NotImplementedError):
+        model.convert_to_tflite("model.tflite")
 
 
 def test_convert_keras_to_tflite(tmp_path: Path, test_keras_model: Path) -> None:
@@ -38,7 +53,7 @@ def test_convert_tf_to_tflite(tmp_path: Path, test_tf_model: Path) -> None:
 @pytest.mark.parametrize(
     "model_path, expected_type, expected_error",
     [
-        ("test.tflite", TFLiteModel, does_not_raise()),
+        ("test.tflite", TFLiteModel, pytest.raises(ValueError)),
         ("test.h5", KerasModel, does_not_raise()),
         ("test.hdf5", KerasModel, does_not_raise()),
         (
@@ -73,3 +88,26 @@ def test_get_model_dir(
     """Test TensorFlow Lite model type."""
     model = get_model(str(test_models_path / model_path))
     assert isinstance(model, expected_type)
+
+
+@pytest.fixture(scope="session", name="test_tfrecord_fp32_batch_3")
+def fixture_test_tfrecord_fp32_batch_3(
+    tmp_path_factory: pytest.TempPathFactory,
+) -> Generator[Path, None, None]:
+    """Create tfrecord (same as test_tfrecord_fp32) but with batch size 3."""
+
+    def random_data() -> np.ndarray:
+        return np.random.rand(3, 28, 28, 1).astype(np.float32)
+
+    yield from create_tfrecord(tmp_path_factory, random_data)
+
+
+def test_tflite_model_call(
+    test_tflite_model_fp32: Path, test_tfrecord_fp32_batch_3: Path
+) -> None:
+    """Test inference function of class TFLiteModel."""
+    model = TFLiteModel(test_tflite_model_fp32, batch_size=2)
+    data = numpytf_read(test_tfrecord_fp32_batch_3)
+    for named_input in data.as_numpy_iterator():
+        res = model(named_input)
+        assert res

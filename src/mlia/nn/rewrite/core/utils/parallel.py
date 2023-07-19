@@ -15,14 +15,14 @@ from typing import Any
 import numpy as np
 import tensorflow as tf
 
-from mlia.nn.rewrite.core.utils.numpy_tfrecord import TFLiteModel
+from mlia.nn.tensorflow.config import TFLiteModel
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
 logger = logging.getLogger(__name__)
 
 
-class ParallelTFLiteModel(TFLiteModel):
+class ParallelTFLiteModel(TFLiteModel):  # pylint: disable=abstract-method
     """A parallel version of a TFLiteModel.
 
     num_procs: 0 => detect real cores on system

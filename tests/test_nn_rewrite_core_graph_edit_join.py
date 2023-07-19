@@ -10,7 +10,7 @@ import pytest
 from mlia.nn.rewrite.core.graph_edit.cut import cut_model
 from mlia.nn.rewrite.core.graph_edit.join import append_relabel
 from mlia.nn.rewrite.core.graph_edit.join import join_models
-from mlia.nn.rewrite.core.utils.utils import load
+from mlia.nn.tensorflow.tflite_graph import load_fb
 from tests.utils.rewrite import models_are_equal
 
 
@@ -49,8 +49,8 @@ def test_join_model(test_tflite_model: Path, tmp_path: Path) -> None:
         )
         assert joined_file.is_file()
 
-        orig_model = load(str(test_tflite_model))
-        joined_model = load(str(joined_file))
+        orig_model = load_fb(str(test_tflite_model))
+        joined_model = load_fb(str(joined_file))
 
         assert models_are_equal(orig_model, joined_model)
 

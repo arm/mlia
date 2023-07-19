@@ -3,15 +3,13 @@
 """Tests for module mlia.nn.rewrite.graph_edit.record."""
 from pathlib import Path
 
-import pytest
 import tensorflow as tf
 
 from mlia.nn.rewrite.core.graph_edit.record import record_model
 from mlia.nn.rewrite.core.utils.numpy_tfrecord import numpytf_read
 
 
-@pytest.mark.parametrize("batch_size", (None, 1, 2))
-def test_record_model(
+def check_record_model(
     test_tflite_model: Path,
     tmp_path: Path,
     test_tfrecord: Path,

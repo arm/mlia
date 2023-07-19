@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Utilities for TensorFlow Lite graphs."""
 from __future__ import annotations
@@ -10,7 +10,10 @@ from pathlib import Path
 from typing import Any
 from typing import cast
 
+import flatbuffers
 from tensorflow.lite.python import schema_py_generated as schema_fb
+from tensorflow.lite.python.schema_py_generated import Model
+from tensorflow.lite.python.schema_py_generated import ModelT
 from tensorflow.lite.tools import visualize
 
 
@@ -137,3 +140,25 @@ def parse_subgraphs(tflite_file: Path) -> list[list[Op]]:
     ]
 
     return graphs
+
+
+def load_fb(input_tflite_file: str | Path) -> ModelT:
+    """Load a flatbuffer model from file."""
+    if not Path(input_tflite_file).exists():
+        raise FileNotFoundError(f"TFLite file not found at {input_tflite_file}\n")
+    with open(input_tflite_file, "rb") as file_handle:
+        file_data = bytearray(file_handle.read())
+    model_obj = Model.GetRootAsModel(file_data, 0)
+    model = ModelT.InitFromObj(model_obj)
+    return model
+
+
+def save_fb(model: ModelT, output_tflite_file: str | Path) -> None:
+    """Save a flatbuffer model to a given file."""
+    builder = flatbuffers.Builder(1024)  # Initial size of the buffer, which
+    # will grow automatically if needed
+    model_offset = model.Pack(builder)
+    builder.Finish(model_offset, file_identifier=b"TFL3")
+    model_data = builder.Output()
+    with open(output_tflite_file, "wb") as out_file:
+        out_file.write(model_data)

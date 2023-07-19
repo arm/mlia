@@ -9,8 +9,8 @@ import tensorflow as tf
 from tensorflow.lite.python.schema_py_generated import ModelT
 from tensorflow.lite.python.schema_py_generated import SubGraphT
 
-from mlia.nn.rewrite.core.utils.utils import load
-from mlia.nn.rewrite.core.utils.utils import save
+from mlia.nn.tensorflow.tflite_graph import load_fb
+from mlia.nn.tensorflow.tflite_graph import save_fb
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
@@ -138,8 +138,8 @@ def cut_model(
     output_file: str,
 ) -> None:
     """Cut subgraphs and simplify a given model."""
-    model = load(model_file)
+    model = load_fb(model_file)
     subgraph = model.subgraphs[subgraph_index]
     cut_subgraph(subgraph, input_names, output_names)
     simplify(model)
-    save(model, output_file)
+    save_fb(model, output_file)
