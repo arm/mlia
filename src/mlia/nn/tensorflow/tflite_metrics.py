@@ -29,6 +29,8 @@ DEFAULT_IGNORE_LIST = [
     "flatten",
     "StatefulPartitionedCall",
     "bias",
+    # Buffer layer from TensorFlow 2.11 (previously unamed)
+    "Conv_hwcn_weights",
 ]
 
 
