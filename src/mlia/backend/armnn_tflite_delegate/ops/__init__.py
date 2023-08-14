@@ -1,7 +1,3 @@
 # SPDX-FileCopyrightText: Copyright 2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
-
-target="cortex-a"
-
-[backend.armnn-tflite-delegate]
-version="23.05"
+"""Operator support of the ArmNN TensorFlow Lite Delegate."""

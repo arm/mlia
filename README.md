@@ -237,7 +237,7 @@ Ethos-U is supported by these backends:
 ## Cortex-A
 
 The profile *cortex-a* can be used to get the information about supported
-operators for Cortex-A CPUs when using the Arm NN TensorFlow Lite delegate.
+operators for Cortex-A CPUs when using the Arm NN TensorFlow Lite Delegate.
 Please, find more details in the section for the
 [corresponding backend](#arm-nn-tensorflow-lite-delegate).
 
@@ -307,7 +307,7 @@ the following table shows some compatibility information:
 +=============================================================================
 | Arm NN        |                        |                |                  |
 | TensorFlow    | x86_64                 | Windows 10     | Python>=3.8      |
-| Lite delegate |                        |                |                  |
+| Lite Delegate |                        |                |                  |
 +-----------------------------------------------------------------------------
 | Corstone-300  | x86_64                 | Not compatible | Python>=3.8      |
 +-----------------------------------------------------------------------------
@@ -319,15 +319,17 @@ the following table shows some compatibility information:
 +----------------------------------------------------------------------------+
 ```
 
-### Arm NN TensorFlow Lite delegate
+### Arm NN TensorFlow Lite Delegate
 
 This backend provides general information about the compatibility of operators
-with the Arm NN TensorFlow Lite delegate for Cortex-A. It comes pre-installed
+with the Arm NN TensorFlow Lite Delegate for Cortex-A. It comes pre-installed
 with MLIA.
+
+For version 23.05 the classic delegate is used.
 
 For more information see:
 
-* [Arm NN TensorFlow Lite delegate documentation](https://arm-software.github.io/armnn/latest/delegate.xhtml)
+* [Arm NN TensorFlow Lite Delegate documentation](https://arm-software.github.io/armnn/latest/delegate.xhtml)
 
 ### Corstone-300
 

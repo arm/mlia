@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
-"""Arm NN TensorFlow Lite delegate backend module."""
+"""Arm NN TensorFlow Lite Delegate backend module."""
 from typing import cast
 
 from mlia.backend.armnn_tflite_delegate.compat import ARMNN_TFLITE_DELEGATE

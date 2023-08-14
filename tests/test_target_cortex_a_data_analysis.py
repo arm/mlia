@@ -47,7 +47,7 @@ BACKEND_INFO = f"{ARMNN_TFLITE_DELEGATE['backend']} {VERSION}"
                     Operator(
                         "CUSTOM",
                         "somewhere else",
-                        activation_func=TFL_ACTIVATION_FUNCTION.SIGN_BIT,
+                        activation_func=TFL_ACTIVATION_FUNCTION.RELU6,
                         custom_name="MaxPool3D",
                     ),
                 ],
