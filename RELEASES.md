@@ -16,6 +16,21 @@ scheme.
   of Arm® Limited (or its subsidiaries) in the U.S. and/or elsewhere.
 * TensorFlow™ is a trademark of Google® LLC.
 
+## Release 0.7.0
+
+### Internal changes
+
+* Update the operator list of TensorFlow Lite Delegate
+  for Arm NN 23.05 (MLIA-881)
+* Generalize installation routines for backends by using registry (MLIA-825)
+* Add contribution guidelines
+* Update Vela (MLIA-757) and mypy (MLIA-849) dependencies
+
+### Issues fixed
+
+* Have the TFLite compability check display tables for all
+  targets (MLIA-711)
+
 ## Release 0.6.0
 
 ### Feature changes
