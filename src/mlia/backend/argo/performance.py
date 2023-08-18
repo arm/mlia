@@ -134,6 +134,7 @@ def estimate_performance(
             tmp_dir,
             argo_output_dir_path,
         )
+        shutil.rmtree(str(argo_output_dir_path), ignore_errors=True)
         shutil.copytree(str(tmp_dir), str(argo_output_dir_path))
         argo_metrics_file = (
             argo_output_dir_path / f"{model_path.stem}_chrome_trace.json"

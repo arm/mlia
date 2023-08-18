@@ -15,9 +15,11 @@ from mlia.core.context import ExecutionContext
 from mlia.core.data_analysis import DataAnalyzer
 from mlia.core.data_collection import DataCollector
 from mlia.core.events import Event
+from mlia.target.common.optimization import add_common_optimization_params
 from mlia.target.hydra.advice_generation import HydraAdviceProducer
 from mlia.target.hydra.config import HydraConfiguration
 from mlia.target.hydra.data_analysis import HydraDataAnalyzer
+from mlia.target.hydra.data_collection import HydraOptimizingPerformance
 from mlia.target.hydra.data_collection import HydraPerformance
 from mlia.target.hydra.events import HydraAdvisorStartedEvent
 from mlia.target.hydra.handlers import HydraEventHandler
@@ -40,11 +42,12 @@ class HydraInferenceAdvisor(DefaultInferenceAdvisor):
 
         if context.category_enabled(AdviceCategory.PERFORMANCE):
             collectors.append(HydraPerformance(model, target_cfg))
-        if context.any_category_enabled(
-            AdviceCategory.COMPATIBILITY, AdviceCategory.OPTIMIZATION
-        ):
+        elif context.category_enabled(AdviceCategory.OPTIMIZATION):
+            collectors.append(HydraOptimizingPerformance(model, target_cfg))
+        if context.category_enabled(AdviceCategory.COMPATIBILITY):
             raise ValueError(
-                "Only advice category 'PERFORMANCE' is currently supported by Hydra."
+                "Only advice category 'PERFORMANCE' and 'OPTIMIZATION' are "
+                "currently supported by Hydra."
             )
 
         return collectors
@@ -80,20 +83,22 @@ def configure_and_get_hydra_advisor(
     context: ExecutionContext,
     target_profile: str | Path,
     model: str | Path,
-    **_extra_args: Any,
+    **extra_args: Any,
 ) -> InferenceAdvisor:
     """Create and configure Hydra advisor."""
     if context.event_handlers is None:
         context.event_handlers = [HydraEventHandler()]
 
     if context.config_parameters is None:
-        context.config_parameters = _get_config_parameters(model, target_profile)
+        context.config_parameters = _get_config_parameters(
+            model, target_profile, **extra_args
+        )
 
     return HydraInferenceAdvisor()
 
 
 def _get_config_parameters(
-    model: str | Path, target_profile: str | Path
+    model: str | Path, target_profile: str | Path, **extra_args: Any
 ) -> dict[str, Any]:
     """Get configuration parameters for the advisor."""
     advisor_parameters: dict[str, Any] = {
@@ -102,5 +107,7 @@ def _get_config_parameters(
             "target_profile": target_profile,
         },
     }
+
+    add_common_optimization_params(advisor_parameters, extra_args)
 
     return advisor_parameters

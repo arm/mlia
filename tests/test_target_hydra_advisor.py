@@ -31,21 +31,35 @@ def test_configure_and_get_hydra_advisor(test_tflite_model: Path) -> None:
         "hydra_inference_advisor": {
             "model": str(test_tflite_model),
             "target_profile": "hydra",
-        }
+        },
+        "common_optimizations": {
+            "optimizations": [
+                [
+                    {
+                        "layers_to_optimize": None,
+                        "optimization_target": 0.5,
+                        "optimization_type": "pruning",
+                    },
+                    {
+                        "layers_to_optimize": None,
+                        "optimization_target": 32,
+                        "optimization_type": "clustering",
+                    },
+                ]
+            ]
+        },
     }
 
     assert isinstance(workflow, DefaultWorkflowExecutor)
 
 
-@pytest.mark.parametrize(
-    "category", (AdviceCategory.COMPATIBILITY, AdviceCategory.OPTIMIZATION)
-)
 def test_unsupported_advice_categories(
     tmp_path: Path,
-    category: AdviceCategory,
     test_tflite_model: Path,
 ) -> None:
     """Test that advisor should throw an exception for unsupported categories."""
+    category = AdviceCategory.COMPATIBILITY
+
     with pytest.raises(ValueError):
         ctx = ExecutionContext(output_dir=tmp_path, advice_category={category})
         advisor = configure_and_get_hydra_advisor(ctx, "hydra", test_tflite_model)
