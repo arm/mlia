@@ -87,4 +87,4 @@ def cortex_a_formatters(data: Any) -> Callable[[Any], Report]:
     if isinstance(data, CortexACompatibilityInfo):
         return report_cortex_a_operators
 
-    raise Exception(f"Unable to find appropriate formatter for {data}.")
+    raise RuntimeError(f"Unable to find appropriate formatter for {data}.")

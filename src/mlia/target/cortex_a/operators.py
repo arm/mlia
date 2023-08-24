@@ -143,7 +143,7 @@ def get_cortex_a_compatibility_info(
 
 def report() -> None:
     """Generate supported operators report."""
-    raise Exception(
+    raise NotImplementedError(
         "Generating a supported operators report is not "
         "currently supported with Cortex-A target profile."
     )

@@ -44,13 +44,13 @@ class ExecutionConfiguration:
     def from_dict(cls, exec_info: dict) -> ExecutionConfiguration:
         """Create instance from the dictionary."""
         if not (command := exec_info.get("command")):
-            raise Exception("Command is not defined")
+            raise ValueError("Command is not defined.")
 
         if command not in VALID_COMMANDS:
-            raise Exception(f"Unknown command {command}")
+            raise ValueError(f"Command {command} is unknown.")
 
         if not (params := exec_info.get("parameters")):
-            raise Exception(f"Command {command} should have parameters")
+            raise ValueError(f"Command {command} should have parameters.")
 
         assert isinstance(params, dict), "Parameters should be a dictionary"
         assert all(
@@ -101,13 +101,13 @@ def launch_and_wait(
             if print_output:
                 print(output)
         else:
-            raise Exception("Unable to get process output")
+            raise RuntimeError("Unable to get process output. stdout is unavailable.")
 
         # Wait for the process to terminate
         process.wait()
 
         if (exit_code := process.poll()) != 0:
-            raise Exception(f"Command failed with exit_code {exit_code}")
+            raise RuntimeError(f"Command failed with exit_code {exit_code}.")
 
 
 def run_command(
@@ -142,11 +142,11 @@ def get_config_file() -> Path:
     """Get path to the configuration file."""
     env_var_name = "MLIA_E2E_CONFIG_FILE"
     if not (config_file_env_var := os.environ.get(env_var_name)):
-        raise Exception(f"Config file env variable ({env_var_name}) is not set")
+        raise ValueError(f"Config file env variable ({env_var_name}) is not set.")
 
     config_file = Path(config_file_env_var)
     if not config_file.is_file():
-        raise Exception(f"Invalid config file {config_file_env_var}")
+        raise FileNotFoundError(f"Invalid config file {config_file_env_var}.")
 
     return config_file
 

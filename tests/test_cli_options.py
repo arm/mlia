@@ -26,11 +26,11 @@ from mlia.core.typing import OutputFormat
             None,
             does_not_raise(),
             [
-                dict(
-                    optimization_type="pruning",
-                    optimization_target=0.5,
-                    layers_to_optimize=None,
-                )
+                {
+                    "optimization_type": "pruning",
+                    "optimization_target": 0.5,
+                    "layers_to_optimize": None,
+                }
             ],
         ],
         [
@@ -40,11 +40,11 @@ from mlia.core.typing import OutputFormat
             None,
             does_not_raise(),
             [
-                dict(
-                    optimization_type="pruning",
-                    optimization_target=0.5,
-                    layers_to_optimize=None,
-                )
+                {
+                    "optimization_type": "pruning",
+                    "optimization_target": 0.5,
+                    "layers_to_optimize": None,
+                }
             ],
         ],
         [
@@ -54,11 +54,11 @@ from mlia.core.typing import OutputFormat
             None,
             does_not_raise(),
             [
-                dict(
-                    optimization_type="clustering",
-                    optimization_target=32,
-                    layers_to_optimize=None,
-                )
+                {
+                    "optimization_type": "clustering",
+                    "optimization_target": 32,
+                    "layers_to_optimize": None,
+                }
             ],
         ],
         [
@@ -68,16 +68,16 @@ from mlia.core.typing import OutputFormat
             None,
             does_not_raise(),
             [
-                dict(
-                    optimization_type="pruning",
-                    optimization_target=0.5,
-                    layers_to_optimize=None,
-                ),
-                dict(
-                    optimization_type="clustering",
-                    optimization_target=32,
-                    layers_to_optimize=None,
-                ),
+                {
+                    "optimization_type": "pruning",
+                    "optimization_target": 0.5,
+                    "layers_to_optimize": None,
+                },
+                {
+                    "optimization_type": "clustering",
+                    "optimization_target": 32,
+                    "layers_to_optimize": None,
+                },
             ],
         ],
         [
@@ -87,11 +87,11 @@ from mlia.core.typing import OutputFormat
             None,
             does_not_raise(),
             [
-                dict(
-                    optimization_type="pruning",
-                    optimization_target=0.4,
-                    layers_to_optimize=None,
-                )
+                {
+                    "optimization_type": "pruning",
+                    "optimization_target": 0.4,
+                    "layers_to_optimize": None,
+                }
             ],
         ],
         [
@@ -113,11 +113,11 @@ from mlia.core.typing import OutputFormat
             32.2,
             does_not_raise(),
             [
-                dict(
-                    optimization_type="clustering",
-                    optimization_target=32.2,
-                    layers_to_optimize=None,
-                )
+                {
+                    "optimization_type": "clustering",
+                    "optimization_target": 32.2,
+                    "layers_to_optimize": None,
+                }
             ],
         ],
     ],

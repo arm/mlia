@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Mixins module."""
 from __future__ import annotations
@@ -35,21 +35,21 @@ class ParameterResolverMixin:
         ctx = context or self.context
 
         if ctx.config_parameters is None:
-            raise Exception("Configuration parameters are not set")
+            raise ValueError("Configuration parameters are not set.")
 
         section_params = ctx.config_parameters.get(section)
         if section_params is None or not isinstance(section_params, dict):
-            raise Exception(
+            raise ValueError(
                 f"Parameter section {section} has wrong format, "
-                "expected to be a dictionary"
+                "expected to be a dictionary."
             )
 
         value = section_params.get(name)
 
         if not value and expected:
-            raise Exception(f"Parameter {name} is not set")
+            raise ValueError(f"Parameter {name} is not set.")
 
         if value and expected_type is not None and not isinstance(value, expected_type):
-            raise Exception(f"Parameter {name} expected to have type {expected_type}")
+            raise TypeError(f"Parameter {name} expected to have type {expected_type}.")
 
         return value

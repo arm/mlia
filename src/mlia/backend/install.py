@@ -145,7 +145,7 @@ class BackendInstallation(Installation):
             assert backend_info is not None, "Unable to resolve backend path"
             self._install_from(backend_info)
         else:
-            raise Exception(f"Unable to install {install_type}")
+            raise RuntimeError(f"Unable to install {install_type}.")
 
     def _install_from(self, backend_info: BackendInfo) -> None:
         """Install backend from the directory."""
@@ -173,7 +173,7 @@ class BackendInstallation(Installation):
             try:
                 downloaded_to = download_artifact.download_to(tmpdir)
             except Exception as err:
-                raise Exception("Unable to download backend artifact") from err
+                raise RuntimeError("Unable to download backend artifact.") from err
 
             with working_directory(tmpdir / "dist", create_dir=True) as dist_dir:
                 with tarfile.open(downloaded_to) as archive:
@@ -184,7 +184,7 @@ class BackendInstallation(Installation):
                     backend_path = self.backend_installer(eula_agrement, dist_dir)
 
                 if self.path_checker(backend_path) is None:
-                    raise Exception("Downloaded artifact has invalid structure")
+                    raise ValueError("Downloaded artifact has invalid structure.")
 
                 self.install(InstallFromPath(backend_path))
 
@@ -311,7 +311,7 @@ class PyPackageBackendInstallation(Installation):
     def install(self, install_type: InstallationType) -> None:
         """Install the backend."""
         if not self.supports(install_type):
-            raise Exception(f"Unsupported installation type {install_type}")
+            raise ValueError(f"Unsupported installation type {install_type}.")
 
         self.package_manager.install(self._packages_to_install)
 

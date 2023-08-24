@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Module for the events and related functionality.
 
@@ -267,14 +267,14 @@ class EventDispatcherMetaclass(type):
     """
 
     def __new__(
-        cls,
+        mcs,
         clsname: str,
         bases: tuple[type, ...],
         namespace: dict[str, Any],
         event_handler_method_prefix: str = "on_",
     ) -> Any:
         """Create event dispatcher and link event handlers."""
-        new_class = super().__new__(cls, clsname, bases, namespace)
+        new_class = super().__new__(mcs, clsname, bases, namespace)
 
         @singledispatchmethod
         def dispatcher(_self: Any, _event: Event) -> Any:

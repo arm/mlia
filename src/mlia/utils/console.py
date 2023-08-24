@@ -77,7 +77,7 @@ def _get_table(table_style: str) -> Table:
     if table_style == "no_borders":
         return Table(show_header=False, box=None)
 
-    raise Exception(f"Unsupported table style {table_style}")
+    raise ValueError(f"Table style {table_style} is not supported.")
 
 
 def _convert_to_text(*renderables: RenderableType) -> str:

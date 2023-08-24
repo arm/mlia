@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for module select."""
 from __future__ import annotations
@@ -10,6 +10,7 @@ from typing import Any
 import pytest
 import tensorflow as tf
 
+from mlia.core.errors import ConfigurationError
 from mlia.nn.tensorflow.optimizations.clustering import Clusterer
 from mlia.nn.tensorflow.optimizations.clustering import ClusteringConfiguration
 from mlia.nn.tensorflow.optimizations.pruning import Pruner
@@ -55,7 +56,7 @@ from mlia.nn.tensorflow.optimizations.select import OptimizationSettings
                 layers_to_optimize=None,
             ),
             pytest.raises(
-                Exception,
+                ConfigurationError,
                 match="Optimization target should be a "
                 "positive integer. "
                 "Optimization target provided: 0.5",
@@ -76,7 +77,7 @@ from mlia.nn.tensorflow.optimizations.select import OptimizationSettings
                 layers_to_optimize="all",  # type: ignore
             ),
             pytest.raises(
-                Exception,
+                ConfigurationError,
                 match="Unsupported optimization type: superoptimization",
             ),
             None,
@@ -89,7 +90,7 @@ from mlia.nn.tensorflow.optimizations.select import OptimizationSettings
                 layers_to_optimize=None,
             ),
             pytest.raises(
-                Exception,
+                ConfigurationError,
                 match="Optimization type is not provided",
             ),
             None,
@@ -225,7 +226,7 @@ def test_optimization_settings_create_from(
             OptimizationSettings("super_optimization", 42, None),
             None,
             pytest.raises(
-                Exception, match="Unknown optimization type super_optimization"
+                Exception, match="Optimization type super_optimization is unknown."
             ),
         ],
     ],

@@ -129,7 +129,7 @@ class VelaCompiler:  # pylint: disable=too-many-instance-attributes
             nng, network_type = model.nng, NetworkType.TFLite
 
         if not nng:
-            raise Exception("Unable to read model")
+            raise ValueError("Unable to read model: model.nng is not available")
 
         output_basename = f"{self.output_dir}/{nng.name}"
 
@@ -152,7 +152,9 @@ class VelaCompiler:  # pylint: disable=too-many-instance-attributes
 
             return OptimizedModel(nng, arch, compiler_options, scheduler_options)
         except (SystemExit, Exception) as err:
-            raise Exception("Model could not be optimized with Vela compiler") from err
+            raise RuntimeError(
+                "Model could not be optimized with Vela compiler."
+            ) from err
 
     def get_config(self) -> dict[str, Any]:
         """Get compiler configuration."""
@@ -200,7 +202,7 @@ class VelaCompiler:  # pylint: disable=too-many-instance-attributes
             ):
                 return read_model(model_path, ModelReaderOptions())  # type: ignore
         except (SystemExit, Exception) as err:
-            raise Exception(f"Unable to read model {model_path}") from err
+            raise RuntimeError(f"Unable to read model {model_path}.") from err
 
     def _architecture_features(self) -> ArchitectureFeatures:
         """Return ArchitectureFeatures instance."""

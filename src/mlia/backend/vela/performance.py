@@ -56,7 +56,9 @@ def estimate_performance(
 
     initial_model = vela_compiler.read_model(model_path)
     if initial_model.optimized:
-        raise Exception("Unable to estimate performance for the given optimized model")
+        raise ValueError(
+            "Unable to estimate performance for the given optimized model."
+        )
 
     optimized_model = vela_compiler.compile_model(initial_model)
 

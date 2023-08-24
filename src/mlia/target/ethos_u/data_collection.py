@@ -178,7 +178,7 @@ class EthosUOptimizationPerformance(ContextAwareDataCollector):
     ) -> list[list[OptimizationSettings]]:
         """Parse optimization parameters."""
         if not is_list_of(optimizations, list):
-            raise Exception("Optimization parameters expected to be a list")
+            raise ValueError("Optimization parameters expected to be a list.")
 
         return [
             [

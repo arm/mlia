@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for config module."""
 from contextlib import ExitStack as does_not_raise
@@ -45,10 +45,12 @@ def test_convert_tf_to_tflite(tmp_path: Path, test_tf_model: Path) -> None:
             "test.model",
             None,
             pytest.raises(
-                Exception,
-                match="The input model format is not supported"
-                r"\(supported formats: TensorFlow Lite, Keras, "
-                r"TensorFlow saved model\)!",
+                ValueError,
+                match=(
+                    "The input model format is not supported "
+                    r"\(supported formats: TensorFlow Lite, Keras, "
+                    r"TensorFlow saved model\)!"
+                ),
             ),
         ),
     ],

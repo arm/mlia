@@ -109,7 +109,7 @@ class BackendRepository:
         repo_backend_path = self._get_backend_path(backend_dir_name)
 
         if repo_backend_path.exists():
-            raise Exception(f"Unable to copy backend files for {backend_name}.")
+            raise RuntimeError(f"Unable to copy backend files for {backend_name}.")
 
         copy_all(backend_path, dest=repo_backend_path)
 
@@ -126,7 +126,7 @@ class BackendRepository:
     ) -> None:
         """Add backend to repository."""
         if self.is_backend_installed(backend_name):
-            raise Exception(f"Backend {backend_name} already installed.")
+            raise RuntimeError(f"Backend {backend_name} already installed.")
 
         settings = settings or {}
         settings["backend_path"] = backend_path.absolute().as_posix()
@@ -138,7 +138,7 @@ class BackendRepository:
         settings = self.config_file.get_backend_settings(backend_name)
 
         if not settings:
-            raise Exception(f"Backend {backend_name} is not installed.")
+            raise RuntimeError(f"Backend {backend_name} is not installed.")
 
         if "backend_dir" in settings:
             repo_backend_path = self._get_backend_path(settings["backend_dir"])
@@ -155,7 +155,7 @@ class BackendRepository:
         settings = self.config_file.get_backend_settings(backend_name)
 
         if not settings:
-            raise Exception(f"Backend {backend_name} is not installed.")
+            raise RuntimeError(f"Backend {backend_name} is not installed.")
 
         if backend_dir := settings.get("backend_dir", None):
             return self._get_backend_path(backend_dir), settings
@@ -163,7 +163,7 @@ class BackendRepository:
         if backend_path := settings.get("backend_path", None):
             return Path(backend_path), settings
 
-        raise Exception(f"Unable to resolve path of the backend {backend_name}.")
+        raise RuntimeError(f"Unable to resolve path of the backend {backend_name}.")
 
     def _get_backend_path(self, backend_dir_name: str) -> Path:
         """Return path to backend."""
@@ -173,7 +173,7 @@ class BackendRepository:
         """Init repository."""
         if self.repository.exists():
             if not self.config_file.exists():
-                raise Exception(
+                raise RuntimeError(
                     f"Directory {self.repository} could not be used as MLIA repository."
                 )
         else:

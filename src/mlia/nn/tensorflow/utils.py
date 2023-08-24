@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-FileCopyrightText: Copyright The TensorFlow Authors. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0
 """Collection of useful functions for optimizations."""
@@ -22,7 +22,7 @@ def representative_dataset(
 ) -> Callable:
     """Sample dataset used for quantization."""
     if input_shape[0] != 1:
-        raise Exception("Only the input batch_size=1 is supported!")
+        raise ValueError("Only the input batch_size=1 is supported!")
 
     def dataset() -> Iterable:
         for _ in range(sample_count):
@@ -41,7 +41,7 @@ def get_tf_tensor_shape(model: str) -> list:
         default_signature = loaded.signatures[default_signature_key]
         inputs_tensor_info = default_signature.inputs
     except KeyError as err:
-        raise Exception(f"Signature '{default_signature_key}' not found") from err
+        raise KeyError(f"Signature '{default_signature_key}' not found.") from err
 
     return [
         dim

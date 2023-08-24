@@ -390,6 +390,6 @@ def ethos_u_formatters(data: Any) -> Callable[[Any], Report]:
         report = report_tflite_compatiblity
 
     else:
-        raise Exception(f"Unable to find appropriate formatter for {data}")
+        raise RuntimeError(f"Unable to find appropriate formatter for {data}.")
 
     return report

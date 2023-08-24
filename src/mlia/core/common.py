@@ -36,7 +36,7 @@ class AdviceCategory(Flag):
         category_names = [item.name for item in AdviceCategory]
         for advice_value in values:
             if advice_value.upper() not in category_names:
-                raise Exception(f"Invalid advice category {advice_value}")
+                raise ValueError(f"Invalid advice category {advice_value}.")
 
         return {AdviceCategory[value.upper()] for value in values}
 

@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Inference advisor module."""
 from __future__ import annotations
@@ -77,7 +77,7 @@ class DefaultInferenceAdvisor(InferenceAdvisor, ParameterResolverMixin):
 
         model = Path(model_param)
         if not model.exists():
-            raise Exception(f"Path {model} does not exist")
+            raise FileNotFoundError(f"Path {model} does not exist.")
 
         return model
 

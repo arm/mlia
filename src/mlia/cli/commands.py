@@ -72,7 +72,7 @@ def check(
                       "model.h5", compatibility=True, performance=True)
     """
     if not model:
-        raise Exception("Model is not provided")
+        raise ValueError("Model is not provided.")
 
     # Set category based on checks to perform (i.e. "compatibility" and/or
     # "performance").

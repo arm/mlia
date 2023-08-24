@@ -45,12 +45,12 @@ class CortexAInferenceAdvisor(DefaultInferenceAdvisor):
             collectors.append(CortexAOperatorCompatibility(model, target_config))
 
         if context.category_enabled(AdviceCategory.PERFORMANCE):
-            raise Exception(
+            raise RuntimeError(
                 "Performance estimation is currently not supported for Cortex-A."
             )
 
         if context.category_enabled(AdviceCategory.OPTIMIZATION):
-            raise Exception(
+            raise RuntimeError(
                 "Model optimizations are currently not supported for Cortex-A."
             )
 

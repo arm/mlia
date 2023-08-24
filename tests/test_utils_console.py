@@ -53,7 +53,7 @@ def test_produce_table(
 
 def test_produce_table_unknown_style() -> None:
     """Test that function should fail if unknown style provided."""
-    with pytest.raises(Exception, match="Unsupported table style unknown_style"):
+    with pytest.raises(ValueError, match="Table style unknown_style is not supported."):
         produce_table([["1", "2", "3"]], [], "unknown_style")
 
 

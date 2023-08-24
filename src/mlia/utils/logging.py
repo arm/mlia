@@ -181,7 +181,7 @@ def create_log_handler(
         handler = logging.StreamHandler(stream)
 
     if handler is None:
-        raise Exception("Unable to create logging handler")
+        raise RuntimeError("Unable to create logging handler.")
 
     if log_level:
         handler.setLevel(log_level)

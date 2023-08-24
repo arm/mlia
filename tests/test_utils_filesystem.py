@@ -40,12 +40,12 @@ def test_get_mlia_target_profiles() -> None:
 @pytest.mark.parametrize("raise_exception", [True, False])
 def test_temp_file(raise_exception: bool) -> None:
     """Test temp_file context manager."""
-    with contextlib.suppress(Exception):
+    with contextlib.suppress(RuntimeError):
         with temp_file() as tmp_path:
             assert tmp_path.is_file()
 
             if raise_exception:
-                raise Exception("Error!")
+                raise RuntimeError("Error!")
 
     assert not tmp_path.exists()
 

@@ -427,7 +427,7 @@ class SingleRow(Table):
     def to_plain_text(self, **kwargs: Any) -> str:
         """Produce report in human readable format."""
         if len(self.rows) != 1:
-            raise Exception("Table should have only one row")
+            raise RuntimeError(f"Table should have only one row, but has {self.rows}.")
 
         items = "\n".join(
             column.header.ljust(35) + str(item).rjust(25)

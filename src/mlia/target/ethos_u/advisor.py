@@ -54,7 +54,7 @@ class EthosUInferenceAdvisor(DefaultInferenceAdvisor):
         if is_tflite_model(model):
             # TensorFlow Lite models do not support optimization (only performance)!
             if context.category_enabled(AdviceCategory.OPTIMIZATION):
-                raise Exception(
+                raise RuntimeError(
                     "Optimizations are not supported for TensorFlow Lite files."
                 )
             if context.category_enabled(AdviceCategory.PERFORMANCE):
@@ -170,7 +170,7 @@ def _get_config_parameters(
     backends = extra_args.get("backends")
     if backends is not None:
         if not is_list_of(backends, str):
-            raise Exception("Backends value has wrong format")
+            raise ValueError("Backends value has wrong format.")
 
         advisor_parameters["ethos_u_inference_advisor"]["backends"] = backends
 
@@ -179,7 +179,7 @@ def _get_config_parameters(
         optimization_targets = _DEFAULT_OPTIMIZATION_TARGETS
 
     if not is_list_of(optimization_targets, dict):
-        raise Exception("Optimization targets value has wrong format")
+        raise ValueError("Optimization targets value has wrong format.")
 
     advisor_parameters.update(
         {

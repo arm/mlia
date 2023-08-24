@@ -51,7 +51,7 @@ class Corstone300Installer:
                 # this instance
                 subprocess.check_call(fvp_install_cmd)  # nosec
             except subprocess.CalledProcessError as err:
-                raise Exception(
+                raise RuntimeError(
                     "Error occurred during Corstone-300 installation"
                 ) from err
 
