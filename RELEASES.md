@@ -135,7 +135,7 @@ scheme.
 * Ethos-U operator compatibility, performance estimation and optimization
   advice
 * Arm IP support:
-  * Ethos-U55 via Corstone-300 and Corstone-310
-  * Ethos-U65 via Corstone-300
+   * Ethos-U55 via Corstone-300 and Corstone-310
+   * Ethos-U65 via Corstone-300
 
   Note: Corstone-310 is available on AVH only.

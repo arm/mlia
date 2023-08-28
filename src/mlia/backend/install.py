@@ -11,6 +11,7 @@ from abc import abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
+from typing import Iterable
 from typing import Optional
 from typing import Union
 
@@ -177,7 +178,47 @@ class BackendInstallation(Installation):
 
             with working_directory(tmpdir / "dist", create_dir=True) as dist_dir:
                 with tarfile.open(downloaded_to) as archive:
-                    archive.extractall(dist_dir)
+
+                    def get_filtered_members(
+                        members: Iterable[tarfile.TarInfo],
+                    ) -> Iterable[tarfile.TarInfo]:
+                        """
+                        Make sure we only handle safe files from the tar file.
+
+                        To avoid traversal attacks we only allow files that are
+                        - regular files, i.e. not a symlink etc.
+                        - relative paths, i.e. no absolute file paths
+                        - not including directory traversal sequences '..'
+                        """
+                        for member in members:
+                            try:
+                                if not (member.isfile() or member.isdir()):
+                                    raise ValueError("Path is not a regular file.")
+                                path = Path(member.path)
+                                if path.is_absolute():
+                                    raise ValueError(
+                                        "Path is absolute, but must be relative."
+                                    )
+                                abs_path = (dist_dir / path).resolve()
+                                abs_path.relative_to(dist_dir)
+                                yield member
+                            except ValueError as ex:
+                                logger.warning(
+                                    "File '%s' ignored while extracting from %s: %s",
+                                    member.path,
+                                    downloaded_to,
+                                    ex,
+                                )
+
+                    # Filter files from the tarfile to avoid traversal attacks.
+                    # Note: bandit is still putting out a low severity /
+                    # low confidence warning despite the check
+                    # From Python 3.8.17 on there is a built-in feature to fix
+                    # this using the new argument filter="data", see
+                    # https://docs.python.org/3.8/library/tarfile.html#tarfile.TarFile.extractall
+                    archive.extractall(  # nosec
+                        dist_dir, members=get_filtered_members(archive.getmembers())
+                    )
 
                 backend_path = dist_dir
                 if self.backend_installer:

@@ -64,8 +64,8 @@ typical setup for MLIA requires:
   tested on this one specifically)
 * Python® >= 3.8.1
 * Ethos™-U Vela dependencies (Linux® only)
-  * For more details, please refer to the
-    [prerequisites of Vela](https://pypi.org/project/ethos-u-vela/)
+   * For more details, please refer to the
+     [prerequisites of Vela](https://pypi.org/project/ethos-u-vela/)
 
 ## Installation
 

@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 # Pre-commit checks
 #
@@ -11,7 +11,7 @@
 
 repos:
 - repo: https://github.com/pre-commit/pre-commit-hooks
-  rev: v4.3.0
+  rev: v4.4.0
   hooks:
     - id: check-yaml
 
@@ -38,57 +38,57 @@ repos:
       args: [--whitespaces-count, '8']
 
 - repo: https://github.com/asottile/reorder_python_imports
-  rev: v3.9.0
+  rev: v3.10.0
   hooks:
     - id: reorder-python-imports
       args: ["--application-directories", ".:src"]
 
 - repo: https://github.com/asottile/pyupgrade
-  rev: v3.2.0
+  rev: v3.10.1
   hooks:
     - id: pyupgrade
       args: ["--py38-plus"]
 
 - repo: https://github.com/psf/black
-  rev: 22.10.0
+  rev: 23.7.0
   hooks:
     - id: black
 
 - repo: https://github.com/PyCQA/flake8
-  rev: '5.0.4'
+  rev: 6.1.0
   hooks:
     - id: flake8
 
 - repo: https://github.com/PyCQA/pydocstyle
-  rev: 6.1.1
+  rev: 6.3.0
   hooks:
     - id: pydocstyle
 
 - repo: https://github.com/markdownlint/markdownlint
-  rev: v0.11.0
+  rev: v0.12.0
   hooks:
     - id: markdownlint
       args: ["-r", "~MD024,~MD002"]
 
 - repo: https://github.com/ryanrhee/shellcheck-py
-  rev: v0.8.0.4
+  rev: v0.9.0.5
   hooks:
     - id: shellcheck
       args: [-f, gcc, -x]
 
 - repo: https://github.com/fsfe/reuse-tool
-  rev: v1.0.0
+  rev: v2.1.0
   hooks:
     - id: reuse
 
 - repo: https://github.com/PrincetonUniversity/blocklint
-  rev: v0.2.3
+  rev: v0.2.4
   hooks:
     - id: blocklint
       exclude: setup.cfg
 
 - repo: https://github.com/PyCQA/bandit
-  rev: '1.7.4'
+  rev: 1.7.5
   hooks:
     - id: bandit
       args: ["--skip", "B101"]
