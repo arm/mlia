@@ -255,6 +255,19 @@ class ChromeTrace:
             slice_row_times[slice_name] = row_times
         return slice_row_times
 
+    def get_pass_times(self, slice_filter: Callable = lambda: True) -> dict[int, float]:
+        """Get total times spent in each pass."""
+        pass_times: dict[int, float] = {}
+        for slc, thread, _ in self.list_records():
+            if not slice_filter(slc):
+                continue
+
+            pass_time = pass_times.get(thread.id, 0)
+            pass_time += slc.duration
+            pass_times[thread.id] = pass_time
+
+        return pass_times
+
 
 def parse_chrometrace(trace_file: Path) -> ChromeTrace:
     """Parse the trace file and return the parser object."""

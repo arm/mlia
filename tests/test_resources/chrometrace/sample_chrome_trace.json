@@ -1,0 +1,332 @@
+{
+"displayTimeUnit": "ms",
+"traceEvents": [
+{
+"args": {
+"name": "Functional Unit Utilisation (in %)"
+},
+"name": "process_name",
+"ph": "M",
+"pid": 1001
+},
+{
+"args": {
+"name": "Endpoint Utilisation (in %)"
+},
+"name": "process_name",
+"ph": "M",
+"pid": 1002
+},
+{
+"args": {
+"name": "Endpoint Occupancy (in %)"
+},
+"name": "process_name",
+"ph": "M",
+"pid": 1003
+},
+{
+"args": {
+"name": "Memory System Utilisation (in %)"
+},
+"name": "process_name",
+"ph": "M",
+"pid": 1004
+},
+{
+"args": {
+"name": "Memory System Bandwidth (in GB/s)"
+},
+"name": "process_name",
+"ph": "M",
+"pid": 1005
+},
+{
+"args": {
+"name": "Mac throughput (Tops/s)"
+},
+"name": "process_name",
+"ph": "M",
+"pid": 1006
+},
+{
+"args": {
+"name": "Bound By"
+},
+"name": "process_name",
+"ph": "M",
+"pid": 1007
+},
+{
+"args": {
+"name": "NE"
+},
+"name": "process_name",
+"ph": "M",
+"pid": 0
+},
+{
+"args": {
+"name": "Pass"
+},
+"name": "thread_name",
+"ph": "M",
+"pid": 0,
+"tid": 0
+},
+{
+"args": {
+"name": "Pass"
+},
+"name": "thread_name",
+"ph": "M",
+"pid": 0,
+"tid": 1
+},
+{
+"args": {
+"name": "ne_convolution"
+},
+"name": "thread_name",
+"ph": "M",
+"pid": 1007,
+"tid": 0
+},
+{
+"args": {
+"name": "ne_vector"
+},
+"name": "thread_name",
+"ph": "M",
+"pid": 1007,
+"tid": 1
+},
+{
+"args": {
+"name": "pseudo_cascade_startup"
+},
+"name": "thread_name",
+"ph": "M",
+"pid": 1007,
+"tid": 7
+},
+{
+"args": {
+"name": "pseudo_stripe_startup"
+},
+"name": "thread_name",
+"ph": "M",
+"pid": 1007,
+"tid": 8
+},
+{
+"args": {
+"name": "l2_cache"
+},
+"name": "thread_name",
+"ph": "M",
+"pid": 1007,
+"tid": 10
+},
+{
+"args": {
+"name": "mesh_link"
+},
+"name": "thread_name",
+"ph": "M",
+"pid": 1007,
+"tid": 13
+},
+{
+"cat": "Stripe trace",
+"name": "sequential/max_pooling2d/MaxPool",
+"ph": "B",
+"pid": 0,
+"tid": 0,
+"ts": 0.0
+},
+{
+"args": {
+"block quantum": [
+32,
+1,
+8,
+16,
+8,
+10,
+2
+],
+"command box begin": [
+0,
+0,
+0,
+0,
+0,
+0,
+0
+],
+"command box size": [
+128,
+1,
+25,
+10,
+1,
+10,
+4
+],
+"name": "sequential/max_pooling2d/MaxPool",
+"sections": [
+"NEInputReader: InputRead",
+"NEWeightFetch: WeightFetch",
+"NEInputReader: InputRead",
+"NEConvolution: Conv2DBias",
+"NEVector: BiasRescaleDownVector Clamp",
+"NEOutputWriter: OutputWrite"
+],
+"source_locations": [
+{
+"name": "sequential/max_pooling2d/MaxPool",
+"operator_index": 0,
+"subgraph_index": 0
+}
+]
+},
+"cat": "Stripe trace",
+"name": "sequential/max_pooling2d/MaxPool",
+"ph": "E",
+"pid": 0,
+"tid": 0,
+"ts": 7.2718750000000005
+},
+{
+"cat": "Stripe trace",
+"name": "sequential/max_pooling2d/MaxPool",
+"ph": "B",
+"pid": 0,
+"tid": 0,
+"ts": 7.2718750000000005
+},
+{
+"args": {
+"block quantum": [
+32,
+1,
+8,
+16,
+8,
+10,
+2
+],
+"command box begin": [
+128,
+0,
+0,
+0,
+0,
+0,
+0
+],
+"command box size": [
+128,
+1,
+25,
+10,
+1,
+10,
+4
+],
+"name": "sequential/max_pooling2d/MaxPool",
+"sections": [
+"NEInputReader: InputRead",
+"NEWeightFetch: WeightFetch",
+"NEInputReader: InputRead",
+"NEConvolution: Conv2DBias",
+"NEVector: BiasRescaleDownVector Clamp",
+"NEOutputWriter: OutputWrite"
+],
+"source_locations": [
+{
+"name": "sequential/max_pooling2d/MaxPool",
+"operator_index": 0,
+"subgraph_index": 0
+}
+]
+},
+"cat": "Stripe trace",
+"name": "sequential/max_pooling2d/MaxPool",
+"ph": "E",
+"pid": 0,
+"tid": 0,
+"ts": 13.521875
+},
+{
+"cat": "Stripe trace",
+"name": "model/re_lu_1/Relu",
+"ph": "B",
+"pid": 0,
+"tid": 1,
+"ts": 13.521875
+},
+{
+"args": {
+"block quantum": [
+64,
+1,
+8,
+8,
+64,
+3,
+3
+],
+"command box begin": [
+0,
+0,
+0,
+0,
+0,
+0,
+0
+],
+"command box size": [
+128,
+1,
+13,
+5,
+1,
+3,
+3
+],
+"name": "model/re_lu_1/Relu",
+"sections": [
+"NEInputReader: InputRead",
+"NEWeightFetch: WeightFetch",
+"NEInputReader: InputRead",
+"NEConvolution: DepthwiseConv2DBias",
+"NEVector: BiasRescaleDownVector Clamp",
+"NEOutputWriter: OutputWrite"
+],
+"source_locations": [
+{
+"name": "model/re_lu_1/Relu",
+"operator_index": 1,
+"subgraph_index": 0
+}
+]
+},
+"cat": "Stripe trace",
+"name": "model/re_lu_1/Relu",
+"ph": "E",
+"pid": 0,
+"tid": 1,
+"ts": 14.734375
+},
+{
+"cat": "Stripe trace",
+"name": "sequential/max_pooling2d/MaxPool",
+"ph": "B",
+"pid": 0,
+"tid": 0,
+"ts": 14.734375
+}
+]
+}

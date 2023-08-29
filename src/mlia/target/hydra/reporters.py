@@ -42,8 +42,15 @@ def report_hydra_performance(metrics: HydraPerformanceMetrics) -> Report:
         Column(
             "Duration(µs)", alias="duration", fmt=Format(wrap_width=25, str_fmt="12.3f")
         ),
+        Column(
+            "Percentage of time", alias="percentage_time", fmt=Format(wrap_width=25)
+        ),
     ]
     columns = op_columns + perf_columns
+    total_time: float = 0
+    for _, op_data in enumerate(metrics.operator_performance_data):
+        for operator in op_data.get_duration():
+            total_time += float(operator[0])
 
     rows = [
         (
@@ -56,6 +63,11 @@ def report_hydra_performance(metrics: HydraPerformanceMetrics) -> Report:
                 rows=op_data.get_duration(),
                 name="Duration",
             ),
+            Table(
+                columns=columns,
+                rows=op_data.get_percentage_time(total_time),
+                name="percentage_time",
+            ),
         )
         for i, op_data in enumerate(metrics.operator_performance_data)
     ]
@@ -65,7 +77,7 @@ def report_hydra_performance(metrics: HydraPerformanceMetrics) -> Report:
         rows=rows,
         name="Argo per-layer analysis",
         alias="argo_per_layer",
-    )
+    ).sorted_by("duration", True)
 
 
 def hydra_formatters(data: Any) -> Callable[[Any], Report]:

@@ -47,6 +47,13 @@ def assert_table_lines(report: Table, expected_lines: list) -> None:
 
 def test_hydra_formatters() -> None:
     """Test function hydra_formatters() with valid input."""
+    op_performance_data = OperatorPerformanceData(
+        "BiasAdd",
+        "BIAS_ADD",
+        [{"n_pass": 4, "hw_block": "SE", "duration": 5.123456789}],
+    ).get_performance_metrics()
+    assert op_performance_data
+
     metrics = HydraPerformanceMetrics(
         target_config=HydraConfiguration(target="hydra"),
         metrics_file=Path("DOES_NOT_EXIST"),
@@ -79,17 +86,20 @@ def test_hydra_formatters() -> None:
     assert_table_lines(
         report,
         [
+            # pylint: disable=C0301
             "Argo per-layer analysis:",
-            "┌───────────────┬───────────────────┬────────┬──────────┬──────────────┐",
-            "│ Operator name │ Type              │ Pass # │ HW Block │ Duration(µs) │",
-            "╞═══════════════╪═══════════════════╪════════╪══════════╪══════════════╡",
-            "│ Relu          │ CONV_2D           │ 1      │ NE       │ 2.1235       │",
-            "│               │                   │ 2      │ NE       │ 3.1235       │",
-            "├───────────────┼───────────────────┼────────┼──────────┼──────────────┤",
-            "│ Relu          │ DEPTHWISE_CONV_2D │ 3      │ SE       │ 4.1235       │",
-            "├───────────────┼───────────────────┼────────┼──────────┼──────────────┤",
-            "│ BiasAdd       │ BIAS_ADD          │ 4      │ SE       │ 5.1235       │",
-            "└───────────────┴───────────────────┴────────┴──────────┴──────────────┘",
+            "┌──────────────┬──────────────┬────────┬──────────┬──────────────┬─────────────┐",
+            "│ Operator     │              │        │          │              │ Percentage  │",
+            "│ name         │ Type         │ Pass # │ HW Block │ Duration(µs) │ of time     │",
+            "╞══════════════╪══════════════╪════════╪══════════╪══════════════╪═════════════╡",
+            "│ Relu         │ CONV_2D      │ 1      │ NE       │ 2.1235       │ 14.65%      │",
+            "│              │              │ 2      │ NE       │ 3.1235       │ 21.55%      │",
+            "├──────────────┼──────────────┼────────┼──────────┼──────────────┼─────────────┤",
+            "│ BiasAdd      │ BIAS_ADD     │ 4      │ SE       │ 5.1235       │ 35.35%      │",
+            "├──────────────┼──────────────┼────────┼──────────┼──────────────┼─────────────┤",
+            "│ Relu         │ DEPTHWISE_C… │ 3      │ SE       │ 4.1235       │ 28.45%      │",
+            "└──────────────┴──────────────┴────────┴──────────┴──────────────┴─────────────┘",
+            # pylint: enable=C0301
         ],
     )
 

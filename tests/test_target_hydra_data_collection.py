@@ -20,8 +20,7 @@ def test_hydra_data_collection(
 ) -> None:
     """Test Hydra data collection."""
     test_metrics_file = Path(
-        test_resources_path
-        / "chrometrace/ds_cnn_large_fully_quantized_int8_chrome_trace.json"
+        test_resources_path / "chrometrace/sample_chrome_trace.json"
     )
     monkeypatch.setattr(
         "mlia.target.hydra.performance.estimate_performance",
