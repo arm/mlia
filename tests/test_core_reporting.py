@@ -111,6 +111,18 @@ def test_table_representation(with_notes: bool, expected_text_report: str) -> No
             {"header2": 5, "header3": 123123},
         ]
     }
+    table = sample_table(with_notes)
+    sorted_table = table.sorted_by("header3", True)
+    json_repr = sorted_table.to_json()
+    assert json_repr == {
+        "sample_table": [
+            {"header2": 5, "header3": 123123},
+            {"header2": 2, "header3": 3},
+        ]
+    }
+
+    with pytest.raises(KeyError):
+        table.sorted_by("Invalid", True)
 
     text_report = remove_ascii_codes(table.to_plain_text())
     assert text_report == expected_text_report

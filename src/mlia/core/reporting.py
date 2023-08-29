@@ -123,6 +123,10 @@ class Cell:
         val = self._get_value()
         return self._apply_style(val)
 
+    def __hash__(self) -> int:
+        """Return hashable verion of cell."""
+        return hash(str(self))
+
     def to_json(self) -> Any:
         """Cell definition for json."""
         return self.value
@@ -330,6 +334,31 @@ class Table(Report):
         self.name = name
         self.alias = alias
         self.notes = notes
+
+    def sorted_by(self, key: str, reverse: bool = False) -> Table:
+        """Sort table by giving column alias as key."""
+        found_column_flag = False
+        for column_number, column in enumerate(self.columns):
+            if key == column.alias:
+                found_column_flag = True
+                row_values = []
+                for row in self.rows:
+                    try:
+                        total_row_value: float = 0.0
+                        for row_value in row[column_number].rows:
+                            total_row_value += float(row_value[0])
+                        row_values.append({row: total_row_value})
+                    except AttributeError:
+                        try:
+                            row_values.append({row: row[column_number].value})
+                        except AttributeError:
+                            row_values.append({row: row[column_number]})
+        if found_column_flag is False:
+            error_message = "*Unable to find column with alias: " + key
+            raise KeyError(error_message)
+        row_values.sort(key=lambda x: list(x.values()), reverse=reverse)
+        sorted_rows = [list(row.keys())[0] for row in row_values]
+        return Table(self.columns, sorted_rows, self.name, self.alias)
 
     def to_json(self, **kwargs: Any) -> Iterable:
         """Convert table to dict object."""
