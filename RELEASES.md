@@ -40,6 +40,34 @@ scheme.
 * Add linters/checkers for TOML files to pre-commits
 * Add flaky dependency for unstable tests
 
+## Release 0.7.0+internal.0
+
+### Interface changes
+
+* Add a graph rewriting flow to MLIA for local optimization
+  (MLIA-750, MLIA-845, MLIA-843, MLIA-865, MLIA-749)
+* Add Argo backend for NGP performance analysis (MLIA-855,
+  MLIA-825, MLIA-826)
+
+### Internal changes
+
+* Implicitly convert datasets for rewrites (MLIA-884)
+* Enable rewrite functionality for all targets (MLIA-891)
+* Adapt default parameters for training of rewrites (MLIA-946)
+
+### Feature changes
+
+* Add more metrics to the rewrite report (MLIA-906)
+* Add support for rewrites of int8 quantized input models (MLIA-906,
+  MLIA-907, MLIA-927, MLIA-908)
+* Add functionality to list all available rewrites (MLIA-899)
+* Add Argo performance analysis report (MLIA-882, MLIA-858, MLIA-827)
+
+### Issues fixed
+
+* Fix replacement model input shape of converted Keras model
+  for rewrites (MLIA-895)
+
 ## Release 0.7.0
 
 ### Internal changes
