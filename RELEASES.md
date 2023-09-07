@@ -62,6 +62,7 @@ scheme.
   MLIA-907, MLIA-927, MLIA-908)
 * Add functionality to list all available rewrites (MLIA-899)
 * Add Argo performance analysis report (MLIA-882, MLIA-858, MLIA-827)
+* Sort Argo performance report by percentage of time per layer (MLIA-896)
 
 ### Issues fixed
 
