@@ -6,6 +6,7 @@ from __future__ import annotations
 import logging
 import sys
 from dataclasses import dataclass
+from io import StringIO
 from pathlib import Path
 from typing import Any
 from typing import Literal
@@ -141,6 +142,9 @@ class VelaCompiler:  # pylint: disable=too-many-instance-attributes
             with redirect_output(
                 logger, stdout_level=logging.DEBUG, stderr_level=logging.DEBUG
             ):
+                tmp = sys.stdout
+                output_message = StringIO()
+                sys.stdout = output_message
                 compiler_driver(
                     nng,
                     arch,
@@ -149,8 +153,16 @@ class VelaCompiler:  # pylint: disable=too-many-instance-attributes
                     network_type,
                     output_basename,
                 )
+                sys.stdout = tmp
+                if (
+                    "Warning: SRAM target for arena memory area exceeded."
+                    in output_message.getvalue()
+                ):
+                    raise MemoryError("Model is too large and uses too much RAM")
 
             return OptimizedModel(nng, arch, compiler_options, scheduler_options)
+        except MemoryError as err:
+            raise err
         except (SystemExit, Exception) as err:
             raise RuntimeError(
                 "Model could not be optimized with Vela compiler."

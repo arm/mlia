@@ -2,7 +2,9 @@
 # SPDX-License-Identifier: Apache-2.0
 """Tests for module vela/compiler."""
 from pathlib import Path
+from typing import Any
 
+import pytest
 from ethosu.vela.compiler_driver import TensorAllocator
 from ethosu.vela.scheduler import OptimizationStrategy
 
@@ -152,6 +154,24 @@ def test_compile_model(test_tflite_model: Path) -> None:
 
     optimized_model = compiler.compile_model(test_tflite_model)
     assert isinstance(optimized_model, OptimizedModel)
+
+
+def test_compile_model_fail_sram_exceeded(
+    test_tflite_model: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Test model optimization."""
+    compiler = VelaCompiler(
+        EthosUConfiguration.load_profile("ethos-u55-256").compiler_options
+    )
+
+    def fake_compiler(*_: Any) -> None:
+        print("Warning: SRAM target for arena memory area exceeded.")
+
+    monkeypatch.setattr("mlia.backend.vela.compiler.compiler_driver", fake_compiler)
+    with pytest.raises(Exception) as exc_info:
+        compiler.compile_model(test_tflite_model)
+
+    assert str(exc_info.value) == "Model is too large and uses too much RAM"
 
 
 def test_optimize_model(tmp_path: Path, test_tflite_model: Path) -> None:
