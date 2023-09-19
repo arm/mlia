@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-FileCopyrightText: Copyright The TensorFlow Authors. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0
 """Collection of useful functions for optimizations."""
@@ -21,12 +21,10 @@ def representative_dataset(
     input_shape: Any, sample_count: int = 100, input_dtype: type = np.float32
 ) -> Callable:
     """Sample dataset used for quantization."""
-    if input_shape[0] != 1:
-        raise Exception("Only the input batch_size=1 is supported!")
 
     def dataset() -> Iterable:
         for _ in range(sample_count):
-            data = np.random.rand(*input_shape)
+            data = np.random.rand(1, *input_shape[1:])
             yield [data.astype(input_dtype)]
 
     return dataset
