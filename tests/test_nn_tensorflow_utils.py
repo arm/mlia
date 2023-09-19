@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Test for module utils/test_utils."""
 from pathlib import Path
@@ -29,12 +29,6 @@ def test_generate_representative_dataset() -> None:
         ndarray = elem[0]
         assert ndarray.dtype == np.float32
         assert isinstance(ndarray, np.ndarray)
-
-
-def test_generate_representative_dataset_wrong_shape() -> None:
-    """Test that only shape with batch size=1 is supported."""
-    with pytest.raises(Exception, match="Only the input batch_size=1 is supported!"):
-        representative_dataset([2, 3, 3], 5)
 
 
 def test_convert_saved_model_to_tflite(test_tf_model: Path) -> None:

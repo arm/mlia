@@ -21,12 +21,10 @@ def representative_dataset(
     input_shape: Any, sample_count: int = 100, input_dtype: type = np.float32
 ) -> Callable:
     """Sample dataset used for quantization."""
-    if input_shape[0] != 1:
-        raise ValueError("Only the input batch_size=1 is supported!")
 
     def dataset() -> Iterable:
         for _ in range(sample_count):
-            data = np.random.rand(*input_shape)
+            data = np.random.rand(1, *input_shape[1:])
             yield [data.astype(input_dtype)]
 
     return dataset
