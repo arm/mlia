@@ -16,6 +16,12 @@ scheme.
   of Arm® Limited (or its subsidiaries) in the U.S. and/or elsewhere.
 * TensorFlow™ is a trademark of Google® LLC.
 
+## Release 0.7.1
+
+### Issues fixed
+
+* Support batch size > 1 for optimizations (MLIA-469)
+
 ## Release 0.7.0
 
 ### Internal changes
