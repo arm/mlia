@@ -100,7 +100,10 @@ def test_register_rewrite_function() -> None:
 
 def test_builtin_rewrite_names() -> None:
     """Test if all builtin rewrites are properly registered and returned."""
-    assert RewritingOptimizer.builtin_rewrite_names() == ["fully-connected"]
+    assert RewritingOptimizer.builtin_rewrite_names() == [
+        "fully-connected",
+        "fully_connected_sparsity24",
+    ]
 
 
 def test_rewrite_function_autoload() -> None:

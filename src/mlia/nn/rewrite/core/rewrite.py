@@ -115,7 +115,11 @@ class RewritingOptimizer(Optimizer):
         [
             DynamicallyLoadedRewrite(
                 "fully-connected", "mlia.nn.rewrite.library.fc_layer.get_keras_model"
-            )
+            ),
+            DynamicallyLoadedRewrite(
+                "fully_connected_sparsity24",
+                "mlia.nn.rewrite.library.fc_sparsity24_layer.get_keras_model24",
+            ),
         ]
     )
 

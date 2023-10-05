@@ -126,7 +126,8 @@ def test_performance_unknown_target(
                 Exception,
                 match=re.escape(
                     "Invalid rewrite target: 'random'. "
-                    "Supported rewrites: ['fully-connected']"
+                    "Supported rewrites: ['fully-connected',"
+                    " 'fully_connected_sparsity24']"
                 ),
             ),
         ],
