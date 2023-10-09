@@ -42,13 +42,15 @@ def test_rewrite() -> None:
     "rewrite_name, expected_error",
     [
         ("fully-connected", does_not_raise()),
+        ("fully-connected-sparsity24", does_not_raise()),
         ("random", does_not_raise()),
     ],
 )
 def test_rewrite_configuration(
     test_tflite_model_fp32: Path, rewrite_name: str, expected_error: Any
 ) -> None:
-    """Test get_rewrite function only supports rewrite type fully-connected."""
+    """Test get_rewrite function only supports rewrite types
+    fully-connected and fully-connected-sparsity24."""
     with expected_error:
         config_obj = RewriteConfiguration(
             rewrite_name,
@@ -102,7 +104,7 @@ def test_builtin_rewrite_names() -> None:
     """Test if all builtin rewrites are properly registered and returned."""
     assert RewritingOptimizer.builtin_rewrite_names() == [
         "fully-connected",
-        "fully_connected_sparsity24",
+        "fully-connected-sparsity24",
     ]
 
 

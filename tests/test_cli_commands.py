@@ -84,6 +84,19 @@ def test_performance_unknown_target(
         ],
         [
             "ethos-u55-256",
+            False,
+            False,
+            None,
+            None,
+            None,
+            True,
+            "fully-connected-sparsity24",
+            "sequential/flatten/Reshape",
+            "StatefulPartitionedCall:0",
+            does_not_raise(),
+        ],
+        [
+            "ethos-u55-256",
             True,
             False,
             None,
@@ -127,7 +140,7 @@ def test_performance_unknown_target(
                 match=re.escape(
                     "Invalid rewrite target: 'random'. "
                     "Supported rewrites: ['fully-connected',"
-                    " 'fully_connected_sparsity24']"
+                    " 'fully-connected-sparsity24']"
                 ),
             ),
         ],
