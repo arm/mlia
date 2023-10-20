@@ -18,6 +18,7 @@ from mlia.target.registry import registry
 from mlia.target.registry import supported_advice
 from mlia.target.registry import supported_backends
 from mlia.target.registry import supported_targets
+from tests.test_backend_registry import SUPPORTED_BACKENDS
 
 
 @pytest.mark.parametrize(
@@ -102,7 +103,10 @@ def test_supported_backends(target_name: str, expected_backends: list[str]) -> N
         (
             AdviceCategory.PERFORMANCE,
             ["ethos-u55", "ethos-u65", "hydra"]
-            if "argo" in backend_registry.items
+            if any(
+                backend in backend_registry.items
+                for backend in ("argo", "ngp-graph-compiler")
+            )
             else ["ethos-u55", "ethos-u65"],
         ),
     ),
@@ -114,16 +118,8 @@ def test_supported_targets(advice: AdviceCategory, expected_targets: list[str]) 
 
 def test_all_supported_backends() -> None:
     """Test function all_supported_backends."""
-    all_backends = {
-        "argo",
-        "armnn-tflite-delegate",
-        "corstone-310",
-        "corstone-300",
-        "tosa-checker",
-        "vela",
-    }
     registered_backends = all_supported_backends()
-    assert registered_backends.issubset(all_backends)
+    assert registered_backends.issubset(SUPPORTED_BACKENDS)
 
 
 @pytest.mark.parametrize(

@@ -37,20 +37,32 @@ class HydraOptimizationPerformanceMetrics:
 class HydraPerformance(ContextAwareDataCollector):
     """Collect performance information."""
 
-    def __init__(self, model: Path, cfg: HydraConfiguration) -> None:
+    def __init__(self, model: Path, cfg: HydraConfiguration, backend: str) -> None:
         """Init operator compatibility data collector."""
         self.model = model
         self.cfg = cfg
+        self.backend = backend
 
     def collect_data(self) -> ArgoPerformanceMetrics:
         """Run performance estimator."""
         if not is_tflite_model(self.model):
             raise ConfigurationError("Input must be a tflite file.")
 
-        with log_action("Checking performance..."):
+        if self.backend == "argo":
             estimator = ArgoPerformanceEstimator(
                 self.context.output_dir, self.cfg.backend_config
             )
+        elif self.backend == "ngp-graph-compiler":
+            raise NotImplementedError(
+                "Implement performance estimation via NGP Graph Compiler here."
+            )
+        else:
+            raise ValueError(
+                f"Backend '{self.backend}' is not supported for "
+                f"target '{self.cfg.target}'."
+            )
+
+        with log_action("Checking performance..."):
             metrics = estimator.estimate(self.model)
 
         return metrics

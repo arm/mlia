@@ -91,18 +91,22 @@ def test_backend_registry(
     assert cfg.type == type_
 
 
+SUPPORTED_BACKENDS = {
+    "argo",
+    "armnn-tflite-delegate",
+    "corstone-300",
+    "corstone-310",
+    "ngp-graph-compiler",
+    "tosa-checker",
+    "vela",
+    "vulkan-model-converter",
+}
+
+
 def test_get_supported_backends() -> None:
     """Test function get_supported_backends."""
-    supported_backends = {
-        "argo",
-        "armnn-tflite-delegate",
-        "corstone-300",
-        "corstone-310",
-        "tosa-checker",
-        "vela",
-    }
     registered_backends = set(get_supported_backends())
-    assert registered_backends.issubset(supported_backends)
+    assert registered_backends.issubset(SUPPORTED_BACKENDS)
 
 
 def test_get_supported_systems() -> None:

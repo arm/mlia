@@ -14,6 +14,7 @@ from mlia.core.context import Context
 from mlia.core.context import ExecutionContext
 from mlia.core.data_analysis import DataAnalyzer
 from mlia.core.data_collection import DataCollector
+from mlia.core.errors import ConfigurationError
 from mlia.core.events import Event
 from mlia.target.common.optimization import add_common_optimization_params
 from mlia.target.hydra.advice_generation import HydraAdviceProducer
@@ -40,8 +41,10 @@ class HydraInferenceAdvisor(DefaultInferenceAdvisor):
 
         collectors: list[DataCollector] = []
 
+        backend = self._get_backends(context)[0]
+
         if context.category_enabled(AdviceCategory.PERFORMANCE):
-            collectors.append(HydraPerformance(model, target_cfg))
+            collectors.append(HydraPerformance(model, target_cfg, backend))
         elif context.category_enabled(AdviceCategory.OPTIMIZATION):
             collectors.append(HydraOptimizingPerformance(model, target_cfg))
         if context.category_enabled(AdviceCategory.COMPATIBILITY):
@@ -78,6 +81,16 @@ class HydraInferenceAdvisor(DefaultInferenceAdvisor):
         target_profile = self.get_target_profile(context)
         return HydraConfiguration.load_profile(target_profile)
 
+    def _get_backends(self, context: Context) -> str:
+        """Get list of backends."""
+        return self.get_parameter(  # type: ignore
+            self.name(),
+            "backends",
+            expected_type=list,
+            expected=True,
+            context=context,
+        )
+
 
 def configure_and_get_hydra_advisor(
     context: ExecutionContext,
@@ -107,6 +120,17 @@ def _get_config_parameters(
             "target_profile": target_profile,
         },
     }
+
+    # Hydra requires exactly one backend specified
+    backends = extra_args.get("backends")
+    if not backends:
+        raise ConfigurationError("One backend is required but was not specified.")
+    if len(backends) > 1:
+        raise ConfigurationError(
+            f"Only one backend is supported but {len(backends)} were provided: "
+            f"{backends}"
+        )
+    advisor_parameters[HydraInferenceAdvisor.name()]["backends"] = backends
 
     add_common_optimization_params(advisor_parameters, extra_args)
 

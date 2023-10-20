@@ -5,3 +5,5 @@ target = "hydra"
 
 [backend.argo]
 num_npu_cores = 1
+
+[backend.ngp-graph-compiler]

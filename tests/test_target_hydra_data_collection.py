@@ -28,7 +28,7 @@ def test_hydra_data_collection(
     )
 
     perf = HydraPerformance(
-        model=test_tflite_model, cfg=HydraConfiguration(target="hydra")
+        model=test_tflite_model, cfg=HydraConfiguration(target="hydra"), backend="argo"
     )
     perf.set_context(ExecutionContext(advice_category={AdviceCategory.PERFORMANCE}))
     assert perf.name() == "hydra_performance"

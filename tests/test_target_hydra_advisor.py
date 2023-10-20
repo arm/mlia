@@ -21,7 +21,9 @@ def test_configure_and_get_hydra_advisor(test_tflite_model: Path) -> None:
     """Test Hydra advisor configuration."""
     ctx = ExecutionContext(advice_category={AdviceCategory.PERFORMANCE})
 
-    advisor = configure_and_get_hydra_advisor(ctx, "hydra", test_tflite_model)
+    advisor = configure_and_get_hydra_advisor(
+        ctx, "hydra", test_tflite_model, backends=["argo"]
+    )
     workflow = advisor.configure(ctx)
 
     assert isinstance(advisor, HydraInferenceAdvisor)
@@ -29,6 +31,7 @@ def test_configure_and_get_hydra_advisor(test_tflite_model: Path) -> None:
     assert ctx.event_handlers is not None
     assert ctx.config_parameters == {
         "hydra_inference_advisor": {
+            "backends": ["argo"],
             "model": str(test_tflite_model),
             "target_profile": "hydra",
         },
@@ -62,5 +65,7 @@ def test_unsupported_advice_categories(
 
     with pytest.raises(ValueError):
         ctx = ExecutionContext(output_dir=tmp_path, advice_category={category})
-        advisor = configure_and_get_hydra_advisor(ctx, "hydra", test_tflite_model)
+        advisor = configure_and_get_hydra_advisor(
+            ctx, "hydra", test_tflite_model, backends=["argo"]
+        )
         advisor.configure(ctx)

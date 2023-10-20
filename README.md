@@ -446,8 +446,11 @@ Please, find more details in the section for the
 
 ## Hydra
 
-The profile *hydra* can be used for performance analysis of your model on Hydra.
-It requires the [Argo](#argo) backend.
+The profile *hydra* is supported by the following backends:
+
+* [Argo](#argo)
+* [NGP Graph Compiler](#ngp-graph-compiler)
+* [Vulkan Model Converter](#vulkan-model-converter)
 
 ## TOSA
 
@@ -539,17 +542,10 @@ Argo is used from the docker image 'argo-app'. It can either be
 * pulled from the internal docker registry or
 * built locally from the Argo source (see docs there).
 
-To pull Argo from the internal docker registry use the following steps:
+To pull Argo from the internal docker registry:
 
-1. You have to provide your credentials as env vars. This means  \
-  1.1 Go to
-  [Artifactory](https://artifactory.eu02.arm.com/ui/repos/tree/General)  \
-  1.2 Login via Azure (SSO)  \
-  1.3 Go to *"Edit profile"*  \
-  1.4 Create an API Key or copy an existing one  \
-  1.5 Assign the API Key to the env var MLIA_ARTIFACTORY_PASSWORD  \
-  1.6 Assign your email address to MLIA_ARTIFACTORY_USERNAME  \
-
+1. Use the steps listed to set up Artifactory credentials for the
+   [NGP Graph Compiler](#ngp-graph-compiler).
 1. Run this command: `mlia-backend install argo`
 
 After the installation was successful you can get a performance report using
@@ -561,7 +557,7 @@ Argo as shown in the following example.
 # Download and install Argo (requires credentials to be set as described above)
 mlia-backend install argo
 # Get a performance report for the Hydra target using Argo.
-mlia check --performance -t hydra ~/model_file.tflite
+mlia check --performance -t hydra -b argo ~/model_file.tflite
 ```
 
 **Running Argo from host machine**
@@ -613,6 +609,41 @@ on Cortex-M85 and Ethos-U.
 * Please use the examples of MLIA using Corstone-310 here to get started:
   <https://github.com/ARM-software/open-iot-sdk>
 
+### NGP Graph Compiler
+
+The NGP Graph Compiler provides detailed performance information about the input
+model (in TensorFlow Lite format).
+
+It can be installed via
+
+* download: from the internal Artifactory or
+* path: pointing to the extracted package locally
+
+To download from the internal Artifactory use the following steps:
+
+1. You have to provide your credentials as env vars. This means  \
+  1.1 Go to
+  [Artifactory](https://artifactory.eu02.arm.com/ui/repos/tree/General)  \
+  1.2 Login via Azure (SSO)  \
+  1.3 Go to *"Edit profile"*  \
+  1.4 Create an API Key or copy an existing one  \
+  1.5 Assign the API Key to the env var MLIA_ARTIFACTORY_PASSWORD  \
+  1.6 Assign your email address to MLIA_ARTIFACTORY_USERNAME  \
+
+1. Run this command: `mlia-backend install ngp-graph-compiler`
+
+After the installation was successful you can get a performance report as shown
+in the following example.
+
+*Examples:*
+
+```bash
+# Download and install (requires credentials to be set as described above)
+mlia-backend install ngp-graph-compiler
+# Get a performance report for the Hydra target using the NGP Graph Compiler.
+mlia check --performance -t hydra -b ngp-graph-compiler ~/model_file.tflite
+```
+
 ### TOSA Checker
 
 The TOSA Checker backend provides operator compatibility checks against the
@@ -637,3 +668,10 @@ comes pre-installed.
 Additional resources:
 
 * <https://pypi.org/project/ethos-u-vela/>
+
+### Vulkan Model Converter
+
+The Vulkan Model Converter is currently required by the NGP Graph Compiler to
+convert the input model from TensorFlow Lite to SPIR-V. The installation works
+as for the [NGP Graph Compiler](#ngp-graph-compiler) (please detailed
+information there).

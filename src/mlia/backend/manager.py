@@ -159,23 +159,18 @@ class DefaultInstallationManager(InstallationManager, InstallationFiltersMixin):
         if not installation.supports(install_type):
             if isinstance(install_type, InstallFromPath):
                 logger.info(
-                    "Backend '%s' could not be installed using path '%s'.",
+                    "Backend '%s' could not be installed using path '%s'. "
+                    "Please check that it is a valid path to the backend.",
                     installation.name,
-                    install_type.backend_path,
-                )
-                logger.info(
-                    "Please check that '%s' is a valid path to the installed backend.",
                     install_type.backend_path,
                 )
             else:
                 logger.info(
-                    "Backend '%s' could not be downloaded and installed",
+                    "Backend '%s' could not be downloaded for installation. "
+                    "Installation using '--path' might be an alternative."
+                    "Please refer to the project's documentation for more details.",
                     installation.name,
                 )
-                logger.info(
-                    "Please refer to the project's documentation for more details."
-                )
-
             return
 
         if installation.already_installed and not force:
