@@ -31,7 +31,7 @@ def models_are_equal(model1: ModelT, model2: ModelT) -> bool:
     return True
 
 
-class TestTrainingParameters(
+class MockTrainingParameters(
     TrainingParameters
 ):  # pylint: disable=too-few-public-methods
     """

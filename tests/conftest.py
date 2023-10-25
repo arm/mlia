@@ -18,7 +18,7 @@ from mlia.nn.tensorflow.utils import convert_to_tflite
 from mlia.nn.tensorflow.utils import save_keras_model
 from mlia.nn.tensorflow.utils import save_tflite_model
 from mlia.target.ethos_u.config import EthosUConfiguration
-from tests.utils.rewrite import TestTrainingParameters
+from tests.utils.rewrite import MockTrainingParameters
 
 
 @pytest.fixture(scope="session", name="test_resources_path")
@@ -210,10 +210,10 @@ def fixture_test_tfrecord_fp32(
 
 @pytest.fixture(scope="session", autouse=True)
 def set_training_steps() -> Generator[None, None, None]:
-    """Speed up tests by using TestTrainingParameters."""
+    """Speed up tests by using MockTrainingParameters."""
     with pytest.MonkeyPatch.context() as monkeypatch:
         monkeypatch.setattr(
             "mlia.nn.select._get_rewrite_train_params",
-            MagicMock(return_value=TestTrainingParameters()),
+            MagicMock(return_value=MockTrainingParameters()),
         )
         yield
