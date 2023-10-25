@@ -1,10 +1,12 @@
 # SPDX-FileCopyrightText: Copyright 2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: LicenseRef-LICENSE
 """Tests for Hydra reporters."""
+from functools import partial
 from pathlib import Path
 from typing import List
 
 import pytest
+from rich.console import Console
 
 from mlia.core.reporting import Table
 from mlia.target.hydra.config import HydraConfiguration
@@ -45,7 +47,7 @@ def assert_table_lines(report: Table, expected_lines: list) -> None:
     assert actual_lines == expected_lines, f"Expected:\n{expected}\n\nActual:\n{actual}"
 
 
-def test_hydra_formatters() -> None:
+def test_hydra_formatters(monkeypatch: pytest.MonkeyPatch) -> None:
     """Test function hydra_formatters() with valid input."""
     op_performance_data = OperatorPerformanceData(
         "BiasAdd",
@@ -78,6 +80,8 @@ def test_hydra_formatters() -> None:
             ),
         ],
     )
+
+    monkeypatch.setattr("mlia.utils.console.Console", partial(Console, width=80))
 
     formatter = hydra_formatters(metrics)
     report = formatter(metrics)
