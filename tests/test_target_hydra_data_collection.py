@@ -23,7 +23,7 @@ def test_hydra_data_collection(
         test_resources_path / "chrometrace/sample_chrome_trace.json"
     )
     monkeypatch.setattr(
-        "mlia.target.hydra.performance.estimate_performance",
+        "mlia.backend.argo.performance.ArgoPerformanceEstimator._run_argo",
         MagicMock(return_value=test_metrics_file),
     )
 
@@ -35,7 +35,7 @@ def test_hydra_data_collection(
 
     metrics = perf.collect_data()
     assert metrics.metrics_file == test_metrics_file
-    assert metrics.target_config.target == "hydra"
+    assert metrics.backend_config.accelerator_config == "hydra"
 
     perf.model = test_keras_model
     with pytest.raises(Exception):

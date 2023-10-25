@@ -8,10 +8,11 @@ from typing import List
 import pytest
 from rich.console import Console
 
+from mlia.backend.argo.config import ArgoConfig
+from mlia.backend.argo.performance import ArgoPerformanceMetrics
+from mlia.backend.argo.performance import OperatorPerformanceData
 from mlia.core.reporting import Table
 from mlia.target.hydra.config import HydraConfiguration
-from mlia.target.hydra.performance import HydraPerformanceMetrics
-from mlia.target.hydra.performance import OperatorPerformanceData
 from mlia.target.hydra.reporters import hydra_formatters
 from mlia.target.hydra.reporters import report_target
 from mlia.utils.console import remove_ascii_codes
@@ -56,8 +57,8 @@ def test_hydra_formatters(monkeypatch: pytest.MonkeyPatch) -> None:
     ).get_performance_metrics()
     assert op_performance_data
 
-    metrics = HydraPerformanceMetrics(
-        target_config=HydraConfiguration(target="hydra"),
+    metrics = ArgoPerformanceMetrics(
+        backend_config=ArgoConfig(),
         metrics_file=Path("DOES_NOT_EXIST"),
         operator_performance_data=[
             OperatorPerformanceData(

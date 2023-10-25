@@ -5,12 +5,12 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from mlia.backend.argo.config import ArgoConfig
+from mlia.backend.argo.performance import ArgoPerformanceMetrics
 from mlia.core.common import AdviceCategory
 from mlia.core.context import ExecutionContext
 from mlia.target.hydra.advice_generation import HydraAdviceProducer
-from mlia.target.hydra.config import HydraConfiguration
 from mlia.target.hydra.data_analysis import ModelPerformanceAnalysed
-from mlia.target.hydra.performance import HydraPerformanceMetrics
 
 
 def test_hydra_advice_producer(tmpdir: str) -> None:
@@ -23,8 +23,8 @@ def test_hydra_advice_producer(tmpdir: str) -> None:
     )
     producer.set_context(context)
 
-    metrics = HydraPerformanceMetrics(
-        target_config=HydraConfiguration(target="hydra"),
+    metrics = ArgoPerformanceMetrics(
+        backend_config=ArgoConfig(),
         metrics_file=Path("DOES_NOT_EXIST"),
         operator_performance_data=[],
     )

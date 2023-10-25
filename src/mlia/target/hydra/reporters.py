@@ -6,6 +6,7 @@ from __future__ import annotations
 from typing import Any
 from typing import Callable
 
+from mlia.backend.argo.performance import ArgoPerformanceMetrics
 from mlia.core.advice_generation import Advice
 from mlia.core.reporters import report_advice
 from mlia.core.reporting import Column
@@ -15,7 +16,6 @@ from mlia.core.reporting import Report
 from mlia.core.reporting import ReportItem
 from mlia.core.reporting import Table
 from mlia.target.hydra.config import HydraConfiguration
-from mlia.target.hydra.performance import HydraPerformanceMetrics
 from mlia.utils.types import is_list_of
 
 
@@ -30,7 +30,7 @@ def report_target(target_cfg: HydraConfiguration) -> Report:
     )
 
 
-def report_hydra_performance(metrics: HydraPerformanceMetrics) -> Report:
+def report_hydra_performance(metrics: ArgoPerformanceMetrics) -> Report:
     """Generate report for the operators."""
     op_columns = [
         Column("Operator name", alias="op_name", fmt=Format(wrap_width=25)),
@@ -88,7 +88,7 @@ def hydra_formatters(data: Any) -> Callable[[Any], Report]:
     if isinstance(data, HydraConfiguration):
         return report_target
 
-    if isinstance(data, HydraPerformanceMetrics):
+    if isinstance(data, ArgoPerformanceMetrics):
         return report_hydra_performance
 
     raise RuntimeError(f"Unable to find appropriate formatter for {data}.")

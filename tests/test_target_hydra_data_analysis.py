@@ -5,17 +5,17 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from mlia.target.hydra.config import HydraConfiguration
+from mlia.backend.argo.config import ArgoConfig
+from mlia.backend.argo.performance import ArgoPerformanceMetrics
 from mlia.target.hydra.data_analysis import HydraDataAnalyzer
 from mlia.target.hydra.data_analysis import ModelPerformanceAnalysed
-from mlia.target.hydra.performance import HydraPerformanceMetrics
 
 
 def test_hydra_data_analyzer() -> None:
     """Test Hydra data analyzer."""
     analyzer = HydraDataAnalyzer()
-    metrics = HydraPerformanceMetrics(
-        target_config=HydraConfiguration(target="hydra"),
+    metrics = ArgoPerformanceMetrics(
+        backend_config=ArgoConfig(),
         metrics_file=Path("DOES_NOT_EXIST"),
         operator_performance_data=[],
     )

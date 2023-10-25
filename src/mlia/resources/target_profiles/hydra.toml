@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: Copyright 2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: LicenseRef-LICENSE
 
-target="hydra"
+target = "hydra"
 
 [backend.argo]
-num_npu_cores=1
+num_npu_cores = 1

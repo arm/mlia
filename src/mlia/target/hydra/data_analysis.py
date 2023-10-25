@@ -6,10 +6,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from functools import singledispatchmethod
 
+from mlia.backend.argo.performance import ArgoPerformanceMetrics
 from mlia.core.common import DataItem
 from mlia.core.data_analysis import Fact
 from mlia.core.data_analysis import FactExtractor
-from mlia.target.hydra.performance import HydraPerformanceMetrics
 
 
 class HydraDataAnalyzer(FactExtractor):
@@ -20,7 +20,7 @@ class HydraDataAnalyzer(FactExtractor):
         """Analyse the data."""
 
     @analyze_data.register
-    def analyze_performance(self, data_item: HydraPerformanceMetrics) -> None:
+    def analyze_performance(self, data_item: ArgoPerformanceMetrics) -> None:
         """Analyse operator compatibility information."""
         self.add_fact(ModelPerformanceAnalysed(data_item))
 
@@ -29,4 +29,4 @@ class HydraDataAnalyzer(FactExtractor):
 class ModelPerformanceAnalysed(Fact):
     """Model performance was analyzed."""
 
-    metrics: HydraPerformanceMetrics
+    metrics: ArgoPerformanceMetrics
