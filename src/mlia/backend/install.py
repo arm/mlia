@@ -4,11 +4,13 @@
 from __future__ import annotations
 
 import logging
+import os
 import platform
 import tarfile
 from abc import ABC
 from abc import abstractmethod
 from dataclasses import dataclass
+from functools import partial
 from pathlib import Path
 from typing import Callable
 from typing import Iterable
@@ -388,3 +390,34 @@ class PyPackageBackendInstallation(Installation):
     def uninstall(self) -> None:
         """Uninstall the backend."""
         self.package_manager.uninstall(self._packages_to_uninstall)
+
+
+ARTIFACTORY_USERNAME_ENV_VAR = "MLIA_ARTIFACTORY_USERNAME"
+ARTIFACTORY_PASSWORD_ENV_VAR = "MLIA_ARTIFACTORY_PASSWORD"  # nosec
+
+
+def credentials_from_env(user_env: str, pw_env: str) -> tuple[str, str]:
+    """Get the credentials from environment variables."""
+    try:
+        return (os.environ[user_env], os.environ[pw_env])
+    except KeyError as ex:
+        raise RuntimeError(
+            "Failed to retrieve the credentials from environment variables."
+            "Make sure your credentials are available as environment variables "
+            f"'{user_env}' and '{pw_env}'."
+        ) from ex
+
+
+artifactory_credentials_from_env = partial(
+    credentials_from_env, ARTIFACTORY_USERNAME_ENV_VAR, ARTIFACTORY_PASSWORD_ENV_VAR
+)
+
+
+def artifactory_credential_headers() -> dict[str, str]:
+    """Get credentials from env vars and create HTTP headers for Artifactory."""
+    username, password = artifactory_credentials_from_env()
+    headers = {
+        "Username": username,
+        "X-JFrog-Art-Api": password,
+    }
+    return headers

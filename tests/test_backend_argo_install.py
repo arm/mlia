@@ -13,6 +13,8 @@ import pytest
 from mlia.backend.argo.install import DOCKER_IMAGE_NAME
 from mlia.backend.argo.install import DockerInstallation
 from mlia.backend.argo.install import get_argo_installation
+from mlia.backend.install import ARTIFACTORY_PASSWORD_ENV_VAR
+from mlia.backend.install import ARTIFACTORY_USERNAME_ENV_VAR
 from mlia.backend.install import DownloadAndInstall
 from mlia.backend.install import InstallFromPath
 from mlia.utils.misc import is_docker_available
@@ -127,8 +129,8 @@ def test_docker_installation_install(
         # Credentials are not set as env vars => raises an exception
         docker_installation.install(DownloadAndInstall())
 
-    monkeypatch.setenv(DockerInstallation.USERNAME_ENV_VAR, "abc123@arm.com")
-    monkeypatch.setenv(DockerInstallation.PASSWORD_ENV_VAR, "1234")
+    monkeypatch.setenv(ARTIFACTORY_USERNAME_ENV_VAR, "abc123@arm.com")
+    monkeypatch.setenv(ARTIFACTORY_PASSWORD_ENV_VAR, "1234")
 
     docker_installation.install(DownloadAndInstall())
 

@@ -547,8 +547,8 @@ To pull Argo from the internal docker registry use the following steps:
   1.2 Login via Azure (SSO)  \
   1.3 Go to *"Edit profile"*  \
   1.4 Create an API Key or copy an existing one  \
-  1.5 Assign the API Key to the env var MLIA_BACKEND_PASSWORD  \
-  1.6 Assign your email address to MLIA_BACKEND_USERNAME  \
+  1.5 Assign the API Key to the env var MLIA_ARTIFACTORY_PASSWORD  \
+  1.6 Assign your email address to MLIA_ARTIFACTORY_USERNAME  \
 
 1. Run this command: `mlia-backend install argo`
 

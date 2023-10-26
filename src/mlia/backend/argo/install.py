@@ -3,11 +3,10 @@
 """Module for the installation of Argo via Docker."""
 from __future__ import annotations
 
-import os
-
 from rich.status import Status
 
 import docker
+from mlia.backend.install import artifactory_credentials_from_env
 from mlia.backend.install import DownloadAndInstall
 from mlia.backend.install import Installation
 from mlia.backend.install import InstallationType
@@ -17,9 +16,6 @@ DOCKER_IMAGE_NAME = "argo-app"
 
 class DockerInstallation(Installation):
     """Define installation process for docker images."""
-
-    USERNAME_ENV_VAR = "MLIA_BACKEND_USERNAME"
-    PASSWORD_ENV_VAR = "MLIA_BACKEND_PASSWORD"  # nosec
 
     def __init__(
         self,
@@ -106,15 +102,10 @@ class DockerInstallation(Installation):
     def _login(self, client: docker.DockerClient) -> None:  # type: ignore
         """Log in to the registry using credentials from environment variables."""
         try:
-            # Get the credentials from environment variables
-            username = os.environ[self.USERNAME_ENV_VAR]
-            password = os.environ[self.PASSWORD_ENV_VAR]
-        except KeyError as ex:
+            username, password = artifactory_credentials_from_env()
+        except RuntimeError as ex:
             raise RuntimeError(
-                "Failed to retrieve the credentials for registry "
-                f"'{self.registry}'. Make sure your credentials are available "
-                f"as environment variables '{self.USERNAME_ENV_VAR}' and "
-                f"'{self.PASSWORD_ENV_VAR}'."
+                f"Failed to retrieve credentials for registry '{self.registry}'."
             ) from ex
 
         client.login(

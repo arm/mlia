@@ -102,7 +102,7 @@ def _get_config_parameters(
 ) -> dict[str, Any]:
     """Get configuration parameters for the advisor."""
     advisor_parameters: dict[str, Any] = {
-        "hydra_inference_advisor": {
+        HydraInferenceAdvisor.name(): {
             "model": str(model),
             "target_profile": target_profile,
         },

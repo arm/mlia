@@ -39,8 +39,8 @@ ARGO_OUTPUT_DIR = Path("argo-output")
 
 def get_argo_backend_path() -> str | None:
     """Determine whether we should use Docker wrapper or Subprocess to run Argo."""
-    mlia_backend_argo_path = os.environ.get("MLIA_BACKEND_ARGO_PATH")
-    return mlia_backend_argo_path
+    argo_path = os.environ.get("MLIA_BACKEND_ARGO_PATH")
+    return argo_path
 
 
 def create_argo_command(
