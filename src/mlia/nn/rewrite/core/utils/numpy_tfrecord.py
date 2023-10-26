@@ -30,12 +30,11 @@ def decode_fn(record_bytes: Any, type_map: dict) -> dict:
     return features
 
 
-def make_decode_fn(filename: str, model_filename: str | Path | None = None) -> Callable:
+def make_decode_fn(filename: str) -> Callable:
     """Make decode filename."""
     meta_filename = filename + ".meta"
-    try:
-        with open(meta_filename, encoding="utf-8") as file:
-            type_map = json.load(file)["type_map"]
+    with open(meta_filename, encoding="utf-8") as file:
+        type_map = json.load(file)["type_map"]
     return lambda record_bytes: decode_fn(record_bytes, type_map)
 
 
