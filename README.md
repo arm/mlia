@@ -4,12 +4,16 @@ SPDX-License-Identifier: Apache-2.0
 --->
 # ML Inference Advisor - Introduction
 
-The ML Inference Advisor (MLIA) is used to help AI developers design and
-optimize neural network models for efficient inference on Arm® targets (see
-[supported targets](#target-profiles)) by enabling performance analysis and
-providing actionable advice early in the model development cycle. The final
-advice can cover supported operators, performance analysis and suggestions for
-model optimization (e.g. pruning, clustering, etc.).
+The ML Inference Advisor (MLIA) helps AI developers design and optimize
+neural network models for efficient inference on Arm® targets (see
+[supported targets](#target-profiles)). MLIA provides
+insights on how the ML model will perform on Arm early in the model
+development cycle. By passing a model file and specifying an Arm hardware target,
+users get an overview of possible areas of improvement and actionable advice.
+The advice can cover operator compatibility, performance analysis and model
+optimization (e.g. pruning and clustering). With the ML Inference Advisor,
+we aim to make the Arm ML IP accessible to developers at all levels of abstraction,
+with differing knowledge on hardware optimization and machine learning.
 
 ## Inclusive language commitment
 
@@ -58,7 +62,7 @@ ML Inference Advisor is licensed under [Apache License 2.0](LICENSES/Apache-2.0.
 ## Prerequisites and dependencies
 
 It is recommended to use a virtual environment for MLIA installation, and a
-typical setup for MLIA requires:
+typical setup requires:
 
 * Ubuntu® 20.04.03 LTS (other OSs may work, the ML Inference Advisor has been
   tested on this one specifically)
@@ -75,7 +79,7 @@ MLIA can be installed with `pip` using the following command:
 pip install mlia
 ```
 
-It is highly recommended to create a new virtual environment to install MLIA.
+It is highly recommended to create a new virtual environment for the installation.
 
 ## First steps
 
@@ -87,7 +91,7 @@ following command that should print the help text:
 mlia --help
 ```
 
-The ML Inference Advisor works with sub-commands, i.e. in general a MLIA command
+The ML Inference Advisor works with sub-commands, i.e. in general a command
 would look like this:
 
 ```bash
@@ -115,8 +119,8 @@ This section gives an overview of the available sub-commands for MLIA.
 
 ### compatibility
 
-Default check that MLIA runs. It lists the model's operators with information
-about their compatibility with the specified target.
+Lists the model's operators with information about their compatibility with
+the specified target.
 
 *Examples:*
 
@@ -133,7 +137,7 @@ mlia check --help
 
 ### performance
 
-Estimate the model's performance on the specified target and print out
+Estimates the model's performance on the specified target and prints out
 statistics.
 
 *Examples:*
@@ -208,7 +212,7 @@ mlia optimize ~/models/ds_cnn_large_fp32.tflite \
 # Target profiles
 
 The targets currently supported are described in the sections below.
-All MLIA sub-commands require a target profile as input parameter.
+All sub-commands require a target profile as input parameter.
 That target profile can be either a name of a built-in target profile
 or a custom file. MLIA saves the target profile that was used for a run
 in the output directory.
@@ -283,8 +287,8 @@ mlia ops --target-profile ~/my_custom_profile.toml sample_model.tflite
 # Backend installation
 
 The ML Inference Advisor is designed to use backends to provide different
-metrics for different target hardware. Some backends come pre-installed with
-MLIA, but others can be added and managed using the command `mlia-backend`, that
+metrics for different target hardware. Some backends come pre-installed,
+but others can be added and managed using the command `mlia-backend`, that
 provides the following functionality:
 
 * **install**
@@ -336,8 +340,7 @@ the following table shows some compatibility information:
 ### Arm NN TensorFlow Lite Delegate
 
 This backend provides general information about the compatibility of operators
-with the Arm NN TensorFlow Lite Delegate for Cortex-A. It comes pre-installed
-with MLIA.
+with the Arm NN TensorFlow Lite Delegate for Cortex-A. It comes pre-installed.
 
 For version 23.05 the classic delegate is used.
 
@@ -392,7 +395,7 @@ Additional resources:
 ### Vela
 
 The Vela backend provides performance metrics for Ethos-U based systems. It
-comes pre-installed with MLIA.
+comes pre-installed.
 
 Additional resources:
 
