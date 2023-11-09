@@ -10,7 +10,7 @@ from mlia.backend.argo.performance import ArgoPerformanceMetrics
 from mlia.core.common import AdviceCategory
 from mlia.core.context import ExecutionContext
 from mlia.target.hydra.advice_generation import HydraAdviceProducer
-from mlia.target.hydra.data_analysis import ModelPerformanceAnalysed
+from mlia.target.hydra.data_analysis import ArgoModelPerformanceAnalyzed
 
 
 def test_hydra_advice_producer(tmpdir: str) -> None:
@@ -28,9 +28,9 @@ def test_hydra_advice_producer(tmpdir: str) -> None:
         metrics_file=Path("DOES_NOT_EXIST"),
         operator_performance_data=[],
     )
-    producer.produce_advice(ModelPerformanceAnalysed(metrics))
+    producer.produce_advice(ArgoModelPerformanceAnalyzed(metrics))
 
     # Compatibility is not supported and should do nothing
     context.advice_category = {AdviceCategory.COMPATIBILITY}
     producer.set_context(context)
-    producer.produce_advice(ModelPerformanceAnalysed(metrics))
+    producer.produce_advice(ArgoModelPerformanceAnalyzed(metrics))

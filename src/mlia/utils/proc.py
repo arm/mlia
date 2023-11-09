@@ -8,6 +8,7 @@ import subprocess  # nosec
 from dataclasses import dataclass
 from functools import partial
 from pathlib import Path
+from typing import Any
 from typing import Callable
 from typing import Generator
 
@@ -65,4 +66,14 @@ def process_command_output(
     """Execute command and process output."""
     for line in command_output(command):
         for consumer in consumers:
-            consumer(line)
+            consumer(line.strip())
+
+
+def args_from_cfg(cfg: Any, cfg_to_arg: dict[str, str]) -> list[str]:
+    """Return a list of arguments created from the config and the mapping."""
+    args: list[str] = []
+    for name, value in vars(cfg).items():
+        if not value:
+            continue
+        args.extend((cfg_to_arg[name], str(value)))
+    return args

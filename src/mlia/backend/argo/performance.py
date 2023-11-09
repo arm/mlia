@@ -26,6 +26,7 @@ from mlia.nn.tensorflow.config import ModelConfiguration
 from mlia.nn.tensorflow.tflite_graph import operator_names_to_types
 from mlia.utils.chrometrace import parse_chrometrace
 from mlia.utils.logging import log_action
+from mlia.utils.proc import args_from_cfg
 from mlia.utils.proc import Command
 from mlia.utils.proc import OutputConsumer
 from mlia.utils.proc import OutputLogger
@@ -51,13 +52,8 @@ def create_argo_command(
         str(model_path),
         "--output-dir",
         str(output_path),
+        *args_from_cfg(argo_cfg, CONFIG_TO_CLI_OPTION),
     ]
-
-    for name, value in vars(argo_cfg).items():
-        if not value:
-            continue
-        command.extend((CONFIG_TO_CLI_OPTION[name], str(value)))
-
     return command
 
 

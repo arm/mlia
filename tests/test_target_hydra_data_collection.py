@@ -6,13 +6,14 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from mlia.backend.argo.performance import ArgoPerformanceMetrics
 from mlia.core.common import AdviceCategory
 from mlia.core.context import ExecutionContext
 from mlia.target.hydra.config import HydraConfiguration
 from mlia.target.hydra.data_collection import HydraPerformance
 
 
-def test_hydra_data_collection(
+def test_hydra_data_collection_argo(
     monkeypatch: pytest.MonkeyPatch,
     test_resources_path: Path,
     test_tflite_model: Path,
@@ -34,6 +35,7 @@ def test_hydra_data_collection(
     assert perf.name() == "hydra_performance"
 
     metrics = perf.collect_data()
+    assert isinstance(metrics, ArgoPerformanceMetrics)
     assert metrics.metrics_file == test_metrics_file
     assert metrics.backend_config.accelerator_config == "hydra"
 

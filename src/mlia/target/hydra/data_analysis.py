@@ -7,6 +7,9 @@ from dataclasses import dataclass
 from functools import singledispatchmethod
 
 from mlia.backend.argo.performance import ArgoPerformanceMetrics
+from mlia.backend.ngp_graph_compiler.performance import (
+    NGPGraphCompilerPerformanceMetrics,
+)
 from mlia.core.common import DataItem
 from mlia.core.data_analysis import Fact
 from mlia.core.data_analysis import FactExtractor
@@ -20,13 +23,27 @@ class HydraDataAnalyzer(FactExtractor):
         """Analyse the data."""
 
     @analyze_data.register
-    def analyze_performance(self, data_item: ArgoPerformanceMetrics) -> None:
+    def analyze_argo_performance(self, data_item: ArgoPerformanceMetrics) -> None:
         """Analyse operator compatibility information."""
-        self.add_fact(ModelPerformanceAnalysed(data_item))
+        self.add_fact(ArgoModelPerformanceAnalyzed(data_item))
+
+    @analyze_data.register
+    def analyze_ngp_graph_compiler_performance(
+        self, data_item: NGPGraphCompilerPerformanceMetrics
+    ) -> None:
+        """Analyse operator compatibility information."""
+        self.add_fact(NGPGraphCompilerModelPerformanceAnalyzed(data_item))
 
 
 @dataclass
-class ModelPerformanceAnalysed(Fact):
-    """Model performance was analyzed."""
+class ArgoModelPerformanceAnalyzed(Fact):
+    """Model performance was analyzed with Argo."""
 
     metrics: ArgoPerformanceMetrics
+
+
+@dataclass
+class NGPGraphCompilerModelPerformanceAnalyzed(Fact):
+    """Model performance was analyzed with the NGP Graph Compiler."""
+
+    metrics: NGPGraphCompilerPerformanceMetrics

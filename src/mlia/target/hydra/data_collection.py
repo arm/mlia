@@ -11,6 +11,12 @@ from typing import cast
 
 from mlia.backend.argo.performance import ArgoPerformanceEstimator
 from mlia.backend.argo.performance import ArgoPerformanceMetrics
+from mlia.backend.ngp_graph_compiler.performance import (
+    NGPGraphCompilerPerformanceEstimator,
+)
+from mlia.backend.ngp_graph_compiler.performance import (
+    NGPGraphCompilerPerformanceMetrics,
+)
 from mlia.core.data_collection import ContextAwareDataCollector
 from mlia.core.errors import ConfigurationError
 from mlia.core.performance import P
@@ -43,18 +49,21 @@ class HydraPerformance(ContextAwareDataCollector):
         self.cfg = cfg
         self.backend = backend
 
-    def collect_data(self) -> ArgoPerformanceMetrics:
+    def collect_data(
+        self,
+    ) -> ArgoPerformanceMetrics | NGPGraphCompilerPerformanceMetrics:
         """Run performance estimator."""
         if not is_tflite_model(self.model):
             raise ConfigurationError("Input must be a tflite file.")
 
+        estimator: ArgoPerformanceEstimator | NGPGraphCompilerPerformanceEstimator
         if self.backend == "argo":
             estimator = ArgoPerformanceEstimator(
                 self.context.output_dir, self.cfg.backend_config
             )
         elif self.backend == "ngp-graph-compiler":
-            raise NotImplementedError(
-                "Implement performance estimation via NGP Graph Compiler here."
+            estimator = NGPGraphCompilerPerformanceEstimator(
+                self.context.output_dir, self.cfg.backend_config
             )
         else:
             raise ValueError(

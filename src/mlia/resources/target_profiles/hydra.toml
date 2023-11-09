@@ -7,3 +7,5 @@ target = "hydra"
 num_npu_cores = 1
 
 [backend.ngp-graph-compiler]
+system_config = "ngp-graph-compiler/system_config_16_8x256_14.10.6.ini"
+compiler_config = "ngp-graph-compiler/compiler_config.ini"
