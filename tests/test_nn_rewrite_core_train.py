@@ -14,6 +14,7 @@ import pytest
 import tensorflow as tf
 from keras.api._v2 import keras  # Temporary workaround for now: MLIA-1107
 
+from mlia.nn.rewrite.core.rewrite import DynamicallyLoadedRewrite
 from mlia.nn.rewrite.core.train import augment_fn_twins
 from mlia.nn.rewrite.core.train import AUGMENTATION_PRESETS
 from mlia.nn.rewrite.core.train import LearningRateSchedule
@@ -53,12 +54,18 @@ def check_train(
     """Test the train() function."""
     with TemporaryDirectory() as tmp_dir:
         output_file = Path(tmp_dir, "out.tflite")
+        mock_rewrite = DynamicallyLoadedRewrite(
+            name="replace",
+            function_name=(
+                "tests.test_nn_rewrite_core_train.replace_fully_connected_with_conv"
+            ),
+        )
         result = train(
             source_model=str(tflite_model),
             unmodified_model=str(tflite_model) if use_unmodified_model else None,
             output_model=str(output_file),
             input_tfrec=str(tfrecord),
-            replace_fn=replace_fully_connected_with_conv,
+            rewrite=mock_rewrite,
             input_tensors=["sequential/flatten/Reshape"],
             output_tensors=["StatefulPartitionedCall:0"],
             train_params=train_params,

@@ -39,6 +39,20 @@ def test_rewrite() -> None:
 
 
 @pytest.mark.parametrize(
+    "rewrite_name, callbacks_length",
+    [
+        ("fully-connected", 0),
+        ("fully-connected-sparsity24", 1),
+    ],
+)
+def test_rewrite_selection(rewrite_name: str, callbacks_length: int) -> None:
+    """Test that the correct rewrite class is instantiated."""
+    rewrite = RewritingOptimizer.registry.items[rewrite_name]
+    assert rewrite.name == rewrite_name
+    assert len(rewrite.training_callbacks()) == callbacks_length
+
+
+@pytest.mark.parametrize(
     "rewrite_name, expected_error",
     [
         ("fully-connected", does_not_raise()),
@@ -89,7 +103,7 @@ def test_rewriting_optimizer(
 
 
 def test_register_rewrite_function() -> None:
-    """Test adding rewrite functions and verify the are reported via the registry."""
+    """Test adding rewrite functions and verify they are reported via the registry."""
     registry = RewriteRegistry()
 
     rewrite1 = Rewrite("r1", cast(RewriteCallable, lambda: 1))

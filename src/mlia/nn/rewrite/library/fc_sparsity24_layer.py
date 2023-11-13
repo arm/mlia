@@ -1,14 +1,23 @@
-# SPDX-FileCopyrightText: Copyright 2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2024, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
-"""PLACEHOLDER for example rewrite with one fully connected 2:4 sparsity layer."""
+"""Example rewrite with one fully connected 2:4 sparsity layer."""
 from typing import Any
 
+import tensorflow_model_optimization as tfmot
 from keras.api._v2 import keras  # Temporary workaround for now: MLIA-1107
 
-from .fc_layer import get_keras_model
 
-
-def get_keras_model24(input_shape: Any, output_shape: Any) -> keras.Model:
+def get_keras_model(input_shape: Any, output_shape: Any) -> keras.Model:
     """Generate TensorFlow Lite model for rewrite."""
-    model = get_keras_model(input_shape, output_shape)
+    model = tfmot.sparsity.keras.prune_low_magnitude(
+        to_prune=keras.Sequential(
+            [
+                keras.layers.InputLayer(input_shape=input_shape),
+                keras.layers.Reshape([-1]),
+                keras.layers.Dense(output_shape),
+            ]
+        ),
+        sparsity_m_by_n=(2, 4),
+    )
+
     return model
