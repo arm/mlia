@@ -3,7 +3,6 @@
 # SPDX-FileCopyrightText: Copyright (c) 2015-2022 Dropbox, Inc.
 # SPDX-License-Identifier: Apache-2.0 AND MIT
 
-
 [build-system]
 requires = [
     "setuptools>=42",
@@ -18,9 +17,9 @@ build-backend = "setuptools.build_meta"
 [tool.pytest.ini_options]
 testpaths = "tests"
 markers = [
-    "e2e",       # e2e tests
-    "install",   # installation tests
-    "command",   # command tests
+    "e2e",  # e2e tests
+    "install",  # installation tests
+    "command",  # command tests
     "model_gen"  # model generation tests
 ]
 junit_logging = "all"
@@ -30,17 +29,15 @@ min-similarity-lines = 10
 min-public-methods = 1
 max-line-length = 88
 max-args = 8
-max-attributes=10
-
+max-attributes = 10
 # Provide basic compatibility with black
 disable = [
-  "wrong-import-order"
+    "wrong-import-order"
 ]
-
 enable = [
-  "dangerous-default-value",       # W0102
-  # black will reflow code lines, but won't touch comments, error on those
-  "line-too-long"                  # C0301
+    "dangerous-default-value",  # W0102
+    # black will reflow code lines, but won't touch comments, error on those
+    "line-too-long"  # C0301
 ]
 
 [tool.pylint.similarities]
@@ -73,6 +70,6 @@ check_untyped_defs = true
 [[tool.mypy.overrides]]
 module = [
     "pkg_resources",
-    "requests",
+    "requests"
 ]
 ignore_missing_imports = true
