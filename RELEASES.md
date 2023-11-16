@@ -31,6 +31,15 @@ scheme.
 * Have the TFLite compability check display tables for all
   targets (MLIA-711)
 
+### Known issues
+
+* The test_cluster_simple_model_fully test case in
+  test_nn_tensorflow_optimizations_pruning.py has proved to fail
+  sporadically for stochastic reasons, due to a threshold not being met.
+  Re-running the test will help. We are yet to find a more deterministic
+  approach to run the test, and in the meantime we classify it as a
+  known issue.
+
 ## Release 0.6.0
 
 ### Feature changes
