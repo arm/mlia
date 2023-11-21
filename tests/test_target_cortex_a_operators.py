@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 import tensorflow as tf
 
-from mlia.nn.tensorflow.utils import convert_to_tflite
+from mlia.nn.tensorflow.tflite_convert import convert_to_tflite_bytes
 from mlia.target.cortex_a.config import CortexAConfiguration
 from mlia.target.cortex_a.operators import CortexACompatibilityInfo
 from mlia.target.cortex_a.operators import get_cortex_a_compatibility_info
@@ -52,7 +52,7 @@ def test_get_cortex_a_compatibility_info_not_compatible(
         ]
     )
     keras_model.compile(optimizer="sgd", loss="mean_squared_error")
-    tflite_model = convert_to_tflite(keras_model, quantized=False)
+    tflite_model = convert_to_tflite_bytes(keras_model, quantized=False)
 
     monkeypatch.setattr(
         "mlia.nn.tensorflow.tflite_graph.load_tflite", lambda _p: tflite_model

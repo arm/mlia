@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Functions for checking TensorFlow Lite compatibility."""
 from __future__ import annotations
@@ -14,7 +14,7 @@ from typing import List
 import tensorflow as tf
 from tensorflow.lite.python import convert
 
-from mlia.nn.tensorflow.utils import get_tflite_converter
+from mlia.nn.tensorflow.tflite_convert import convert_to_tflite
 from mlia.utils.logging import redirect_raw_output
 
 TF_VERSION_MAJOR, TF_VERSION_MINOR, _ = (int(s) for s in tf.version.VERSION.split("."))
@@ -115,7 +115,6 @@ class TFLiteChecker:
         """Check TensorFlow Lite compatibility for the provided model."""
         try:
             logger.debug("Check TensorFlow Lite compatibility for %s", model)
-            converter = get_tflite_converter(model, quantized=self.quantized)
 
             # there is an issue with intercepting TensorFlow output
             # not all output could be captured, for now just intercept
@@ -123,7 +122,7 @@ class TFLiteChecker:
             with redirect_raw_output(
                 logging.getLogger("tensorflow"), stdout_level=None
             ):
-                converter.convert()
+                convert_to_tflite(model, self.quantized)
         except convert.ConverterError as err:
             return self._process_convert_error(err)
         except Exception as err:  # pylint: disable=broad-except

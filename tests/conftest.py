@@ -14,9 +14,8 @@ import tensorflow as tf
 from mlia.backend.vela.compiler import optimize_model
 from mlia.core.context import ExecutionContext
 from mlia.nn.rewrite.core.utils.numpy_tfrecord import NumpyTFWriter
-from mlia.nn.tensorflow.utils import convert_to_tflite
+from mlia.nn.tensorflow.tflite_convert import convert_to_tflite
 from mlia.nn.tensorflow.utils import save_keras_model
-from mlia.nn.tensorflow.utils import save_tflite_model
 from mlia.target.ethos_u.config import EthosUConfiguration
 from tests.utils.rewrite import MockTrainingParameters
 
@@ -93,15 +92,13 @@ def fixture_test_models_path(
     save_keras_model(keras_model, tmp_path / TEST_MODEL_KERAS_FILE)
 
     # Un-quantized TensorFlow Lite model (fp32)
-    save_tflite_model(
-        convert_to_tflite(keras_model, quantized=False),
-        tmp_path / TEST_MODEL_TFLITE_FP32_FILE,
+    convert_to_tflite(
+        keras_model, quantized=False, output_path=tmp_path / TEST_MODEL_TFLITE_FP32_FILE
     )
 
     # Quantized TensorFlow Lite model (int8)
-    tflite_model = convert_to_tflite(keras_model, quantized=True)
     tflite_model_path = tmp_path / TEST_MODEL_TFLITE_INT8_FILE
-    save_tflite_model(tflite_model, tflite_model_path)
+    convert_to_tflite(keras_model, quantized=True, output_path=tflite_model_path)
 
     # Vela-optimized TensorFlow Lite model (int8)
     tflite_vela_model = tmp_path / TEST_MODEL_TFLITE_VELA_FILE

@@ -14,10 +14,9 @@ from mlia.nn.tensorflow.optimizations.clustering import Clusterer
 from mlia.nn.tensorflow.optimizations.clustering import ClusteringConfiguration
 from mlia.nn.tensorflow.optimizations.pruning import Pruner
 from mlia.nn.tensorflow.optimizations.pruning import PruningConfiguration
+from mlia.nn.tensorflow.tflite_convert import convert_to_tflite
 from mlia.nn.tensorflow.tflite_metrics import ReportClusterMode
 from mlia.nn.tensorflow.tflite_metrics import TFLiteMetrics
-from mlia.nn.tensorflow.utils import convert_to_tflite
-from mlia.nn.tensorflow.utils import save_tflite_model
 from tests.utils.common import get_dataset
 from tests.utils.common import train_model
 
@@ -118,8 +117,7 @@ def test_cluster_simple_model_fully(
     clustered_model = clusterer.get_model()
 
     temp_file = tmp_path / "test_cluster_simple_model_fully_after.tflite"
-    tflite_clustered_model = convert_to_tflite(clustered_model)
-    save_tflite_model(tflite_clustered_model, temp_file)
+    convert_to_tflite(clustered_model, output_path=temp_file)
     clustered_tflite_metrics = TFLiteMetrics(str(temp_file))
 
     _test_num_unique_weights(

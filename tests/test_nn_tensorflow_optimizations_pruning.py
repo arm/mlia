@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Test for module optimizations/pruning."""
 from __future__ import annotations
@@ -11,9 +11,8 @@ from numpy.core.numeric import isclose
 
 from mlia.nn.tensorflow.optimizations.pruning import Pruner
 from mlia.nn.tensorflow.optimizations.pruning import PruningConfiguration
+from mlia.nn.tensorflow.tflite_convert import convert_to_tflite
 from mlia.nn.tensorflow.tflite_metrics import TFLiteMetrics
-from mlia.nn.tensorflow.utils import convert_to_tflite
-from mlia.nn.tensorflow.utils import save_tflite_model
 from tests.utils.common import get_dataset
 from tests.utils.common import train_model
 
@@ -52,7 +51,7 @@ def _get_tflite_metrics(
 ) -> TFLiteMetrics:
     """Save model as TFLiteModel and return metrics."""
     temp_file = path / tflite_fn
-    save_tflite_model(convert_to_tflite(model), temp_file)
+    convert_to_tflite(model, output_path=temp_file)
     return TFLiteMetrics(str(temp_file))
 
 

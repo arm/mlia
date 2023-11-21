@@ -34,9 +34,9 @@ from mlia.nn.rewrite.core.utils.numpy_tfrecord import numpytf_count
 from mlia.nn.rewrite.core.utils.numpy_tfrecord import numpytf_read
 from mlia.nn.rewrite.core.utils.parallel import ParallelTFLiteModel
 from mlia.nn.tensorflow.config import TFLiteModel
+from mlia.nn.tensorflow.tflite_convert import convert_to_tflite
 from mlia.nn.tensorflow.tflite_graph import load_fb
 from mlia.nn.tensorflow.tflite_graph import save_fb
-from mlia.nn.tensorflow.utils import get_tflite_converter
 from mlia.utils.logging import log_action
 
 
@@ -499,11 +499,7 @@ def save_as_tflite(
             keras_model.input.set_shape(orig_shape)
 
     with fixed_input(keras_model, input_shape) as fixed_model:
-        converter = get_tflite_converter(fixed_model, quantized=model_is_quantized)
-    tflite_model = converter.convert()
-
-    with open(filename, "wb") as file:
-        file.write(tflite_model)
+        convert_to_tflite(fixed_model, model_is_quantized, Path(filename))
 
     # Now fix the shapes and names to match those we expect
     flatbuffer = load_fb(filename)

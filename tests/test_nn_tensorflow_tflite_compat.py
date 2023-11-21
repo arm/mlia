@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for tflite_compat module."""
 from __future__ import annotations
@@ -219,7 +219,7 @@ def test_tflite_compatibility(
         converter_mock.convert.side_effect = conversion_error
 
     monkeypatch.setattr(
-        "mlia.nn.tensorflow.tflite_compat.get_tflite_converter",
+        "mlia.nn.tensorflow.tflite_convert.get_tflite_converter",
         lambda *args, **kwargs: converter_mock,
     )
 
