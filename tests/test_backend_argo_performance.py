@@ -29,7 +29,10 @@ def test_estimate_performance_docker(
         "mlia.backend.argo.performance.mkdtemp",
         MagicMock(return_value=str(nested_tmp_path)),
     )
-
+    monkeypatch.setattr(
+        "mlia.backend.argo.performance.get_argo_backend_path",
+        MagicMock(return_value=None),
+    )
     docker_mock = MagicMock()
     docker_client_mock = MagicMock()
 
@@ -67,7 +70,10 @@ def test_estimate_performance_subprocess(
         "mlia.backend.argo.performance.mkdtemp",
         MagicMock(return_value=str(nested_tmp_path)),
     )
-    monkeypatch.setenv("MLIA_BACKEND_ARGO_PATH", "touch")
+    monkeypatch.setattr(
+        "mlia.backend.argo.performance.get_argo_backend_path",
+        MagicMock(return_value=Path("touch")),
+    )
     monkeypatch.setattr(
         "mlia.backend.argo.performance.create_argo_command",
         MagicMock(return_value=[str(trace_output_path)]),

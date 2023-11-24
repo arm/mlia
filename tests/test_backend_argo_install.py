@@ -5,11 +5,11 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
-from typing import cast
 from unittest.mock import MagicMock
 
 import pytest
 
+from mlia.backend.argo.install import ARGO_PATH_ENV_VAR
 from mlia.backend.argo.install import DOCKER_IMAGE_NAME
 from mlia.backend.argo.install import DockerInstallation
 from mlia.backend.argo.install import get_argo_installation
@@ -91,11 +91,18 @@ def test_docker_installation_supports(docker_installation: DockerInstallation) -
     assert not docker_installation.supports(InstallFromPath(Path("DOES_NOT_EXIST")))
 
 
+@pytest.mark.parametrize("docker_available", (True, False))
 def test_docker_installation_could_be_installed(
+    monkeypatch: pytest.MonkeyPatch,
     docker_installation: DockerInstallation,
+    docker_available: bool,
 ) -> None:
     """Test function could_be_installed() of class 'DockerInstallation'."""
-    assert docker_installation.could_be_installed
+    monkeypatch.setattr(
+        "mlia.backend.argo.install.is_docker_available_cached",
+        MagicMock(return_value=docker_available),
+    )
+    assert docker_installation.could_be_installed == docker_available
 
 
 def test_docker_installation_install(
@@ -177,6 +184,38 @@ def test_docker_installation_already_installed(
 
 def test_get_argo_installation() -> None:
     """Test function get_argo_installation()."""
-    installation = cast(DockerInstallation, get_argo_installation())
+    installation = get_argo_installation()
     assert installation.name == "argo"
     assert installation.image_name == DOCKER_IMAGE_NAME
+
+
+@pytest.mark.parametrize(
+    ("env_var_name", "env_var_value", "exec_path"),
+    (
+        ("ENV_VAR", "some-file", Path("some-file")),
+        ("ENV_VAR", None, None),
+        (None, None, None),
+    ),
+)
+def test_executable_overwrite(
+    monkeypatch: pytest.MonkeyPatch,
+    env_var_name: str | None,
+    env_var_value: str | None,
+    exec_path: Path | None,
+) -> None:
+    """Test property 'DockerInstallation.executable_overwrite'."""
+    if env_var_name:
+        monkeypatch.setenv(env_var_name, env_var_value if env_var_value else "")
+    installation = DockerInstallation(
+        "Name", "Description", "IMAGE", "REGISTRY", env_var_name
+    )
+    assert installation.executable_overwrite == exec_path
+
+
+def test_executable_overwrite_argo(docker_installation: DockerInstallation) -> None:
+    """Make sure the right environment variable is used for Argo."""
+    assert (
+        # pylint: disable=protected-access
+        docker_installation._executable_overwrite_env_var
+        == ARGO_PATH_ENV_VAR
+    )

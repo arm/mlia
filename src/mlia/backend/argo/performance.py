@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import logging
-import os
 import shutil
 import subprocess  # nosec
 from dataclasses import dataclass
@@ -20,7 +19,9 @@ import docker
 from mlia.backend.argo.config import ArgoConfig
 from mlia.backend.argo.config import CONFIG_TO_CLI_OPTION
 from mlia.backend.argo.install import DOCKER_IMAGE_NAME
+from mlia.backend.argo.install import DockerInstallation
 from mlia.backend.errors import BackendExecutionFailed
+from mlia.backend.registry import registry as backend_registry
 from mlia.core.performance import PerformanceEstimator
 from mlia.nn.tensorflow.config import ModelConfiguration
 from mlia.nn.tensorflow.tflite_graph import operator_names_to_types
@@ -38,10 +39,10 @@ logger = logging.getLogger(__name__)
 ARGO_OUTPUT_DIR = Path("argo-output")
 
 
-def get_argo_backend_path() -> str | None:
+def get_argo_backend_path() -> Path | None:
     """Determine whether we should use Docker wrapper or Subprocess to run Argo."""
-    argo_path = os.environ.get("MLIA_BACKEND_ARGO_PATH")
-    return argo_path
+    install = cast(DockerInstallation, backend_registry.items["argo"].installation)
+    return install.executable_overwrite
 
 
 def create_argo_command(

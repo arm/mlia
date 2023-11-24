@@ -3,6 +3,9 @@
 """Module for the installation of Argo via Docker."""
 from __future__ import annotations
 
+import os
+from pathlib import Path
+
 from rich.status import Status
 
 import docker
@@ -10,8 +13,10 @@ from mlia.backend.install import artifactory_credentials_from_env
 from mlia.backend.install import DownloadAndInstall
 from mlia.backend.install import Installation
 from mlia.backend.install import InstallationType
+from mlia.utils.misc import is_docker_available_cached
 
 DOCKER_IMAGE_NAME = "argo-app"
+ARGO_PATH_ENV_VAR = "MLIA_BACKEND_ARGO_PATH"
 
 
 class DockerInstallation(Installation):
@@ -23,6 +28,7 @@ class DockerInstallation(Installation):
         description: str,
         image_name: str,
         registry: str | None,
+        executable_overwrite_env_var: str | None = None,
     ) -> None:
         """Init the installation."""
         super().__init__(name, description)
@@ -33,6 +39,7 @@ class DockerInstallation(Installation):
             if self._registry
             else self._image_name
         )
+        self._executable_overwrite_env_var = executable_overwrite_env_var
 
     @property
     def image_name(self) -> str:
@@ -52,13 +59,32 @@ class DockerInstallation(Installation):
     @property
     def could_be_installed(self) -> bool:
         """Check if backend could be installed in current environment."""
-        return True
+        return is_docker_available_cached()
 
     @property
     def already_installed(self) -> bool:
         """Check if docker container is already installed."""
+        if self.executable_overwrite:
+            return True
         client = docker.from_env()  # type: ignore
         return bool(client.images.list(name=self.image_name))
+
+    @property
+    def executable_overwrite(self) -> Path | None:
+        """Get the path to the executable from the environment variable.
+
+        This overwrites the use of docker in favor of directly calling the
+        executable specified in the environment variable given during
+        construction. This can be used to avoid docker if
+
+        - running in docker already (avoiding docker-in-docker) or
+        - the host system has the backend running locally.
+        """
+        if self._executable_overwrite_env_var:
+            exec_path = os.environ.get(self._executable_overwrite_env_var)
+            if exec_path:
+                return Path(exec_path)
+        return None
 
     def supports(self, install_type: InstallationType) -> bool:
         """Check if installation supports requested installation type."""
@@ -115,11 +141,12 @@ class DockerInstallation(Installation):
         )
 
 
-def get_argo_installation() -> Installation:
+def get_argo_installation() -> DockerInstallation:
     """Get all information to install Argo."""
     return DockerInstallation(
         name="argo",
         description="Argo performance backend",
         image_name=DOCKER_IMAGE_NAME,
         registry="ml-tooling--docker-local.artifactory.geo.arm.com",
+        executable_overwrite_env_var=ARGO_PATH_ENV_VAR,
     )
