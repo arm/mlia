@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 from contextlib import ExitStack
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -160,3 +161,20 @@ def test_validate_backend(
 
     with exit_stack:
         assert validate_backend(input_target_profile, input_backends) == output_backends
+
+
+def test_validate_backend_default_available() -> None:
+    """Test default backend validation with available backend."""
+    backends = validate_backend("cortex-a", None)
+    assert backends
+    assert backends == ["armnn-tflite-delegate"]
+
+
+def test_validate_backend_default_unavailable(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test default backend validation with unavailable backend."""
+    monkeypatch.setattr(
+        "mlia.cli.command_validators.default_backends",
+        MagicMock(return_value=["UNKNOWN_BACKEND"]),
+    )
+    with pytest.raises(argparse.ArgumentError):
+        validate_backend("cortex-a", None)

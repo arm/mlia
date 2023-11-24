@@ -7,6 +7,7 @@ import argparse
 import logging
 import sys
 
+from mlia.backend.manager import get_available_backends
 from mlia.target.registry import default_backends
 from mlia.target.registry import get_target
 from mlia.target.registry import supported_backends
@@ -14,9 +15,7 @@ from mlia.target.registry import supported_backends
 logger = logging.getLogger(__name__)
 
 
-def validate_backend(
-    target_profile: str, backend: list[str] | None
-) -> list[str] | None:
+def validate_backend(target_profile: str, backend: list[str] | None) -> list[str]:
     """Validate backend with given target profile.
 
     This validator checks whether the given target-profile and backend are
@@ -26,7 +25,15 @@ def validate_backend(
     target = get_target(target_profile)
 
     if not backend:
-        return default_backends(target)
+        defaults = default_backends(target)
+        missing_backends = set(defaults)
+        missing_backends.difference_update(get_available_backends())
+        if missing_backends:
+            raise argparse.ArgumentError(
+                None,
+                f"The following default backends are not installed: {missing_backends}",
+            )
+        return defaults
 
     compatible_backends = list(map(normalize_string, supported_backends(target)))
     backends = {normalize_string(b): b for b in backend}
