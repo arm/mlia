@@ -68,7 +68,7 @@ def quantize(
     ), f"Input tensor for quantization is of type {tensor.dtype}, but it must be float."
 
     quantized_tensor = (tensor / quant_params.scales) + quant_params.zero_points
-    quantized_tensor = np.clip(  # type: ignore
+    quantized_tensor = np.clip(
         quantized_tensor, -128, 127, dtype=np.int8, casting="unsafe"
     )
     return cast(np.ndarray, quantized_tensor)
