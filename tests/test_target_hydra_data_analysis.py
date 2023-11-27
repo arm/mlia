@@ -10,6 +10,7 @@ import pytest
 from mlia.backend.argo.config import ArgoConfig
 from mlia.backend.argo.performance import ArgoPerformanceMetrics
 from mlia.backend.ngp_graph_compiler.config import NGPGraphCompilerConfig
+from mlia.backend.ngp_graph_compiler.output_parsing import NGPPerformanceDatabase
 from mlia.backend.ngp_graph_compiler.performance import NGPGraphCompilerOutputFiles
 from mlia.backend.ngp_graph_compiler.performance import (
     NGPGraphCompilerPerformanceMetrics,
@@ -35,7 +36,8 @@ from mlia.target.hydra.data_analysis import NGPGraphCompilerModelPerformanceAnal
                 output_files=NGPGraphCompilerOutputFiles.from_output_dir(
                     Path("DOES_NOT_EXIST"), "TEST"
                 ),
-            )
+                performance_db=NGPPerformanceDatabase(),
+            ),
         ),
     ),
 )

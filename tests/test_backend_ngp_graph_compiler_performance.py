@@ -48,6 +48,10 @@ def test_ngp_graph_compiler_performance_estimator(
         MagicMock(),
     )
     monkeypatch.setattr(
+        "mlia.backend.ngp_graph_compiler.performance.NGPPerformanceDatabase",
+        MagicMock(),
+    )
+    monkeypatch.setattr(
         "mlia.backend.ngp_graph_compiler.performance."
         "NGPGraphCompilerOutputFiles.check_exists",
         MagicMock(return_value=True),

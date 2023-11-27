@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Union
 
 from mlia.backend.ngp_graph_compiler.config import NGPGraphCompilerConfig
+from mlia.backend.ngp_graph_compiler.output_parsing import NGPPerformanceDatabase
 from mlia.backend.repo import get_backend_repository
 from mlia.backend.vulkan_model_converter.conversion import VulkanModelConverter
 from mlia.core.performance import PerformanceEstimator
@@ -70,6 +71,7 @@ class NGPGraphCompilerPerformanceMetrics:
 
     backend_config: NGPGraphCompilerConfig
     output_files: NGPGraphCompilerOutputFiles
+    performance_db: NGPPerformanceDatabase
 
 
 class NGPGraphCompilerPerformanceEstimator(
@@ -103,9 +105,13 @@ class NGPGraphCompilerPerformanceEstimator(
             spirv_file = self._run_vulkan_model_converter(model_path)
             output = self._run_ngp_graph_compiler(spirv_file, model_path.stem)
 
-            # Parse output files here
+            perf_db = NGPPerformanceDatabase()
+            records = perf_db.load(Path(output.performance_database))
+            logger.debug("Loaded [%d] records from performance database.", len(records))
 
-            return NGPGraphCompilerPerformanceMetrics(self.backend_config, output)
+            return NGPGraphCompilerPerformanceMetrics(
+                self.backend_config, output, perf_db
+            )
 
     def _run_vulkan_model_converter(self, model_path: Path) -> Path:
         """Run NGP Graph Compiler and return the path to the SPIR-V file."""
