@@ -6,6 +6,9 @@ from __future__ import annotations
 import logging
 
 from mlia.backend.argo.performance import ArgoPerformanceMetrics
+from mlia.backend.ngp_graph_compiler.performance import (
+    NGPGraphCompilerPerformanceMetrics,
+)
 from mlia.core.events import CollectedDataEvent
 from mlia.core.handlers import WorkflowEventsHandler
 from mlia.target.hydra.events import HydraAdvisorEventHandler
@@ -26,7 +29,9 @@ class HydraEventHandler(WorkflowEventsHandler, HydraAdvisorEventHandler):
         """Handle CollectedDataEvent event."""
         data_item = event.data_item
 
-        if isinstance(data_item, ArgoPerformanceMetrics):
+        if isinstance(
+            data_item, (ArgoPerformanceMetrics, NGPGraphCompilerPerformanceMetrics)
+        ):
             self.reporter.submit(data_item, delay_print=True, space=True)
 
     def on_hydra_advisor_started(self, event: HydraAdvisorStartedEvent) -> None:

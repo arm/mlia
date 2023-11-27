@@ -7,6 +7,9 @@ from typing import Any
 from typing import Callable
 
 from mlia.backend.argo.performance import ArgoPerformanceMetrics
+from mlia.backend.ngp_graph_compiler.performance import (
+    NGPGraphCompilerPerformanceMetrics,
+)
 from mlia.core.advice_generation import Advice
 from mlia.core.reporters import report_advice
 from mlia.core.reporting import Column
@@ -80,6 +83,66 @@ def report_hydra_performance(metrics: ArgoPerformanceMetrics) -> Report:
     ).sorted_by("duration", True)
 
 
+def report_ngp_graph_compiler_perf_db(
+    metrics: NGPGraphCompilerPerformanceMetrics,
+) -> Report:
+    """Report NGP graph compiler's graph DB."""
+    perf_records = sorted(metrics.performance_db.records, key=lambda x: x["id"])
+
+    columns = [
+        Column("Operator ID", alias="id", fmt=Format(wrap_width=25)),
+        Column("Operator Cycles", alias="opCycles", fmt=Format(wrap_width=25)),
+        Column("Total Cycles", alias="totalCycles", fmt=Format(wrap_width=25)),
+    ]
+
+    hwutil_columns = [
+        Column("HW Section", alias="hwSection", fmt=Format(wrap_width=25)),
+        Column("HW Utilisation", alias="hwUtil", fmt=Format(wrap_width=25)),
+    ]
+    mem_column_titles = {
+        "memoryName": "Memory Name",
+        "readBytes": "Read bytes",
+        "writeBytes": "Write bytes",
+        "trafficCycles": "Traffic cycles",
+    }
+
+    mem_columns = [
+        Column(title, alias=key, fmt=Format(wrap_width=25))
+        for key, title in mem_column_titles.items()
+    ]
+
+    def sub_table(
+        columns: list[Column], keys_values: list[dict[str, Any]], field: str
+    ) -> Table:
+        return Table(
+            columns=columns,
+            rows=[[x[field]] for x in keys_values],
+            name="Ignored",
+        )
+
+    rows = [
+        (
+            record["id"],
+            record["opCycles"],
+            record["totalCycles"],
+            sub_table(mem_columns, record["Utilization"], "sectionName"),
+            sub_table(mem_columns, record["Utilization"], "hwUtil"),
+            *[
+                sub_table(mem_columns, record["Memory"], field)
+                for field in mem_column_titles
+            ],
+        )
+        for record in perf_records
+    ]
+
+    return Table(
+        columns=columns + hwutil_columns + mem_columns,
+        rows=rows,
+        name="NGP raw performance report",
+        alias="ngp_perf_db",
+    )
+
+
 def hydra_formatters(data: Any) -> Callable[[Any], Report]:
     """Find appropriate formatter for the provided data."""
     if is_list_of(data, Advice):
@@ -90,5 +153,8 @@ def hydra_formatters(data: Any) -> Callable[[Any], Report]:
 
     if isinstance(data, ArgoPerformanceMetrics):
         return report_hydra_performance
+
+    if isinstance(data, NGPGraphCompilerPerformanceMetrics):
+        return report_ngp_graph_compiler_perf_db
 
     raise RuntimeError(f"Unable to find appropriate formatter for {data}.")

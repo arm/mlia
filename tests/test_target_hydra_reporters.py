@@ -11,6 +11,12 @@ from rich.console import Console
 from mlia.backend.argo.config import ArgoConfig
 from mlia.backend.argo.performance import ArgoPerformanceMetrics
 from mlia.backend.argo.performance import OperatorPerformanceData
+from mlia.backend.ngp_graph_compiler.config import NGPGraphCompilerConfig
+from mlia.backend.ngp_graph_compiler.output_parsing import NGPPerformanceDatabase
+from mlia.backend.ngp_graph_compiler.performance import NGPGraphCompilerOutputFiles
+from mlia.backend.ngp_graph_compiler.performance import (
+    NGPGraphCompilerPerformanceMetrics,
+)
 from mlia.core.reporting import Table
 from mlia.target.hydra.config import HydraConfiguration
 from mlia.target.hydra.reporters import hydra_formatters
@@ -104,6 +110,75 @@ def test_hydra_formatters(monkeypatch: pytest.MonkeyPatch) -> None:
             "├──────────────┼──────────────┼────────┼──────────┼──────────────┼─────────────┤",
             "│ Relu         │ DEPTHWISE_C… │ 3      │ SE       │ 4.1235       │ 28.45%      │",
             "└──────────────┴──────────────┴────────┴──────────┴──────────────┴─────────────┘",
+            # pylint: enable=C0301
+        ],
+    )
+
+
+def test_ngp_graph_compiler_reporting(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test function hydra_formatters() with NGP performance data."""
+
+    contents = """
+    "id", "opCycles", "totalCycles", "memoryName;readBytes;writeBytes;trafficCycles", "sectionName;hwUtil"
+    26, 18, 212, Undefined;0;0;0;Internal;0;0;0;L1;0;0;0;L2;0;0;0;SystemCache;0;0;0;DRAM;320;12;10;, OutputWriter;1;VectorEngine;0.25;VectorEngine;0.25;VectorEngine;0.25;TransformUnit;0.25;TransformUnit;0.25;InputReader;0.0625;InputReader;0.0625;InputReader;0.25;
+    25, 4, 13, Undefined;0;0;0;Internal;0;0;0;L1;0;4;0;L2;0;0;0;SystemCache;0;0;0;DRAM;128;4;4;, OutputWriter;0.0625;VectorEngine;0.125;VectorEngine;0.125;VectorEngine;0.125;VectorEngine;0.125;InputReader;0.0625;InputReader;0.0625;
+    """.strip()
+
+    performance_db = NGPPerformanceDatabase()
+    performance_db.records = performance_db.parse_contents(contents)
+
+    sys_cfg, compiler_cfg = Path("system-config"), Path("compiler-config")
+    cfg = NGPGraphCompilerConfig(sys_cfg, compiler_cfg)
+
+    ignored_path = Path("ignored")
+
+    metrics = NGPGraphCompilerPerformanceMetrics(
+        backend_config=cfg,
+        output_files=NGPGraphCompilerOutputFiles(
+            ignored_path,
+            ignored_path,
+            ignored_path,
+            ignored_path,
+            ignored_path,
+            ignored_path,
+            ignored_path,
+        ),
+        performance_db=performance_db,
+    )
+
+    monkeypatch.setattr("mlia.utils.console.Console", partial(Console, width=80))
+
+    formatter = hydra_formatters(metrics)
+    report = formatter(metrics)
+    assert isinstance(report, Table)
+
+    assert_table_lines(
+        report,
+        [
+            # pylint: disable=C0301
+            "NGP raw performance report:",
+            "┌────────┬────────┬────────┬────────┬────────┬────────┬───────┬────────┬───────┐",
+            "│ Opera… │ Opera… │ Total  │ HW     │ HW     │ Memory │ Read  │ Write  │ Traf… │",
+            "│ ID     │ Cycles │ Cycles │ Secti… │ Utili… │ Name   │ bytes │ bytes  │ cycl… │",
+            "╞════════╪════════╪════════╪════════╪════════╪════════╪═══════╪════════╪═══════╡",
+            "│ 25     │ 4      │ 13     │ Outpu… │ 0.0625 │ Undef… │ 0     │ 0      │ 0     │",
+            "│        │        │        │ Vecto… │ 0.125  │ Inter… │ 0     │ 0      │ 0     │",
+            "│        │        │        │ Vecto… │ 0.125  │ L1     │ 0     │ 4      │ 0     │",
+            "│        │        │        │ Vecto… │ 0.125  │ L2     │ 0     │ 0      │ 0     │",
+            "│        │        │        │ Vecto… │ 0.125  │ Syste… │ 0     │ 0      │ 0     │",
+            "│        │        │        │ Input… │ 0.0625 │ DRAM   │ 128   │ 4      │ 4     │",
+            "│        │        │        │ Input… │ 0.0625 │        │       │        │       │",
+            "├────────┼────────┼────────┼────────┼────────┼────────┼───────┼────────┼───────┤",
+            "│ 26     │ 18     │ 212    │ Outpu… │ 1      │ Undef… │ 0     │ 0      │ 0     │",
+            "│        │        │        │ Vecto… │ 0.25   │ Inter… │ 0     │ 0      │ 0     │",
+            "│        │        │        │ Vecto… │ 0.25   │ L1     │ 0     │ 0      │ 0     │",
+            "│        │        │        │ Vecto… │ 0.25   │ L2     │ 0     │ 0      │ 0     │",
+            "│        │        │        │ Trans… │ 0.25   │ Syste… │ 0     │ 0      │ 0     │",
+            "│        │        │        │ Trans… │ 0.25   │ DRAM   │ 320   │ 12     │ 10    │",
+            "│        │        │        │ Input… │ 0.0625 │        │       │        │       │",
+            "│        │        │        │ Input… │ 0.0625 │        │       │        │       │",
+            "│        │        │        │ Input… │ 0.25   │        │       │        │       │",
+            "└────────┴────────┴────────┴────────┴────────┴────────┴───────┴────────┴───────┘",
             # pylint: enable=C0301
         ],
     )
