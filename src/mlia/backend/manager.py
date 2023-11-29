@@ -192,16 +192,17 @@ class DefaultInstallationManager(InstallationManager, InstallationFiltersMixin):
                 )
             missing_deps = [dep for dep in deps if not dep.already_installed]
             if missing_deps:
+                missing_dep_names = [dep.name for dep in missing_deps]
                 proceed = self.noninteractive or yes(
                     "The following dependencies are not installed: "
-                    f"{[dep.name for dep in missing_deps]}. "
+                    f"{missing_dep_names}. "
                     "Continue installation anyway?"
                 )
                 logger.warning(
                     "Installing backend %s with the following dependencies "
                     "missing: %s",
                     installation.name,
-                    missing_deps,
+                    missing_dep_names,
                 )
                 if not proceed:
                     logger.info(
