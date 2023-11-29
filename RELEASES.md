@@ -40,6 +40,30 @@ scheme.
 * Add linters/checkers for TOML files to pre-commits
 * Add flaky dependency for unstable tests
 
+## Release 0.7.1+internal.0
+
+### Feature changes
+
+* NGP Graph Compiler as performance backend: Integrate Vulkan Model Converter
+  and NGP Graph Compiler as backends to enable per-layer performance estimations
+  for NGP (MLIA-916)
+
+### Internal changes
+
+* Improve capturing of Vela warning (MLIA-963)
+* Re-factoring backend installation (MLIA-968)
+
+### Issues fixed
+
+* Fix inconsistent behavior with the docker installation for Argo leading to
+  failing calls when explicitly specifying Argo as backend (MLIA-1037)
+
+## Release 0.7.1
+
+### Issues fixed
+
+* Support batch size > 1 for optimizations (MLIA-469)
+
 ## Release 0.7.0+internal.0
 
 ### Interface changes
