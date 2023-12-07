@@ -130,7 +130,9 @@ def test_vulkan_model_converter_create_front_end_command(
 
     assert cmd.cmd
     assert all(isinstance(arg, str) for arg in cmd.cmd)
-    assert cmd.cmd[0] == vulkan_model_converter.FRONT_END_EXE
+    assert cmd.cmd[0] == str(
+        vulkan_model_converter.converter_path / vulkan_model_converter.FRONT_END_EXE
+    )
     assert str(in_file) in cmd.cmd
     assert str(out_file) in cmd.cmd
 
@@ -151,6 +153,8 @@ def test_vulkan_model_converter_create_back_end_command(
 
     assert cmd.cmd
     assert all(isinstance(arg, str) for arg in cmd.cmd)
-    assert cmd.cmd[0] == vulkan_model_converter.BACK_END_EXE
+    assert cmd.cmd[0] == str(
+        vulkan_model_converter.converter_path / vulkan_model_converter.BACK_END_EXE
+    )
     assert str(in_file) in cmd.cmd
     assert str(out_file) in cmd.cmd

@@ -59,8 +59,13 @@ class VulkanModelConverter:
             )
         }
         cmd = Command(
-            cmd=[self.FRONT_END_EXE, "-i", str(tflite_file), "-o", str(tosa_file)],
-            cwd=self.converter_path,
+            cmd=[
+                str(self.converter_path / self.FRONT_END_EXE),
+                "-i",
+                str(tflite_file),
+                "-o",
+                str(tosa_file),
+            ],
             env=env,
         )
         return cmd
@@ -87,14 +92,13 @@ class VulkanModelConverter:
         """Create the command to run the front end."""
         cmd = Command(
             cmd=[
-                self.BACK_END_EXE,
+                str(self.converter_path / self.BACK_END_EXE),
                 "-i",
                 str(tosa_file),
                 "-o",
                 str(spirv_file),
                 "--package-spv",
             ],
-            cwd=self.converter_path,
         )
         return cmd
 
