@@ -38,6 +38,10 @@ Below is an overview on contributing code to MLIA.
     git commit -s
 ```
 
+- For the commit messages, the codebase follows [Conventional Commits](https://www.conventionalcommits.org),
+  with some customizations. Header description is be capitalized, and the following
+  commit types are allowed: build, ci, docs, feat, fix, perf, refactor, style, test.
+
 - Push patch for code review
 
 ```bash

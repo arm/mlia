@@ -118,3 +118,9 @@ repos:
       entry: pylint
       language: system
       types: [python]
+
+- repo: https://github.com/commitizen-tools/commitizen
+  rev: v3.13.0
+  hooks:
+    - id: commitizen-branch
+      args: [--rev-range, HEAD~1..HEAD]

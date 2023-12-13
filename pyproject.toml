@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-FileCopyrightText: Copyright (c) 2012-2022 Jukka Lehtosalo and contributors
 # SPDX-FileCopyrightText: Copyright (c) 2015-2022 Dropbox, Inc.
 # SPDX-License-Identifier: Apache-2.0 AND MIT
@@ -73,3 +73,23 @@ module = [
     "requests"
 ]
 ignore_missing_imports = true
+
+[tool.commitizen]
+# This simply signifies that we want to customize the commitizen configuration
+name = "cz_customize"
+# name = "cz_conventional_commits"
+tag_format = "$version"
+version_scheme = "semver"
+version_provider = "scm"
+update_changelog_on_bump = true
+
+[tool.commitizen.customize]
+# Schema pattern is used by `cz check`, and `tox -e lint` in turn. Builtin CC pattern:
+# (?s)(build|ci|docs|feat|fix|perf|refactor|style|test|chore|revert|bump)(\\(\\S+\\))?!?:( [^\\n\\r]+)((\\n\\n.*)|(\\s*))?$
+# We customize this slightly by removing types that don't seem relevant now:
+schema_pattern = "(?s)(build|ci|docs|feat|fix|perf|refactor|style|test)(\\(\\S+\\))?!?:( [A-Z][^\\n\\r]+)((\\n\\n.*)|(\\s*))?$"
+schema = "<type>(<scope>): <Subject-capitalized>\n<BLANK LINE>\n<body>\n<BLANK LINE>\n(BREAKING CHANGE: )<footer>"
+# Commit parser is used to render the commits for RELEASES.md
+commit_parser = "^((?P<change_type>feat|fix|refactor|perf|BREAKING CHANGE)(?:\\((?P<scope>[^()\\r\\n]*)\\)|\\()?(?P<breaking>!)?|\\w+!):\\s(?P<message>.*)?"
+# Change type map to render the title for that category as per {tag:title}
+change_type_map = {'feat' = 'Feature changes', 'fix' = 'Bug fix', 'perf' = 'Performance improvements'}
