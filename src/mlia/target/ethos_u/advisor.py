@@ -110,7 +110,7 @@ class EthosUInferenceAdvisor(DefaultInferenceAdvisor):
         """Get target configuration."""
         target_profile = self.get_target_profile(context)
         target_config = cast(EthosUConfiguration, profile(target_profile))
-        target_config.compiler_options.output_dir = context.output_dir  # type: ignore
+        target_config.compiler_options.output_dir = context.output_dir
         return target_config
 
     def _get_optimization_settings(self, context: Context) -> list[list[dict]]:

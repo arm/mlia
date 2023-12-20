@@ -18,10 +18,11 @@ def get_vulkan_model_converter_installation() -> BackendInstallation:
         download_config=DownloadConfig(
             url=(
                 "https://artifactory.arm.com:443/artifactory/ml-tooling.misc/"
-                "mlia/vulkan-model-converter/vulkan_converter-20231020-b7887b9c.tar.gz"
+                "mlia/vulkan-model-converter/"
+                "vulkan-ml-sdk-dev-converter-20231219-3040b70e.tar.gz"
             ),
             sha256_hash=(
-                "80b4082388baf501f4dbccb56e3e8fe24462406b1057cd7279cab223ad80a419"
+                "803f5a878b37511a3cc48b4f72051971c5810c003bdfa31fdf6fce79910127c4"
             ),
             header_gen_fn=artifactory_credential_headers,
         ),

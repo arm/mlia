@@ -163,7 +163,6 @@ class NGPGraphCompilerPerformanceEstimator(
                 "--enable-fusing",
                 "-j",
                 "8",
-                "--enable-tensor-zero-edge-extension",
                 "--enable-external-brick-formats",
                 "--enable-performance-summary-dump"
                 # Use system and compiler config here. There is currently a crash
