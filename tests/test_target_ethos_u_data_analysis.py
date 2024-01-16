@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for Ethos-U data analysis module."""
 from __future__ import annotations
@@ -10,6 +10,7 @@ import pytest
 from mlia.backend.vela.compat import NpuSupported
 from mlia.backend.vela.compat import Operator
 from mlia.backend.vela.compat import Operators
+from mlia.backend.vela.performance import LayerwisePerfInfo
 from mlia.core.common import DataItem
 from mlia.core.data_analysis import Fact
 from mlia.nn.select import OptimizationSettings
@@ -98,6 +99,7 @@ def test_perf_metrics_diff() -> None:
                     NPUCycles(1, 2, 3, 4, 5, 6),
                     # memory metrics are in kilobytes
                     MemoryUsage(*[i * 1024 for i in range(1, 6)]),  # type: ignore
+                    LayerwisePerfInfo(layerwise_info=[]),
                 ),
                 [
                     [
@@ -111,6 +113,7 @@ def test_perf_metrics_diff() -> None:
                             MemoryUsage(
                                 *[i * 1024 for i in range(1, 6)]  # type: ignore
                             ),
+                            LayerwisePerfInfo(layerwise_info=[]),
                         ),
                     ],
                 ],
@@ -141,6 +144,7 @@ def test_perf_metrics_diff() -> None:
                     NPUCycles(1, 2, 3, 4, 5, 6),
                     # memory metrics are in kilobytes
                     MemoryUsage(*[i * 1024 for i in range(1, 6)]),  # type: ignore
+                    LayerwisePerfInfo(layerwise_info=[]),
                 ),
                 [],
             ),

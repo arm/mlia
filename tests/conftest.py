@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Pytest conf module."""
 import shutil
@@ -50,6 +50,32 @@ def invalid_input_model_file(test_tflite_invalid_model: Path) -> Path:
     return test_tflite_invalid_model
 
 
+@pytest.fixture(scope="session", name="empty_test_csv_file")
+def fixture_empty_test_csv_file(  # pylint: disable=too-many-locals
+    test_csv_path: Path,
+) -> Path:
+    """Return empty test csv file path."""
+    return test_csv_path / "empty_test_csv_file.csv"
+
+
+@pytest.fixture(scope="session", name="test_csv_file")
+def fixture_test_csv_file(  # pylint: disable=too-many-locals
+    test_csv_path: Path,
+) -> Path:
+    """Return test csv file path."""
+    return test_csv_path / "test_csv_file.csv"
+
+
+@pytest.fixture(scope="session", name="test_csv_path")
+def fixture_test_csv_path(  # pylint: disable=too-many-locals
+    tmp_path_factory: pytest.TempPathFactory,
+) -> Generator[Path, None, None]:
+    """Return test csv file path."""
+    tmp_path = tmp_path_factory.mktemp("csv_files")
+    yield tmp_path
+    shutil.rmtree(tmp_path)
+
+
 def get_test_keras_model() -> tf.keras.Model:
     """Return test Keras model."""
     model = tf.keras.Sequential(
@@ -86,6 +112,9 @@ def fixture_test_models_path(
 ) -> Generator[Path, None, None]:
     """Provide path to the test models."""
     tmp_path = tmp_path_factory.mktemp("models")
+
+    # Need an output directory for verbose performance
+    Path("output").mkdir(exist_ok=True)
 
     # Keras Model
     keras_model = get_test_keras_model()

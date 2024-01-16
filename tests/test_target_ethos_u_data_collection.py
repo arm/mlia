@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for the data collection module for Ethos-U."""
 from pathlib import Path
@@ -7,6 +7,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from mlia.backend.vela.compat import Operators
+from mlia.backend.vela.performance import LayerwisePerfInfo
 from mlia.core.context import Context
 from mlia.core.context import ExecutionContext
 from mlia.core.data_collection import DataCollector
@@ -162,6 +163,7 @@ def mock_performance_estimation(
         target,
         NPUCycles(1, 2, 3, 4, 5, 6),
         MemoryUsage(1, 2, 3, 4, 5),
+        LayerwisePerfInfo(layerwise_info=[]),
     )
     monkeypatch.setattr(
         "mlia.target.ethos_u.data_collection.EthosUPerformanceEstimator.estimate",

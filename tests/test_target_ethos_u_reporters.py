@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for reports module."""
 from __future__ import annotations
@@ -10,16 +10,244 @@ import pytest
 
 from mlia.backend.vela.compat import NpuSupported
 from mlia.backend.vela.compat import Operator
+from mlia.backend.vela.performance import LayerPerfInfo
+from mlia.backend.vela.performance import LayerwisePerfInfo
+from mlia.core.reporting import CompoundReport
 from mlia.core.reporting import Report
 from mlia.core.reporting import Table
 from mlia.nn.tensorflow.tflite_compat import TFLiteCompatibilityInfo
 from mlia.nn.tensorflow.tflite_compat import TFLiteCompatibilityStatus
 from mlia.target.ethos_u.config import EthosUConfiguration
+from mlia.target.ethos_u.performance import MemorySizeType
+from mlia.target.ethos_u.performance import MemoryUsage
+from mlia.target.ethos_u.performance import PerformanceMetrics
 from mlia.target.ethos_u.reporters import ethos_u_formatters
 from mlia.target.ethos_u.reporters import report_operators
+from mlia.target.ethos_u.reporters import report_perf_metrics
 from mlia.target.ethos_u.reporters import report_target_details
 from mlia.target.registry import profile
 from mlia.utils.console import remove_ascii_codes
+
+
+# pylint: disable=line-too-long
+@pytest.mark.parametrize(
+    "perf_metrics, expected_plain_text, expected_json_dict",
+    [
+        (
+            [
+                PerformanceMetrics(
+                    target_config=EthosUConfiguration.load_profile("ethos-u55-256"),
+                    npu_cycles=None,
+                    memory_usage=MemoryUsage(
+                        sram_memory_area_size=10,
+                        dram_memory_area_size=0,
+                        unknown_memory_area_size=0,
+                        on_chip_flash_memory_area_size=0,
+                        off_chip_flash_memory_area_size=20,
+                        memory_size_type=MemorySizeType.KILOBYTES,
+                    ),
+                    layerwise_perf_info=LayerwisePerfInfo(
+                        layerwise_info=[
+                            LayerPerfInfo(
+                                name="Test Layer",
+                                tflite_operator="test_operator",
+                                sram_usage=0,
+                                op_cycles=0.0,
+                                npu_cycles=0.0,
+                                sram_access_cycles=0.0,
+                                dram_access_cycles=0.0,
+                                on_chip_flash_access_cycles=0.0,
+                                off_chip_flash_access_cycles=0.0,
+                                mac_count=0,
+                                util_mac_percentage=0.0,
+                            ),
+                            LayerPerfInfo(
+                                name="Test Layer 1",
+                                tflite_operator="test_operator",
+                                sram_usage=0,
+                                op_cycles=0.0,
+                                npu_cycles=0.0,
+                                sram_access_cycles=0.0,
+                                dram_access_cycles=0.0,
+                                on_chip_flash_access_cycles=0.0,
+                                off_chip_flash_access_cycles=0.0,
+                                mac_count=0,
+                                util_mac_percentage=0.0,
+                            ),
+                        ]
+                    ),
+                )
+            ],
+            """
+Performance metrics:
+┌─────────────────────┬──────────────┬──────┐
+│ Metric              │ Value        │ Unit │
+╞═════════════════════╪══════════════╪══════╡
+│ SRAM used           │        10.00 │ KiB  │
+├─────────────────────┼──────────────┼──────┤
+│ Off-chip flash used │        20.00 │ KiB  │
+└─────────────────────┴──────────────┴──────┘
+IMPORTANT: The performance figures above refer to NPU only
+Layer-Wise Metrics:
+┌──────────────┬─────────────────┬──────────────┬──────────────┬──────────────┬──────────────┬──────────────┬──────────────┬──────────────┬──────────────┬──────────────┐
+│ Layer Name   │ TFLite Operator │ SRAM Usage   │ OP Cycles    │ NPU Cycles   │ SRAM AC      │ DRAM AC      │ OnFlash AC   │ OffFlash AC  │ MAC Count    │ MAC Util (%) │
+╞══════════════╪═════════════════╪══════════════╪══════════════╪══════════════╪══════════════╪══════════════╪══════════════╪══════════════╪══════════════╪══════════════╡
+│ Test Layer   │ test_operator   │            0 │         0.00 │         0.00 │         0.00 │         0.00 │         0.00 │         0.00 │            0 │         0.00 │
+├──────────────┼─────────────────┼──────────────┼──────────────┼──────────────┼──────────────┼──────────────┼──────────────┼──────────────┼──────────────┼──────────────┤
+│ Test Layer 1 │ test_operator   │            0 │         0.00 │         0.00 │         0.00 │         0.00 │         0.00 │         0.00 │            0 │         0.00 │
+└──────────────┴─────────────────┴──────────────┴──────────────┴──────────────┴──────────────┴──────────────┴──────────────┴──────────────┴──────────────┴──────────────┘
+""".strip(),
+            {
+                "performance_metrics": [
+                    {"metric": "SRAM used", "value": 10, "unit": "KiB"},
+                    {"metric": "Off-chip flash used", "value": 20, "unit": "KiB"},
+                ],
+                "layerwise_metrics": [
+                    {
+                        "name": "Test Layer",
+                        "tflite_operator": "test_operator",
+                        "sram_usage": 0,
+                        "op_cycles": 0.0,
+                        "npu_cycles": 0.0,
+                        "sram_access_cycles": 0.0,
+                        "dram_access_cycles": 0.0,
+                        "on_chip_flash_access_cycles": 0.0,
+                        "off_chip_flash_access_cycles": 0.0,
+                        "mac_count": 0,
+                        "util_mac_percentage": 0.0,
+                    },
+                    {
+                        "name": "Test Layer 1",
+                        "tflite_operator": "test_operator",
+                        "sram_usage": 0,
+                        "op_cycles": 0.0,
+                        "npu_cycles": 0.0,
+                        "sram_access_cycles": 0.0,
+                        "dram_access_cycles": 0.0,
+                        "on_chip_flash_access_cycles": 0.0,
+                        "off_chip_flash_access_cycles": 0.0,
+                        "mac_count": 0,
+                        "util_mac_percentage": 0.0,
+                    },
+                ],
+            },
+        ),
+        (
+            [
+                PerformanceMetrics(
+                    target_config=EthosUConfiguration.load_profile("ethos-u55-256"),
+                    npu_cycles=None,
+                    memory_usage=MemoryUsage(
+                        sram_memory_area_size=10,
+                        dram_memory_area_size=0,
+                        unknown_memory_area_size=0,
+                        on_chip_flash_memory_area_size=0,
+                        off_chip_flash_memory_area_size=20,
+                        memory_size_type=MemorySizeType.KILOBYTES,
+                    ),
+                    layerwise_perf_info=LayerwisePerfInfo(
+                        layerwise_info=[
+                            LayerPerfInfo(
+                                name="Test Layer",
+                                tflite_operator="test_operator",
+                                sram_usage=0,
+                                op_cycles=0.0,
+                                npu_cycles=0.0,
+                                sram_access_cycles=0.0,
+                                dram_access_cycles=0.0,
+                                on_chip_flash_access_cycles=0.0,
+                                off_chip_flash_access_cycles=0.0,
+                                mac_count=0,
+                                util_mac_percentage=0.0,
+                            ),
+                            LayerPerfInfo(
+                                name="Test Layer",
+                                tflite_operator="test_operator",
+                                sram_usage=0,
+                                op_cycles=0.0,
+                                npu_cycles=0.0,
+                                sram_access_cycles=0.0,
+                                dram_access_cycles=0.0,
+                                on_chip_flash_access_cycles=0.0,
+                                off_chip_flash_access_cycles=0.0,
+                                mac_count=0,
+                                util_mac_percentage=0.0,
+                            ),
+                        ]
+                    ),
+                )
+            ],
+            """
+Performance metrics:
+┌─────────────────────┬──────────────┬──────┐
+│ Metric              │ Value        │ Unit │
+╞═════════════════════╪══════════════╪══════╡
+│ SRAM used           │        10.00 │ KiB  │
+├─────────────────────┼──────────────┼──────┤
+│ Off-chip flash used │        20.00 │ KiB  │
+└─────────────────────┴──────────────┴──────┘
+IMPORTANT: The performance figures above refer to NPU only
+Layer-Wise Metrics:
+┌────────────────┬─────────────────┬──────────────┬──────────────┬──────────────┬──────────────┬──────────────┬──────────────┬──────────────┬──────────────┬──────────────┐
+│ Layer Name     │ TFLite Operator │ SRAM Usage   │ OP Cycles    │ NPU Cycles   │ SRAM AC      │ DRAM AC      │ OnFlash AC   │ OffFlash AC  │ MAC Count    │ MAC Util (%) │
+╞════════════════╪═════════════════╪══════════════╪══════════════╪══════════════╪══════════════╪══════════════╪══════════════╪══════════════╪══════════════╪══════════════╡
+│ Test Layer     │ test_operator   │            0 │         0.00 │         0.00 │         0.00 │         0.00 │         0.00 │         0.00 │            0 │         0.00 │
+├────────────────┼─────────────────┼──────────────┼──────────────┼──────────────┼──────────────┼──────────────┼──────────────┼──────────────┼──────────────┼──────────────┤
+│ Test Layer (1) │ test_operator   │            0 │         0.00 │         0.00 │         0.00 │         0.00 │         0.00 │         0.00 │            0 │         0.00 │
+└────────────────┴─────────────────┴──────────────┴──────────────┴──────────────┴──────────────┴──────────────┴──────────────┴──────────────┴──────────────┴──────────────┘
+""".strip(),
+            {
+                "performance_metrics": [
+                    {"metric": "SRAM used", "value": 10, "unit": "KiB"},
+                    {"metric": "Off-chip flash used", "value": 20, "unit": "KiB"},
+                ],
+                "layerwise_metrics": [
+                    {
+                        "name": "Test Layer",
+                        "tflite_operator": "test_operator",
+                        "sram_usage": 0,
+                        "op_cycles": 0.0,
+                        "npu_cycles": 0.0,
+                        "sram_access_cycles": 0.0,
+                        "dram_access_cycles": 0.0,
+                        "on_chip_flash_access_cycles": 0.0,
+                        "off_chip_flash_access_cycles": 0.0,
+                        "mac_count": 0,
+                        "util_mac_percentage": 0.0,
+                    },
+                    {
+                        "name": "Test Layer (1)",
+                        "tflite_operator": "test_operator",
+                        "sram_usage": 0,
+                        "op_cycles": 0.0,
+                        "npu_cycles": 0.0,
+                        "sram_access_cycles": 0.0,
+                        "dram_access_cycles": 0.0,
+                        "on_chip_flash_access_cycles": 0.0,
+                        "off_chip_flash_access_cycles": 0.0,
+                        "mac_count": 0,
+                        "util_mac_percentage": 0.0,
+                    },
+                ],
+            },
+        ),
+    ],
+)
+# pylint: enable=line-too-long
+def test_report_perf_metrics(
+    perf_metrics: PerformanceMetrics,
+    expected_plain_text: str,
+    expected_json_dict: dict,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test report_perf_metrics formatter."""
+    monkeypatch.setenv("COLUMNS", "5000")
+    report = report_perf_metrics(perf_metrics)
+    assert isinstance(report, CompoundReport)
+    plain_text = remove_ascii_codes(report.to_plain_text())
+    assert plain_text == expected_plain_text
+    json_dict = report.to_json()
+    assert json_dict == expected_json_dict
 
 
 @pytest.mark.parametrize(

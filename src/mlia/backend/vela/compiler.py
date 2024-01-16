@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Vela compiler wrapper module."""
 from __future__ import annotations
@@ -90,7 +90,7 @@ class VelaCompilerOptions:  # pylint: disable=too-many-instance-attributes
     tensor_allocator: TensorAllocatorType = "HillClimb"
     cpu_tensor_alignment: int = Tensor.AllocationQuantum
     optimization_strategy: OptimizationStrategyType = "Performance"
-    output_dir: str = "output"
+    output_dir: Path = Path("output")
     recursion_limit: int = 1000
 
 
@@ -251,12 +251,17 @@ class VelaCompiler:  # pylint: disable=too-many-instance-attributes
             verbose_register_command_stream=False,
             verbose_operators=False,
             verbose_weights=False,
+            verbose_performance=True,
             show_cpu_operations=False,
             tensor_allocator=self.tensor_allocator,
             timing=False,
             output_dir=self.output_dir,
             cpu_tensor_alignment=self.cpu_tensor_alignment,
         )
+
+    def return_compiler_options(self) -> CompilerOptions:
+        """Return CompilerOptions instance for test purposes."""
+        return self._compiler_options()
 
 
 def resolve_compiler_config(

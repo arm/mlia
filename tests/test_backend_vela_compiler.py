@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for module vela/compiler."""
 from pathlib import Path
@@ -29,7 +29,7 @@ def test_default_vela_compiler() -> None:
     assert default_compiler.tensor_allocator == TensorAllocator.HillClimb
     assert default_compiler.cpu_tensor_alignment == 16
     assert default_compiler.optimization_strategy == OptimizationStrategy.Performance
-    assert default_compiler.output_dir == "output"
+    assert default_compiler.output_dir == Path("output")
 
     assert default_compiler.get_config() == {
         "accelerator_config": "ethos-u55-256",
@@ -88,7 +88,7 @@ def test_vela_compiler_with_parameters(test_resources_path: Path) -> None:
         tensor_allocator="Greedy",
         cpu_tensor_alignment=4,
         optimization_strategy="Size",
-        output_dir="custom_output",
+        output_dir=Path("custom_output"),
     )
     compiler = VelaCompiler(compiler_options)
 
@@ -101,7 +101,7 @@ def test_vela_compiler_with_parameters(test_resources_path: Path) -> None:
     assert compiler.tensor_allocator == TensorAllocator.Greedy
     assert compiler.cpu_tensor_alignment == 4
     assert compiler.optimization_strategy == OptimizationStrategy.Size
-    assert compiler.output_dir == "custom_output"
+    assert compiler.output_dir == Path("custom_output")
 
     assert compiler.get_config() == {
         "accelerator_config": "ethos-u65-256",
@@ -154,6 +154,25 @@ def test_compile_model(test_tflite_model: Path) -> None:
 
     optimized_model = compiler.compile_model(test_tflite_model)
     assert isinstance(optimized_model, OptimizedModel)
+
+
+def test_csv_file_created(test_tflite_model: Path) -> None:
+    """Test that a csv file is created by the vela backend"""
+    compiler = VelaCompiler(
+        EthosUConfiguration.load_profile("ethos-u55-256").compiler_options
+    )
+    csv_file_name = test_tflite_model.stem + "_per-layer.csv"
+    compiler.compile_model(test_tflite_model)
+    assert (compiler.output_dir / csv_file_name).is_file()
+
+
+# Test to see if the new flag is passed to Vela
+def test_verbose_flag_passed() -> None:
+    """Test that the verbose_performance flag is passed to vela backend"""
+    compiler = VelaCompiler(
+        EthosUConfiguration.load_profile("ethos-u55-256").compiler_options
+    )
+    assert compiler.return_compiler_options().verbose_performance
 
 
 def test_compile_model_fail_sram_exceeded(

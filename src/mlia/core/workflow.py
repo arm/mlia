@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Module for executors.
 
@@ -114,6 +114,7 @@ class DefaultWorkflowExecutor(WorkflowExecutor):
             self.before_start()
 
             collected_data = self.collect_data()
+
             analyzed_data = self.analyze_data(collected_data)
 
             self.produce_advice(analyzed_data)

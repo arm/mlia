@@ -1,14 +1,16 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Reports module."""
 from __future__ import annotations
 
 from collections import defaultdict
+from dataclasses import fields
 from typing import Any
 from typing import Callable
 
 from mlia.backend.vela.compat import Operator
 from mlia.backend.vela.compat import Operators
+from mlia.backend.vela.performance import layer_metrics
 from mlia.core.advice_generation import Advice
 from mlia.core.reporters import report_advice
 from mlia.core.reporting import BytesCell
@@ -16,6 +18,7 @@ from mlia.core.reporting import Cell
 from mlia.core.reporting import ClockCell
 from mlia.core.reporting import Column
 from mlia.core.reporting import CompoundFormatter
+from mlia.core.reporting import CompoundReport
 from mlia.core.reporting import CyclesCell
 from mlia.core.reporting import Format
 from mlia.core.reporting import NestedReport
@@ -237,9 +240,58 @@ def report_target_details(target_config: EthosUConfiguration) -> Report:
     )
 
 
-def metrics_as_records(perf_metrics: list[PerformanceMetrics]) -> list[tuple]:
+def metrics_as_records(
+    perf_metrics: list[PerformanceMetrics],
+) -> tuple[list[tuple], list[tuple]]:
     """Convert perf metrics object into list of records."""
     perf_metrics = [item.in_kilobytes() for item in perf_metrics]
+
+    def _layerwise_as_metrics(
+        perf_metrics: list[PerformanceMetrics],
+    ) -> list[tuple]:
+        metric_map = defaultdict(list)  # type: dict[str, list]
+        format_types = {int: "12,d", str: "", float: "12.2f"}
+        rows = []
+        for perf_metric in perf_metrics:
+            if perf_metric.layerwise_perf_info:
+                for layerwise_metric in perf_metric.layerwise_perf_info.layerwise_info:
+                    field_names = [
+                        field.name
+                        for field in fields(layerwise_metric)
+                        if field.name != "name"
+                    ]
+                    duplicate_idx = 1
+                    dict_key = getattr(layerwise_metric, "name")
+                    while dict_key in metric_map:
+                        dict_key = (
+                            getattr(layerwise_metric, "name")
+                            + " ("
+                            + str(duplicate_idx)
+                            + ")"
+                        )
+                        duplicate_idx += 1
+                    for field_name in field_names:
+                        metric_map[dict_key].append(
+                            getattr(layerwise_metric, field_name)
+                        )
+                rows = [
+                    (
+                        name,
+                        *(
+                            Cell(
+                                value,
+                                Format(
+                                    str_fmt=format_types[type(value)]
+                                    if type(value) in format_types
+                                    else ""
+                                ),
+                            )
+                            for value in values
+                        ),
+                    )
+                    for name, values in metric_map.items()
+                ]
+        return rows
 
     def _cycles_as_records(perf_metrics: list[PerformanceMetrics]) -> list[tuple]:
         metric_map = defaultdict(list)
@@ -306,7 +358,7 @@ def metrics_as_records(perf_metrics: list[PerformanceMetrics]) -> list[tuple]:
             _data_beats_as_records,
         )
         for metrics in metrics_func(perf_metrics)
-    ]
+    ], _layerwise_as_metrics(perf_metrics)
 
 
 def report_perf_metrics(
@@ -315,9 +367,9 @@ def report_perf_metrics(
     """Return comparison table for the performance metrics."""
     if isinstance(perf_metrics, PerformanceMetrics):
         perf_metrics = [perf_metrics]
+    rows, layerwise_rows = metrics_as_records(perf_metrics)
 
-    rows = metrics_as_records(perf_metrics)
-
+    # Create a seperate table for layerwise data
     if len(perf_metrics) == 2:
         return Table(
             columns=[
@@ -349,17 +401,42 @@ def report_perf_metrics(
             alias="performance_metrics",
             notes="IMPORTANT: The performance figures above refer to NPU only",
         )
-
-    return Table(
-        columns=[
-            Column("Metric", alias="metric", fmt=Format(wrap_width=30)),
-            Column("Value", alias="value", fmt=Format(wrap_width=15)),
-            Column("Unit", alias="unit", fmt=Format(wrap_width=15)),
-        ],
-        rows=rows,
-        name="Performance metrics",
-        alias="performance_metrics",
-        notes="IMPORTANT: The performance figures above refer to NPU only",
+    if layerwise_rows == []:
+        return Table(
+            columns=[
+                Column("Metric", alias="metric", fmt=Format(wrap_width=30)),
+                Column("Value", alias="value", fmt=Format(wrap_width=15)),
+                Column("Unit", alias="unit", fmt=Format(wrap_width=15)),
+            ],
+            rows=rows,
+            name="Performance metrics",
+            alias="performance_metrics",
+            notes="IMPORTANT: The performance figures above refer to NPU only",
+        )
+    return CompoundReport(
+        [
+            Table(
+                columns=[
+                    Column("Metric", alias="metric", fmt=Format(wrap_width=30)),
+                    Column("Value", alias="value", fmt=Format(wrap_width=15)),
+                    Column("Unit", alias="unit", fmt=Format(wrap_width=15)),
+                ],
+                rows=rows,
+                name="Performance metrics",
+                alias="performance_metrics",
+                notes="IMPORTANT: The performance figures above refer to NPU only",
+            ),
+            Table(
+                columns=[
+                    Column(name, alias=alias, fmt=Format(wrap_width=30))
+                    for alias, _, name in layer_metrics
+                ],
+                rows=layerwise_rows,
+                name="Layer-Wise Metrics",
+                alias="layerwise_metrics",
+                notes="",
+            ),
+        ]
     )
 
 

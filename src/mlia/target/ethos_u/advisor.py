@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Ethos-U MLIA module."""
 from __future__ import annotations
@@ -44,6 +44,7 @@ class EthosUInferenceAdvisor(DefaultInferenceAdvisor):
         """Return list of the data collectors."""
         model = self.get_model(context)
         target_config = self._get_target_config(context)
+        target_config.compiler_options.output_dir = context.output_dir  # type: ignore
         backends = self._get_backends(context)
 
         collectors: list[DataCollector] = []

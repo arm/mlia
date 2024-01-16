@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 from contextlib import ExitStack as does_not_raise
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -25,7 +26,7 @@ def test_compiler_options_default_init() -> None:
     assert opts.tensor_allocator == "HillClimb"
     assert opts.cpu_tensor_alignment == 16
     assert opts.optimization_strategy == "Performance"
-    assert opts.output_dir == "output"
+    assert opts.output_dir == Path("output")
 
 
 def test_ethosu_target() -> None:

@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Performance estimation."""
 from __future__ import annotations
@@ -13,6 +13,7 @@ import mlia.backend.vela.compiler as vela_comp
 import mlia.backend.vela.performance as vela_perf
 from mlia.backend.corstone import is_corstone_backend
 from mlia.backend.corstone.performance import estimate_performance
+from mlia.backend.vela.performance import LayerwisePerfInfo
 from mlia.core.context import Context
 from mlia.core.performance import PerformanceEstimator
 from mlia.nn.select import OptimizationSettings
@@ -95,16 +96,23 @@ class PerformanceMetrics:
     target_config: EthosUConfiguration
     npu_cycles: NPUCycles | None
     memory_usage: MemoryUsage | None
+    layerwise_perf_info: LayerwisePerfInfo | None
 
     def in_kilobytes(self) -> PerformanceMetrics:
         """Return metrics with memory usage in KiB."""
         if self.memory_usage is None:
             return PerformanceMetrics(
-                self.target_config, self.npu_cycles, self.memory_usage
+                self.target_config,
+                self.npu_cycles,
+                self.memory_usage,
+                self.layerwise_perf_info,
             )
 
         return PerformanceMetrics(
-            self.target_config, self.npu_cycles, self.memory_usage.in_kilobytes()
+            self.target_config,
+            self.npu_cycles,
+            self.memory_usage.in_kilobytes(),
+            self.layerwise_perf_info,
         )
 
 
@@ -119,7 +127,9 @@ class OptimizationPerformanceMetrics:
 
 
 class VelaPerformanceEstimator(
-    PerformanceEstimator[Union[Path, ModelConfiguration], MemoryUsage]
+    PerformanceEstimator[
+        Union[Path, ModelConfiguration], tuple[MemoryUsage, LayerwisePerfInfo]
+    ]
 ):
     """Vela based performance estimator."""
 
@@ -128,7 +138,9 @@ class VelaPerformanceEstimator(
         self.context = context
         self.target = target_config
 
-    def estimate(self, model: Path | ModelConfiguration) -> MemoryUsage:
+    def estimate(
+        self, model: Path | ModelConfiguration
+    ) -> tuple[MemoryUsage, LayerwisePerfInfo]:
         """Estimate performance."""
         with log_action("Getting the memory usage metrics ..."):
             model_path = (
@@ -141,12 +153,15 @@ class VelaPerformanceEstimator(
                 model_path, self.target.compiler_options
             )
 
-            return MemoryUsage(
-                vela_perf_metrics.sram_memory_area_size,
-                vela_perf_metrics.dram_memory_area_size,
-                vela_perf_metrics.unknown_memory_area_size,
-                vela_perf_metrics.on_chip_flash_memory_area_size,
-                vela_perf_metrics.off_chip_flash_memory_area_size,
+            return (
+                MemoryUsage(
+                    vela_perf_metrics.sram_memory_area_size,
+                    vela_perf_metrics.dram_memory_area_size,
+                    vela_perf_metrics.unknown_memory_area_size,
+                    vela_perf_metrics.on_chip_flash_memory_area_size,
+                    vela_perf_metrics.off_chip_flash_memory_area_size,
+                ),
+                vela_perf_metrics.layerwise_performance_info,
             )
 
 
@@ -238,12 +253,15 @@ class EthosUPerformanceEstimator(
 
         memory_usage = None
         npu_cycles = None
+        layerwise_perf_info = None
         for backend in self.backends:
             if backend == "vela":
                 vela_estimator = VelaPerformanceEstimator(
                     self.context, self.target_config
                 )
-                memory_usage = vela_estimator.estimate(tflite_model)
+                memory_usage, layerwise_perf_info = vela_estimator.estimate(
+                    tflite_model
+                )
             elif is_corstone_backend(backend):
                 corstone_estimator = CorstonePerformanceEstimator(
                     self.context, self.target_config, backend
@@ -256,4 +274,6 @@ class EthosUPerformanceEstimator(
                     backend,
                 )
 
-        return PerformanceMetrics(self.target_config, npu_cycles, memory_usage)
+        return PerformanceMetrics(
+            self.target_config, npu_cycles, memory_usage, layerwise_perf_info
+        )
