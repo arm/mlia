@@ -10,15 +10,12 @@ from collections import Counter
 from dataclasses import dataclass
 from dataclasses import fields
 from pathlib import Path
-from pydoc import locate
 
 import numpy as np
-from ethosu.vela.npu_performance import PassCycles
-from ethosu.vela.tensor import MemArea
 
-from mlia.backend.vela.compiler import OptimizedModel
 from mlia.backend.vela.compiler import VelaCompiler
 from mlia.backend.vela.compiler import VelaCompilerOptions
+from mlia.backend.vela.compiler import VelaSummary
 
 
 logger = logging.getLogger(__name__)
@@ -37,11 +34,10 @@ class PerformanceMetrics:  # pylint: disable=too-many-instance-attributes
     batch_inference_time: float
     inferences_per_second: float
     batch_size: int
-    unknown_memory_area_size: int
-    sram_memory_area_size: int
-    dram_memory_area_size: int
-    on_chip_flash_memory_area_size: int
-    off_chip_flash_memory_area_size: int
+    sram_memory_area_size: float
+    dram_memory_area_size: float
+    on_chip_flash_memory_area_size: float
+    off_chip_flash_memory_area_size: float
     layerwise_performance_info: LayerwisePerfInfo
 
 
@@ -145,19 +141,19 @@ def parse_layerwise_perf_csv(  # pylint: disable=too-many-locals
             if row == headers_to_check_cpu_ops:
                 continue
             try:
+                # pylint: disable=eval-used
                 key_types = {
-                    field.name: locate(str(field.type))
+                    field.name: eval(field.type)  # type: ignore # nosec
                     for field in fields(LayerPerfInfo)
                 }
+                # pylint: enable=eval-used
                 ids_to_metrics = {}
                 for key, title, _ in metrics:
                     try:
-                        ids_to_metrics[key] = key_types[key](  # type: ignore
-                            row_as_dict[title]
-                        )
+                        ids_to_metrics[key] = key_types[key](row_as_dict[title])
                     except ValueError as err:
                         if "invalid literal for int() with base 10" in str(err):
-                            ids_to_metrics[key] = key_types[key](  # type: ignore
+                            ids_to_metrics[key] = key_types[key](
                                 float(row_as_dict[title])
                             )
                         else:
@@ -180,17 +176,20 @@ def estimate_performance(
         model_path,
         compiler_options.accelerator_config,
     )
-
     vela_compiler = VelaCompiler(compiler_options)
+    if Path(
+        Path(compiler_options.output_dir).as_posix()
+        + "/"
+        + model_path.stem
+        + "_summary_"
+        + compiler_options.system_config
+        + ".csv"
+    ).is_file():
+        summary_data, _ = vela_compiler.compile_model(model_path, True)
+    else:
+        summary_data, _ = vela_compiler.compile_model(model_path)
 
-    initial_model = vela_compiler.read_model(model_path)
-    if initial_model.optimized:
-        raise ValueError(
-            "Unable to estimate performance for the given optimized model."
-        )
-
-    optimized_model = vela_compiler.compile_model(initial_model)
-    output_dir = optimized_model.compiler_options.output_dir
+    output_dir = compiler_options.output_dir
     csv_paths = [entry for entry in os.listdir(output_dir) if "per-layer.csv" in entry]
     model_name = str(model_path.stem)
     csv_file_found = None
@@ -204,41 +203,31 @@ def estimate_performance(
         vela_csv_file=csv_path, metrics=layer_metrics
     )
 
-    return _performance_metrics(layerwise_performance_info, optimized_model)
+    return _performance_metrics(layerwise_performance_info, summary_data)
 
 
 def _performance_metrics(
-    layerwise_performance_info: LayerwisePerfInfo, optimized_model: OptimizedModel
+    layerwise_performance_info: LayerwisePerfInfo, summary_data: VelaSummary
 ) -> PerformanceMetrics:
     """Return performance metrics for optimized model."""
-    cycles = optimized_model.nng.cycles
-
-    def memory_usage(mem_area: MemArea) -> int:
-        """Get memory usage for the proviced memory area type."""
-        memory_used: dict[MemArea, int] = optimized_model.nng.memory_used
-        bandwidths = optimized_model.nng.bandwidths
-
-        return memory_used.get(mem_area, 0) if np.sum(bandwidths[mem_area]) > 0 else 0
-
     midpoint_fps = np.nan
-    midpoint_inference_time = cycles[PassCycles.Total] / optimized_model.arch.core_clock
+    midpoint_inference_time = summary_data.cycles_total / summary_data.core_clock
     if midpoint_inference_time > 0:
         midpoint_fps = 1 / midpoint_inference_time
 
     return PerformanceMetrics(
-        npu_cycles=int(cycles[PassCycles.Npu]),
-        sram_access_cycles=int(cycles[PassCycles.SramAccess]),
-        dram_access_cycles=int(cycles[PassCycles.DramAccess]),
-        on_chip_flash_access_cycles=int(cycles[PassCycles.OnChipFlashAccess]),
-        off_chip_flash_access_cycles=int(cycles[PassCycles.OffChipFlashAccess]),
-        total_cycles=int(cycles[PassCycles.Total]),
+        npu_cycles=int(summary_data.cycles_npu),
+        sram_access_cycles=int(summary_data.cycles_sram_access),
+        dram_access_cycles=int(summary_data.cycles_dram_access),
+        on_chip_flash_access_cycles=int(summary_data.cycles_on_chip_flash_access),
+        off_chip_flash_access_cycles=int(summary_data.cycles_off_chip_flash_access),
+        total_cycles=int(summary_data.cycles_total),
         batch_inference_time=midpoint_inference_time * 1000,
         inferences_per_second=midpoint_fps,
-        batch_size=optimized_model.nng.batch_size,
-        unknown_memory_area_size=memory_usage(MemArea.Unknown),
-        sram_memory_area_size=memory_usage(MemArea.Sram),
-        dram_memory_area_size=memory_usage(MemArea.Dram),
-        on_chip_flash_memory_area_size=memory_usage(MemArea.OnChipFlash),
-        off_chip_flash_memory_area_size=memory_usage(MemArea.OffChipFlash),
+        batch_size=summary_data.batch_size,
+        sram_memory_area_size=float(summary_data.sram_memory_used),
+        dram_memory_area_size=float(summary_data.dram_memory_used),
+        on_chip_flash_memory_area_size=float(summary_data.on_chip_flash_memory_used),
+        off_chip_flash_memory_area_size=float(summary_data.off_chip_flash_memory_used),
         layerwise_performance_info=layerwise_performance_info,
     )

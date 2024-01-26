@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from dataclasses import asdict
 from dataclasses import fields
 from typing import Any
 from typing import Callable
@@ -119,29 +120,50 @@ def report_target_details(target_config: EthosUConfiguration) -> Report:
     """Return table representation for the target."""
     compiler_config = target_config.resolved_compiler_config
 
+    memory_dict = dict(
+        zip(
+            ["Sram", "Dram", "OnChipFlash", "OffChipFlash"],
+            [
+                compiler_config.sram_memory_data,
+                compiler_config.dram_memory_data,
+                compiler_config.on_chip_flash_memory_data,
+                compiler_config.off_chip_flash_memory_data,
+            ],
+        )
+    )
+
+    memory_dict = {
+        key: val
+        for key, val in memory_dict.items()
+        if not list(asdict(val).values()).count(None) == len(list(asdict(val).values()))
+    }
+
     memory_settings = [
         ReportItem(
             "Const mem area",
             "const_mem_area",
-            compiler_config["const_mem_area"],
+            compiler_config.const_mem_area,
         ),
         ReportItem(
             "Arena mem area",
             "arena_mem_area",
-            compiler_config["arena_mem_area"],
+            compiler_config.arena_mem_area,
         ),
         ReportItem(
             "Cache mem area",
             "cache_mem_area",
-            compiler_config["cache_mem_area"],
-        ),
-        ReportItem(
-            "Arena cache size",
-            "arena_cache_size",
-            BytesCell(compiler_config["arena_cache_size"]),
+            compiler_config.cache_mem_area,
         ),
     ]
 
+    if compiler_config.arena_cache_size is not None:
+        memory_settings.append(
+            ReportItem(
+                "Arena cache size",
+                "arena_cache_size",
+                BytesCell(compiler_config.arena_cache_size),
+            )
+        )
     mem_areas_settings = [
         ReportItem(
             f"{mem_area_name}",
@@ -151,67 +173,48 @@ def report_target_details(target_config: EthosUConfiguration) -> Report:
                 ReportItem(
                     "Clock scales",
                     "clock_scales",
-                    mem_area_settings["clock_scales"],
+                    mem_area_settings.clock_scale,
                 ),
                 ReportItem(
                     "Burst length",
                     "burst_length",
-                    BytesCell(mem_area_settings["burst_length"]),
+                    BytesCell(mem_area_settings.burst_length),
                 ),
                 ReportItem(
                     "Read latency",
                     "read_latency",
-                    CyclesCell(mem_area_settings["read_latency"]),
+                    CyclesCell(mem_area_settings.read_latency),
                 ),
                 ReportItem(
                     "Write latency",
                     "write_latency",
-                    CyclesCell(mem_area_settings["write_latency"]),
+                    CyclesCell(mem_area_settings.write_latency),
                 ),
             ],
         )
-        for mem_area_name, mem_area_settings in compiler_config["memory_area"].items()
+        for mem_area_name, mem_area_settings in memory_dict.items()
     ]
 
     system_settings = [
         ReportItem(
             "Accelerator clock",
             "accelerator_clock",
-            ClockCell(compiler_config["core_clock"]),
+            ClockCell(compiler_config.core_clock),
         ),
         ReportItem(
             "AXI0 port",
             "axi0_port",
-            compiler_config["axi0_port"],
+            compiler_config.axi0_port,
         ),
         ReportItem(
             "AXI1 port",
             "axi1_port",
-            compiler_config["axi1_port"],
+            compiler_config.axi1_port,
         ),
         ReportItem(
             "Memory area settings", "memory_area", None, nested_items=mem_areas_settings
         ),
     ]
-
-    arch_settings = [
-        ReportItem(
-            "Permanent storage mem area",
-            "permanent_storage_mem_area",
-            compiler_config["permanent_storage_mem_area"],
-        ),
-        ReportItem(
-            "Feature map storage mem area",
-            "feature_map_storage_mem_area",
-            compiler_config["feature_map_storage_mem_area"],
-        ),
-        ReportItem(
-            "Fast storage mem area",
-            "fast_storage_mem_area",
-            compiler_config["fast_storage_mem_area"],
-        ),
-    ]
-
     return NestedReport(
         "Target information",
         "target",
@@ -221,20 +224,14 @@ def report_target_details(target_config: EthosUConfiguration) -> Report:
             ReportItem(
                 "Memory mode",
                 alias="memory_mode",
-                value=compiler_config["memory_mode"],
+                value=compiler_config.memory_mode,
                 nested_items=memory_settings,
             ),
             ReportItem(
                 "System config",
                 alias="system_config",
-                value=compiler_config["system_config"],
+                value=compiler_config.system_config,
                 nested_items=system_settings,
-            ),
-            ReportItem(
-                "Architecture settings",
-                "arch_settings",
-                None,
-                nested_items=arch_settings,
             ),
         ],
     )
@@ -244,7 +241,6 @@ def metrics_as_records(
     perf_metrics: list[PerformanceMetrics],
 ) -> tuple[list[tuple], list[tuple]]:
     """Convert perf metrics object into list of records."""
-    perf_metrics = [item.in_kilobytes() for item in perf_metrics]
 
     def _layerwise_as_metrics(
         perf_metrics: list[PerformanceMetrics],
@@ -314,9 +310,6 @@ def metrics_as_records(
                 return []
             metric_map["SRAM used"].append(metrics.memory_usage.sram_memory_area_size)
             metric_map["DRAM used"].append(metrics.memory_usage.dram_memory_area_size)
-            metric_map["Unknown memory area used"].append(
-                metrics.memory_usage.unknown_memory_area_size
-            )
             metric_map["On-chip flash used"].append(
                 metrics.memory_usage.on_chip_flash_memory_area_size
             )

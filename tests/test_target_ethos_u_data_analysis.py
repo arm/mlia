@@ -98,7 +98,7 @@ def test_perf_metrics_diff() -> None:
                     cast(EthosUConfiguration, profile("ethos-u55-256")),
                     NPUCycles(1, 2, 3, 4, 5, 6),
                     # memory metrics are in kilobytes
-                    MemoryUsage(*[i * 1024 for i in range(1, 6)]),  # type: ignore
+                    MemoryUsage(*list(range(1, 5))),  # type: ignore
                     LayerwisePerfInfo(layerwise_info=[]),
                 ),
                 [
@@ -110,9 +110,7 @@ def test_perf_metrics_diff() -> None:
                             cast(EthosUConfiguration, profile("ethos-u55-256")),
                             NPUCycles(1, 2, 3, 4, 5, 6),
                             # memory metrics are in kilobytes
-                            MemoryUsage(
-                                *[i * 1024 for i in range(1, 6)]  # type: ignore
-                            ),
+                            MemoryUsage(*list(range(1, 5))),  # type: ignore
                             LayerwisePerfInfo(layerwise_info=[]),
                         ),
                     ],
@@ -128,8 +126,8 @@ def test_perf_metrics_diff() -> None:
                             opt_diffs={
                                 "sram": PerfMetricDiff(1.0, 1.0),
                                 "dram": PerfMetricDiff(2.0, 2.0),
-                                "on_chip_flash": PerfMetricDiff(4.0, 4.0),
-                                "off_chip_flash": PerfMetricDiff(5.0, 5.0),
+                                "on_chip_flash": PerfMetricDiff(3.0, 3.0),
+                                "off_chip_flash": PerfMetricDiff(4.0, 4.0),
                                 "npu_total_cycles": PerfMetricDiff(3, 3),
                             },
                         )
@@ -143,7 +141,7 @@ def test_perf_metrics_diff() -> None:
                     cast(EthosUConfiguration, profile("ethos-u55-256")),
                     NPUCycles(1, 2, 3, 4, 5, 6),
                     # memory metrics are in kilobytes
-                    MemoryUsage(*[i * 1024 for i in range(1, 6)]),  # type: ignore
+                    MemoryUsage(*list(range(1, 5))),  # type: ignore
                     LayerwisePerfInfo(layerwise_info=[]),
                 ),
                 [],

@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Context module.
 
@@ -112,7 +112,6 @@ class ExecutionContext(Context):
         event_publisher: EventPublisher | None = None,
         verbose: bool = False,
         logs_dir: str = "logs",
-        models_dir: str = "models",
         action_resolver: ActionResolver | None = None,
         output_format: OutputFormat = "plain_text",
     ) -> None:
@@ -129,8 +128,6 @@ class ExecutionContext(Context):
         :param verbose: enable verbose output
         :param logs_dir: name of the directory inside output directory where
                log files will be stored
-        :param models_dir: name of the directory inside output directory where
-               temporary models will be stored
         :param action_resolver: instance of the action resolver that could make
                advice actionable
         :param output_format: format for the application output
@@ -144,7 +141,6 @@ class ExecutionContext(Context):
         self._event_publisher = event_publisher or DefaultEventPublisher()
         self.verbose = verbose
         self.logs_dir = logs_dir
-        self.models_dir = models_dir
         self._action_resolver = action_resolver or APIActionResolver()
         self._output_format = output_format
 
@@ -195,10 +191,7 @@ class ExecutionContext(Context):
 
     def get_model_path(self, model_filename: str) -> Path:
         """Return path for the model."""
-        models_dir_path = self._output_dir_path / self.models_dir
-        models_dir_path.mkdir(exist_ok=True)
-
-        return models_dir_path / model_filename
+        return self._output_dir_path / model_filename
 
     @property
     def logs_path(self) -> Path:

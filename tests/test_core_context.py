@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for the module context."""
 from __future__ import annotations
@@ -59,7 +59,6 @@ def test_execution_context(tmp_path: Path) -> None:
         event_publisher=publisher,
         verbose=True,
         logs_dir="logs_directory",
-        models_dir="models_directory",
         output_format="json",
     )
 
@@ -74,7 +73,7 @@ def test_execution_context(tmp_path: Path) -> None:
     assert context.event_handlers == []
     assert context.event_publisher == publisher
     assert context.logs_path == output_dir / "logs_directory"
-    expected_model_path = output_dir / "models_directory/sample.model"
+    expected_model_path = output_dir / "sample.model"
     assert context.get_model_path("sample.model") == expected_model_path
     assert context.verbose is True
     assert context.output_format == "json"
@@ -107,7 +106,7 @@ def test_execution_context_with_default_params(tmp_path: Path) -> None:
     assert context_with_default_params.logs_path == output_dir / "logs"
 
     default_model_path = context_with_default_params.get_model_path("sample.model")
-    expected_default_model_path = output_dir / "models/sample.model"
+    expected_default_model_path = output_dir / "sample.model"
     assert default_model_path == expected_default_model_path
     assert context_with_default_params.output_format == "plain_text"
 

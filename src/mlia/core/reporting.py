@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Reporting module."""
 from __future__ import annotations
@@ -49,7 +49,7 @@ class ReportItem:
         self,
         name: str,
         alias: str | None = None,
-        value: str | int | Cell | None = None,
+        value: str | int | float | Cell | None = None,
         nested_items: list[ReportItem] | None = None,
     ) -> None:
         """Init the report item."""

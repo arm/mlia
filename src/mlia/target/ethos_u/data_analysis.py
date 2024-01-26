@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Ethos-U data analysis module."""
 from __future__ import annotations
@@ -110,13 +110,13 @@ class EthosUDataAnalyzer(FactExtractor):
         if not optimizations:
             return
 
-        orig = optimization_results.original_perf_metrics.in_kilobytes()
+        orig = optimization_results.original_perf_metrics
         orig_memory = orig.memory_usage
         orig_cycles = orig.npu_cycles
 
         diffs: list[OptimizationDiff] = []
         for opt_type, opt_perf_metrics in optimizations:
-            opt = opt_perf_metrics.in_kilobytes()
+            opt = opt_perf_metrics
             opt_memory = opt.memory_usage
             opt_cycles = opt.npu_cycles
 

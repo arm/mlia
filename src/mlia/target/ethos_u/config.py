@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Ethos-U configuration."""
 from __future__ import annotations
@@ -10,6 +10,7 @@ from mlia.backend.corstone import is_corstone_backend
 from mlia.backend.manager import get_available_backends
 from mlia.backend.vela.compiler import resolve_compiler_config
 from mlia.backend.vela.compiler import VelaCompilerOptions
+from mlia.backend.vela.compiler import VelaInitData
 from mlia.target.config import TargetProfile
 from mlia.utils.filesystem import get_vela_config
 
@@ -53,7 +54,7 @@ class EthosUConfiguration(TargetProfile):
             )
 
     @property
-    def resolved_compiler_config(self) -> dict[str, Any]:
+    def resolved_compiler_config(self) -> VelaInitData:
         """Resolve compiler configuration."""
         return resolve_compiler_config(self.compiler_options)
 

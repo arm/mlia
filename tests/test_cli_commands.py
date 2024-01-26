@@ -207,7 +207,7 @@ def mock_performance_estimation(monkeypatch: pytest.MonkeyPatch) -> None:
     metrics = PerformanceMetrics(
         EthosUConfiguration.load_profile("ethos-u55-256"),
         NPUCycles(1, 2, 3, 4, 5, 6),
-        MemoryUsage(1, 2, 3, 4, 5),
+        MemoryUsage(1, 2, 3, 4),
         LayerwisePerfInfo(layerwise_info=[]),
     )
     monkeypatch.setattr(

@@ -54,7 +54,6 @@ class MemoryUsage:
 
     sram_memory_area_size: int | float
     dram_memory_area_size: int | float
-    unknown_memory_area_size: int | float
     on_chip_flash_memory_area_size: int | float
     off_chip_flash_memory_area_size: int | float
     memory_size_type: MemorySizeType = MemorySizeType.BYTES
@@ -67,27 +66,6 @@ class MemoryUsage:
         "Off chip flash used",
     ]
 
-    def in_kilobytes(self) -> MemoryUsage:
-        """Return memory usage with values in kilobytes."""
-        if self.memory_size_type == MemorySizeType.KILOBYTES:
-            return self
-
-        kilobytes = [
-            value / BYTES_PER_KILOBYTE
-            for value in [
-                self.sram_memory_area_size,
-                self.dram_memory_area_size,
-                self.unknown_memory_area_size,
-                self.on_chip_flash_memory_area_size,
-                self.off_chip_flash_memory_area_size,
-            ]
-        ]
-
-        return MemoryUsage(
-            *kilobytes,  # type: ignore
-            memory_size_type=MemorySizeType.KILOBYTES,
-        )
-
 
 @dataclass
 class PerformanceMetrics:
@@ -97,23 +75,6 @@ class PerformanceMetrics:
     npu_cycles: NPUCycles | None
     memory_usage: MemoryUsage | None
     layerwise_perf_info: LayerwisePerfInfo | None
-
-    def in_kilobytes(self) -> PerformanceMetrics:
-        """Return metrics with memory usage in KiB."""
-        if self.memory_usage is None:
-            return PerformanceMetrics(
-                self.target_config,
-                self.npu_cycles,
-                self.memory_usage,
-                self.layerwise_perf_info,
-            )
-
-        return PerformanceMetrics(
-            self.target_config,
-            self.npu_cycles,
-            self.memory_usage.in_kilobytes(),
-            self.layerwise_perf_info,
-        )
 
 
 @dataclass
@@ -157,7 +118,6 @@ class VelaPerformanceEstimator(
                 MemoryUsage(
                     vela_perf_metrics.sram_memory_area_size,
                     vela_perf_metrics.dram_memory_area_size,
-                    vela_perf_metrics.unknown_memory_area_size,
                     vela_perf_metrics.on_chip_flash_memory_area_size,
                     vela_perf_metrics.off_chip_flash_memory_area_size,
                 ),
@@ -192,12 +152,8 @@ class CorstonePerformanceEstimator(
                 else model
             )
 
-            optimized_model_path = self.context.get_model_path(
-                f"{model_path.stem}_vela.tflite"
-            )
-
-            vela_comp.optimize_model(
-                model_path, self.target_config.compiler_options, optimized_model_path
+            optimized_model_path = vela_comp.compile_model(
+                model_path, self.target_config.compiler_options
             )
 
             corstone_perf_metrics = estimate_performance(

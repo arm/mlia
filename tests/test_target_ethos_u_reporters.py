@@ -41,7 +41,6 @@ from mlia.utils.console import remove_ascii_codes
                     memory_usage=MemoryUsage(
                         sram_memory_area_size=10,
                         dram_memory_area_size=0,
-                        unknown_memory_area_size=0,
                         on_chip_flash_memory_area_size=0,
                         off_chip_flash_memory_area_size=20,
                         memory_size_type=MemorySizeType.KILOBYTES,
@@ -140,7 +139,6 @@ Layer-Wise Metrics:
                     memory_usage=MemoryUsage(
                         sram_memory_area_size=10,
                         dram_memory_area_size=0,
-                        unknown_memory_area_size=0,
                         on_chip_flash_memory_area_size=0,
                         off_chip_flash_memory_area_size=20,
                         memory_size_type=MemorySizeType.KILOBYTES,
@@ -362,7 +360,6 @@ def test_report_operators(
     Const mem area                                                Axi1
     Arena mem area                                                Axi0
     Cache mem area                                                Axi0
-    Arena cache size                                   2,096,768 bytes
 
   System config                            Ethos_U55_High_End_Embedded
     Accelerator clock                                   500,000,000 Hz
@@ -376,28 +373,11 @@ def test_report_operators(
         Read latency                                         32 cycles
         Write latency                                        32 cycles
 
-      Dram:
-        Clock scales                                               1.0
-        Burst length                                            1 byte
-        Read latency                                          0 cycles
-        Write latency                                         0 cycles
-
-      OnChipFlash:
-        Clock scales                                               1.0
-        Burst length                                            1 byte
-        Read latency                                          0 cycles
-        Write latency                                         0 cycles
-
       OffChipFlash:
         Clock scales                                             0.125
         Burst length                                         128 bytes
         Read latency                                         64 cycles
-        Write latency                                        64 cycles
-
-  Architecture settings:
-    Permanent storage mem area                            OffChipFlash
-    Feature map storage mem area                                  Sram
-    Fast storage mem area                                         Sram""",
+        Write latency                                        64 cycles""",
             {
                 "target": {
                     "target": "ethos-u55",
@@ -406,7 +386,6 @@ def test_report_operators(
                         "const_mem_area": "Axi1",
                         "arena_mem_area": "Axi0",
                         "cache_mem_area": "Axi0",
-                        "arena_cache_size": {"value": 2096768, "unit": "bytes"},
                     },
                     "system_config": {
                         "accelerator_clock": {"value": 500000000.0, "unit": "Hz"},
@@ -419,18 +398,6 @@ def test_report_operators(
                                 "read_latency": {"value": 32, "unit": "cycles"},
                                 "write_latency": {"value": 32, "unit": "cycles"},
                             },
-                            "Dram": {
-                                "clock_scales": 1.0,
-                                "burst_length": {"value": 1, "unit": "byte"},
-                                "read_latency": {"value": 0, "unit": "cycles"},
-                                "write_latency": {"value": 0, "unit": "cycles"},
-                            },
-                            "OnChipFlash": {
-                                "clock_scales": 1.0,
-                                "burst_length": {"value": 1, "unit": "byte"},
-                                "read_latency": {"value": 0, "unit": "cycles"},
-                                "write_latency": {"value": 0, "unit": "cycles"},
-                            },
                             "OffChipFlash": {
                                 "clock_scales": 0.125,
                                 "burst_length": {"value": 128, "unit": "bytes"},
@@ -438,11 +405,6 @@ def test_report_operators(
                                 "write_latency": {"value": 64, "unit": "cycles"},
                             },
                         },
-                    },
-                    "arch_settings": {
-                        "permanent_storage_mem_area": "OffChipFlash",
-                        "feature_map_storage_mem_area": "Sram",
-                        "fast_storage_mem_area": "Sram",
                     },
                 }
             },
