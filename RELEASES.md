@@ -1,5 +1,5 @@
 <!---
-SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
+SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
 SPDX-License-Identifier: Apache-2.0
 --->
 # MLIA Releases
@@ -10,11 +10,35 @@ main feature changes, interface changes and issues that have been fixed.
 The version numbering adheres to the [semantic versioning](https://semver.org/)
 scheme.
 
-### Trademarks and Copyrights
+## Trademarks and Copyrights
 
 * Arm®, Cortex®-A, Ethos™-U, Corstone™ are registered trademarks or trademarks
   of Arm® Limited (or its subsidiaries) in the U.S. and/or elsewhere.
 * TensorFlow™ is a trademark of Google® LLC.
+
+## 0.8.0 (2024-02-09)
+
+### Bug fix
+
+* Improve error handling for invalid file
+* Fix PytestCollectionWarning in unit tests
+* Capture and handle Vela warning when model is too big
+* Fix default backend validation
+* Fix invalid artifacts from TensorFlow logging in the JSON output
+
+### Feature changes
+
+* Support batch size > 1 for optimizations
+* New optimization type 'rewrite' (proof-of-concept implementation to be extended)
+* Integrate Vela's per-layer performance estimates
+
+### Internal changes
+
+* Minimum required Python version bumped to 3.9
+* Dependencies updated (Vela 3.10, TensorFlow 2.14 and more)
+* Pre-commit and tox dependencies updated
+* Add linters/checkers for TOML files to pre-commits
+* Add flaky dependency for unstable tests
 
 ## Release 0.7.0
 
