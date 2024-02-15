@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 # Pre-commit checks
 #
@@ -70,7 +70,7 @@ repos:
   rev: v0.12.0
   hooks:
     - id: markdownlint
-      args: ["-r", "~MD024,~MD002"]
+      args: ["-r", "~MD024,~MD002,~MD013"]
 
 - repo: https://github.com/ryanrhee/shellcheck-py
   rev: v0.9.0.5

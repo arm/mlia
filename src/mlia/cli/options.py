@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Module for the CLI options."""
 from __future__ import annotations
@@ -15,6 +15,7 @@ from mlia.core.common import AdviceCategory
 from mlia.core.errors import ConfigurationError
 from mlia.core.typing import OutputFormat
 from mlia.nn.rewrite.core.rewrite import RewritingOptimizer
+from mlia.target.registry import builtin_optimization_names
 from mlia.target.registry import builtin_profile_names
 from mlia.target.registry import registry as target_registry
 
@@ -128,6 +129,16 @@ def add_multi_optimization_options(parser: argparse.ArgumentParser) -> None:
         "--rewrite-end",
         type=str,
         help="Ending node in the graph of the subgraph to be rewritten.",
+    )
+
+    optimization_profiles = builtin_optimization_names()
+    multi_optimization_group.add_argument(
+        "-o",
+        "--optimization-profile",
+        required=False,
+        default="optimization",
+        help="Built-in optimization profile or path to the custom profile. "
+        f"Built-in optimization profiles are {', '.join(optimization_profiles)}. ",
     )
 
 

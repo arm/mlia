@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for the target registry module."""
 from __future__ import annotations
@@ -6,9 +6,11 @@ from __future__ import annotations
 import pytest
 
 from mlia.core.common import AdviceCategory
-from mlia.target.config import get_builtin_profile_path
+from mlia.target.config import get_builtin_optimization_profile_path
+from mlia.target.config import get_builtin_target_profile_path
 from mlia.target.registry import all_supported_backends
 from mlia.target.registry import default_backends
+from mlia.target.registry import get_optimization_profile
 from mlia.target.registry import is_supported
 from mlia.target.registry import profile
 from mlia.target.registry import registry
@@ -146,6 +148,27 @@ def test_profile(target_profile: str) -> None:
     assert target_profile.startswith(cfg.target)
 
     # Test loading the file directly
-    profile_file = get_builtin_profile_path(target_profile)
+    profile_file = get_builtin_target_profile_path(target_profile)
     cfg = profile(profile_file)
     assert target_profile.startswith(cfg.target)
+
+
+@pytest.mark.parametrize("optimization_profile", ["optimization"])
+def test_optimization_profile(optimization_profile: str) -> None:
+    """Test function optimization_profile()."""
+
+    get_optimization_profile(optimization_profile)
+
+    profile_file = get_builtin_optimization_profile_path(optimization_profile)
+    get_optimization_profile(profile_file)
+
+
+@pytest.mark.parametrize("optimization_profile", ["non_valid_file"])
+def test_optimization_profile_non_valid_file(optimization_profile: str) -> None:
+    """Test function optimization_profile()."""
+    with pytest.raises(
+        ValueError,
+        match=f"optimization Profile '{optimization_profile}' is neither "
+        "a valid built-in optimization profile name or a valid file path.",
+    ):
+        get_optimization_profile(optimization_profile)

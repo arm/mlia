@@ -1,8 +1,9 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for the helper classes."""
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Any
 
@@ -144,9 +145,38 @@ class TestCliActionResolver:
 
 
 def test_copy_profile_file_to_output_dir(tmp_path: Path) -> None:
-    """Test if the profile file is copied into the output directory."""
+    """Test if the target profile file is copied into the output directory."""
     test_target_profile_name = "ethos-u55-128"
     test_file_path = Path(f"{tmp_path}/{test_target_profile_name}.toml")
 
-    copy_profile_file_to_output_dir(test_target_profile_name, tmp_path)
+    copy_profile_file_to_output_dir(
+        test_target_profile_name, tmp_path, profile_to_copy="target_profile"
+    )
     assert Path.is_file(test_file_path)
+
+
+def test_copy_optimization_file_to_output_dir(tmp_path: Path) -> None:
+    """Test if the optimization profile file is copied into the output directory."""
+    test_target_profile_name = "optimization"
+    test_file_path = Path(f"{tmp_path}/{test_target_profile_name}.toml")
+
+    copy_profile_file_to_output_dir(
+        test_target_profile_name, tmp_path, profile_to_copy="optimization_profile"
+    )
+    assert Path.is_file(test_file_path)
+
+
+def test_copy_optimization_file_to_output_dir_error(tmp_path: Path) -> None:
+    """Test that the correct error is raised if the optimization
+    profile cannot be found."""
+    test_target_profile_name = "wrong_file"
+    with pytest.raises(
+        RuntimeError,
+        match=re.escape(
+            "Failed to copy optimization_profile file: "
+            "[Errno 2] No such file or directory: '" + test_target_profile_name + "'"
+        ),
+    ):
+        copy_profile_file_to_output_dir(
+            test_target_profile_name, tmp_path, profile_to_copy="optimization_profile"
+        )

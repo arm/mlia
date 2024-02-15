@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for the filesystem module."""
 import contextlib
@@ -10,6 +10,7 @@ from mlia.utils.filesystem import all_files_exist
 from mlia.utils.filesystem import all_paths_valid
 from mlia.utils.filesystem import copy_all
 from mlia.utils.filesystem import get_mlia_resources
+from mlia.utils.filesystem import get_mlia_target_optimization_dir
 from mlia.utils.filesystem import get_mlia_target_profiles_dir
 from mlia.utils.filesystem import get_vela_config
 from mlia.utils.filesystem import recreate_directory
@@ -35,6 +36,11 @@ def test_get_vela_config() -> None:
 def test_get_mlia_target_profiles() -> None:
     """Test target profiles getter."""
     assert get_mlia_target_profiles_dir().is_dir()
+
+
+def test_get_mlia_target_optimizations() -> None:
+    """Test target profiles getter."""
+    assert get_mlia_target_optimization_dir().is_dir()
 
 
 @pytest.mark.parametrize("raise_exception", [True, False])

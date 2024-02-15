@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """CLI main entry point."""
 from __future__ import annotations
@@ -203,9 +203,15 @@ def run_command(args: argparse.Namespace) -> int:
 
     try:
         logger.info("ML Inference Advisor %s", __version__)
-        if copy_profile_file(ctx, func_args):
+        if copy_profile_file(ctx, func_args, "target_profile"):
             logger.info(
                 "\nThe target profile (.toml) is copied to the output directory: %s",
+                ctx.output_dir,
+            )
+        if copy_profile_file(ctx, func_args, "optimization_profile"):
+            logger.info(
+                "\nThe optimization profile (.toml) is copied to "
+                "the output directory: %s",
                 ctx.output_dir,
             )
         args.func(**func_args)
@@ -278,11 +284,13 @@ def init_and_run(commands: list[CommandInfo], argv: list[str] | None = None) -> 
     return run_command(args)
 
 
-def copy_profile_file(ctx: ExecutionContext, func_args: dict) -> bool:
-    """If present, copy the target profile file to the output directory."""
-    if func_args.get("target_profile"):
+def copy_profile_file(
+    ctx: ExecutionContext, func_args: dict, profile_to_copy: str
+) -> bool:
+    """If present, copy the selected profile file to the output directory."""
+    if func_args.get(profile_to_copy):
         return copy_profile_file_to_output_dir(
-            func_args["target_profile"], ctx.output_dir
+            func_args[profile_to_copy], ctx.output_dir, profile_to_copy
         )
 
     return False

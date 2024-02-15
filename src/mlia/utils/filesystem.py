@@ -34,6 +34,11 @@ def get_mlia_target_profiles_dir() -> Path:
     return get_mlia_resources() / "target_profiles"
 
 
+def get_mlia_target_optimization_dir() -> Path:
+    """Get the profiles file."""
+    return get_mlia_resources() / "optimization_profiles"
+
+
 @contextmanager
 def temp_file(suffix: str | None = None) -> Generator[Path, None, None]:
     """Create temp file and remove it after."""

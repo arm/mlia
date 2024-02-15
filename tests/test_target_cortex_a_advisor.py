@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for Cortex-A MLIA module."""
 from pathlib import Path
@@ -46,7 +46,8 @@ def test_configure_and_get_cortex_a_advisor(test_tflite_model: Path) -> None:
                         "optimization_type": "clustering",
                     },
                 ]
-            ]
+            ],
+            "training_parameters": [None],
         },
     }
 

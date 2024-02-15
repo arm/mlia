@@ -52,13 +52,15 @@ def test_performance_unknown_target(
 
 
 @pytest.mark.parametrize(
-    "target_profile, pruning, clustering, pruning_target, clustering_target, "
-    "rewrite, rewrite_target, rewrite_start, rewrite_end, expected_error",
+    "target_profile, pruning, clustering, optimization_profile, pruning_target, "
+    "clustering_target, rewrite, rewrite_target, rewrite_start, rewrite_end ,"
+    "expected_error",
     [
         [
             "ethos-u55-256",
             True,
             False,
+            None,
             0.5,
             None,
             False,
@@ -73,6 +75,7 @@ def test_performance_unknown_target(
             False,
             None,
             None,
+            None,
             True,
             "fully_connected",
             "sequential/flatten/Reshape",
@@ -83,6 +86,7 @@ def test_performance_unknown_target(
             "ethos-u55-256",
             True,
             False,
+            None,
             0.5,
             None,
             True,
@@ -98,6 +102,7 @@ def test_performance_unknown_target(
             "ethos-u65-512",
             False,
             True,
+            None,
             0.5,
             32,
             False,
@@ -110,6 +115,7 @@ def test_performance_unknown_target(
             "ethos-u55-256",
             False,
             False,
+            None,
             0.5,
             None,
             True,
@@ -128,6 +134,7 @@ def test_performance_unknown_target(
             "ethos-u55-256",
             False,
             False,
+            None,
             0.5,
             None,
             True,
@@ -146,6 +153,7 @@ def test_performance_unknown_target(
             "ethos-u55-256",
             False,
             False,
+            None,
             "invalid",
             None,
             True,
@@ -169,6 +177,7 @@ def test_opt_valid_optimization_target(  # pylint: disable=too-many-locals,too-m
     clustering: bool,
     pruning_target: float | None,
     clustering_target: int | None,
+    optimization_profile: str | None,
     rewrite: bool,
     rewrite_target: str | None,
     rewrite_start: str | None,
@@ -192,6 +201,7 @@ def test_opt_valid_optimization_target(  # pylint: disable=too-many-locals,too-m
             model=str(model_type),
             pruning=pruning,
             clustering=clustering,
+            optimization_profile=optimization_profile,
             pruning_target=pruning_target,
             clustering_target=clustering_target,
             rewrite=rewrite,

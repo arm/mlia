@@ -1,8 +1,9 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Module for various helpers."""
 from __future__ import annotations
 
+import importlib
 from pathlib import Path
 from shutil import copy
 from typing import Any
@@ -12,8 +13,6 @@ from mlia.cli.options import get_target_profile_opts
 from mlia.core.helpers import ActionResolver
 from mlia.nn.select import OptimizationSettings
 from mlia.nn.tensorflow.utils import is_keras_model
-from mlia.target.config import get_builtin_profile_path
-from mlia.target.config import is_builtin_profile
 from mlia.utils.types import is_list_of
 
 
@@ -120,12 +119,16 @@ class CLIActionResolver(ActionResolver):
 
 
 def copy_profile_file_to_output_dir(
-    target_profile: str | Path, output_dir: str | Path
+    target_profile: str | Path, output_dir: str | Path, profile_to_copy: str
 ) -> bool:
     """Copy the target profile file to the output directory."""
+    get_func_name = "get_builtin_" + profile_to_copy + "_path"
+    get_func = getattr(importlib.import_module("mlia.target.config"), get_func_name)
+    is_func_name = "is_builtin_" + profile_to_copy
+    is_func = getattr(importlib.import_module("mlia.target.config"), is_func_name)
     profile_file_path = (
-        get_builtin_profile_path(cast(str, target_profile))
-        if is_builtin_profile(target_profile)
+        get_func(cast(str, target_profile))
+        if is_func(target_profile)
         else Path(target_profile)
     )
     output_file_path = f"{output_dir}/{profile_file_path.stem}.toml"
@@ -133,4 +136,4 @@ def copy_profile_file_to_output_dir(
         copy(profile_file_path, output_file_path)
         return True
     except OSError as err:
-        raise RuntimeError("Failed to copy profile file:", err.strerror) from err
+        raise RuntimeError(f"Failed to copy {profile_to_copy} file: {err}") from err

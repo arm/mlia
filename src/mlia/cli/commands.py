@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """CLI commands module.
 
@@ -104,6 +104,7 @@ def optimize(  # pylint: disable=too-many-locals,too-many-arguments
     clustering: bool,
     pruning_target: float | None,
     clustering_target: int | None,
+    optimization_profile: str | None = None,
     rewrite: bool | None = None,
     rewrite_target: str | None = None,
     rewrite_start: str | None = None,
@@ -166,6 +167,7 @@ def optimize(  # pylint: disable=too-many-locals,too-many-arguments
         model,
         {"optimization"},
         optimization_targets=opt_params,
+        optimization_profile=optimization_profile,
         context=ctx,
         backends=validated_backend,
     )

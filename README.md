@@ -209,6 +209,44 @@ mlia optimize ~/models/ds_cnn_large_fp32.tflite \
     --rewrite-end MobileNet/fc1/BiasAdd
 ```
 
+### optimization Profiles
+
+Training parameters for rewrites can be specified.
+
+There are a number of predefined profiles:
+
+|    Name      | Batch Size |  LR  | Show Progress | Steps | LR Schedule | Num Procs | Num Threads | Checkpoints |
+| :----------: | :--------: | :--: | :-----------: | :---: | :---------: | :-------: | :---------: | :---------: |
+| optimization |     32     | 1e-3 |      True     | 48000 |   "cosine"  |     1     |      0      |     None    |
+
+```bash
+##### An example for using optimization Profiles
+mlia optimize ~/models/ds_cnn_large_fp32.tflite \
+    --target-profile ethos-u55-256 \
+    --optimization-profile optimization \
+    --rewrite \
+    --dataset input.tfrec \
+    --rewrite-target fully_connected \
+    --rewrite-start MobileNet/avg_pool/AvgPool \
+    --rewrite-end MobileNet/fc1/BiasAdd_
+```
+
+#### Custom optimization Profiles
+
+For the _custom optimization profiles_, the configuration file for a custom
+optimization profile is passed as path and needs to conform to the TOML file format.
+Each optimization in MLIA has a pre-defined set of parameters which need to be present
+in the config file. When using the built-in optimization profiles, the appropriate
+toml file is copied to `mlia-output` and can be used to understand what parameters
+apply for each optimization.
+
+*Example:*
+
+``` bash
+# for custom profiles
+mlia ops --optimization-profile ~/my_custom_optimization_profile.toml
+```
+
 # Target profiles
 
 The targets currently supported are described in the sections below.
@@ -275,8 +313,9 @@ For more information, see TOSA Checker's:
 For the _custom target profiles_, the configuration file for a custom
 target profile is passed as path and needs to conform to the TOML file format.
 Each target in MLIA has a pre-defined set of parameters which need to be present
-in the config file. The built-in target profiles (in `src/mlia/resources/target_profiles`)
-can be used to understand what parameters apply for each target.
+in the config file. When using the built-in target profiles, the appropriate
+toml file is copied to `mlia-output` and can be used to understand what parameters
+apply for each target.
 
 *Example:*
 
