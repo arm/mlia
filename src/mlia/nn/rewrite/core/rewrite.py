@@ -157,6 +157,7 @@ class RewritingOptimizer(Optimizer):
         [
             FullyConnectedRewrite("fully-connected", fc_rewrite),
             Sparsity24Rewrite("fully-connected-sparsity24", fc_rewrite_sparsity24),
+            FullyConnectedRewrite("fully-connected-clustering", fc_rewrite),
         ]
     )
 

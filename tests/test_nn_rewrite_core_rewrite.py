@@ -63,6 +63,7 @@ def test_rewrite_selection(
     [
         ("fully-connected", does_not_raise()),
         ("fully-connected-sparsity24", does_not_raise()),
+        ("fully-connected-clustering", does_not_raise()),
         ("random", does_not_raise()),
     ],
 )
@@ -124,6 +125,7 @@ def test_builtin_rewrite_names() -> None:
     """Test if all builtin rewrites are properly registered and returned."""
     assert RewritingOptimizer.builtin_rewrite_names() == [
         "fully-connected",
+        "fully-connected-clustering",
         "fully-connected-sparsity24",
     ]
 

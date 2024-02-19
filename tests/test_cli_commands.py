@@ -140,7 +140,7 @@ def test_performance_unknown_target(
                 match=re.escape(
                     "Invalid rewrite target: 'random'. "
                     "Supported rewrites: ['fully-connected',"
-                    " 'fully-connected-sparsity24']"
+                    " 'fully-connected-clustering', 'fully-connected-sparsity24']"
                 ),
             ),
         ],
@@ -181,6 +181,19 @@ def test_performance_unknown_target(
                     r"rewrite-start and rewrite-end must be set."
                 ),
             ),
+        ],
+        [
+            "ethos-u55-256",
+            False,
+            False,
+            None,
+            None,
+            None,
+            True,
+            "fully-connected-clustering",
+            "sequential/flatten/Reshape",
+            "StatefulPartitionedCall:0",
+            does_not_raise(),
         ],
     ],
 )
