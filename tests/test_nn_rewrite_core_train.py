@@ -14,13 +14,15 @@ import pytest
 import tensorflow as tf
 from keras.api._v2 import keras  # Temporary workaround for now: MLIA-1107
 
-from mlia.nn.rewrite.core.rewrite import DynamicallyLoadedRewrite
+from mlia.nn.rewrite.core.rewrite import FullyConnectedRewrite
+from mlia.nn.rewrite.core.rewrite import QATRewrite
 from mlia.nn.rewrite.core.train import augment_fn_twins
 from mlia.nn.rewrite.core.train import AUGMENTATION_PRESETS
 from mlia.nn.rewrite.core.train import LearningRateSchedule
 from mlia.nn.rewrite.core.train import mixup
 from mlia.nn.rewrite.core.train import train
 from mlia.nn.rewrite.core.train import TrainingParameters
+from mlia.nn.rewrite.library.fc_layer import get_keras_model as fc_rewrite
 from tests.utils.rewrite import MockTrainingParameters
 
 
@@ -54,12 +56,11 @@ def check_train(
     """Test the train() function."""
     with TemporaryDirectory() as tmp_dir:
         output_file = Path(tmp_dir, "out.tflite")
-        mock_rewrite = DynamicallyLoadedRewrite(
+        mock_rewrite = FullyConnectedRewrite(
             name="replace",
-            function_name=(
-                "tests.test_nn_rewrite_core_train.replace_fully_connected_with_conv"
-            ),
+            rewrite_fn=fc_rewrite,
         )
+        is_qat = isinstance(mock_rewrite, QATRewrite)
         result = train(
             source_model=str(tflite_model),
             unmodified_model=str(tflite_model) if use_unmodified_model else None,
@@ -68,6 +69,7 @@ def check_train(
             rewrite=mock_rewrite,
             input_tensors=["sequential/flatten/Reshape"],
             output_tensors=["StatefulPartitionedCall:0"],
+            is_qat=is_qat,
             train_params=train_params,
         )
 
