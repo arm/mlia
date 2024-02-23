@@ -44,7 +44,7 @@ class EthosUInferenceAdvisor(DefaultInferenceAdvisor):
         """Return list of the data collectors."""
         model = self.get_model(context)
         target_config = self._get_target_config(context)
-        target_config.compiler_options.output_dir = context.output_dir  # type: ignore
+        target_config.compiler_options.output_dir = context.output_dir
         backends = self._get_backends(context)
 
         collectors: list[DataCollector] = []
