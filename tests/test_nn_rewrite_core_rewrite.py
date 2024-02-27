@@ -10,8 +10,14 @@ from typing import cast
 from unittest.mock import MagicMock
 
 import pytest
+from keras.api._v2 import keras  # Temporary workaround for now: MLIA-1107
+from tensorflow_model_optimization.python.core.clustering.keras.cluster_wrapper import (  # pylint: disable=no-name-in-module
+    ClusterWeights,
+)
 
+from mlia.nn.rewrite.core.rewrite import ClusteringRewrite
 from mlia.nn.rewrite.core.rewrite import FullyConnectedRewrite
+from mlia.nn.rewrite.core.rewrite import Rewrite
 from mlia.nn.rewrite.core.rewrite import RewriteCallable
 from mlia.nn.rewrite.core.rewrite import RewriteConfiguration
 from mlia.nn.rewrite.core.rewrite import RewriteRegistry
@@ -37,25 +43,21 @@ def test_rewrite() -> None:
 
 
 @pytest.mark.parametrize(
-    "rewrite_name, rewrite_class",
+    "rewrite_name, callbacks_length, instance",
     [
-        ("fully-connected", FullyConnectedRewrite),
-        ("fully-connected-sparsity24", Sparsity24Rewrite),
+        ("fully-connected", 0, Rewrite),
+        ("fully-connected-clustering", 0, ClusteringRewrite),
+        ("fully-connected-sparsity24", 1, Sparsity24Rewrite),
     ],
 )
 def test_rewrite_selection(
-    rewrite_name: str,
-    rewrite_class: Any,
+    rewrite_name: str, callbacks_length: int, instance: Rewrite
 ) -> None:
-    """Check that the correct rewrite class is instantiated through the registry"""
-    config_obj = RewriteConfiguration(
-        rewrite_name,
-        ["sample_node_start", "sample_node_end"],
-    )
-
-    rewrite = RewritingOptimizer.registry.items[config_obj.optimization_target]
+    """Test that the correct rewrite class is instantiated."""
+    rewrite = RewritingOptimizer.registry.items[rewrite_name]
     assert rewrite.name == rewrite_name
-    assert isinstance(rewrite, rewrite_class)
+    assert isinstance(rewrite, instance)  # type: ignore
+    assert len(rewrite.training_callbacks()) == callbacks_length
 
 
 @pytest.mark.parametrize(
@@ -71,7 +73,7 @@ def test_rewrite_configuration(
     test_tflite_model_fp32: Path, rewrite_name: str, expected_error: Any
 ) -> None:
     """Test get_rewrite function only supports rewrite types
-    fully-connected and fully-connected-sparsity24."""
+    fully-connected, fully-connected-clustering and fully-connected-sparsity24."""
     with expected_error:
         config_obj = RewriteConfiguration(
             rewrite_name,
@@ -86,19 +88,36 @@ def test_rewrite_configuration(
         assert isinstance(rewriter_obj, RewritingOptimizer)
 
 
+@pytest.mark.parametrize(
+    "rewrite_type, expected_layers",
+    [
+        ["fully-connected", [keras.layers.Reshape, keras.layers.Dense]],
+        ["fully-connected-clustering", [ClusterWeights, ClusterWeights]],
+    ],
+)
 def test_rewriting_optimizer(
     test_tflite_model_fp32: Path,
     test_tfrecord_fp32: Path,
+    rewrite_type: str,
+    expected_layers: list[object],
 ) -> None:
     """Test fc_layer rewrite process with rewrite type fully-connected."""
     config_obj = RewriteConfiguration(
-        "fully-connected",
+        rewrite_type,
         ["sequential/flatten/Reshape", "StatefulPartitionedCall:0"],
         test_tfrecord_fp32,
         train_params=MockTrainingParameters(),
     )
 
     test_obj = RewritingOptimizer(test_tflite_model_fp32, config_obj)
+    rewrite_function = RewritingOptimizer.registry.items[
+        test_obj.optimizer_configuration.optimization_target
+    ]
+    # Input, output shape does not matter, just need the test the layers are as expected
+    rewrite_model = rewrite_function(input_shape=(28, 28, 1), output_shape=12)
+    for idx, layer in enumerate(rewrite_model.layers):
+        assert isinstance(layer, expected_layers[idx])  # type: ignore
+
     test_obj.apply_optimization()
     trained_model = test_obj.get_model()
 

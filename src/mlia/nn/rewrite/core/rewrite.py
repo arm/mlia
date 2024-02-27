@@ -23,6 +23,9 @@ from mlia.nn.common import Optimizer
 from mlia.nn.common import OptimizerConfiguration
 from mlia.nn.rewrite.core.train import train
 from mlia.nn.rewrite.core.train import TrainingParameters
+from mlia.nn.rewrite.library.fc_clustering_layer import (
+    get_keras_model_clus as fc_clustering_rewrite,
+)
 from mlia.nn.rewrite.library.fc_layer import get_keras_model as fc_rewrite
 from mlia.nn.rewrite.library.fc_sparsity24_layer import (
     get_keras_model as fc_rewrite_sparsity24,
@@ -61,6 +64,24 @@ class Rewrite(ABC):
     @abstractmethod
     def post_process(self, model: keras.Model) -> keras.Model:
         """Return default post-processing rewrite options."""
+
+
+class ClusteringRewrite(Rewrite):
+    """Graph clustering rewrite logic to be used by RewritingOptimizer."""
+
+    strip_pruning_wrapper = staticmethod(tfmot.clustering.keras.strip_clustering)
+
+    def quantize(self, model: keras.Model) -> keras.Model:
+        """Return a quantized model."""
+        return model
+
+    def post_process(self, model: keras.Model) -> keras.Model:
+        """Return the clustering stripped model."""
+        return self.strip_pruning_wrapper(model)
+
+    def training_callbacks(self) -> list:
+        """Return default rewrite callbacks."""
+        return []
 
 
 class QATRewrite(Rewrite):
@@ -157,7 +178,7 @@ class RewritingOptimizer(Optimizer):
         [
             FullyConnectedRewrite("fully-connected", fc_rewrite),
             Sparsity24Rewrite("fully-connected-sparsity24", fc_rewrite_sparsity24),
-            FullyConnectedRewrite("fully-connected-clustering", fc_rewrite),
+            ClusteringRewrite("fully-connected-clustering", fc_clustering_rewrite),
         ]
     )
 
@@ -191,7 +212,6 @@ class RewritingOptimizer(Optimizer):
             raise ConfigurationError(
                 "Input and output tensor names need to be set for rewrite."
             )
-
         orig_vs_repl_stats, total_stats = train(
             source_model=tflite_model,
             unmodified_model=tflite_model if use_unmodified_model else None,
