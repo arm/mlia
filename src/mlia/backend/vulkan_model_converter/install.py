@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2023-2024, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: LicenseRef-LICENSE
 """Module for the installation of Vulkan Model Converter."""
 from __future__ import annotations
@@ -17,7 +17,7 @@ def get_vulkan_model_converter_installation() -> BackendInstallation:
         fvp_dir_name="vulkan-model-converter",
         download_config=DownloadConfig(
             url=(
-                "https://artifactory.eu02.arm.com:443/artifactory/ml-tooling.misc/"
+                "https://artifactory.arm.com:443/artifactory/ml-tooling.misc/"
                 "mlia/vulkan-model-converter/vulkan_converter-20231020-b7887b9c.tar.gz"
             ),
             sha256_hash=(

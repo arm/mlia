@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2023-2024, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: LicenseRef-LICENSE
 """Module for the installation of NGP Graph Compiler."""
 from __future__ import annotations
@@ -17,7 +17,7 @@ def get_ngp_graph_compiler_installation() -> BackendInstallation:
         fvp_dir_name="ngp-graph-compiler",
         download_config=DownloadConfig(
             url=(
-                "https://artifactory.eu02.arm.com:443/artifactory/ml-tooling.misc/"
+                "https://artifactory.arm.com:443/artifactory/ml-tooling.misc/"
                 "mlia/ngp-graph-compiler/regorc-20231017-9ee66a57-linux-x86_64.tar.gz"
             ),
             sha256_hash=(
