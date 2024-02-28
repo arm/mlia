@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for the backend registry module."""
 from __future__ import annotations
@@ -26,14 +26,22 @@ from mlia.core.common import AdviceCategory
         ),
         (
             "corstone-300",
-            [AdviceCategory.PERFORMANCE, AdviceCategory.OPTIMIZATION],
-            [System.LINUX_AMD64],
+            [
+                AdviceCategory.COMPATIBILITY,
+                AdviceCategory.PERFORMANCE,
+                AdviceCategory.OPTIMIZATION,
+            ],
+            [System.LINUX_AMD64, System.LINUX_AARCH64],
             BackendType.CUSTOM,
         ),
         (
             "corstone-310",
-            [AdviceCategory.PERFORMANCE, AdviceCategory.OPTIMIZATION],
-            [System.LINUX_AMD64],
+            [
+                AdviceCategory.COMPATIBILITY,
+                AdviceCategory.PERFORMANCE,
+                AdviceCategory.OPTIMIZATION,
+            ],
+            [System.LINUX_AMD64, System.LINUX_AARCH64],
             BackendType.CUSTOM,
         ),
         (

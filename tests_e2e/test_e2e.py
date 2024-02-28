@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """End to end tests for MLIA CLI."""
 from __future__ import annotations
@@ -20,6 +20,7 @@ from typing import Sequence
 
 import pytest
 
+from mlia.backend.config import System
 from mlia.backend.manager import get_available_backends
 from mlia.cli.main import get_commands
 from mlia.cli.main import get_possible_command_names
@@ -251,10 +252,15 @@ def get_all_commands_combinations(
 def check_args(args: list[str], no_skip: bool) -> None:
     """Check the arguments and skip/fail test cases based on that."""
     parser = argparse.ArgumentParser()
+
     parser.add_argument(
         "--backend",
         help="Backends to use for evaluation.",
         action="append",
+    )
+    parser.add_argument(
+        "--target-profile",
+        help="Target profiles to use for evaluation.",
     )
 
     parsed_args, _ = parser.parse_known_args(args)
@@ -265,6 +271,10 @@ def check_args(args: list[str], no_skip: bool) -> None:
 
         if missing_backends and not no_skip:
             pytest.skip(f"Missing backend(s): {','.join(missing_backends)}")
+
+    if parsed_args.target_profile == "tosa":
+        if System.CURRENT == System.LINUX_AARCH64:
+            pytest.skip("TOSA is not yet available for AArch64, skipping this test.")
 
 
 def get_execution_definitions(

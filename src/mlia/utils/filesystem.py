@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Utils related to file management."""
 from __future__ import annotations
@@ -77,7 +77,7 @@ def sha256(filepath: Path) -> str:
 
 
 def all_files_exist(paths: Iterable[Path]) -> bool:
-    """Check if all files are exist."""
+    """Check if all files exist."""
     return all(item.is_file() for item in paths)
 
 

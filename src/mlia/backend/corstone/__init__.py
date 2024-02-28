@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Corstone backend module."""
 from mlia.backend.config import BackendConfiguration
@@ -20,8 +20,12 @@ for corstone_name, installation in CORSTONE_PRIORITY.items():
     registry.register(
         corstone_name.lower(),
         BackendConfiguration(
-            supported_advice=[AdviceCategory.PERFORMANCE, AdviceCategory.OPTIMIZATION],
-            supported_systems=[System.LINUX_AMD64],
+            supported_advice=[
+                AdviceCategory.COMPATIBILITY,
+                AdviceCategory.PERFORMANCE,
+                AdviceCategory.OPTIMIZATION,
+            ],
+            supported_systems=[System.LINUX_AMD64, System.LINUX_AARCH64],
             backend_type=BackendType.CUSTOM,
             installation=installation,
         ),

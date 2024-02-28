@@ -1,5 +1,5 @@
 <!---
-SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
+SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
 SPDX-License-Identifier: Apache-2.0
 --->
 # ML Inference Advisor - Introduction
@@ -262,7 +262,8 @@ Please, find more details in the section for the
 ## TOSA
 
 The target profile *tosa* can be used for TOSA compatibility checks of your
-model. It requires the [TOSA Checker](#tosa-checker) backend.
+model. It requires the [TOSA Checker](#tosa-checker) backend. Please note that
+TOSA is currently only available for x86 architecture.
 
 For more information, see TOSA Checker's:
 
@@ -324,16 +325,16 @@ the following table shows some compatibility information:
 | Backend       | Linux                  | Windows        | Python           |
 +=============================================================================
 | Arm NN        |                        |                |                  |
-| TensorFlow    | x86_64                 | Windows 10     | Python>=3.8      |
+| TensorFlow    | x86_64 and AArch64     | Windows 10     | Python>=3.8      |
 | Lite Delegate |                        |                |                  |
 +-----------------------------------------------------------------------------
-| Corstone-300  | x86_64                 | Not compatible | Python>=3.8      |
+| Corstone-300  | x86_64 and  AArch64    | Not compatible | Python>=3.8      |
 +-----------------------------------------------------------------------------
-| Corstone-310  | x86_64                 | Not compatible | Python>=3.8      |
+| Corstone-310  | x86_64 and  AArch64    | Not compatible | Python>=3.8      |
 +-----------------------------------------------------------------------------
 | TOSA checker  | x86_64 (manylinux2014) | Not compatible | 3.7<=Python<=3.9 |
 +-----------------------------------------------------------------------------
-| Vela          | x86_64                 | Windows 10     | Python~=3.7      |
+| Vela          | x86_64 and  AArch64    | Windows 10     | Python~=3.7      |
 +----------------------------------------------------------------------------+
 ```
 
@@ -368,8 +369,7 @@ For further information about Corstone-300 please refer to:
 ### Corstone-310
 
 Corstone-310 is a backend that provides performance metrics for systems based
-on Cortex-M85 and Ethos-U. It is available as Arm Virtual Hardware (AVH) only,
-i.e. it can not be downloaded automatically.
+on Cortex-M85 and Ethos-U.
 
 * For access to AVH for Corstone-310 please refer to:
   <https://developer.arm.com/Processors/Corstone-310>
@@ -379,7 +379,7 @@ i.e. it can not be downloaded automatically.
 ### TOSA Checker
 
 The TOSA Checker backend provides operator compatibility checks against the
-TOSA specification.
+TOSA specification. Please note that TOSA is currently only available for x86 architecture.
 
 Please, install it into the same environment as MLIA using this command:
 

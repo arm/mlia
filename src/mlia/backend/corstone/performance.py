@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Module for backend integration."""
 from __future__ import annotations
@@ -114,6 +114,8 @@ def get_executable_name(fvp: str, profile: str, target: str) -> str:
         ("corstone-300", "default", "ethos-u65"): "FVP_Corstone_SSE-300_Ethos-U65",
         ("corstone-310", "AVH", "ethos-u55"): "VHT_Corstone_SSE-310",
         ("corstone-310", "AVH", "ethos-u65"): "VHT_Corstone_SSE-310_Ethos-U65",
+        ("corstone-310", "default", "ethos-u55"): "FVP_Corstone_SSE-310",
+        ("corstone-310", "default", "ethos-u65"): "FVP_Corstone_SSE-310_Ethos-U65",
     }
 
     return executable_name_mapping[(fvp, profile, target)]
@@ -122,6 +124,7 @@ def get_executable_name(fvp: str, profile: str, target: str) -> str:
 def get_fvp_metadata(fvp: str, profile: str, target: str) -> FVPMetadata:
     """Return metadata for selected Corstone backend."""
     executable_name = get_executable_name(fvp, profile, target)
+
     app = get_generic_inference_app_path(fvp, target)
 
     return FVPMetadata(executable_name, app)
