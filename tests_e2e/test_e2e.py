@@ -254,7 +254,7 @@ def check_args(args: list[str], no_skip: bool) -> None:
     parser.add_argument(
         "--backend",
         help="Backends to use for evaluation.",
-        nargs="+",
+        action="append",
     )
 
     parsed_args, _ = parser.parse_known_args(args)
