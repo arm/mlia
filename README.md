@@ -184,9 +184,9 @@ documentation, e.g. in the
 The following rewrites are supported:
 
 * fully-connected - replaces a subgraph with a fully connected layer
-* fully-connected-sparsity24 - replaces a subgraph with a pruned 2:4 sparse fully connected layer
+* fully-connected-sparsity - replaces a subgraph with a pruned 2:4 sparse fully connected layer
 * fully-connected-clustering - replaces a subgraph with a clustered fully connected layer
-* conv2d-sparsity24 - replaces a subgraph with a pruned 2:4 sparse conv2d layer
+* conv2d-sparsity - replaces a subgraph with a pruned 2:4 sparse conv2d layer
 * conv2d-clustering  - replaces a subgraph with a clustered conv2d layer
 
 **Note:** A ***Keras model*** (.h5 or SavedModel) is required as input to
@@ -217,19 +217,45 @@ mlia optimize ~/models/ds_cnn_large_fp32.tflite \
     --rewrite-end MobileNet/fc1/BiasAdd
 ```
 
-### optimization Profiles
+### Optimization Profiles
 
 Training parameters for rewrites can be specified.
 
-There are a number of predefined profiles:
+There are a number of predefined profiles for rewrites shown below:
 
 |    Name      | Batch Size |  LR  | Show Progress | Steps | LR Schedule | Num Procs | Num Threads | Checkpoints |  Augmentations  |
 | :----------: | :--------: | :--: | :-----------: | :---: | :---------: | :-------: | :---------: | :---------: | :-------------: |
 | optimization |     32     | 1e-3 |      True     | 48000 |   "cosine"  |     1     |      0      |     None    |    "gaussian"   |
 
+|    Name                                 | Batch Size |  LR  | Show Progress | Steps | LR Schedule | Num Procs | Num Threads | Checkpoints | Num Clusters | Cluster Centroids Init             |
+| :-------------------------------------: | :--------: | :--: | :-----------: | :---: | :---------: | :-------: | :---------: | :---------: | :----------: | :--------------------------------: |
+| optimization-fully-connected-clustering |     32     | 1e-3 |      True     | 48000 |   "cosine"  |     1     |      0      |     None    |      32      |    "CentroidInitialization.LINEAR" |
+
+|    Name                               | Batch Size |  LR  | Show Progress | Steps | LR Schedule | Num Procs | Num Threads | Checkpoints | Sparsity M | Sparsity N |
+| :-----------------------------------: | :--------: | :--: | :-----------: | :---: | :---------: | :-------: | :---------: | :---------: | :--------: | :--------: |
+| optimization-fully-connected-pruning |     32     | 1e-3 |      True     | 48000 |   "cosine"  |     1     |      0      |     None    |     2      |      4     |
+
+|    Name                                 | Batch Size |  LR  | Show Progress | Steps | LR Schedule | Num Procs | Num Threads | Checkpoints | Num Clusters | Cluster Centroids Init             |
+| :-------------------------------------: | :--------: | :--: | :-----------: | :---: | :---------: | :-------: | :---------: | :---------: | :----------: | :--------------------------------: |
+| optimization-conv2d-clustering |     32     | 1e-3 |      True     | 48000 |   "cosine"  |     1     |      0      |     None    |      32      |    "CentroidInitialization.LINEAR" |
+
+|    Name                               | Batch Size |  LR  | Show Progress | Steps | LR Schedule | Num Procs | Num Threads | Checkpoints | Sparsity M | Sparsity N |
+| :-----------------------------------: | :--------: | :--: | :-----------: | :---: | :---------: | :-------: | :---------: | :---------: | :--------: | :--------: |
+| optimization-conv2d-pruning |     32     | 1e-3 |      True     | 48000 |   "cosine"  |     1     |      0      |     None    |     2      |      4     |
+
+These are summarized below:
+
+* optimization - Provides training parameters for rewrites
+* optimization-fully-connected-clustering - Provides training parameters for rewrites and cluster specific parameters for the fully-connected-clustering rewrite
+* optimization-fully-connected-pruning - Provides training parameters for rewrites and pruning specific parameters for the fully-connected-sparsity rewrite
+* optimization-conv2d-clustering - Provides training parameters for rewrites and cluster specific parameters for the conv2d-clustering rewrite
+* optimization-conv2d-pruning - Provides training parameters for rewrites and pruning specific parameters for the conv2d-sparsity rewrite
+
+The user can also specify custom augmentations as part of the training parameters. An example of this can be found in the following optimization profile:
+
 |               Name               | Batch Size |  LR  | Show Progress | Steps | LR Schedule | Num Procs | Num Threads | Checkpoints | Augmentations - gaussian_strength | Augmentations - mixup_strength |
 | :------------------------------: | :--------: | :--: | :-----------: | :---: | :---------: | :-------: | :---------: | :---------: | :-------------------------------: | :----------------------------: |
-| optimization_custom_augmentation |     32     | 1e-3 |      True     | 48000 |   "cosine"  |     1     |      0      |     None    |               0.1                 |                0.1             |
+| optimization-custom-augmentation |     32     | 1e-3 |      True     | 48000 |   "cosine"  |     1     |      0      |     None    |               0.1                 |                0.1             |
 
 The augmentations consist of 2 parameters: mixup strength and gaussian strength.
 
@@ -253,7 +279,7 @@ mlia optimize ~/models/ds_cnn_large_fp32.tflite \
     --dataset input.tfrec \
     --rewrite-target fully-connected \
     --rewrite-start MobileNet/avg_pool/AvgPool \
-    --rewrite-end MobileNet/fc1/BiasAdd_
+    --rewrite-end MobileNet/fc1/BiasAdd
 ```
 
 #### Custom optimization Profiles
@@ -269,7 +295,17 @@ apply for each optimization.
 
 ``` bash
 # for custom profiles
-mlia ops --optimization-profile ~/my_custom_optimization_profile.toml
+mlia optimize --optimization-profile ~/my_custom_optimization_profile.toml
+```
+
+When providing rewrite-specific parameters e.g. for clustering, the rewrite name should be specified in the toml:
+
+For example, the following provides rewrite-specific parameters for the fully-connected-clustering rewrite
+
+``` bash
+[rewrite.fully-connected-clustering]
+num_clusters = 16
+cluster_centroids_init = "CentroidInitialization.LINEAR"
 ```
 
 # Target profiles

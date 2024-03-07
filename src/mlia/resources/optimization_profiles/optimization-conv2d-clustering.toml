@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: Copyright 2024, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 
-[training]
+[rewrite.training_parameters]
 batch_size = 32
 learning_rate = 1e-3
 show_progress = true
@@ -9,5 +9,9 @@ steps = 48000
 learning_rate_schedule = "cosine"
 num_procs = 1
 num_threads = 0
-augmentations.gaussian_strength = 0.1
-augmentations.mixup_strength = 0.1
+augmentations.gaussian_strength = 0.0
+augmentations.mixup_strength = 0.0
+
+[rewrite.conv2d-clustering]
+num_clusters = 16
+cluster_centroids_init = "CentroidInitialization.LINEAR"

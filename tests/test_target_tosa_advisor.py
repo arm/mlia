@@ -9,6 +9,7 @@ import pytest
 from mlia.core.common import AdviceCategory
 from mlia.core.context import ExecutionContext
 from mlia.core.workflow import DefaultWorkflowExecutor
+from mlia.target.common.optimization import _DEFAULT_OPTIMIZATION_TARGETS
 from mlia.target.tosa.advisor import configure_and_get_tosa_advisor
 from mlia.target.tosa.advisor import TOSAInferenceAdvisor
 
@@ -33,21 +34,11 @@ def test_configure_and_get_tosa_advisor(
     assert ctx.event_handlers is not None
     assert ctx.config_parameters == {
         "common_optimizations": {
-            "optimizations": [
-                [
-                    {
-                        "layers_to_optimize": None,
-                        "optimization_target": 0.5,
-                        "optimization_type": "pruning",
-                    },
-                    {
-                        "layers_to_optimize": None,
-                        "optimization_target": 32,
-                        "optimization_type": "clustering",
-                    },
-                ]
-            ],
-            "training_parameters": None,
+            "optimizations": [_DEFAULT_OPTIMIZATION_TARGETS],
+            "rewrite_parameters": {
+                "train_params": None,
+                "rewrite_specific_params": None,
+            },
         },
         "tosa_inference_advisor": {
             "model": str(test_tflite_model),

@@ -60,7 +60,10 @@ def test_optimizing_data_collector(
         config_parameters={
             "common_optimizations": {
                 "optimizations": optimizations,
-                "training_parameters": training_parameters,
+                "rewrite_parameters": {
+                    "train_params": training_parameters,
+                    "rewrite_specific_params": None,
+                },
             }
         }
     )
@@ -97,12 +100,15 @@ def test_optimizing_data_collector(
     collector.set_context(context)
     collector.collect_data()
     assert optimize_model_mock.call_args.args[0] == opt_settings[0]
-    assert optimize_model_mock.call_args.args[1] == training_parameters
+    assert optimize_model_mock.call_args.args[1] == {
+        "train_params": training_parameters,
+        "rewrite_specific_params": None,
+    }
     assert fake_optimizer.invocation_count == 1
 
 
 @pytest.mark.parametrize(
-    "extra_args, error_to_raise",
+    "extra_args, error_to_raise, rewrite_parameter_type",
     [
         (
             {
@@ -115,14 +121,39 @@ def test_optimizing_data_collector(
                 ],
             },
             does_not_raises(),
+            type(None),
         ),
         (
             {
+                "optimization_targets": [
+                    {
+                        "optimization_type": "rewrite",
+                        "optimization_target": "fully-connected-clustering",
+                    }
+                ],
                 "optimization_profile": load_profile(
-                    "src/mlia/resources/optimization_profiles/optimization.toml"
-                )
+                    "src/mlia/resources/optimization_profiles/"
+                    "optimization-fully-connected-clustering.toml"
+                ),
             },
             does_not_raises(),
+            dict,
+        ),
+        (
+            {
+                "optimization_targets": [
+                    {
+                        "optimization_type": "rewrite",
+                        "optimization_target": "fully-connected-sparsity",
+                    }
+                ],
+                "optimization_profile": load_profile(
+                    "src/mlia/resources/optimization_profiles/"
+                    "optimization-fully-connected-pruning.toml"
+                ),
+            },
+            does_not_raises(),
+            dict,
         ),
         (
             {
@@ -135,16 +166,22 @@ def test_optimizing_data_collector(
             pytest.raises(
                 TypeError, match="Optimization targets value has wrong format."
             ),
+            type(None),
         ),
         (
             {"optimization_profile": [32, 1e-3, True, 48000, "cosine", 1, 0]},
             pytest.raises(
-                TypeError, match="Training Parameter values has wrong format."
+                TypeError, match="Optimization Parameter values has wrong format."
             ),
+            type(None),
         ),
     ],
 )
-def test_add_common_optimization_params(extra_args: dict, error_to_raise: Any) -> None:
+def test_add_common_optimization_params(
+    extra_args: dict,
+    error_to_raise: Any,
+    rewrite_parameter_type: dict | None,
+) -> None:
     """Test to check that optimization_targets and optimization_profiles are
     correctly parsed."""
     advisor_parameters: dict = {}
@@ -161,14 +198,40 @@ def test_add_common_optimization_params(extra_args: dict, error_to_raise: Any) -
             ]
 
         if not extra_args.get("optimization_profile"):
-            assert (
-                advisor_parameters["common_optimizations"]["training_parameters"]
-                is None
-            )
+            assert advisor_parameters["common_optimizations"]["rewrite_parameters"] == {
+                "train_params": None,
+                "rewrite_specific_params": None,
+            }
         else:
-            assert (
-                advisor_parameters["common_optimizations"]["training_parameters"]
-                == extra_args["optimization_profile"]["training"]
+            if not extra_args["optimization_profile"].get("rewrite"):
+                assert isinstance(
+                    advisor_parameters["common_optimizations"]["rewrite_parameters"][
+                        "train_params"
+                    ],
+                    type(None),
+                )
+            elif not extra_args["optimization_profile"]["rewrite"].get(
+                "training_parameters"
+            ):
+                assert isinstance(
+                    advisor_parameters["common_optimizations"]["rewrite_parameters"][
+                        "train_params"
+                    ],
+                    type(None),
+                )
+            else:
+                assert isinstance(
+                    advisor_parameters["common_optimizations"]["rewrite_parameters"][
+                        "train_params"
+                    ],
+                    dict,
+                )
+
+            assert isinstance(
+                advisor_parameters["common_optimizations"]["rewrite_parameters"][
+                    "rewrite_specific_params"
+                ],
+                rewrite_parameter_type,  # type: ignore
             )
 
 

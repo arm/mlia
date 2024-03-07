@@ -9,7 +9,9 @@ from keras.api._v2 import keras  # Temporary workaround for now: MLIA-1107
 from mlia.nn.rewrite.library.helper_functions import compute_conv2d_parameters
 
 
-def fc_sparsity_rewrite(input_shape: Any, output_shape: Any) -> keras.Model:
+def fc_sparsity_rewrite(
+    input_shape: Any, output_shape: Any, sparsity_m: int = 2, sparsity_n: int = 4
+) -> keras.Model:
     """Fully connected TensorFlow Lite model ready for sparse pruning."""
     model = tfmot.sparsity.keras.prune_low_magnitude(
         to_prune=keras.Sequential(
@@ -19,13 +21,18 @@ def fc_sparsity_rewrite(input_shape: Any, output_shape: Any) -> keras.Model:
                 keras.layers.Dense(output_shape),
             ]
         ),
-        sparsity_m_by_n=(2, 4),
+        sparsity_m_by_n=(
+            sparsity_m,
+            sparsity_n,
+        ),
     )
 
     return model
 
 
-def conv2d_sparsity_rewrite(input_shape: Any, output_shape: Any) -> keras.Model:
+def conv2d_sparsity_rewrite(
+    input_shape: Any, output_shape: Any, sparsity_m: int = 2, sparsity_n: int = 4
+) -> keras.Model:
     """Conv2d TensorFlow Lite model ready for sparse pruning."""
     conv2d_parameters = compute_conv2d_parameters(
         input_shape=input_shape, output_shape=output_shape
@@ -39,7 +46,10 @@ def conv2d_sparsity_rewrite(input_shape: Any, output_shape: Any) -> keras.Model:
                 keras.layers.ReLU(),
             ]
         ),
-        sparsity_m_by_n=(2, 4),
+        sparsity_m_by_n=(
+            sparsity_m,
+            sparsity_n,
+        ),
     )
 
     return model

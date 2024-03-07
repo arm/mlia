@@ -1,5 +1,5 @@
 # SPDX-FileCopyrightText: Copyright 2024, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 
-[training]
+[rewrite.training_parameters]
 steps = 100

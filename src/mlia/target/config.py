@@ -71,7 +71,14 @@ def is_builtin_target_profile(profile_name: str | Path) -> bool:
     return profile_name in BUILTIN_SUPPORTED_PROFILE_NAMES
 
 
-BUILTIN_SUPPORTED_OPTIMIZATION_NAMES = ["optimization"]
+BUILTIN_SUPPORTED_OPTIMIZATION_NAMES = [
+    "optimization",
+    "optimization-custom-augmentation",
+    "optimization-fully-connected-clustering",
+    "optimization-fully-connected-pruning",
+    "optimization-conv2d-clustering",
+    "optimization-conv2d-pruning",
+]
 
 
 def is_builtin_optimization_profile(optimization_name: str | Path) -> bool:

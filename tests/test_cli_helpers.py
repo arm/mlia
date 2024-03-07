@@ -156,7 +156,7 @@ def test_copy_profile_file_to_output_dir(tmp_path: Path) -> None:
 
 
 def test_copy_optimization_file_to_output_dir(tmp_path: Path) -> None:
-    """Test if the optimization profile file is copied into the output directory."""
+    """Test if the profile file is copied into the output directory."""
     test_target_profile_name = "optimization"
     test_file_path = Path(f"{tmp_path}/{test_target_profile_name}.toml")
 

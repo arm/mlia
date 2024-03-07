@@ -51,7 +51,7 @@ class OptimizingDataCollector(ContextAwareDataCollector):
 
         optimizations = self._get_optimization_settings(self.context)
 
-        training_parameters = self._get_training_settings(self.context)
+        rewrite_parameters = self._get_rewrite_settings(self.context)
 
         if not optimizations or optimizations == [[]]:
             raise FunctionalityNotSupportedError(
@@ -78,7 +78,7 @@ class OptimizingDataCollector(ContextAwareDataCollector):
             model = self.model  # type: ignore
 
         optimizers: list[Callable] = [
-            partial(self.optimize_model, opts, training_parameters)
+            partial(self.optimize_model, opts, rewrite_parameters)
             for opts in opt_settings
         ]
 
@@ -87,12 +87,12 @@ class OptimizingDataCollector(ContextAwareDataCollector):
     def optimize_model(
         self,
         opt_settings: list[OptimizationSettings],
-        training_parameters: dict | None,
+        rewrite_parameters: dict,
         model: KerasModel | TFLiteModel,
     ) -> Any:
         """Run optimization."""
         optimizer = get_optimizer(
-            model, opt_settings, training_parameters=training_parameters
+            model, opt_settings, rewrite_parameters=rewrite_parameters
         )
         opts_as_str = ", ".join(str(opt) for opt in opt_settings)
         logger.info("Applying model optimizations - [%s]", opts_as_str)
@@ -124,11 +124,11 @@ class OptimizingDataCollector(ContextAwareDataCollector):
             context=context,
         )
 
-    def _get_training_settings(self, context: Context) -> dict:
+    def _get_rewrite_settings(self, context: Context) -> list[dict]:
         """Get optimization settings."""
         return self.get_parameter(  # type: ignore
             OptimizingDataCollector.name(),
-            "training_parameters",
+            "rewrite_parameters",
             expected_type=dict,
             expected=False,
             context=context,
@@ -234,7 +234,7 @@ def parse_augmentations(
         valid_keys = ["mixup_strength", "gaussian_strength"]
         tuple_to_return = []
         for valid_key in valid_keys.copy():
-            if augmentations.get(valid_key):
+            if augmentations.get(valid_key) is not None:
                 del augmentation_keys_test_for_valid[
                     augmentation_keys_test_for_valid.index(valid_key)
                 ]
@@ -247,7 +247,6 @@ def parse_augmentations(
                     tuple_to_return.append(None)
             else:
                 tuple_to_return.append(None)
-
         if len(augmentation_keys_test_for_valid) > 0:
             logger.warning(
                 "Warning! Expected augmentation parameters to be 'gaussian_strength' "
@@ -275,23 +274,32 @@ def add_common_optimization_params(  # pylint: disable=too-many-branches
     if not is_list_of(optimization_targets, dict):
         raise TypeError("Optimization targets value has wrong format.")
 
-    rewrite_parameters = extra_args.get("optimization_profile")
     training_parameters = None
-    if rewrite_parameters:
-        if not isinstance(rewrite_parameters, dict):
-            raise TypeError("Training Parameter values has wrong format.")
-        training_parameters = extra_args["optimization_profile"].get("training")
+    rewrite_specific_parameters = None
 
-        if training_parameters:
-            training_parameters["augmentations"] = parse_augmentations(
-                training_parameters.get("augmentations")
-            )
+    optimization_parameters = extra_args.get("optimization_profile")
+    if optimization_parameters:  # pylint: disable=too-many-nested-blocks
+        if not isinstance(optimization_parameters, dict):
+            raise TypeError("Optimization Parameter values has wrong format.")
 
+        if optimization_parameters.get("rewrite"):
+            rewrite_params = optimization_parameters["rewrite"]
+            training_parameters = rewrite_params.get("training_parameters")
+            if training_parameters:
+                training_parameters["augmentations"] = parse_augmentations(
+                    training_parameters.get("augmentations")
+                )
+
+            optimization_target = optimization_targets[0]["optimization_target"]
+            rewrite_specific_parameters = rewrite_params.get(optimization_target)
     advisor_parameters.update(
         {
             "common_optimizations": {
                 "optimizations": [optimization_targets],
-                "training_parameters": training_parameters,
+                "rewrite_parameters": {
+                    "train_params": training_parameters,
+                    "rewrite_specific_params": rewrite_specific_parameters,
+                },
             },
         }
     )

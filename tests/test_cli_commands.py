@@ -90,7 +90,7 @@ def test_performance_unknown_target(
             None,
             None,
             True,
-            "fully-connected-sparsity24",
+            "fully-connected-sparsity",
             "sequential/flatten/Reshape",
             "StatefulPartitionedCall:0",
             does_not_raise(),
@@ -139,9 +139,9 @@ def test_performance_unknown_target(
                 Exception,
                 match=re.escape(
                     "Invalid rewrite target: 'random'. "
-                    "Supported rewrites: ['conv2d-clustering', 'conv2d-sparsity24', "
+                    "Supported rewrites: ['conv2d-clustering', 'conv2d-sparsity', "
                     "'fully-connected', 'fully-connected-clustering', "
-                    "'fully-connected-sparsity24']"
+                    "'fully-connected-sparsity']"
                 ),
             ),
         ],
@@ -204,7 +204,7 @@ def test_performance_unknown_target(
             None,
             None,
             True,
-            "conv2d-sparsity24",
+            "conv2d-sparsity",
             "sequential/conv1/Relu;sequential/conv1/Conv2D",
             "sequential/conv2/Relu;sequential/conv2/Conv2D",
             does_not_raise(),

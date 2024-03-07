@@ -20,7 +20,7 @@ from mlia.nn.rewrite.core.train import LearningRateSchedule
 from mlia.nn.rewrite.core.train import mixup
 from mlia.nn.rewrite.core.train import train
 from mlia.nn.rewrite.core.train import TrainingParameters
-from tests.test_nn_rewrite_core_rewrite import TestRewrite
+from tests.test_nn_rewrite_core_rewrite import GenericRewrite
 from tests.utils.rewrite import MockTrainingParameters
 
 
@@ -54,7 +54,7 @@ def check_train(
     """Test the train() function."""
     with TemporaryDirectory() as tmp_dir:
         output_file = Path(tmp_dir, "out.tflite")
-        mock_rewrite = TestRewrite("replace", replace_fully_connected_with_conv)
+        mock_rewrite = GenericRewrite("replace", replace_fully_connected_with_conv)
         result = train(
             source_model=str(tflite_model),
             unmodified_model=str(tflite_model) if use_unmodified_model else None,
@@ -65,6 +65,7 @@ def check_train(
             input_tensors=["sequential/flatten/Reshape"],
             output_tensors=["StatefulPartitionedCall:0"],
             train_params=train_params,
+            rewrite_specific_params={},
         )
 
         assert len(result[0][0]) == 2

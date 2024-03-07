@@ -8,6 +8,7 @@ import tempfile
 from abc import ABC
 from abc import abstractmethod
 from dataclasses import dataclass
+from inspect import getfullargspec
 from pathlib import Path
 from typing import Any
 from typing import Callable
@@ -36,7 +37,7 @@ from mlia.nn.tensorflow.config import TFLiteModel
 from mlia.utils.registry import Registry
 
 logger = logging.getLogger(__name__)
-RewriteCallable = Callable[[Any, Any], keras.Model]
+RewriteCallable = Callable[..., keras.Model]
 
 
 class Rewrite(ABC):
@@ -47,10 +48,23 @@ class Rewrite(ABC):
         self.name = name
         self.function = rewrite_fn
 
-    def __call__(self, input_shape: Any, output_shape: Any) -> keras.Model:
-        """Return an instance of the rewrite model."""
+    def __call__(
+        self, input_shape: Any, output_shape: Any, **kwargs: Any
+    ) -> keras.Model:
+        """Perform the rewrite operation using the configured function."""
         try:
-            return self.function(input_shape, output_shape)
+            return self.function(input_shape, output_shape, **kwargs)
+        except TypeError as ex:
+            expected_args = getfullargspec(self.function).args
+            if "input_shape" in expected_args:
+                expected_args.remove("input_shape")
+            if "output_shape" in expected_args:
+                expected_args.remove("output_shape")
+            raise KeyError(
+                f"Found unexpected parameters for rewrite. Expected (sub)set "
+                f"of {expected_args} found unexpected parameter(s) "
+                f"{list(set(list(kwargs.keys())) - set(expected_args))}"
+            ) from ex
         except Exception as ex:
             raise RuntimeError(f"Rewrite '{self.name}' failed.") from ex
 
@@ -67,7 +81,7 @@ class Rewrite(ABC):
         """Return post-processing rewrite option."""
 
     @abstractmethod
-    def check_optimization(self, model: keras.Model, **kwargs: dict) -> bool:
+    def check_optimization(self, model: keras.Model) -> bool:
         """Check if the optimization has produced the correct result."""
 
 
@@ -86,7 +100,7 @@ class GenericRewrite(Rewrite):
         """Return default post-processing rewrite option."""
         return model
 
-    def check_optimization(self, model: keras.Model, **kwargs: Any) -> bool:
+    def check_optimization(self, model: keras.Model) -> bool:
         """Not needed here."""
         return True
 
@@ -100,8 +114,8 @@ class QuantizeAwareTrainingRewrite(Rewrite, ABC):
         return model
 
 
-class Sparsity24Rewrite(QuantizeAwareTrainingRewrite):
-    """Rewrite class for sparsity rewrite e.g. fully-connected-sparsity24."""
+class SparsityRewrite(QuantizeAwareTrainingRewrite):
+    """Rewrite class for sparsity rewrite e.g. fully-connected-sparsity."""
 
     pruning_callback = tfmot.sparsity.keras.UpdatePruningStep
 
@@ -132,17 +146,25 @@ class Sparsity24Rewrite(QuantizeAwareTrainingRewrite):
 
         return model
 
-    def check_optimization(self, model: keras.Model, **kwargs: Any) -> bool:
+    def check_optimization(
+        self,
+        model: keras.Model,
+        sparsity_m: int = 2,
+        sparsity_n: int = 4,
+        **_: Any,
+    ) -> bool:
         """Check if sparity has produced the correct result."""
         for layer in model.layers:
             for weight in layer.weights:
                 if "kernel" in weight.name:
                     if "kernel_min" in weight.name or "kernel_max" in weight.name:
                         continue
-                    if not is_pruned_m_by_n(weight, m_by_n=(2, 4)):
+                    if not is_pruned_m_by_n(weight, m_by_n=(sparsity_m, sparsity_n)):
                         logger.warning(
-                            "\nWARNING: Could not find (2,4) sparsity, "
+                            "\nWARNING: Could not find (%d, %d) sparsity, "
                             "in layer %s for weight %s \n",
+                            sparsity_m,
+                            sparsity_n,
                             layer.name,
                             weight.name,
                         )
@@ -164,27 +186,21 @@ class ClusteringRewrite(QuantizeAwareTrainingRewrite):
         )
         return cqat_model
 
-    def check_optimization(self, model: keras.Model, **kwargs: Any) -> bool:
+    def check_optimization(
+        self, model: keras.Model, num_clusters: int = 2, **_: Any
+    ) -> bool:
         """Check if clustering has produced the correct result."""
-        number_of_clusters = kwargs.get("number_of_clusters")
-        if not number_of_clusters:
-            raise ValueError(
-                """
-                Expected check_optimization to have argument number_of_clusters.
-                """
-            )
-
         for layer in model.layers:
             for weight in layer.weights:
                 if "kernel" in weight.name:
                     if "kernel_min" in weight.name or "kernel_max" in weight.name:
                         continue
                     number_of_found_clusters = len(np.unique(weight))
-                    if number_of_found_clusters != number_of_clusters:
+                    if number_of_found_clusters != num_clusters:
                         logger.warning(
                             "\nWARNING: Expected %d cluster(s), found %d "
                             "cluster(s) in layer %s for weight %s \n",
-                            number_of_clusters,
+                            num_clusters,
                             number_of_found_clusters,
                             layer.name,
                             weight.name,
@@ -228,6 +244,7 @@ class RewriteConfiguration(OptimizerConfiguration):
     layers_to_optimize: list[str] | None = None
     dataset: Path | None = None
     train_params: TrainingParameters = TrainingParameters()
+    rewrite_specific_params: dict | None = None
 
     def __str__(self) -> str:
         """Return string representation of the configuration."""
@@ -240,10 +257,10 @@ class RewritingOptimizer(Optimizer):
     registry = RewriteRegistry(
         [
             GenericRewrite("fully-connected", fc_rewrite),
-            Sparsity24Rewrite("fully-connected-sparsity24", fc_sparsity_rewrite),
+            SparsityRewrite("fully-connected-sparsity", fc_sparsity_rewrite),
             ClusteringRewrite("fully-connected-clustering", fc_clustering_rewrite),
             ClusteringRewrite("conv2d-clustering", conv2d_clustering_rewrite),
-            Sparsity24Rewrite("conv2d-sparsity24", conv2d_sparsity_rewrite),
+            SparsityRewrite("conv2d-sparsity", conv2d_sparsity_rewrite),
         ]
     )
 
@@ -265,7 +282,6 @@ class RewritingOptimizer(Optimizer):
         rewrite = RewritingOptimizer.registry.items[
             self.optimizer_configuration.optimization_target
         ]
-
         use_unmodified_model = True
         tflite_model = self.model.model_path
         tfrecord = str(self.optimizer_configuration.dataset)
@@ -287,6 +303,7 @@ class RewritingOptimizer(Optimizer):
             input_tensors=[self.optimizer_configuration.layers_to_optimize[0]],
             output_tensors=[self.optimizer_configuration.layers_to_optimize[1]],
             train_params=self.optimizer_configuration.train_params,
+            rewrite_specific_params=self.optimizer_configuration.rewrite_specific_params,  # pylint: disable=line-too-long
         )
 
         if orig_vs_repl_stats:

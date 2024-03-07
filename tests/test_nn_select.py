@@ -4,12 +4,12 @@
 from __future__ import annotations
 
 from contextlib import ExitStack as does_not_raise
-from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 from typing import cast
 
 import pytest
+import tensorflow_model_optimization as tfmot
 from keras.api._v2 import keras  # Temporary workaround for now: MLIA-1107
 
 from mlia.core.errors import ConfigurationError
@@ -176,23 +176,50 @@ def test_get_optimizer(
             model = test_tflite_model
         else:
             model = keras.models.load_model(str(test_keras_model))
-        optimizer = get_optimizer(model, config)
+        optimizer = get_optimizer(
+            model, config, {"train_params": None, "rewrite_specific_params": None}
+        )
         assert isinstance(optimizer, expected_type)
         assert optimizer.optimization_config() == expected_config
 
 
+# pylint: disable=line-too-long
 @pytest.mark.parametrize(
-    "rewrite_parameters",
-    [None, {"batch_size": 64, "learning_rate": 0.003}],
+    "rewrite_parameters, optimization_target",
+    [
+        [
+            {"train_params": None, "rewrite_specific_params": None},
+            "fully-connected-clustering",
+        ],
+        [
+            {
+                "train_params": None,
+                "rewrite_specific_params": {
+                    "num_clusters": 5,
+                    "cluster_centroids_init": tfmot.clustering.keras.CentroidInitialization(
+                        "CentroidInitialization.LINEAR"
+                    ),
+                },
+            },
+            "fully-connected-clustering",
+        ],
+        [
+            {"train_params": None, "rewrite_specific_params": None},
+            "fully-connected",
+        ],
+    ],
 )
+# pylint: enable=line-too-long
 @pytest.mark.skip_set_training_steps
 def test_get_optimizer_training_parameters(
-    rewrite_parameters: dict | None, test_tflite_model: Path
+    rewrite_parameters: dict,
+    optimization_target: str,
+    test_tflite_model: Path,
 ) -> None:
     """Test function get_optimzer with various combinations of parameters."""
     config = OptimizationSettings(
         optimization_type="rewrite",
-        optimization_target="fully-connected",  # type: ignore
+        optimization_target=optimization_target,  # type: ignore
         layers_to_optimize=None,
         dataset=None,
     )
@@ -200,18 +227,20 @@ def test_get_optimizer_training_parameters(
         RewritingOptimizer,
         get_optimizer(test_tflite_model, config, rewrite_parameters),
     )
+    assert len(list(rewrite_parameters.items())) == 2
+    if rewrite_parameters.get("rewrite_specific_params"):
+        assert isinstance(
+            rewrite_parameters["rewrite_specific_params"],
+            type(optimizer.optimizer_configuration.rewrite_specific_params),
+        )
+        assert (
+            optimizer.optimizer_configuration.rewrite_specific_params
+            == rewrite_parameters["rewrite_specific_params"]
+        )
 
     assert isinstance(
         optimizer.optimizer_configuration.train_params, TrainingParameters
     )
-    if not rewrite_parameters:
-        assert asdict(TrainingParameters()) == asdict(
-            optimizer.optimizer_configuration.train_params
-        )
-    else:
-        assert asdict(TrainingParameters()) | rewrite_parameters == asdict(
-            optimizer.optimizer_configuration.train_params
-        )
 
 
 @pytest.mark.parametrize(

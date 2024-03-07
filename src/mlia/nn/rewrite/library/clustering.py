@@ -9,11 +9,18 @@ from keras.api._v2 import keras  # Temporary workaround for now: MLIA-1107
 from mlia.nn.rewrite.library.helper_functions import compute_conv2d_parameters
 
 
-def fc_clustering_rewrite(input_shape: Any, output_shape: Any) -> keras.Model:
+def fc_clustering_rewrite(
+    input_shape: Any,
+    output_shape: Any,
+    num_clusters: int = 2,
+    cluster_centroids_init: tfmot.clustering.keras.CentroidInitialization = tfmot.clustering.keras.CentroidInitialization(  # pylint: disable=line-too-long
+        "CentroidInitialization.LINEAR"
+    ),
+) -> keras.Model:
     """Fully connected TensorFlow Lite model ready for clustering."""
     rewrite_params = {
-        "number_of_clusters": 4,
-        "cluster_centroids_init": tfmot.clustering.keras.CentroidInitialization.LINEAR,
+        "number_of_clusters": num_clusters,
+        "cluster_centroids_init": cluster_centroids_init,
     }
     model = tfmot.clustering.keras.cluster_weights(
         to_cluster=keras.Sequential(
@@ -28,11 +35,18 @@ def fc_clustering_rewrite(input_shape: Any, output_shape: Any) -> keras.Model:
     return model
 
 
-def conv2d_clustering_rewrite(input_shape: Any, output_shape: Any) -> keras.Model:
+def conv2d_clustering_rewrite(
+    input_shape: Any,
+    output_shape: Any,
+    num_clusters: int = 2,
+    cluster_centroids_init: tfmot.clustering.keras.CentroidInitialization = tfmot.clustering.keras.CentroidInitialization(  # pylint: disable=line-too-long
+        "CentroidInitialization.LINEAR"
+    ),
+) -> keras.Model:
     """Conv2d TensorFlow Lite model ready for clustering."""
     rewrite_params = {
-        "number_of_clusters": 4,
-        "cluster_centroids_init": tfmot.clustering.keras.CentroidInitialization.LINEAR,
+        "number_of_clusters": num_clusters,
+        "cluster_centroids_init": cluster_centroids_init,
     }
     conv2d_parameters = compute_conv2d_parameters(
         input_shape=input_shape, output_shape=output_shape
