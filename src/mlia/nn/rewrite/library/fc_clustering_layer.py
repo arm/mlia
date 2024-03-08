@@ -9,7 +9,7 @@ from keras.api._v2 import keras  # Temporary workaround for now: MLIA-1107
 
 def get_keras_model_clus(input_shape: Any, output_shape: Any) -> keras.Model:
     """Generate TensorFlow Lite model for clustering rewrite."""
-    clustering_params = {
+    rewrite_params = {
         "number_of_clusters": 32,
         "cluster_centroids_init": tfmot.clustering.keras.CentroidInitialization.LINEAR,
     }
@@ -21,6 +21,6 @@ def get_keras_model_clus(input_shape: Any, output_shape: Any) -> keras.Model:
                 keras.layers.Dense(units=output_shape),
             ]
         ),
-        **clustering_params
+        **rewrite_params
     )
     return model
