@@ -1,10 +1,12 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for common management functionality."""
 from __future__ import annotations
 
 import tarfile
+import tempfile
 from pathlib import Path
+from typing import Callable
 from unittest.mock import ANY
 from unittest.mock import MagicMock
 
@@ -203,3 +205,81 @@ def test_backend_installation_uninstall(backend_repo: MagicMock) -> None:
 
     installation.uninstall()
     backend_repo.remove_backend.assert_called_with("sample_backend")
+
+
+def _gen_rel_file(dir_path: Path) -> Path:
+    file_path = dir_path / "test.txt"
+    if not file_path.exists():
+        file_path.touch()
+    return file_path
+
+
+def _gen_abs_file(dir_path: Path) -> Path:
+    return _gen_rel_file(dir_path).resolve()
+
+
+def _gen_rel_sym(dir_path: Path) -> Path:
+    file_path = _gen_rel_file(dir_path)
+    lnk_path = dir_path / "symlink-rel"
+    lnk_path.symlink_to(file_path.relative_to(dir_path))
+    return lnk_path
+
+
+def _gen_abs_sym(dir_path: Path) -> Path:
+    file_path = _gen_abs_file(dir_path)
+    lnk_path = dir_path / Path("symlink-abs")
+    lnk_path.symlink_to(file_path)
+    return lnk_path
+
+
+def _gen_rel_lnk(dir_path: Path) -> Path:
+    file_path = _gen_rel_file(dir_path)
+    lnk_path = dir_path / "hardlink-rel"
+    lnk_path.symlink_to(file_path.relative_to(dir_path))
+    return lnk_path
+
+
+def _gen_abs_lnk(dir_path: Path) -> Path:
+    file_path = _gen_abs_file(dir_path)
+    lnk_path = dir_path / Path("hardlink-abs")
+    lnk_path.symlink_to(file_path)
+    return lnk_path
+
+
+@pytest.mark.parametrize(
+    ("gen_file_func", "num_members_in", "num_members_out"),
+    (
+        (_gen_rel_file, 1, 1),
+        (_gen_rel_sym, 1, 1),
+        (_gen_abs_sym, 1, 0),
+        (_gen_rel_lnk, 1, 1),
+        (_gen_abs_lnk, 1, 0),
+    ),
+)
+def test_filter_tar_members(
+    gen_file_func: Callable[[Path], Path],
+    num_members_in: int,
+    num_members_out: int,
+    tmp_path: Path,
+) -> None:
+    """Test function BackendInstallation._filter_tar_members()."""
+
+    def create_tar(file_to_add: Path, archive_path: Path) -> None:
+        with tarfile.open(archive_path, "w") as archive:
+            archive.add(file_to_add, arcname=file_to_add, recursive=False)
+
+    with tempfile.TemporaryDirectory() as tmp_dir_2:
+        with pytest.raises(ValueError):
+            Path(tmp_dir_2).relative_to(tmp_path)
+
+        archive_path = Path(tmp_dir_2) / "test.tar.gz"
+        file_path = gen_file_func(tmp_path)
+        create_tar(file_path, archive_path)
+        with tarfile.open(archive_path) as archive:
+            orig_members = list(archive.getmembers())
+            assert len(orig_members) == num_members_in
+            filtered_members = list(
+                # pylint: disable=protected-access
+                BackendInstallation._filter_tar_members(orig_members, tmp_path)
+            )
+            assert len(filtered_members) == num_members_out

@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Module for installation process."""
 from __future__ import annotations
@@ -166,58 +166,73 @@ class BackendInstallation(Installation):
                 backend_info.settings,
             )
 
+    @staticmethod
+    def _filter_tar_members(
+        members: Iterable[tarfile.TarInfo], dst_dir: Path
+    ) -> Iterable[tarfile.TarInfo]:
+        """
+        Make sure we only handle safe files from the tar file.
+
+        To avoid traversal attacks we only allow files that are
+        - relative paths, i.e. no absolute file paths
+        - not including directory traversal sequences '..'
+        """
+
+        def check_rel(path: Path) -> None:
+            if path.is_absolute():
+                raise ValueError("Path is absolute, but must be relative.")
+
+        def check_in_dir(path: Path) -> None:
+            abs_path = (dst_dir / path).resolve()
+            abs_path.relative_to(dst_dir)
+
+        for member in members:
+            try:
+                path = Path(member.path)
+                check_rel(path)
+                check_in_dir(path)
+
+                if member.islnk() or member.issym():
+                    # Make sure we are only linking within the
+                    # archive.
+                    lnk = Path(member.linkname)
+                    check_rel(lnk)
+                    check_in_dir(lnk)
+
+                yield member
+            except ValueError as ex:
+                logger.warning(
+                    "File '%s' ignored while extracting: %s",
+                    member.path,
+                    ex,
+                )
+
     def _download_and_install(
         self, download_artifact: DownloadArtifact, eula_agrement: bool
     ) -> None:
         """Download and install the backend."""
         with temp_directory() as tmpdir:
             try:
-                downloaded_to = download_artifact.download_to(tmpdir)
+                dest = download_artifact.download_to(tmpdir)
             except Exception as err:
                 raise RuntimeError("Unable to download backend artifact.") from err
 
             with working_directory(tmpdir / "dist", create_dir=True) as dist_dir:
-                with tarfile.open(downloaded_to) as archive:
-
-                    def get_filtered_members(
-                        members: Iterable[tarfile.TarInfo],
-                    ) -> Iterable[tarfile.TarInfo]:
-                        """
-                        Make sure we only handle safe files from the tar file.
-
-                        To avoid traversal attacks we only allow files that are
-                        - regular files, i.e. not a symlink etc.
-                        - relative paths, i.e. no absolute file paths
-                        - not including directory traversal sequences '..'
-                        """
-                        for member in members:
-                            try:
-                                if not (member.isfile() or member.isdir()):
-                                    raise ValueError("Path is not a regular file.")
-                                path = Path(member.path)
-                                if path.is_absolute():
-                                    raise ValueError(
-                                        "Path is absolute, but must be relative."
-                                    )
-                                abs_path = (dist_dir / path).resolve()
-                                abs_path.relative_to(dist_dir)
-                                yield member
-                            except ValueError as ex:
-                                logger.warning(
-                                    "File '%s' ignored while extracting from %s: %s",
-                                    member.path,
-                                    downloaded_to,
-                                    ex,
-                                )
-
+                with tarfile.open(dest) as archive:
                     # Filter files from the tarfile to avoid traversal attacks.
                     # Note: bandit is still putting out a low severity /
                     # low confidence warning despite the check
-                    # From Python 3.8.17 on there is a built-in feature to fix
+                    # From Python 3.9.17 on there is a built-in feature to fix
                     # this using the new argument filter="data", see
-                    # https://docs.python.org/3.8/library/tarfile.html#tarfile.TarFile.extractall
+                    # https://docs.python.org/3.9/library/tarfile.html#tarfile.TarFile.extractall
+                    logger.debug(
+                        "Extracting downloaded artifact %s to %s.", dest, dist_dir
+                    )
                     archive.extractall(  # nosec
-                        dist_dir, members=get_filtered_members(archive.getmembers())
+                        dist_dir,
+                        members=self._filter_tar_members(
+                            archive.getmembers(), dist_dir
+                        ),
                     )
 
                 backend_path = dist_dir
