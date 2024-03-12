@@ -150,6 +150,7 @@ class RewritingOptimizer(Optimizer):
                 "Input and output tensor names need to be set for rewrite."
             )
 
+        self.optimizer_configuration.train_params.checkpoint_at = [5000, 10000]
         orig_vs_repl_stats, total_stats = train(
             source_model=tflite_model,
             unmodified_model=tflite_model if use_unmodified_model else None,
@@ -162,9 +163,22 @@ class RewritingOptimizer(Optimizer):
         )
 
         if orig_vs_repl_stats:
-            orig_vs_repl = ["Replaced sub-graph only"] + [
-                f"{stat:.3f}" for stat in orig_vs_repl_stats
-            ]
+            model_stats: list = []
+            cp_param = self.optimizer_configuration.train_params.checkpoint_at
+            checkpoints = (
+                [
+                    "At checkpoint " + str(checkpoint) + " steps"
+                    for checkpoint in cp_param
+                ]
+                if cp_param
+                else []
+            )
+            checkpoints.append("All Steps")
+            for checkpoint, orig_vs_repl_stat in zip(checkpoints, orig_vs_repl_stats):
+                model_stats.append(
+                    ["Replaced sub-graph: " + checkpoint]
+                    + [f"{stat:.3f}" for stat in orig_vs_repl_stat]
+                )
             total = ["Total model"] + [f"{stat:.3f}" for stat in total_stats]
             notes = (
                 "These metrics show the difference between original model\n"
@@ -178,14 +192,14 @@ class RewritingOptimizer(Optimizer):
             table = Table(
                 columns=[
                     Column(
-                        "Original vs. optimized",
+                        "Original vs. Optimized",
                         alias="metric",
                         fmt=Format(wrap_width=40),
                     ),
                     Column("MAE", alias="value", fmt=Format(wrap_width=15)),
                     Column("NRMSE", alias="value", fmt=Format(wrap_width=15)),
                 ],
-                rows=[orig_vs_repl, total],
+                rows=[*model_stats, total],
                 name="Rewrite performance metrics",
                 alias="rewrite_performance_metrics",
                 notes=notes,
