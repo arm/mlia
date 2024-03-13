@@ -80,12 +80,12 @@ def get_corstone_300_installation() -> Installation:
         url = (
             "https://developer.arm.com/-/media/Arm%20Developer%20Community/"
             "Downloads/OSS/FVP/Corstone-300/"
-            "FVP_Corstone_SSE-300_11.22_35_Linux64_armv8l.tgz"
+            "FVP_Corstone_SSE-300_11.24_13_Linux64_armv8l.tgz"
         )
 
-        filename = "FVP_Corstone_SSE-300_11.22_35_Linux64_armv8l.tgz"
-        version = "11.22_35"
-        sha256_hash = "0414d3dccbf7037ad24df7002ff1b48975c213f3c1d44544d95033080d0f9ce3"
+        filename = "FVP_Corstone_SSE-300_11.24_13_Linux64_armv8l.tgz"
+        version = "11.24_13"
+        sha256_hash = "9b43da6a688220c707cd1801baf9cf4f5fb37d6dc77587b9071347411a64fd56"
         expected_files = [
             "models/Linux64_armv8l_GCC-9.3/FVP_Corstone_SSE-300_Ethos-U55",
             "models/Linux64_armv8l_GCC-9.3/FVP_Corstone_SSE-300_Ethos-U65",
@@ -96,16 +96,16 @@ def get_corstone_300_installation() -> Installation:
         url = (
             "https://developer.arm.com/-/media/Arm%20Developer%20Community"
             "/Downloads/OSS/FVP/Corstone-300/"
-            "FVP_Corstone_SSE-300_11.16_26.tgz"
+            "FVP_Corstone_SSE-300_11.24_13_Linux64.tgz"
         )
-        filename = "FVP_Corstone_SSE-300_11.16_26.tgz"
-        version = "11.16_26"
-        sha256_hash = "e26139be756b5003a30d978c629de638aed1934d597dc24a17043d4708e934d7"
+        filename = "FVP_Corstone_SSE-300_11.24_13_Linux64.tgz"
+        version = "11.24_13"
+        sha256_hash = "6ea4096ecf8a8c06d6e76e21cae494f0c7139374cb33f6bc3964d189b84539a9"
         expected_files = [
-            "models/Linux64_GCC-6.4/FVP_Corstone_SSE-300_Ethos-U55",
-            "models/Linux64_GCC-6.4/FVP_Corstone_SSE-300_Ethos-U65",
+            "models/Linux64_GCC-9.3/FVP_Corstone_SSE-300_Ethos-U55",
+            "models/Linux64_GCC-9.3/FVP_Corstone_SSE-300_Ethos-U65",
         ]
-        backend_subfolder = "models/Linux64_GCC-6.4"
+        backend_subfolder = "models/Linux64_GCC-9.3"
 
     corstone_300 = BackendInstallation(
         name=corstone_name,
