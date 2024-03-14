@@ -11,16 +11,15 @@ from unittest.mock import MagicMock
 import pytest
 
 from mlia.backend.corstone.install import CorstoneInstaller
-from mlia.backend.corstone.install import get_corstone_installations
+from mlia.backend.corstone.install import get_corstone_installation
 from mlia.backend.install import Installation
 
 
-def test_get_corstone_installations() -> None:
-    """Test function get_corstone_installations."""
-    installations = get_corstone_installations()
-    assert len(installations) == 2
-
-    assert all(isinstance(item, Installation) for item in installations)
+@pytest.mark.parametrize("corstone_name", ["corstone-300", "corstone-310"])
+def test_get_corstone_installation(corstone_name: str) -> None:
+    """Test Corstone installation"""
+    installation = get_corstone_installation(corstone_name)
+    assert isinstance(installation, Installation)
 
 
 @pytest.mark.parametrize(
