@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Test for module utils/test_utils."""
 import os
@@ -9,6 +9,7 @@ from unittest.mock import MagicMock
 import numpy as np
 import pytest
 import tensorflow as tf
+from keras.api._v2 import keras  # Temporary workaround for now: MLIA-1107
 
 from mlia.nn.tensorflow import tflite_convert
 from mlia.nn.tensorflow.tflite_convert import convert_to_tflite
@@ -40,14 +41,14 @@ def test_convert_saved_model_to_tflite(test_tf_model: Path) -> None:
 
 def test_convert_keras_to_tflite(test_keras_model: Path) -> None:
     """Test converting Keras model to TensorFlow Lite."""
-    keras_model = tf.keras.models.load_model(str(test_keras_model))
+    keras_model = keras.models.load_model(str(test_keras_model))
     result = convert_to_tflite_bytes(keras_model)
     assert isinstance(result, bytes)
 
 
 def test_save_tflite_model(tmp_path: Path, test_keras_model: Path) -> None:
     """Test saving TensorFlow Lite model."""
-    keras_model = tf.keras.models.load_model(str(test_keras_model))
+    keras_model = keras.models.load_model(str(test_keras_model))
 
     temp_file = tmp_path / "test_model_saving.tflite"
     convert_to_tflite(keras_model, output_path=temp_file)

@@ -7,8 +7,8 @@ import math
 from pathlib import Path
 
 import pytest
-import tensorflow as tf
 from flaky import flaky
+from keras.api._v2 import keras  # Temporary workaround for now: MLIA-1107
 
 from mlia.nn.tensorflow.optimizations.clustering import Clusterer
 from mlia.nn.tensorflow.optimizations.clustering import ClusteringConfiguration
@@ -22,8 +22,8 @@ from tests.utils.common import train_model
 
 
 def _prune_model(
-    model: tf.keras.Model, target_sparsity: float, layers_to_prune: list[str] | None
-) -> tf.keras.Model:
+    model: keras.Model, target_sparsity: float, layers_to_prune: list[str] | None
+) -> keras.Model:
     x_train, y_train = get_dataset()
     batch_size = 1
     num_epochs = 1
@@ -100,7 +100,7 @@ def test_cluster_simple_model_fully(
     """Simple MNIST test to see if clustering works correctly."""
     target_sparsity = 0.5
 
-    base_model = tf.keras.models.load_model(str(test_keras_model))
+    base_model = keras.models.load_model(str(test_keras_model))
     train_model(base_model)
 
     if sparsity_aware:

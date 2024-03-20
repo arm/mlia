@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Test for module utils/test_utils."""
 import re
@@ -7,6 +7,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 import tensorflow as tf
+from keras.api._v2 import keras  # Temporary workaround for now: MLIA-1107
 
 from mlia.nn.tensorflow.tflite_convert import convert_to_tflite
 from mlia.nn.tensorflow.utils import check_tflite_datatypes
@@ -19,18 +20,18 @@ from mlia.nn.tensorflow.utils import save_keras_model
 
 def test_save_keras_model(tmp_path: Path, test_keras_model: Path) -> None:
     """Test saving Keras model."""
-    keras_model = tf.keras.models.load_model(str(test_keras_model))
+    keras_model = keras.models.load_model(str(test_keras_model))
 
     temp_file = tmp_path / "test_model_saving.h5"
     save_keras_model(keras_model, temp_file)
-    loaded_model = tf.keras.models.load_model(temp_file)
+    loaded_model = keras.models.load_model(temp_file)
 
     assert loaded_model.summary() == keras_model.summary()
 
 
 def test_save_tflite_model(tmp_path: Path, test_keras_model: Path) -> None:
     """Test saving TensorFlow Lite model."""
-    keras_model = tf.keras.models.load_model(str(test_keras_model))
+    keras_model = keras.models.load_model(str(test_keras_model))
 
     temp_file = tmp_path / "test_model_saving.tflite"
     convert_to_tflite(keras_model, output_path=temp_file)

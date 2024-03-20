@@ -10,7 +10,7 @@ from typing import Any
 from typing import cast
 
 import pytest
-import tensorflow as tf
+from keras.api._v2 import keras  # Temporary workaround for now: MLIA-1107
 
 from mlia.core.errors import ConfigurationError
 from mlia.nn.rewrite.core.rewrite import RewriteConfiguration
@@ -175,7 +175,7 @@ def test_get_optimizer(
         ) or isinstance(config, RewriteConfiguration):
             model = test_tflite_model
         else:
-            model = tf.keras.models.load_model(str(test_keras_model))
+            model = keras.models.load_model(str(test_keras_model))
         optimizer = get_optimizer(model, config)
         assert isinstance(optimizer, expected_type)
         assert optimizer.optimization_config() == expected_config

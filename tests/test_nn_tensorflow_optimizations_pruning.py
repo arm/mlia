@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Test for module optimizations/pruning."""
 from __future__ import annotations
@@ -6,7 +6,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-import tensorflow as tf
+from keras.api._v2 import keras  # Temporary workaround for now: MLIA-1107
 from numpy.core.numeric import isclose
 
 from mlia.nn.tensorflow.optimizations.pruning import Pruner
@@ -47,7 +47,7 @@ def _test_check_sparsity(base_tflite_metrics: TFLiteMetrics) -> None:
 
 
 def _get_tflite_metrics(
-    path: Path, tflite_fn: str, model: tf.keras.Model
+    path: Path, tflite_fn: str, model: keras.Model
 ) -> TFLiteMetrics:
     """Save model as TFLiteModel and return metrics."""
     temp_file = path / tflite_fn
@@ -70,7 +70,7 @@ def test_prune_simple_model_fully(
     batch_size = 1
     num_epochs = 1
 
-    base_model = tf.keras.models.load_model(str(test_keras_model))
+    base_model = keras.models.load_model(str(test_keras_model))
     train_model(base_model)
 
     base_tflite_metrics = _get_tflite_metrics(
