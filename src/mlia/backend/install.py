@@ -16,7 +16,8 @@ from typing import Optional
 from typing import Union
 
 from mlia.backend.repo import get_backend_repository
-from mlia.utils.download import DownloadArtifact
+from mlia.utils.download import download
+from mlia.utils.download import DownloadConfig
 from mlia.utils.filesystem import all_files_exist
 from mlia.utils.filesystem import temp_directory
 from mlia.utils.filesystem import working_directory
@@ -45,10 +46,18 @@ InstallationType = Union[InstallFromPath, DownloadAndInstall]
 class Installation(ABC):
     """Base class for the installation process of the backends."""
 
-    def __init__(self, name: str, description: str) -> None:
+    def __init__(
+        self, name: str, description: str, dependencies: list[str] | None = None
+    ) -> None:
         """Init the installation."""
+        assert not dependencies or name not in dependencies, (
+            f"Invalid backend configuration: Backend '{name}' has itself as a "
+            "dependency! The backend source code needs to be fixed."
+        )
+
         self.name = name
         self.description = description
+        self.dependencies = dependencies if dependencies else []
 
     @property
     @abstractmethod
@@ -89,21 +98,22 @@ BackendInstaller = Callable[[bool, Path], Path]
 class BackendInstallation(Installation):
     """Backend installation."""
 
-    def __init__(
+    def __init__(  # pylint: disable=too-many-arguments
         self,
         name: str,
         description: str,
         fvp_dir_name: str,
-        download_artifact: DownloadArtifact | None,
+        download_config: DownloadConfig | None,
         supported_platforms: list[str] | None,
         path_checker: PathChecker,
         backend_installer: BackendInstaller | None,
+        dependencies: list[str] | None = None,
     ) -> None:
         """Init the backend installation."""
-        super().__init__(name, description)
+        super().__init__(name, description, dependencies)
 
         self.fvp_dir_name = fvp_dir_name
-        self.download_artifact = download_artifact
+        self.download_config = download_config
         self.supported_platforms = supported_platforms
         self.path_checker = path_checker
         self.backend_installer = backend_installer
@@ -125,7 +135,7 @@ class BackendInstallation(Installation):
     def supports(self, install_type: InstallationType) -> bool:
         """Return true if backends supported type of the installation."""
         if isinstance(install_type, DownloadAndInstall):
-            return self.download_artifact is not None
+            return self.download_config is not None
 
         if isinstance(install_type, InstallFromPath):
             return self.path_checker(install_type.backend_path) is not None
@@ -135,10 +145,10 @@ class BackendInstallation(Installation):
     def install(self, install_type: InstallationType) -> None:
         """Install the backend."""
         if isinstance(install_type, DownloadAndInstall):
-            assert self.download_artifact is not None, "No artifact provided"
+            assert self.download_config is not None, "No artifact provided"
 
             self._download_and_install(
-                self.download_artifact, install_type.eula_agreement
+                self.download_config, install_type.eula_agreement
             )
         elif isinstance(install_type, InstallFromPath):
             backend_info = self.path_checker(install_type.backend_path)
@@ -207,13 +217,17 @@ class BackendInstallation(Installation):
                     ex,
                 )
 
-    def _download_and_install(
-        self, download_artifact: DownloadArtifact, eula_agrement: bool
-    ) -> None:
+    def _download_and_install(self, cfg: DownloadConfig, eula_agrement: bool) -> None:
         """Download and install the backend."""
         with temp_directory() as tmpdir:
             try:
-                dest = download_artifact.download_to(tmpdir)
+                dest = tmpdir / cfg.filename
+                download(
+                    dest=dest,
+                    cfg=cfg,
+                    show_progress=True,
+                )
+
             except Exception as err:
                 raise RuntimeError("Unable to download backend artifact.") from err
 

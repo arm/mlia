@@ -15,12 +15,12 @@ class CortexAConfiguration(TargetProfile):
     def __init__(self, **kwargs: Any) -> None:
         """Init Cortex-A target configuration."""
         target = kwargs["target"]
-        super().__init__(target)
+        backend_config = kwargs.get("backend")
+        super().__init__(target, backend_config)
 
-        self.backend_config = kwargs.get("backend")
-        self.armnn_tflite_delegate_version = kwargs["backend"]["armnn-tflite-delegate"][
-            "version"
-        ]
+        self.armnn_tflite_delegate_version = self.backend_config[
+            "armnn-tflite-delegate"
+        ]["version"]
 
     def verify(self) -> None:
         """Check the parameters."""

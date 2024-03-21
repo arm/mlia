@@ -6,6 +6,7 @@ from __future__ import annotations
 import logging
 import subprocess  # nosec
 from dataclasses import dataclass
+from functools import partial
 from pathlib import Path
 from typing import Callable
 from typing import Generator
@@ -43,6 +44,18 @@ def command_output(command: Command) -> Generator[str, None, None]:
 
 
 OutputConsumer = Callable[[str], None]
+
+
+class OutputLogger:
+    """Log process output to the given logger with the given level."""
+
+    def __init__(self, logger_: logging.Logger, level: int = logging.DEBUG) -> None:
+        """Create log function with the appropriate log level set."""
+        self.log_fn = partial(logger_.log, level)
+
+    def __call__(self, line: str) -> None:
+        """Redirect output to the logger."""
+        self.log_fn(line)
 
 
 def process_command_output(

@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Module for installation process."""
 from __future__ import annotations
@@ -188,6 +188,33 @@ class DefaultInstallationManager(InstallationManager, InstallationFiltersMixin):
             logger.info("%s installation canceled.", installation.name)
             return
 
+        for dependency in installation.dependencies:
+            deps = self.find_by_name(dependency)
+            if not deps:
+                raise ValueError(
+                    f"Backend {installation.name} depends on "
+                    f"unknown backend '{dependency}'."
+                )
+            missing_deps = [dep for dep in deps if not dep.already_installed]
+            if missing_deps:
+                proceed = self.noninteractive or yes(
+                    "The following dependencies are not installed: "
+                    f"{[dep.name for dep in missing_deps]}. "
+                    "Continue installation anyway?"
+                )
+                logger.warning(
+                    "Installing backend %s with the following dependencies "
+                    "missing: %s",
+                    installation.name,
+                    missing_deps,
+                )
+                if not proceed:
+                    logger.info(
+                        "%s installation canceled due to missing dependencies.",
+                        installation.name,
+                    )
+                    return
+
         if installation.already_installed and force:
             logger.info(
                 "Force installing %s, so delete the existing "
@@ -254,16 +281,37 @@ class DefaultInstallationManager(InstallationManager, InstallationFiltersMixin):
         installations = self.already_installed(backend_name)
 
         if not installations:
-            raise ConfigurationError(f"Backend '{backend_name}' is not installed")
+            raise ConfigurationError(f"Backend '{backend_name}' is not installed.")
 
         if len(installations) != 1:
             raise InternalError(
-                f"More than one installed backend with name {backend_name} found"
+                f"More than one installed backend with name {backend_name} found."
             )
 
         installation = installations[0]
-        installation.uninstall()
 
+        dependent_backends = [
+            dep.name
+            for dep in self.installations
+            if dep.name in installation.dependencies
+        ]
+        if dependent_backends:
+            msg = (
+                f"The following backends depend on '{installation.name}' which "
+                f"you are about to uninstall: {dependent_backends}",
+            )
+            proceed = self.noninteractive or yes(
+                f"{msg}. Continue uninstalling anyway?"
+            )
+            logger.warning(msg)
+            if not proceed:
+                logger.info(
+                    "Uninstalling %s canceled due to dependencies.",
+                    installation.name,
+                )
+                return
+
+        installation.uninstall()
         logger.info("%s successfully uninstalled.", installation.name)
 
     def backend_installed(self, backend_name: str) -> bool:

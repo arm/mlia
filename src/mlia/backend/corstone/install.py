@@ -19,7 +19,7 @@ from mlia.backend.install import CompoundPathChecker
 from mlia.backend.install import Installation
 from mlia.backend.install import PackagePathChecker
 from mlia.backend.install import StaticPathChecker
-from mlia.utils.download import DownloadArtifact
+from mlia.utils.download import DownloadConfig
 from mlia.utils.filesystem import working_directory
 
 
@@ -159,8 +159,6 @@ def get_corstone_installation(corstone_name: str) -> Installation:
     archive = corstone_fvp.archive
     sha256_hash = corstone_fvp.sha256_hash
     url = ARM_ECOSYSTEM_FVP_URL + archive
-    filename = archive.split("/")[-1]
-    version = corstone_fvp.get_fvp_version()
     expected_files_fvp = corstone_fvp.fvp_expected_files
     expected_files_vht = corstone_fvp.get_vht_expected_files()
     backend_subfolder = expected_files_fvp[0].split("FVP")[0]
@@ -169,11 +167,8 @@ def get_corstone_installation(corstone_name: str) -> Installation:
         name=corstone_name,
         description=corstone_name.capitalize() + " FVP",
         fvp_dir_name=corstone_name.replace("-", "_"),
-        download_artifact=DownloadArtifact(
-            name=corstone_name.capitalize() + " FVP",
+        download_config=DownloadConfig(
             url=url,
-            filename=filename,
-            version=version,
             sha256_hash=sha256_hash,
         ),
         supported_platforms=["Linux"],

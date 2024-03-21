@@ -3,6 +3,7 @@
 """Tests for installation manager."""
 from __future__ import annotations
 
+from functools import partial
 from pathlib import Path
 from typing import Any
 from unittest.mock import call
@@ -23,6 +24,7 @@ from mlia.core.errors import InternalError
 def get_default_installation_manager_mock(
     name: str,
     already_installed: bool = False,
+    dependencies: list[str] | None = None,
 ) -> MagicMock:
     """Get mock instance for DefaultInstallationManager."""
     mock = MagicMock(spec=DefaultInstallationManager)
@@ -30,6 +32,7 @@ def get_default_installation_manager_mock(
     props = {
         "name": name,
         "already_installed": already_installed,
+        "dependencies": dependencies if dependencies else [],
     }
     for prop, value in props.items():
         setattr(type(mock), prop, PropertyMock(return_value=value))
@@ -49,6 +52,7 @@ def get_installation_mock(
     already_installed: bool = False,
     could_be_installed: bool = False,
     supported_install_type: type | tuple | None = None,
+    dependencies: list[str] | None = None,
 ) -> MagicMock:
     """Get mock instance for the installation."""
     mock = MagicMock(spec=Installation)
@@ -65,6 +69,7 @@ def get_installation_mock(
         "name": name,
         "already_installed": already_installed,
         "could_be_installed": could_be_installed,
+        "dependencies": dependencies if dependencies else [],
     }
     for prop, value in props.items():
         setattr(type(mock), prop, PropertyMock(return_value=value))
@@ -72,38 +77,45 @@ def get_installation_mock(
     return mock
 
 
-def _already_installed_mock() -> MagicMock:
-    return get_installation_mock(
-        name="already_installed",
-        already_installed=True,
-        supported_install_type=(DownloadAndInstall, InstallFromPath),
-    )
+_already_installed_mock = partial(
+    get_installation_mock,
+    name="already_installed",
+    already_installed=True,
+    supported_install_type=(DownloadAndInstall, InstallFromPath),
+)
 
 
-def _ready_for_installation_mock() -> MagicMock:
-    return get_installation_mock(
-        name="ready_for_installation",
-        already_installed=False,
-        could_be_installed=True,
-    )
+_ready_for_installation_mock = partial(
+    get_installation_mock,
+    name="ready_for_installation",
+    already_installed=False,
+    could_be_installed=True,
+)
 
 
-def _could_be_downloaded_and_installed_mock() -> MagicMock:
-    return get_installation_mock(
-        name="could_be_downloaded_and_installed",
-        already_installed=False,
-        could_be_installed=True,
-        supported_install_type=DownloadAndInstall,
-    )
+_could_be_downloaded_and_installed_mock = partial(
+    get_installation_mock,
+    name="could_be_downloaded_and_installed",
+    already_installed=False,
+    could_be_installed=True,
+    supported_install_type=DownloadAndInstall,
+)
 
 
-def _could_be_installed_from_mock() -> MagicMock:
-    return get_installation_mock(
-        name="could_be_installed_from",
-        already_installed=False,
-        could_be_installed=True,
-        supported_install_type=InstallFromPath,
-    )
+_could_be_installed_from_mock = partial(
+    get_installation_mock,
+    name="could_be_installed_from",
+    already_installed=False,
+    could_be_installed=True,
+    supported_install_type=InstallFromPath,
+)
+
+_already_installed_dep_mock = partial(
+    get_installation_mock,
+    name="already_installed_dep",
+    already_installed=True,
+    supported_install_type=(DownloadAndInstall, InstallFromPath),
+)
 
 
 def get_installation_manager(
@@ -114,11 +126,21 @@ def get_installation_manager(
 ) -> DefaultInstallationManager:
     """Get installation manager instance."""
     if not noninteractive:
-        monkeypatch.setattr(
-            "mlia.backend.manager.yes", MagicMock(return_value=yes_response)
+        return get_interactive_installation_manager(
+            installations, monkeypatch, MagicMock(return_value=yes_response)
         )
 
     return DefaultInstallationManager(installations, noninteractive=noninteractive)
+
+
+def get_interactive_installation_manager(
+    installations: list[Any],
+    monkeypatch: pytest.MonkeyPatch,
+    mock_interaction: MagicMock,
+) -> DefaultInstallationManager:
+    """Get and interactive installation manager instance using the given mock."""
+    monkeypatch.setattr("mlia.backend.manager.yes", mock_interaction)
+    return DefaultInstallationManager(installations, noninteractive=False)
 
 
 def test_installation_manager_filtering() -> None:
@@ -337,3 +359,74 @@ def test_show_env_details(monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch,
     )
     manager.show_env_details()
+
+
+@pytest.mark.parametrize(
+    "dependency",
+    (
+        _ready_for_installation_mock(),
+        _already_installed_mock(),
+    ),
+)
+@pytest.mark.parametrize("yes_response", (True, False))
+def test_could_be_installed_with_dep(
+    dependency: MagicMock,
+    yes_response: bool,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test installation with a dependency."""
+    install_mock = _could_be_installed_from_mock(dependencies=[dependency.name])
+
+    yes_mock = MagicMock(return_value=yes_response)
+    manager = get_interactive_installation_manager(
+        [install_mock, dependency], monkeypatch, yes_mock
+    )
+    manager.install_from(tmp_path, install_mock.name)
+
+    if yes_response:
+        install_mock.install.assert_called_once()
+    else:
+        install_mock.install.assert_not_called()
+    install_mock.uninstall.assert_not_called()
+
+    dependency.install.assert_not_called()
+    dependency.uninstall.assert_not_called()
+
+
+def test_install_with_unknown_dep(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test installation with an unknown dependency."""
+    install_mock = _could_be_installed_from_mock(dependencies=["UNKNOWN_BACKEND"])
+
+    manager = get_installation_manager(False, [install_mock], monkeypatch)
+    with pytest.raises(ValueError):
+        manager.install_from(tmp_path, install_mock.name)
+
+    install_mock.install.assert_not_called()
+    install_mock.uninstall.assert_not_called()
+
+
+@pytest.mark.parametrize("yes_response", (True, False))
+def test_uninstall_with_dep(
+    yes_response: bool, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Test uninstalling a backend with a dependency."""
+    dependency = _already_installed_dep_mock()
+    install_mock = _already_installed_mock(dependencies=[dependency.name])
+    yes_mock = MagicMock(return_value=yes_response)
+    manager = get_interactive_installation_manager(
+        [install_mock, dependency], monkeypatch, yes_mock
+    )
+    manager.uninstall(install_mock.name)
+
+    install_mock.install.assert_not_called()
+    if yes_response:
+        install_mock.uninstall.assert_called_once()
+    else:
+        install_mock.uninstall.assert_not_called()
+
+    dependency.install.assert_not_called()
+    dependency.uninstall.assert_not_called()

@@ -20,6 +20,7 @@ from mlia.backend.install import InstallFromPath
 from mlia.backend.install import PackagePathChecker
 from mlia.backend.install import StaticPathChecker
 from mlia.backend.repo import BackendRepository
+from mlia.utils.download import DownloadConfig
 
 
 @pytest.fixture(name="backend_repo")
@@ -104,11 +105,9 @@ def test_backend_installation_from_path(
 
 
 def test_backend_installation_download_and_install(
-    tmp_path: Path, backend_repo: MagicMock
+    tmp_path: Path, backend_repo: MagicMock, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Test methods of backend installation."""
-    download_artifact_mock = MagicMock()
-
     tmp_archive = tmp_path.joinpath("sample.tgz")
     sample_file = tmp_path.joinpath("sample.txt")
     sample_file.touch()
@@ -116,13 +115,17 @@ def test_backend_installation_download_and_install(
     with tarfile.open(tmp_archive, "w:gz") as archive:
         archive.add(sample_file)
 
-    download_artifact_mock.download_to.return_value = tmp_archive
+    monkeypatch.setattr("mlia.backend.install.download", MagicMock())
+    monkeypatch.setattr(
+        "mlia.utils.download.DownloadConfig.filename",
+        tmp_archive,
+    )
 
     installation = BackendInstallation(
         "sample_backend",
         "Sample backend",
         "sample_backend",
-        download_artifact_mock,
+        DownloadConfig(url="NOT_USED", sha256_hash="NOT_USED"),
         None,
         lambda path: BackendInfo(path, copy_source=False),
         lambda eula_agreement, path: path,

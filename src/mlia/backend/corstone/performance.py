@@ -15,6 +15,7 @@ from mlia.backend.errors import BackendExecutionFailed
 from mlia.backend.repo import get_backend_repository
 from mlia.utils.filesystem import get_mlia_resources
 from mlia.utils.proc import Command
+from mlia.utils.proc import OutputLogger
 from mlia.utils.proc import process_command_output
 
 
@@ -187,15 +188,12 @@ def get_metrics(
         ) from err
 
     output_parser = GenericInferenceOutputParser()
-
-    def redirect_to_log(line: str) -> None:
-        """Redirect FVP output to the logger."""
-        logger.debug(line.strip())
+    output_logger = OutputLogger(logger)
 
     try:
         process_command_output(
             command,
-            [output_parser, redirect_to_log],
+            [output_parser, output_logger],
         )
     except subprocess.CalledProcessError as err:
         raise BackendExecutionFailed("Backend execution failed.") from err

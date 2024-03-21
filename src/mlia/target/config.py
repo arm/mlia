@@ -85,9 +85,11 @@ T = TypeVar("T", bound="TargetProfile")
 class TargetProfile(ABC):
     """Base class for target profiles."""
 
-    def __init__(self, target: str) -> None:
+    def __init__(self, target: str, backend_config: dict | None = None) -> None:
         """Init TargetProfile instance with the target name."""
         self.target = target
+        # Load backend config(s) to be handled by the backend(s) later.
+        self.backend_config = {} if backend_config is None else backend_config
 
     @classmethod
     def load(cls: type[T], path: str | Path) -> T:
