@@ -47,7 +47,7 @@ def test_configure_and_get_cortex_a_advisor(test_tflite_model: Path) -> None:
                     },
                 ]
             ],
-            "training_parameters": [None],
+            "training_parameters": None,
         },
     }
 

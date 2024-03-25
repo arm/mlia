@@ -47,7 +47,7 @@ def test_configure_and_get_tosa_advisor(
                     },
                 ]
             ],
-            "training_parameters": [None],
+            "training_parameters": None,
         },
         "tosa_inference_advisor": {
             "model": str(test_tflite_model),
