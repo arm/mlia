@@ -143,19 +143,19 @@ from mlia.nn.tensorflow.optimizations.pruning import PruningConfiguration
         (
             OptimizationSettings(
                 optimization_type="rewrite",
-                optimization_target="fully_connected",  # type: ignore
+                optimization_target="fully-connected",  # type: ignore
                 layers_to_optimize=None,
                 dataset=None,
             ),
             does_not_raise(),
             RewritingOptimizer,
-            "rewrite: fully_connected",
+            "rewrite: fully-connected",
         ),
         (
-            RewriteConfiguration("fully_connected"),
+            RewriteConfiguration("fully-connected"),
             does_not_raise(),
             RewritingOptimizer,
-            "rewrite: fully_connected",
+            "rewrite: fully-connected",
         ),
     ],
 )
@@ -192,7 +192,7 @@ def test_get_optimizer_training_parameters(
     """Test function get_optimzer with various combinations of parameters."""
     config = OptimizationSettings(
         optimization_type="rewrite",
-        optimization_target="fully_connected",  # type: ignore
+        optimization_target="fully-connected",  # type: ignore
         layers_to_optimize=None,
         dataset=None,
     )

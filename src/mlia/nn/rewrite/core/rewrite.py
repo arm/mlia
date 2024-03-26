@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2023-2024, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Contains class RewritingOptimizer to replace a subgraph/layer of a model."""
 from __future__ import annotations
@@ -113,7 +113,7 @@ class RewritingOptimizer(Optimizer):
     registry = RewriteRegistry(
         [
             DynamicallyLoadedRewrite(
-                "fully_connected", "mlia.nn.rewrite.library.fc_layer.get_keras_model"
+                "fully-connected", "mlia.nn.rewrite.library.fc_layer.get_keras_model"
             )
         ]
     )

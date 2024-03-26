@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2024, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2023-2024, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for module mlia.nn.rewrite.core.rewrite."""
 from __future__ import annotations
@@ -41,14 +41,14 @@ def test_rewrite() -> None:
 @pytest.mark.parametrize(
     "rewrite_name, expected_error",
     [
-        ("fully_connected", does_not_raise()),
+        ("fully-connected", does_not_raise()),
         ("random", does_not_raise()),
     ],
 )
 def test_rewrite_configuration(
     test_tflite_model_fp32: Path, rewrite_name: str, expected_error: Any
 ) -> None:
-    """Test get_rewrite function only supports rewrite type fully_connected."""
+    """Test get_rewrite function only supports rewrite type fully-connected."""
     with expected_error:
         config_obj = RewriteConfiguration(
             rewrite_name,
@@ -67,9 +67,9 @@ def test_rewriting_optimizer(
     test_tflite_model_fp32: Path,
     test_tfrecord_fp32: Path,
 ) -> None:
-    """Test fc_layer rewrite process with rewrite type fully_connected."""
+    """Test fc_layer rewrite process with rewrite type fully-connected."""
     config_obj = RewriteConfiguration(
-        "fully_connected",
+        "fully-connected",
         ["sequential/flatten/Reshape", "StatefulPartitionedCall:0"],
         test_tfrecord_fp32,
         train_params=MockTrainingParameters(),
@@ -100,7 +100,7 @@ def test_register_rewrite_function() -> None:
 
 def test_builtin_rewrite_names() -> None:
     """Test if all builtin rewrites are properly registered and returned."""
-    assert RewritingOptimizer.builtin_rewrite_names() == ["fully_connected"]
+    assert RewritingOptimizer.builtin_rewrite_names() == ["fully-connected"]
 
 
 def test_rewrite_function_autoload() -> None:
@@ -146,7 +146,7 @@ def test_rewrite_configuration_train_params(
     )
 
     config_obj = RewriteConfiguration(
-        "fully_connected",
+        "fully-connected",
         ["sequential/flatten/Reshape", "StatefulPartitionedCall:0"],
         test_tfrecord_fp32,
         train_params=train_params,

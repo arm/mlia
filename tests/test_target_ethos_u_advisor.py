@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for Ethos-U MLIA module."""
 from __future__ import annotations
@@ -40,7 +40,7 @@ def test_advisor_metadata() -> None:
             [
                 {
                     "optimization_type": "rewrite",
-                    "optimization_target": "fully_connected",
+                    "optimization_target": "fully-connected",
                     "layers_to_optimize": [
                         "MobileNet/avg_pool/AvgPool",
                         "MobileNet/fc1/BiasAdd",

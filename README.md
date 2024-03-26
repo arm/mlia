@@ -204,7 +204,7 @@ mlia optimize ~/models/ds_cnn_large_fp32.tflite \
     --target-profile ethos-u55-256 \
     --rewrite \
     --dataset input.tfrec \
-    --rewrite-target fully_connected \
+    --rewrite-target fully-connected \
     --rewrite-start MobileNet/avg_pool/AvgPool \
     --rewrite-end MobileNet/fc1/BiasAdd
 ```
@@ -226,7 +226,7 @@ mlia optimize ~/models/ds_cnn_large_fp32.tflite \
     --optimization-profile optimization \
     --rewrite \
     --dataset input.tfrec \
-    --rewrite-target fully_connected \
+    --rewrite-target fully-connected \
     --rewrite-start MobileNet/avg_pool/AvgPool \
     --rewrite-end MobileNet/fc1/BiasAdd_
 ```

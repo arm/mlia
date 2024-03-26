@@ -77,7 +77,7 @@ def test_performance_unknown_target(
             None,
             None,
             True,
-            "fully_connected",
+            "fully-connected",
             "sequential/flatten/Reshape",
             "StatefulPartitionedCall:0",
             does_not_raise(),
@@ -90,7 +90,7 @@ def test_performance_unknown_target(
             0.5,
             None,
             True,
-            "fully_connected",
+            "fully-connected",
             "sequential/flatten/Reshape",
             "StatefulPartitionedCall:0",
             pytest.raises(
@@ -126,7 +126,7 @@ def test_performance_unknown_target(
                 Exception,
                 match=re.escape(
                     "Invalid rewrite target: 'random'. "
-                    "Supported rewrites: ['fully_connected']"
+                    "Supported rewrites: ['fully-connected']"
                 ),
             ),
         ],
