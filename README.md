@@ -215,9 +215,26 @@ Training parameters for rewrites can be specified.
 
 There are a number of predefined profiles:
 
-|    Name      | Batch Size |  LR  | Show Progress | Steps | LR Schedule | Num Procs | Num Threads | Checkpoints |
-| :----------: | :--------: | :--: | :-----------: | :---: | :---------: | :-------: | :---------: | :---------: |
-| optimization |     32     | 1e-3 |      True     | 48000 |   "cosine"  |     1     |      0      |     None    |
+|    Name      | Batch Size |  LR  | Show Progress | Steps | LR Schedule | Num Procs | Num Threads | Checkpoints |  Augmentations  |
+| :----------: | :--------: | :--: | :-----------: | :---: | :---------: | :-------: | :---------: | :---------: | :-------------: |
+| optimization |     32     | 1e-3 |      True     | 48000 |   "cosine"  |     1     |      0      |     None    |    "gaussian"   |
+
+|               Name               | Batch Size |  LR  | Show Progress | Steps | LR Schedule | Num Procs | Num Threads | Checkpoints | Augmentations - gaussian_strength | Augmentations - mixup_strength |
+| :------------------------------: | :--------: | :--: | :-----------: | :---: | :---------: | :-------: | :---------: | :---------: | :-------------------------------: | :----------------------------: |
+| optimization_custom_augmentation |     32     | 1e-3 |      True     | 48000 |   "cosine"  |     1     |      0      |     None    |               0.1                 |                0.1             |
+
+The augmentations consist of 2 parameters: mixup strength and gaussian strength.
+
+Augmenations can be selected from a number of pre-defined profiles (see the table below) or each individual parameter can be chosen (see optimization_custom_augmentation above for an example):
+
+|         Name         | MixUp Strength | Gaussian Strength |
+| :------------------: | :------------: | :---------------: |
+|         "none"       |       None     |        None       |
+|         "gaussian"   |       None     |        1.0        |
+|         "mixup"      |       1.0      |        None       |
+|         "mixout"     |       1.6      |        None       |
+| "mix_gaussian_large" |       2.0      |        1.0        |
+| "mix_gaussian_small" |       1.6      |        0.3        |
 
 ```bash
 ##### An example for using optimization Profiles
