@@ -12,7 +12,7 @@ from mlia.backend.argo.config import ArgoConfig
 from mlia.backend.argo.performance import ArgoPerformanceMetrics
 from mlia.backend.argo.performance import OperatorPerformanceData
 from mlia.backend.ngp_graph_compiler.config import NGPGraphCompilerConfig
-from mlia.backend.ngp_graph_compiler.output_parsing import NGPPerformanceDatabase
+from mlia.backend.ngp_graph_compiler.output_parsing import NGPPerformanceDatabaseParser
 from mlia.backend.ngp_graph_compiler.performance import NGPGraphCompilerOutputFiles
 from mlia.backend.ngp_graph_compiler.performance import (
     NGPGraphCompilerPerformanceMetrics,
@@ -120,13 +120,16 @@ def test_ngp_graph_compiler_reporting(monkeypatch: pytest.MonkeyPatch) -> None:
     """Test function hydra_formatters() with NGP performance data."""
 
     contents = """
+    <![CDATA[
     "id", "opCycles", "totalCycles", "memoryName;readBytes;writeBytes;trafficCycles", "sectionName;hwUtil"
     26, 18, 212, Undefined;0;0;0;Internal;0;0;0;L1;0;0;0;L2;0;0;0;SystemCache;0;0;0;DRAM;320;12;10;, OutputWriter;1;VectorEngine;0.25;VectorEngine;0.25;VectorEngine;0.25;TransformUnit;0.25;TransformUnit;0.25;InputReader;0.0625;InputReader;0.0625;InputReader;0.25;
     25, 4, 13, Undefined;0;0;0;Internal;0;0;0;L1;0;4;0;L2;0;0;0;SystemCache;0;0;0;DRAM;128;4;4;, OutputWriter;0.0625;VectorEngine;0.125;VectorEngine;0.125;VectorEngine;0.125;VectorEngine;0.125;InputReader;0.0625;InputReader;0.0625;
+    ]]>
     """.strip()
 
-    performance_db = NGPPerformanceDatabase()
-    performance_db.records = performance_db.parse_contents(contents)
+    performance_db_parser = NGPPerformanceDatabaseParser()
+    performance_db_parser.raw_xmlish = contents
+    performance_db_parser.parse_performance_database()
 
     sys_cfg, compiler_cfg = Path("system-config"), Path("compiler-config")
     cfg = NGPGraphCompilerConfig(sys_cfg, compiler_cfg)
@@ -144,7 +147,7 @@ def test_ngp_graph_compiler_reporting(monkeypatch: pytest.MonkeyPatch) -> None:
             ignored_path,
             ignored_path,
         ),
-        performance_db=performance_db,
+        performance_db_parser=performance_db_parser,
     )
 
     monkeypatch.setattr("mlia.utils.console.Console", partial(Console, width=80))

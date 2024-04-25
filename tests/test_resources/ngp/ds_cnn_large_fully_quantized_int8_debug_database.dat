@@ -1,0 +1,286 @@
+<?xml version='1.0' encoding='utf-8' ?>
+<regor_version>0.1.0</regor_version>
+<table name="tosa_op_id">
+<![CDATA[
+"id", "api_labels"
+336, conv2d_spirv_id_92;
+337, rescale_spirv_id_103;
+338, depthwise_conv2d_spirv_id_109;
+339, rescale_spirv_id_114;
+340, conv2d_spirv_id_116;
+341, rescale_spirv_id_119;
+342, depthwise_conv2d_spirv_id_121;
+343, rescale_spirv_id_124;
+344, conv2d_spirv_id_125;
+345, rescale_spirv_id_128;
+346, depthwise_conv2d_spirv_id_129;
+347, rescale_spirv_id_132;
+348, conv2d_spirv_id_133;
+349, rescale_spirv_id_136;
+350, depthwise_conv2d_spirv_id_137;
+351, rescale_spirv_id_140;
+352, conv2d_spirv_id_141;
+353, rescale_spirv_id_144;
+354, depthwise_conv2d_spirv_id_145;
+355, rescale_spirv_id_148;
+356, conv2d_spirv_id_149;
+357, rescale_spirv_id_152;
+358, avgpool2d_spirv_id_156;
+410, avgpool2d_spirv_id_156;
+359, reshape_spirv_id_160;
+413, fully_connected_spirv_id_163;
+361, rescale_spirv_id_171;
+362, rescale_spirv_id_174;
+363, reduce_max_spirv_id_175;
+364, sub_spirv_id_176;
+365, rescale_spirv_id_181;
+366, table_spirv_id_182;
+367, table_spirv_id_183;
+370, logical_left_shift_spirv_id_186;
+371, logical_left_shift_spirv_id_187;
+374, add_spirv_id_190;
+368, table_spirv_id_184;
+372, logical_left_shift_spirv_id_188;
+375, add_spirv_id_191;
+369, table_spirv_id_185;
+373, ars_spirv_id_189;
+440, ars_spirv_id_189;
+376, add_spirv_id_192;
+377, ars_spirv_id_193;
+443, ars_spirv_id_193;
+378, reduce_sum_spirv_id_194;
+379, clz_spirv_id_195;
+400, sub_spirv_id_218;
+380, sub_spirv_id_196;
+381, logical_left_shift_spirv_id_197;
+382, mul_spirv_id_199;
+446, mul_spirv_id_199;
+383, add_spirv_id_200;
+384, mul_spirv_id_201;
+449, mul_spirv_id_201;
+385, sub_spirv_id_202;
+386, mul_spirv_id_203;
+452, mul_spirv_id_203;
+387, mul_spirv_id_204;
+388, add_spirv_id_205;
+389, mul_spirv_id_206;
+455, mul_spirv_id_206;
+390, sub_spirv_id_207;
+391, mul_spirv_id_208;
+458, mul_spirv_id_208;
+392, mul_spirv_id_209;
+393, add_spirv_id_210;
+394, mul_spirv_id_211;
+461, mul_spirv_id_211;
+395, sub_spirv_id_212;
+396, mul_spirv_id_213;
+464, mul_spirv_id_213;
+397, mul_spirv_id_214;
+398, add_spirv_id_215;
+399, mul_spirv_id_217;
+467, mul_spirv_id_217;
+401, ars_spirv_id_219;
+470, ars_spirv_id_219;
+402, rescale_spirv_id_220;
+]]>
+</table>
+<table name="fused_op_id">
+<![CDATA[
+"id", "tosa_op_ids"
+533, 336;
+559, 337;
+535, 338;
+561, 339;
+537, 340;
+563, 341;
+539, 342;
+565, 343;
+541, 344;
+567, 345;
+543, 346;
+569, 347;
+545, 348;
+571, 349;
+547, 350;
+573, 351;
+549, 352;
+575, 353;
+551, 354;
+577, 355;
+553, 356;
+579, 357;
+555, 358;
+581, 410;
+583, 359;
+557, 413;
+585, 361;
+587, 362;
+589, 363;
+471, 364;365;
+591, 366;
+593, 367;
+511, 370;
+513, 371;
+517, 374;
+595, 368;
+515, 372;
+519, 375;
+597, 369;
+473, 373;440;
+521, 376;
+475, 377;443;
+599, 378;
+601, 379;
+507, 400;
+477, 380;
+523, 381;
+479, 382;446;
+525, 383;
+481, 384;449;
+483, 385;
+485, 386;452;
+487, 387;
+527, 388;
+489, 389;455;
+491, 390;
+493, 391;458;
+495, 392;
+529, 393;
+497, 394;461;
+499, 395;
+501, 396;464;
+503, 397;
+531, 398;
+505, 399;467;
+509, 401;470;
+603, 402;
+]]>
+</table>
+<table name="chain_op_id">
+<![CDATA[
+"id", "fused_op_ids"
+605, 533;559;
+607, 535;561;
+609, 537;563;
+611, 539;565;
+613, 541;567;
+615, 543;569;
+617, 545;571;
+619, 547;573;
+621, 549;575;
+623, 551;577;
+625, 553;579;
+627, 555;581;583;
+629, 557;585;
+907, 587;
+909, 589;
+911, 471;
+639, 591;593;511;513;517;
+663, 595;515;519;
+675, 597;473;521;
+749, 475;599;601;507;
+771, 477;523;
+787, 479;525;481;
+813, 483;485;487;527;
+839, 489;491;493;
+861, 495;529;497;
+885, 499;501;503;531;
+901, 505;509;603;
+]]>
+</table>
+<table name="cascade_op_id">
+<![CDATA[
+"id", "chain_op_ids"
+1695, 605;
+1693, 607;
+1691, 609;
+1689, 611;
+1687, 613;
+1685, 615;
+1683, 617;
+1681, 619;
+1679, 621;
+1677, 623;
+1675, 625;
+1673, 627;
+1671, 629;
+1669, 907;
+1667, 909;
+1665, 911;
+1663, 639;
+1661, 663;
+1659, 675;
+1657, 749;
+1655, 771;
+1653, 787;
+1651, 813;
+1649, 839;
+1647, 861;
+1645, 885;
+1643, 901;
+]]>
+</table>
+<table name="stripe_op_id">
+<![CDATA[
+"id", "chain_op_id", "cascade_op_id"
+0, 605, 1695
+1, 607, 1693
+2, 609, 1691
+3, 611, 1689
+4, 613, 1687
+5, 615, 1685
+6, 617, 1683
+7, 619, 1681
+8, 621, 1679
+9, 623, 1677
+10, 625, 1675
+11, 627, 1673
+12, 629, 1671
+13, 907, 1669
+14, 909, 1667
+15, 911, 1665
+16, 639, 1663
+17, 663, 1661
+18, 675, 1659
+19, 749, 1657
+20, 771, 1655
+21, 787, 1653
+22, 813, 1651
+23, 839, 1649
+24, 861, 1647
+25, 885, 1645
+26, 901, 1643
+]]>
+</table>
+<table name="command_streams_id">
+<![CDATA[
+"id", "stripe_op_indexs"
+1695, 0;
+1693, 1;
+1691, 2;
+1689, 3;
+1687, 4;
+1685, 5;
+1683, 6;
+1681, 7;
+1679, 8;
+1677, 9;
+1675, 10;
+1673, 11;
+1671, 12;
+1669, 13;
+1667, 14;
+1665, 15;
+1663, 16;
+1661, 17;
+1659, 18;
+1657, 19;
+1655, 20;
+1653, 21;
+1651, 22;
+1649, 23;
+1647, 24;
+1645, 25;
+1643, 26;
+]]>
+</table>

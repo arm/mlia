@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2023-2024, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: LicenseRef-LICENSE
 """Backend module for parsinng NGP Graph Compiler's output."""
 from __future__ import annotations
@@ -10,7 +10,15 @@ from itertools import islice
 from pathlib import Path
 from typing import Any
 from typing import Dict
+from typing import Iterator
 from typing import List
+
+PerformanceDatabaseContentsType = List[Dict[str, Any]]
+DebugDatabaseContentsType = Dict[str, Dict[str, List]]
+# All of the tables in the debug database have two columns,
+# except for one table that has three. This constant helps
+# us handle that case and error catching.
+MAX_NUM_DEBUG_DB_HEADERS = 3
 
 
 class ColumnParser:
@@ -73,31 +81,80 @@ class SubtableColumnParser(ColumnParser):
         return False
 
 
-PerformanceDatabaseContentsType = List[Dict[str, Any]]
+class NGPOutputParser:
+    """Parser for NGP output files with .dat extension.
 
+    Current versions of the graph compiler produce an
+    invalid XML (eg. a closing <table> element without the
+    starting one), so we read the file into string first.
+    Then we can use the string to extract relevant fields,
+    without expecting strict XML syntax or structure.
 
-class NGPPerformanceDatabase:
-    """Access the performance database produced by the NGP graph compiler."""
+    There is an open ticket to modify the format of these files.
+    """
 
     def __init__(self) -> None:
-        """Initialize the database."""
-        self._column_parsers: dict[str, ColumnParser] = {}
-        self.records: PerformanceDatabaseContentsType = []
+        """Initialize output parser for NGP files."""
+        self.db_path: Path
+        self.raw_xmlish: str = ""
+
+    def load(self, db_path: Path) -> str:
+        """Read NGP compiler's output into a string."""
+        self.db_path = db_path
+        with open(self.db_path, encoding="utf-8") as file:
+            self.raw_xmlish = file.read()
+
+        return self.raw_xmlish
+
+    def get_csv_reader(self, table_data: str) -> Iterator[list[str]]:
+        """Get file content into csv reader object."""
+        return csv.reader(table_data.splitlines())
+
+    def get_csv_headers(self, csv_reader: Iterator[list[str]]) -> list:
+        """Get headers of csv reader."""
+        return [self.extract_field(column) for column in next(csv_reader)]
+
+    def extract_field(self, field: str) -> str:
+        """Extract contents of text field in a CSV table."""
+        field = field.strip()
+        field = re.sub(r"^(['\"])(.*?)\1$", r"\2", field)
+
+        return field
+
+    def extract_cdata(self, xml_string: str) -> str:
+        """Extract CDATA section from a string."""
+        matches = re.findall(r"<!\[CDATA\[(.*?)\]\]>", xml_string, re.DOTALL)
+        if len(matches) != 1:
+            raise RuntimeError(f"No single CDATA section in:\n{xml_string}")
+
+        return str(matches[0]).strip()
+
+
+class NGPPerformanceDatabaseParser(NGPOutputParser):
+    """Parser for NGP performance database."""
+
+    def __init__(self) -> None:
+        """Initialise the performance database parser."""
+        super().__init__()
+        self.performance_db: PerformanceDatabaseContentsType = []
+        self.column_parsers: dict[str, ColumnParser] = {}
         self.register_sub_table(
             "Memory", "memoryName;readBytes;writeBytes;trafficCycles"
         )
         self.register_sub_table("Utilization", "sectionName;hwUtil")
+        self._column_parsers: dict[str, ColumnParser] = {}
 
-    def register_sub_table(self, title: str, header: str) -> None:
+    def register_sub_table(self, title: str, header: str) -> dict[str, ColumnParser]:
         """Add subtable column."""
-        self._column_parsers[header] = SubtableColumnParser(title, header)
+        self.column_parsers[header] = SubtableColumnParser(title, header)
+        return self.column_parsers
 
-    def parse_contents(self, perf_db_strings: str) -> PerformanceDatabaseContentsType:
+    def parse_performance_database(self) -> PerformanceDatabaseContentsType:
         """Parse contents of the performance DB.
 
         Returns a list of dicts (records), which in turn contain key value pairs
         to represent performance statistics for various operators.
-        Values under a record can be numberical, text, or list of other nested
+        Values under a record can be numerical, text, or list of other nested
         dicts (for various memory and HW utilization stats).
 
         Example:
@@ -118,51 +175,155 @@ class NGPPerformanceDatabase:
             ..
         ]
         """
-        reader = csv.reader(perf_db_strings.splitlines())
-        header = [extract_field(column) for column in next(reader)]
-        column_parsers = [
-            self._column_parsers.get(col, NumberColumnParser(col, int))
-            for col in header
-        ]
+        table_data = self.extract_cdata(self.raw_xmlish)
+        reader = self.get_csv_reader(table_data=table_data)
+        headers = self.get_csv_headers(csv_reader=reader)
+        int_column_parsers = self.set_column_parsers(headers=headers, content_type=int)
+        self.performance_db = self.make_parsed_db(
+            csv_reader=reader, headers=headers, column_parsers=int_column_parsers
+        )
 
-        records = []
-        for row in reader:
+        return self.performance_db
+
+    def make_parsed_db(
+        self,
+        csv_reader: Iterator[list[str]],
+        headers: list,
+        column_parsers: list,
+    ) -> list:
+        """Parse database into list."""
+        for row in csv_reader:
             parsed_row = [
-                (cparser.title, cparser(extract_field(cell)))
-                for hcell, cparser, cell in zip(header, column_parsers, row)
+                (cparser.title, cparser(self.extract_field(cell)))
+                for _, cparser, cell in zip(headers, column_parsers, row)
             ]
             record = dict(parsed_row)
-            records.append(record)
-        return records
 
-    def load(self, db_path: Path) -> PerformanceDatabaseContentsType:
-        """Parse NGP compiler's output: performance database.
+            self.performance_db.append(record)
 
-        The file format is XML, but the only meaningful content within it
-        is embedded in a CDATA secion. Current versions of the
-        graph compiler produce invalid XML (eg an closing <table> element
-        without the starting one), so we are trying to be tolerant and
-        extract only the CDATA section without expecting any other elements.
+        return self.performance_db
+
+    def set_column_parsers(
+        self, headers: list, content_type: type
+    ) -> list[ColumnParser]:
+        """Make column parsers."""
+        return [
+            self.column_parsers.get(col, NumberColumnParser(col, content_type))
+            for col in headers
+        ]
+
+
+class NGPDebugDatabaseParser(NGPOutputParser):
+    """Parser for NGP debug database."""
+
+    def __init__(self) -> None:
+        """Initialise the debug database parser."""
+        super().__init__()
+        self.debug_db: dict = {}
+
+    def parse_debug_database(self) -> DebugDatabaseContentsType:
+        """Parse the contents of the debug DB.
+
+        Returns a dict. Values and keys represent graph compiler-level operation ids.
+
+        Every key is a string explaining the
+        operation mapping: e.g. "fused_op_id_to_tosa_op_ids" maps
+        fused ops to tosa ops.
+        Every value is a dictionary of one such mapping e.g.
+        {'1537': ['1305', '1417']} means operation 1537 maps to both
+        operations 1305 and 1417.
+
+        Example:
+        {'tosa_op_id_to_api_id': {},
+        'fused_op_id_to_tosa_op_ids':
+            {'1305': ['1001'],
+            '1417': ['1002'],
+            '1307': ['1003']
+            ...
+            '1299': ['1116', '1114', '1117', '1118'],
+            '1383': ['1119']
+            ...}
+            ...
+        'chain_op_id_to_fused_op_ids':
+            {'1537': ['1305', '1417'],
+            '1539': ['1307', '1419'],
+            '1541': ['1309', '1421'],
+            ...}
+        }
         """
-        with open(db_path, encoding="utf-8") as file:
-            xmlish = file.read()
+        table_elements = self.raw_xmlish.split('<table name="')[1:]
 
-        cdata_content = extract_cdata(xmlish)
-        self.records = self.parse_contents(cdata_content)
-        return self.records
+        for table_element in table_elements:
+            table_name = table_element.split('">')[0]
+            table_data = self.extract_cdata(table_element)
+            reader = self.get_csv_reader(table_data=table_data)
+            headers = self.get_csv_headers(csv_reader=reader)
+            if len(headers) > MAX_NUM_DEBUG_DB_HEADERS:
+                raise RuntimeError(
+                    f"Unsupported number of headers. Found {len(headers)} headers but "
+                    f"max {MAX_NUM_DEBUG_DB_HEADERS} headers supported."
+                )
+            headers[0] = table_name + "_to_" + headers[1]
+            if len(headers) == MAX_NUM_DEBUG_DB_HEADERS:
+                headers[1] = table_name + "_to_" + headers[2]
 
+            self.make_parsed_db(csv_reader=reader, headers=headers)
 
-def extract_field(field: str) -> str:
-    """Extract contents of text field in a CSV table."""
-    field = field.strip()
-    field = re.sub(r"^(['\"])(.*?)\1$", r"\2", field)
-    return field
+        return self.debug_db
 
+    def get_performance_stats(
+        self,
+        performance_db: PerformanceDatabaseContentsType,
+        target: str = "tosa_op_ids",
+    ) -> PerformanceDatabaseContentsType:
+        """
+        Append to every entry of the performance database a new key "tosa_op_ids".
 
-def extract_cdata(xml_string: str) -> str:
-    """Extract CDATA section from xml."""
-    matches = re.findall(r"<!\[CDATA\[(.*?)\]\]>", xml_string, re.DOTALL)
-    if len(matches) != 1:
-        raise RuntimeError(f"No single CDATA section in:\n{xml_string}")
+        The value is a list of the tosa operation ids corresponding
+        that stripe operation id.
+        """
+        if target != "tosa_op_ids":
+            raise NotImplementedError("Tracking operation {target} is not supported.")
 
-    return str(matches[0]).strip()
+        for index, row in enumerate(performance_db):
+            tosa_op_ids = self.track_op(stripe_op_id=str(row["id"]), target=target)
+            performance_db[index]["tosa_op_ids"] = tosa_op_ids
+
+        return performance_db
+
+    def track_op(self, stripe_op_id: str, target: str = "tosa_op_ids") -> list:
+        """Track the ID of a stripe to the ID of the target operation."""
+        if target != "tosa_op_ids":
+            raise NotImplementedError("Tracking operation {target} is not supported.")
+
+        chain_op_id = self.debug_db["stripe_op_id_to_chain_op_id"][stripe_op_id]
+        fused_op_ids = self.debug_db["chain_op_id_to_fused_op_ids"][chain_op_id[0]]
+        tosa_op_ids = []
+        for fused_op_id in fused_op_ids:
+            tosa_op_ids.append(self.debug_db["fused_op_id_to_tosa_op_ids"][fused_op_id])
+
+        return tosa_op_ids
+
+    def make_parsed_db(self, csv_reader: Iterator[list[str]], headers: list) -> None:
+        """Parse database into dictionary."""
+        self.debug_db[headers[0]] = {}
+
+        if len(headers) > MAX_NUM_DEBUG_DB_HEADERS:
+            raise RuntimeError(
+                f"Unsupported number of headers. Found {len(headers)} headers but "
+                f"max {MAX_NUM_DEBUG_DB_HEADERS} headers supported."
+            )
+
+        if len(headers) == MAX_NUM_DEBUG_DB_HEADERS:
+            self.debug_db[headers[1]] = {}
+
+        for row in csv_reader:
+            op_ids_list = [
+                op_id for op_id in row[1].strip().split(";") if op_id.strip()
+            ]
+            self.debug_db[headers[0]][row[0]] = op_ids_list
+            if len(headers) == MAX_NUM_DEBUG_DB_HEADERS:
+                op_ids_list = [
+                    op_id for op_id in row[2].strip().split(";") if op_id.strip()
+                ]
+                self.debug_db[headers[1]][row[0]] = op_ids_list

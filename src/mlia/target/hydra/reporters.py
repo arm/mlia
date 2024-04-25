@@ -136,7 +136,9 @@ def report_ngp_graph_compiler_perf_db(
     metrics: NGPGraphCompilerPerformanceMetrics,
 ) -> Report:
     """Report NGP graph compiler's graph DB."""
-    perf_records = sorted(metrics.performance_db.records, key=lambda x: x["id"])
+    perf_records = sorted(
+        metrics.performance_db_parser.performance_db, key=lambda x: x["id"]
+    )
 
     columns = [
         Column("Operator ID", alias="id", fmt=Format(wrap_width=25)),

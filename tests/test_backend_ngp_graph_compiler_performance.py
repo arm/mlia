@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2023-2024, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: LicenseRef-LICENSE
 """Tests for NGP Graph Compiler performance estimation."""
 from __future__ import annotations
@@ -32,7 +32,6 @@ def test_ngp_graph_compiler_performance_estimator(
 ) -> None:
     """Test class NGPGraphCompilerPerformanceEstimator."""
     hydra_cfg = HydraConfiguration.load_profile("hydra")
-
     mock_repo = MagicMock()
     mock_repo.get_backend_settings = MagicMock(return_value=(tmp_path / "backend", {}))
     monkeypatch.setattr(
@@ -48,7 +47,7 @@ def test_ngp_graph_compiler_performance_estimator(
         MagicMock(),
     )
     monkeypatch.setattr(
-        "mlia.backend.ngp_graph_compiler.performance.NGPPerformanceDatabase",
+        "mlia.backend.ngp_graph_compiler.performance.NGPPerformanceDatabaseParser",
         MagicMock(),
     )
     monkeypatch.setattr(
@@ -60,7 +59,6 @@ def test_ngp_graph_compiler_performance_estimator(
         tmp_path,
         hydra_cfg.backend_config,
     )
-
     metrics = estimator.estimate(tmp_path / "model.tflite")
     assert isinstance(metrics.backend_config, NGPGraphCompilerConfig)
     assert all(isinstance(file, Path) for file in vars(metrics.output_files).values())
