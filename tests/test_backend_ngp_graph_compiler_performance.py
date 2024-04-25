@@ -9,6 +9,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from mlia.backend.ngp_graph_compiler.config import NGPGraphCompilerConfig
+from mlia.backend.ngp_graph_compiler.performance import GRAPH_COMPILER_COMMAND_ARGS
 from mlia.backend.ngp_graph_compiler.performance import NGPGraphCompilerOutputFiles
 from mlia.backend.ngp_graph_compiler.performance import (
     NGPGraphCompilerPerformanceEstimator,
@@ -32,6 +33,7 @@ def test_ngp_graph_compiler_performance_estimator(
 ) -> None:
     """Test class NGPGraphCompilerPerformanceEstimator."""
     hydra_cfg = HydraConfiguration.load_profile("hydra")
+    pco_mock = MagicMock()
     mock_repo = MagicMock()
     mock_repo.get_backend_settings = MagicMock(return_value=(tmp_path / "backend", {}))
     monkeypatch.setattr(
@@ -44,7 +46,7 @@ def test_ngp_graph_compiler_performance_estimator(
     )
     monkeypatch.setattr(
         "mlia.backend.ngp_graph_compiler.performance.process_command_output",
-        MagicMock(),
+        pco_mock,
     )
     monkeypatch.setattr(
         "mlia.backend.ngp_graph_compiler.performance.NGPPerformanceDatabaseParser",
@@ -62,3 +64,7 @@ def test_ngp_graph_compiler_performance_estimator(
     metrics = estimator.estimate(tmp_path / "model.tflite")
     assert isinstance(metrics.backend_config, NGPGraphCompilerConfig)
     assert all(isinstance(file, Path) for file in vars(metrics.output_files).values())
+
+    assert pco_mock.called
+    cmd = pco_mock.call_args[0][0].cmd
+    assert any(argument in cmd for argument in GRAPH_COMPILER_COMMAND_ARGS)
