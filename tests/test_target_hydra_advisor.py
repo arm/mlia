@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2023-2024, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: LicenseRef-LICENSE
 """Tests for Hydra MLIA module."""
 from pathlib import Path
@@ -49,7 +49,8 @@ def test_configure_and_get_hydra_advisor(test_tflite_model: Path) -> None:
                         "optimization_type": "clustering",
                     },
                 ]
-            ]
+            ],
+            "training_parameters": None,
         },
     }
 
