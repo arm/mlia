@@ -139,8 +139,9 @@ def test_performance_unknown_target(
                 Exception,
                 match=re.escape(
                     "Invalid rewrite target: 'random'. "
-                    "Supported rewrites: ['fully-connected',"
-                    " 'fully-connected-clustering', 'fully-connected-sparsity24']"
+                    "Supported rewrites: ['conv2d-clustering', 'conv2d-sparsity24', "
+                    "'fully-connected', 'fully-connected-clustering', "
+                    "'fully-connected-sparsity24']"
                 ),
             ),
         ],
@@ -194,6 +195,36 @@ def test_performance_unknown_target(
             "sequential/flatten/Reshape",
             "StatefulPartitionedCall:0",
             does_not_raise(),
+        ],
+        [
+            "ethos-u55-256",
+            False,
+            False,
+            None,
+            None,
+            None,
+            True,
+            "conv2d-sparsity24",
+            "sequential/flatten/Reshape",
+            "StatefulPartitionedCall:0",
+            pytest.raises(
+                NotImplementedError,
+            ),
+        ],
+        [
+            "ethos-u55-256",
+            False,
+            False,
+            None,
+            None,
+            None,
+            True,
+            "conv2d-clustering",
+            "sequential/flatten/Reshape",
+            "StatefulPartitionedCall:0",
+            pytest.raises(
+                NotImplementedError,
+            ),
         ],
     ],
 )

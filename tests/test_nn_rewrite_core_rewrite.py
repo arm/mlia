@@ -26,9 +26,7 @@ from mlia.nn.rewrite.core.rewrite import RewritingOptimizer
 from mlia.nn.rewrite.core.rewrite import Sparsity24Rewrite
 from mlia.nn.rewrite.core.rewrite import TrainingParameters
 from mlia.nn.rewrite.core.train import train_in_dir
-from mlia.nn.rewrite.library.fc_clustering_layer import (
-    get_keras_model_clus as fc_clustering_rewrite,
-)
+from mlia.nn.rewrite.library.clustering import fc_clustering_rewrite
 from mlia.nn.tensorflow.config import TFLiteModel
 from tests.utils.rewrite import MockTrainingParameters
 
@@ -80,6 +78,8 @@ def test_rewrite() -> None:
         ("fully-connected", 0, GenericRewrite),
         ("fully-connected-clustering", 0, ClusteringRewrite),
         ("fully-connected-sparsity24", 1, Sparsity24Rewrite),
+        ("conv2d-clustering", 0, ClusteringRewrite),
+        ("conv2d-sparsity24", 1, Sparsity24Rewrite),
     ],
 )
 def test_rewrite_selection(
@@ -98,6 +98,8 @@ def test_rewrite_selection(
         ("fully-connected", does_not_raise()),
         ("fully-connected-sparsity24", does_not_raise()),
         ("fully-connected-clustering", does_not_raise()),
+        ("conv2d-clustering", does_not_raise()),
+        ("conv2d-sparsity24", does_not_raise()),
         ("random", does_not_raise()),
     ],
 )
@@ -208,6 +210,8 @@ def test_register_rewrite_function() -> None:
 def test_builtin_rewrite_names() -> None:
     """Test if all builtin rewrites are properly registered and returned."""
     assert RewritingOptimizer.builtin_rewrite_names() == [
+        "conv2d-clustering",
+        "conv2d-sparsity24",
         "fully-connected",
         "fully-connected-clustering",
         "fully-connected-sparsity24",

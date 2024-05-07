@@ -6,7 +6,7 @@ from typing import Any
 from keras.api._v2 import keras  # Temporary workaround for now: MLIA-1107
 
 
-def get_keras_model(input_shape: Any, output_shape: Any) -> keras.Model:
+def fc_rewrite(input_shape: Any, output_shape: Any) -> keras.Model:
     """Generate TensorFlow Lite model for rewrite."""
     model = keras.Sequential(
         (
