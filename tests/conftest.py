@@ -257,17 +257,15 @@ def fixture_test_tfrecord_fp32(
     yield from create_tfrecord(tmp_path_factory, random_data)
 
 
-@pytest.fixture(scope="session", autouse=True)
+@pytest.fixture(scope="function", autouse=True)
 def set_training_steps(
     request: _pytest.fixtures.SubRequest,
 ) -> Generator[None, None, None]:
     """Speed up tests by using MockTrainingParameters."""
-    if "set_training_steps" == request.fixturename:
-        yield
-    else:
+    if "skip_set_training_steps" not in request.keywords:
         with pytest.MonkeyPatch.context() as monkeypatch:
             monkeypatch.setattr(
                 "mlia.nn.select._get_rewrite_params",
-                MagicMock(return_value=[MockTrainingParameters(), None, None]),
+                MagicMock(return_value=MockTrainingParameters()),
             )
-            yield
+    yield
