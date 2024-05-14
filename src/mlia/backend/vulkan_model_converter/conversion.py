@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2023-2024, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: LicenseRef-LICENSE
 """Convert TensorFlow Lite models with the Vulkan Model Converter."""
 from __future__ import annotations
@@ -98,6 +98,7 @@ class VulkanModelConverter:
                 "-o",
                 str(spirv_file),
                 "--package-spv",
+                "--experimental-analysis",
             ],
         )
         return cmd
@@ -125,29 +126,32 @@ class VulkanModelConverter:
             self.converter_path / path
             for path in (
                 self.FRONT_END_DIR,
-                "tensorflow/lite",
-                "tensorflow/compiler/mlir/tosa",
+                "external/cpuinfo",
+                "external/local_xla/xla/mlir/utils",
+                "external/pthreadpool",
+                "external/ruy/ruy",
+                "external/stablehlo",
+                "front-ends/tflite",
+                "tensorflow",
                 "tensorflow/compiler/mlir/lite",
-                "tensorflow/compiler/mlir/tensorflow",
                 "tensorflow/compiler/mlir/lite/quantization",
                 "tensorflow/compiler/mlir/lite/quantization/ir",
                 "tensorflow/compiler/mlir/lite/quantization/lite",
-                "tensorflow/lite/kernels/internal",
-                "tensorflow/lite/tools/optimize",
-                "tensorflow/lite/core/api",
-                "tensorflow/lite/schema",
-                "tensorflow/lite/c",
-                "tensorflow/lite/kernels",
-                "external/cpuinfo",
-                "tensorflow/core/ir/types",
-                "external/ruy/ruy",
-                "tensorflow",
-                "tensorflow/lite/experimental/remat",
-                "tensorflow/lite/core/c",
-                "tensorflow/lite/core",
+                "tensorflow/compiler/mlir/tensorflow",
+                "tensorflow/compiler/mlir/tensorflow/transforms",
+                "tensorflow/compiler/mlir/tosa",
                 "tensorflow/core/ir/importexport",
-                "tensorflow/compiler/xla/mlir/utils",
-                "external/pthreadpool",
+                "tensorflow/core/ir/types",
+                "tensorflow/lite",
+                "tensorflow/lite/c",
+                "tensorflow/lite/core",
+                "tensorflow/lite/core/api",
+                "tensorflow/lite/core/c",
+                "tensorflow/lite/experimental/remat",
+                "tensorflow/lite/kernels",
+                "tensorflow/lite/kernels/internal",
+                "tensorflow/lite/schema",
+                "tensorflow/lite/tools/optimize",
             )
         ]
         return paths

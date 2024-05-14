@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2023-2024, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: LicenseRef-LICENSE
 """Backend module for performance estimation with the NGP Graph Compiler."""
 from __future__ import annotations
@@ -138,7 +138,7 @@ class NGPGraphCompilerPerformanceEstimator(
 
         cmd = Command(
             cmd=[
-                str(gc_path / "bin" / "regorc-0.1.0"),
+                str(gc_path / "regorc-0.1.0"),
                 "-i",
                 str(spirv_file),
                 "-o",

@@ -18,20 +18,21 @@ def get_ngp_graph_compiler_installation() -> BackendInstallation:
         download_config=DownloadConfig(
             url=(
                 "https://artifactory.arm.com:443/artifactory/ml-tooling.misc/"
-                "mlia/ngp-graph-compiler/regorc-231220-11393e21-linux-x86_64.tar.gz"
+                "mlia/ngp-graph-compiler/"
+                "nightly_2024-04-30/graph_compiler_release.tar.gz"
             ),
             sha256_hash=(
-                "7b052627a40c90b79460b54c9e271977b705b9b2321da25c495fde6ea9bf2951"
+                "6f32bceb3546ce7e11975eddfda97c78426beee15fca30d0dd06f4cd4c1b19ef"
             ),
             header_gen_fn=artifactory_credential_headers,
         ),
         supported_platforms=["Linux"],
         path_checker=PackagePathChecker(
             expected_files=[
-                "regorc-231220-11393e21-linux-x86_64/bin/regorc-0.1.0",
-                "regorc-231220-11393e21-linux-x86_64/lib64/libregor.so.0.1.0",
+                "regorc",
+                "regorc-0.1.0",
             ],
-            backend_subfolder="regorc-231220-11393e21-linux-x86_64",
+            backend_subfolder="graph-compiler",
         ),
         backend_installer=None,
         dependencies=["vulkan-model-converter"],
