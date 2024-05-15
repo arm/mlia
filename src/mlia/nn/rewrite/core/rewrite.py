@@ -15,6 +15,9 @@ from typing import Callable
 import numpy as np
 import tensorflow_model_optimization as tfmot
 from keras.api._v2 import keras  # Temporary workaround for now: MLIA-1107
+from tensorflow_model_optimization.python.core.sparsity.keras.pruning_utils import (  # pylint: disable=no-name-in-module
+    is_pruned_m_by_n,
+)
 
 from mlia.core.errors import ConfigurationError
 from mlia.core.reporting import Column
@@ -31,7 +34,6 @@ from mlia.nn.rewrite.library.sparsity import conv2d_sparsity_rewrite
 from mlia.nn.rewrite.library.sparsity import fc_sparsity_rewrite
 from mlia.nn.tensorflow.config import TFLiteModel
 from mlia.utils.registry import Registry
-
 
 logger = logging.getLogger(__name__)
 RewriteCallable = Callable[[Any, Any], keras.Model]
@@ -131,7 +133,20 @@ class Sparsity24Rewrite(QuantizeAwareTrainingRewrite):
         return model
 
     def check_optimization(self, model: keras.Model, **kwargs: Any) -> bool:
-        """Not needed here."""
+        """Check if sparity has produced the correct result."""
+        for layer in model.layers:
+            for weight in layer.weights:
+                if "kernel" in weight.name:
+                    if "kernel_min" in weight.name or "kernel_max" in weight.name:
+                        continue
+                    if not is_pruned_m_by_n(weight, m_by_n=(2, 4)):
+                        logger.warning(
+                            "\nWARNING: Could not find (2,4) sparsity, "
+                            "in layer %s for weight %s \n",
+                            layer.name,
+                            weight.name,
+                        )
+                        return False
         return True
 
 
@@ -250,12 +265,6 @@ class RewritingOptimizer(Optimizer):
         rewrite = RewritingOptimizer.registry.items[
             self.optimizer_configuration.optimization_target
         ]
-
-        if self.optimizer_configuration.optimization_target in [
-            "conv2d-clustering",
-            "conv2d-sparsity24",
-        ]:
-            raise NotImplementedError
 
         use_unmodified_model = True
         tflite_model = self.model.model_path

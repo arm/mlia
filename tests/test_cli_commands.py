@@ -205,11 +205,9 @@ def test_performance_unknown_target(
             None,
             True,
             "conv2d-sparsity24",
-            "sequential/flatten/Reshape",
-            "StatefulPartitionedCall:0",
-            pytest.raises(
-                NotImplementedError,
-            ),
+            "sequential/conv1/Relu;sequential/conv1/Conv2D",
+            "sequential/conv2/Relu;sequential/conv2/Conv2D",
+            does_not_raise(),
         ],
         [
             "ethos-u55-256",
@@ -220,11 +218,9 @@ def test_performance_unknown_target(
             None,
             True,
             "conv2d-clustering",
-            "sequential/flatten/Reshape",
-            "StatefulPartitionedCall:0",
-            pytest.raises(
-                NotImplementedError,
-            ),
+            "sequential/conv1/Relu;sequential/conv1/Conv2D",
+            "sequential/conv2/Relu;sequential/conv2/Conv2D",
+            does_not_raise(),
         ],
     ],
 )

@@ -181,6 +181,14 @@ documentation, e.g. in the
     candidates from the rewrite library, with or without training using a
     small portion of the training data, to achieve local performance gains.
 
+The following rewrites are supported:
+
+* fully-connected - replaces a subgraph with a fully connected layer
+* fully-connected-sparsity24 - replaces a subgraph with a pruned 2:4 sparse fully connected layer
+* fully-connected-clustering - replaces a subgraph with a clustered fully connected layer
+* conv2d-sparsity24 - replaces a subgraph with a pruned 2:4 sparse conv2d layer
+* conv2d-clustering  - replaces a subgraph with a clustered conv2d layer
+
 **Note:** A ***Keras model*** (.h5 or SavedModel) is required as input to
 perform pruning and clustering. A ***TensorFlow Lite model*** is required as input
 to perform a rewrite.

@@ -3,17 +3,22 @@
 """Tests for module mlia.nn.rewrite.core.rewrite."""
 from __future__ import annotations
 
+import re
 from contextlib import ExitStack as does_not_raise
 from pathlib import Path
 from typing import Any
 from typing import cast
 from unittest.mock import MagicMock
 
+import numpy as np
 import pytest
 import tensorflow_model_optimization as tfmot
 from keras.api._v2 import keras  # Temporary workaround for now: MLIA-1107
 from tensorflow_model_optimization.python.core.clustering.keras.cluster_wrapper import (  # pylint: disable=no-name-in-module
     ClusterWeights,
+)
+from tensorflow_model_optimization.python.core.sparsity.keras.pruning_wrapper import (  # pylint: disable=no-name-in-module
+    PruneLowMagnitude,
 )
 
 from mlia.nn.rewrite.core.rewrite import ClusteringRewrite
@@ -26,7 +31,10 @@ from mlia.nn.rewrite.core.rewrite import RewritingOptimizer
 from mlia.nn.rewrite.core.rewrite import Sparsity24Rewrite
 from mlia.nn.rewrite.core.rewrite import TrainingParameters
 from mlia.nn.rewrite.core.train import train_in_dir
+from mlia.nn.rewrite.library.clustering import conv2d_clustering_rewrite
 from mlia.nn.rewrite.library.clustering import fc_clustering_rewrite
+from mlia.nn.rewrite.library.sparsity import conv2d_sparsity_rewrite
+from mlia.nn.rewrite.library.sparsity import fc_sparsity_rewrite
 from mlia.nn.tensorflow.config import TFLiteModel
 from tests.utils.rewrite import MockTrainingParameters
 
@@ -107,7 +115,8 @@ def test_rewrite_configuration(
     test_tflite_model_fp32: Path, rewrite_name: str, expected_error: Any
 ) -> None:
     """Test get_rewrite function only supports rewrite type fully-connected,
-    fully-connected-clustering and fully-connected-sparsity24."""
+    fully-connected-clustering, fully-connected-sparsity24, conv2d-clustering
+    and conv2d-sparsity24."""
     with expected_error:
         config_obj = RewriteConfiguration(
             rewrite_name,
@@ -122,16 +131,75 @@ def test_rewrite_configuration(
         assert isinstance(rewriter_obj, RewritingOptimizer)
 
 
-def test_rewrite_fully_connected_clustering() -> None:
-    """Check that model has the set number of clusters"""
+def train_rewrite_model(
+    input_shape: tuple | np.ndarray,
+    output_shape: int | np.ndarray,
+    rewrite_model: keras.Model,
+) -> keras.Model:
+    """Helper function to quickly train a rewrite model."""
+    rewrite_model.compile(
+        optimizer=keras.optimizers.Nadam(learning_rate=0.01),
+        loss=keras.losses.MeanSquaredError(),
+        metrics=["mae"],
+    )
+    if isinstance(output_shape, int):
+        output_shape_list = [output_shape]
+    else:
+        output_shape_list = output_shape.tolist()
+    rewrite_model.fit(
+        x=np.random.rand(16, *input_shape),
+        y=np.random.rand(16, *output_shape_list),
+        batch_size=1,
+        epochs=1,
+        callbacks=[tfmot.sparsity.keras.UpdatePruningStep()],
+    )
+    return rewrite_model
+
+
+def test_rewrite_fully_connected_clustering(caplog: pytest.LogCaptureFixture) -> None:
+    """Check that fully connected clustering rewrite model
+    has the set number of clusters"""
 
     rewrite = ClusteringRewrite("fully-connected-clustering", fc_clustering_rewrite)
     model = rewrite(input_shape=(28, 28), output_shape=10)
     model = rewrite.post_process(model)
-    assert rewrite.check_optimization(model, number_of_clusters=32)
+    assert rewrite.check_optimization(model, number_of_clusters=4)
+    rewrite.check_optimization(model, number_of_clusters=2)
+    log_records = caplog.records
+    warning_messages = [x.message for x in log_records if x.levelno == 30]
+    assert (
+        re.search(
+            r"\nWARNING: Expected 2 cluster\(s\), found \d+ cluster\(s\) "
+            r"in layer dense_?\d? for weight kernel:0 \n",
+            warning_messages[0],
+        )
+        is not None
+    )
 
 
-def test_rewrite_fully_connected_clustering_error_handling() -> None:
+def test_rewrite_conv2d_clustering(caplog: pytest.LogCaptureFixture) -> None:
+    """Check that conv2d clustering rewrite model has the set number of clusters"""
+
+    rewrite = ClusteringRewrite("conv2d-clustering", conv2d_clustering_rewrite)
+    model = rewrite(
+        input_shape=np.array([28, 28, 3]), output_shape=np.array([14, 14, 3])
+    )
+    model = rewrite.post_process(model)
+    assert rewrite.check_optimization(model, number_of_clusters=4)
+    rewrite.check_optimization(model, number_of_clusters=2)
+    log_records = caplog.records
+    warning_messages = [x.message for x in log_records if x.levelno == 30]
+    assert (
+        re.search(
+            r"\nWARNING: Expected 2 cluster\(s\), found \d+ cluster\(s\) "
+            r"in layer conv2d_?\d? for weight kernel:0 \n",
+            warning_messages[0],
+        )
+        is not None
+    )
+
+
+def test_rewrite_clustering_error_handling() -> None:
     """Check that model has the set number of clusters
     and that when quantized the number of clusters
     remain."""
@@ -147,12 +215,80 @@ def test_rewrite_fully_connected_clustering_error_handling() -> None:
         rewrite.check_optimization(model, bad_arg_name=25)
 
 
+def test_rewrite_fully_connected_sparsity(caplog: pytest.LogCaptureFixture) -> None:
+    """Check that."""
+
+    rewrite = Sparsity24Rewrite("fully-connected-sparsity24", fc_sparsity_rewrite)
+    input_shape = (28, 28)
+    output_shape = 10
+    model = rewrite(input_shape=tuple(input_shape), output_shape=output_shape)
+    model = rewrite.post_process(model)
+    assert not rewrite.check_optimization(model)
+    log_records = caplog.records
+    warning_messages = [x.message for x in log_records if x.levelno == 30]
+    assert (
+        re.search(
+            r"\nWARNING: Could not find \(2,4\) sparsity, in "
+            r"layer dense_?\d? for weight dense_?\d?\/kernel:0 \n",
+            warning_messages[0],
+        )
+        is not None
+    )
+    model = rewrite(input_shape=input_shape, output_shape=output_shape)
+    train_rewrite_model(
+        input_shape=input_shape, output_shape=output_shape, rewrite_model=model
+    )
+    model = rewrite.post_process(model)
+    assert rewrite.check_optimization(model)
+
+
+def test_rewrite_conv2d_sparsity(caplog: pytest.LogCaptureFixture) -> None:
+    """Check that."""
+
+    rewrite = Sparsity24Rewrite("conv2d-sparsity24", conv2d_sparsity_rewrite)
+    input_shape = np.array([28, 28, 3])
+    output_shape = np.array([14, 14, 3])
+    model = rewrite(input_shape=input_shape, output_shape=output_shape)
+    model = rewrite.post_process(model)
+    assert not rewrite.check_optimization(model)
+    log_records = caplog.records
+    warning_messages = [x.message for x in log_records if x.levelno == 30]
+    assert (
+        re.search(
+            r"\nWARNING: Could not find \(2,4\) sparsity, in "
+            r"layer conv2d_?\d? for weight conv2d_?\d?\/kernel:0 \n",
+            warning_messages[0],
+        )
+        is not None
+    )
+    model = rewrite(input_shape=input_shape, output_shape=output_shape)
+    train_rewrite_model(
+        input_shape=input_shape, output_shape=output_shape, rewrite_model=model
+    )
+    model = rewrite.post_process(model)
+    assert rewrite.check_optimization(model)
+
+
 @pytest.mark.parametrize(
     "rewrite_type, expected_layers, quant",
     [
         ["fully-connected", [keras.layers.Reshape, keras.layers.Dense], False],
         ["fully-connected-clustering", [ClusterWeights, ClusterWeights], False],
         ["fully-connected-clustering", [ClusterWeights, ClusterWeights], True],
+        ["fully-connected-sparsity24", [PruneLowMagnitude, PruneLowMagnitude], False],
+        ["fully-connected-sparsity24", [PruneLowMagnitude, PruneLowMagnitude], True],
+        ["conv2d-clustering", [ClusterWeights, ClusterWeights, ClusterWeights], False],
+        ["conv2d-clustering", [ClusterWeights, ClusterWeights, ClusterWeights], True],
+        [
+            "conv2d-sparsity24",
+            [PruneLowMagnitude, PruneLowMagnitude, PruneLowMagnitude],
+            False,
+        ],
+        [
+            "conv2d-sparsity24",
+            [PruneLowMagnitude, PruneLowMagnitude, PruneLowMagnitude],
+            True,
+        ],
     ],
 )
 def test_rewriting_optimizer(  # pylint: disable=too-many-locals
@@ -171,7 +307,12 @@ def test_rewriting_optimizer(  # pylint: disable=too-many-locals
 
     config_obj = RewriteConfiguration(
         rewrite_type,
-        ["sequential/flatten/Reshape", "StatefulPartitionedCall:0"],
+        ["sequential/flatten/Reshape", "StatefulPartitionedCall:0"]
+        if "fully-connected" in rewrite_type
+        else [
+            "sequential/conv1/Relu;sequential/conv1/Conv2D",
+            "sequential/conv2/Relu;sequential/conv2/Conv2D",
+        ],
         tfrecord,
         train_params=MockTrainingParameters(),
     )
@@ -181,7 +322,13 @@ def test_rewriting_optimizer(  # pylint: disable=too-many-locals
         test_obj.optimizer_configuration.optimization_target
     ]
     # Input, output shape does not matter, just need the test the layers are as expected
-    rewrite_model = rewrite_function(input_shape=(28, 28, 1), output_shape=12)
+    rewrite_model = (
+        rewrite_function(input_shape=(28, 28, 1), output_shape=12)
+        if "fully-connected" in rewrite_type
+        else rewrite_function(
+            input_shape=np.array([28, 28, 3]), output_shape=np.array([14, 14, 3])
+        )
+    )
     for idx, layer in enumerate(rewrite_model.layers):
         assert isinstance(layer, expected_layers[idx])  # type: ignore
 

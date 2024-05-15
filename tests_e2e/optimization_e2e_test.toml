@@ -2,4 +2,4 @@
 # SPDX-License-Identifier: Apache-2.0
 
 [training]
-steps = 1000
+steps = 100
