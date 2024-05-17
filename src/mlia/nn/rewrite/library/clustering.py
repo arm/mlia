@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: Copyright 2024, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
-"""Example rewrite with one fully connected clustered layer."""
+"""Rewrite functions used to return layers ready for clustering."""
 from typing import Any
 
 import tensorflow_model_optimization as tfmot
@@ -10,7 +10,7 @@ from mlia.nn.rewrite.library.helper_functions import compute_conv2d_parameters
 
 
 def fc_clustering_rewrite(input_shape: Any, output_shape: Any) -> keras.Model:
-    """Generate TensorFlow Lite model for clustering rewrite."""
+    """Fully connected TensorFlow Lite model ready for clustering."""
     rewrite_params = {
         "number_of_clusters": 4,
         "cluster_centroids_init": tfmot.clustering.keras.CentroidInitialization.LINEAR,
@@ -29,7 +29,7 @@ def fc_clustering_rewrite(input_shape: Any, output_shape: Any) -> keras.Model:
 
 
 def conv2d_clustering_rewrite(input_shape: Any, output_shape: Any) -> keras.Model:
-    """Generate TensorFlow Lite model for clustering rewrite."""
+    """Conv2d TensorFlow Lite model ready for clustering."""
     rewrite_params = {
         "number_of_clusters": 4,
         "cluster_centroids_init": tfmot.clustering.keras.CentroidInitialization.LINEAR,

@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: Copyright 2024, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
-"""Example rewrite with one fully connected clustered layer."""
+"""Rewrite functions used to return layers ready for sparse pruning."""
 from typing import Any
 
 import tensorflow_model_optimization as tfmot
@@ -10,7 +10,7 @@ from mlia.nn.rewrite.library.helper_functions import compute_conv2d_parameters
 
 
 def fc_sparsity_rewrite(input_shape: Any, output_shape: Any) -> keras.Model:
-    """Generate TensorFlow Lite model for rewrite."""
+    """Fully connected TensorFlow Lite model ready for sparse pruning."""
     model = tfmot.sparsity.keras.prune_low_magnitude(
         to_prune=keras.Sequential(
             [
@@ -26,7 +26,7 @@ def fc_sparsity_rewrite(input_shape: Any, output_shape: Any) -> keras.Model:
 
 
 def conv2d_sparsity_rewrite(input_shape: Any, output_shape: Any) -> keras.Model:
-    """Generate TensorFlow Lite model for rewrite."""
+    """Conv2d TensorFlow Lite model ready for sparse pruning."""
     conv2d_parameters = compute_conv2d_parameters(
         input_shape=input_shape, output_shape=output_shape
     )
