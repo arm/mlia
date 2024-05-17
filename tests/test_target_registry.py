@@ -70,10 +70,18 @@ def test_supported_advice(
         ("armnn-tflite-delegate", None, True),
         ("armnn-tflite-delegate", "cortex-a", True),
         ("armnn-tflite-delegate", "tosa", False),
+        ("corstone-300", None, True),
+        ("corstone-300", "ethos-u55", True),
+        ("corstone-300", "ethos-u65", True),
+        ("corstone-300", "cortex-a", False),
         ("corstone-310", None, True),
         ("corstone-310", "ethos-u55", True),
         ("corstone-310", "ethos-u65", True),
         ("corstone-310", "cortex-a", False),
+        ("corstone-315", None, True),
+        ("corstone-315", "ethos-u55", False),
+        ("corstone-315", "ethos-u65", True),
+        ("corstone-315", "cortex-a", False),
     ),
 )
 def test_is_supported(backend: str, target: str | None, expected_result: bool) -> None:
@@ -86,7 +94,7 @@ def test_is_supported(backend: str, target: str | None, expected_result: bool) -
     (
         ("cortex-a", ["armnn-tflite-delegate"]),
         ("ethos-u55", ["corstone-300", "corstone-310", "vela"]),
-        ("ethos-u65", ["corstone-300", "corstone-310", "vela"]),
+        ("ethos-u65", ["corstone-300", "corstone-310", "corstone-315", "vela"]),
         ("tosa", ["tosa-checker"]),
     ),
 )

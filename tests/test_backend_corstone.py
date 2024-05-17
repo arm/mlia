@@ -8,4 +8,5 @@ def test_is_corstone_backend() -> None:
     """Test function is_corstone_backend."""
     assert is_corstone_backend("corstone-300") is True
     assert is_corstone_backend("corstone-310") is True
+    assert is_corstone_backend("corstone-315") is True
     assert is_corstone_backend("New backend") is False

@@ -93,6 +93,18 @@ CORSTONE_FVPS: dict[str, dict[str, CorstoneFVP]] = {
             ],
         ),
     },
+    "corstone-315": {
+        "x86": CorstoneFVP(
+            archive="Corstone-315/FVP_Corstone_SSE-315_11.24_22_Linux64.tgz",
+            sha256_hash="e105569b159e42a5557baf15cc980a62427b2de3bf17aaaa72de6d218bb3a2eb",
+            fvp_expected_files=["models/Linux64_GCC-9.3/FVP_Corstone_SSE-315"],
+        ),
+        "aarch64": CorstoneFVP(
+            archive="Corstone-315/FVP_Corstone_SSE-315_11.24_22_Linux64_armv8l.tgz",
+            sha256_hash="52e592778296a34dfa91b7fcbf24a48886303c12d9615cee20e6ca9af4eb4fdb",
+            fvp_expected_files=["models/Linux64_armv8l_GCC-9.3/FVP_Corstone_SSE-315"],
+        ),
+    },
 }
 
 
@@ -112,6 +124,9 @@ class CorstoneInstaller:
                 fvp = "./FVP_Corstone_SSE-300.sh"
             elif self.name == "corstone-310":
                 fvp = "./FVP_Corstone_SSE-310.sh"
+
+            elif self.name == "corstone-315":
+                fvp = "./FVP_Corstone_SSE-315.sh"
             else:
                 raise RuntimeError(
                     f"Couldn't find fvp file during '{self.name}' installation"

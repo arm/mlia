@@ -425,6 +425,7 @@ Ethos-U is supported by these backends:
 
 * [Corstone-300](#corstone-300)
 * [Corstone-310](#corstone-310)
+* [Corstone-315](#corstone-315)
 * [Vela](#vela)
 
 As described in section [Custom target profiles](#custom-target-profiles), you can customize
@@ -526,6 +527,8 @@ the following table shows some compatibility information:
 +-----------------------------------------------------------------------------
 | Corstone-310  | x86_64 and  AArch64    | Not compatible | Python>=3.8      |
 +-----------------------------------------------------------------------------
+| Corstone-315  | x86_64 and AArch64     | Not compatible | Python>=3.8      |
++-----------------------------------------------------------------------------
 | TOSA checker  | x86_64 (manylinux2014) | Not compatible | 3.7<=Python<=3.9 |
 +-----------------------------------------------------------------------------
 | Vela          | x86_64 and  AArch64    | Windows 10     | Python~=3.7      |
@@ -608,6 +611,14 @@ on Cortex-M85 and Ethos-U.
   <https://developer.arm.com/Processors/Corstone-310>
 * Please use the examples of MLIA using Corstone-310 here to get started:
   <https://github.com/ARM-software/open-iot-sdk>
+
+### Corstone-315
+
+Corstone-315 is a backend that provides performance metrics for systems based
+on Cortex-M85 and Ethos-U.
+
+* For access to AVH for Corstone-315 please refer to:
+  <https://developer.arm.com/Processors/Corstone-315>
 
 ### NGP Graph Compiler
 

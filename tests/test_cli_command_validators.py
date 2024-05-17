@@ -143,6 +143,20 @@ def test_validate_check_target_profile(
             "Backend tosa-checker not supported with target-profile ethos-u65-256.",
             None,
         ],
+        [
+            "ethos-u65-256",
+            ["corstone-315"],
+            False,
+            None,
+            ["corstone-315"],
+        ],
+        [
+            "ethos-u55-256",
+            ["corstone-315"],
+            True,
+            "Backend corstone-315 not supported with target-profile ethos-u55-256.",
+            None,
+        ],
     ],
 )
 def test_validate_backend(

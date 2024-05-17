@@ -96,7 +96,7 @@ def get_generic_inference_app_path(fvp: str, target: str) -> Path:
     """Return path to the generic inference runner binary."""
     apps_path = get_mlia_resources() / "backends/applications"
 
-    fvp_mapping = {"corstone-300": "300", "corstone-310": "310"}
+    fvp_mapping = {"corstone-300": "300", "corstone-310": "310", "corstone-315": "315"}
     target_mapping = {"ethos-u55": "U55", "ethos-u65": "U65"}
 
     fvp_version = f"sse-{fvp_mapping[fvp]}"
@@ -117,6 +117,8 @@ def get_executable_name(fvp: str, profile: str, target: str) -> str:
         ("corstone-310", "AVH", "ethos-u65"): "VHT_Corstone_SSE-310_Ethos-U65",
         ("corstone-310", "default", "ethos-u55"): "FVP_Corstone_SSE-310",
         ("corstone-310", "default", "ethos-u65"): "FVP_Corstone_SSE-310_Ethos-U65",
+        ("corstone-315", "AVH", "ethos-u65"): "VHT_Corstone_SSE-315",
+        ("corstone-315", "default", "ethos-u65"): "FVP_Corstone_SSE-315",
     }
 
     return executable_name_mapping[(fvp, profile, target)]
@@ -141,25 +143,45 @@ def build_corstone_command(
 ) -> Command:
     """Build command to run Corstone FVP."""
     fvp_metadata = get_fvp_metadata(fvp, profile, target)
+    if fvp == "corstone-315":
+        cmd = [
+            backend_path.joinpath(fvp_metadata.executable).as_posix(),
+            "-a",
+            fvp_metadata.generic_inf_app.as_posix(),
+            "--data",
+            f"{model}@0x90000000",
+            "-C",
+            f"mps4_board.subsystem.ethosu.num_macs={mac}",
+            "-C",
+            "mps4_board.telnetterminal0.start_telnet=0",
+            "-C",
+            "mps4_board.uart0.out_file='-'",
+            "-C",
+            "mps4_board.uart0.shutdown_on_eot=1",
+            "-C",
+            "mps4_board.visualisation.disable-visualisation=1",
+            "--stat",
+        ]
 
-    cmd = [
-        backend_path.joinpath(fvp_metadata.executable).as_posix(),
-        "-a",
-        fvp_metadata.generic_inf_app.as_posix(),
-        "--data",
-        f"{model}@0x90000000",
-        "-C",
-        f"ethosu.num_macs={mac}",
-        "-C",
-        "mps3_board.telnetterminal0.start_telnet=0",
-        "-C",
-        "mps3_board.uart0.out_file='-'",
-        "-C",
-        "mps3_board.uart0.shutdown_on_eot=1",
-        "-C",
-        "mps3_board.visualisation.disable-visualisation=1",
-        "--stat",
-    ]
+    else:
+        cmd = [
+            backend_path.joinpath(fvp_metadata.executable).as_posix(),
+            "-a",
+            fvp_metadata.generic_inf_app.as_posix(),
+            "--data",
+            f"{model}@0x90000000",
+            "-C",
+            f"ethosu.num_macs={mac}",
+            "-C",
+            "mps3_board.telnetterminal0.start_telnet=0",
+            "-C",
+            "mps3_board.uart0.out_file='-'",
+            "-C",
+            "mps3_board.uart0.shutdown_on_eot=1",
+            "-C",
+            "mps3_board.visualisation.disable-visualisation=1",
+            "--stat",
+        ]
 
     return Command(cmd)
 
