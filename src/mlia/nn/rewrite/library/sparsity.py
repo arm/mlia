@@ -7,6 +7,7 @@ import tensorflow_model_optimization as tfmot
 from keras.api._v2 import keras  # Temporary workaround for now: MLIA-1107
 
 from mlia.nn.rewrite.library.helper_functions import compute_conv2d_parameters
+from mlia.nn.rewrite.library.helper_functions import get_activation_function
 
 
 def fc_sparsity_rewrite(
@@ -31,11 +32,18 @@ def fc_sparsity_rewrite(
 
 
 def conv2d_sparsity_rewrite(
-    input_shape: Any, output_shape: Any, sparsity_m: int = 2, sparsity_n: int = 4
+    input_shape: Any,
+    output_shape: Any,
+    sparsity_m: int = 2,
+    sparsity_n: int = 4,
+    activation: str = "relu",
 ) -> keras.Model:
     """Conv2d TensorFlow Lite model ready for sparse pruning."""
     conv2d_parameters = compute_conv2d_parameters(
         input_shape=input_shape, output_shape=output_shape
+    )
+    activation_function, activation_function_extra_args = get_activation_function(
+        activation
     )
     model = tfmot.sparsity.keras.prune_low_magnitude(
         to_prune=keras.Sequential(
@@ -43,7 +51,7 @@ def conv2d_sparsity_rewrite(
                 keras.layers.InputLayer(input_shape=input_shape),
                 keras.layers.Conv2D(**conv2d_parameters),
                 keras.layers.BatchNormalization(),
-                keras.layers.ReLU(),
+                activation_function(**activation_function_extra_args),
             ]
         ),
         sparsity_m_by_n=(

@@ -229,19 +229,19 @@ There are a number of predefined profiles for rewrites shown below:
 
 |    Name                                 | Batch Size |  LR  | Show Progress | Steps | LR Schedule | Num Procs | Num Threads | Checkpoints | Num Clusters | Cluster Centroids Init             |
 | :-------------------------------------: | :--------: | :--: | :-----------: | :---: | :---------: | :-------: | :---------: | :---------: | :----------: | :--------------------------------: |
-| optimization-fully-connected-clustering |     32     | 1e-3 |      True     | 48000 |   "cosine"  |     1     |      0      |     None    |      32      |    "CentroidInitialization.LINEAR" |
+| optimization-fully-connected-clustering |     32     | 1e-3 |      True     | 48000 |   "cosine"  |     1     |      0      |     None    |      16      |    "CentroidInitialization.LINEAR" |
 
 |    Name                               | Batch Size |  LR  | Show Progress | Steps | LR Schedule | Num Procs | Num Threads | Checkpoints | Sparsity M | Sparsity N |
 | :-----------------------------------: | :--------: | :--: | :-----------: | :---: | :---------: | :-------: | :---------: | :---------: | :--------: | :--------: |
 | optimization-fully-connected-pruning |     32     | 1e-3 |      True     | 48000 |   "cosine"  |     1     |      0      |     None    |     2      |      4     |
 
-|    Name                                 | Batch Size |  LR  | Show Progress | Steps | LR Schedule | Num Procs | Num Threads | Checkpoints | Num Clusters | Cluster Centroids Init             |
-| :-------------------------------------: | :--------: | :--: | :-----------: | :---: | :---------: | :-------: | :---------: | :---------: | :----------: | :--------------------------------: |
-| optimization-conv2d-clustering |     32     | 1e-3 |      True     | 48000 |   "cosine"  |     1     |      0      |     None    |      32      |    "CentroidInitialization.LINEAR" |
+|    Name                                 | Batch Size |  LR  | Show Progress | Steps | LR Schedule | Num Procs | Num Threads | Checkpoints | Num Clusters | Cluster Centroids Init             | Activation |
+| :-------------------------------------: | :--------: | :--: | :-----------: | :---: | :---------: | :-------: | :---------: | :---------: | :----------: | :--------------------------------: | :--------: |
+| optimization-conv2d-clustering |     32     | 1e-3 |      True     | 48000 |   "cosine"  |     1     |      0      |     None    |      16     |    "CentroidInitialization.LINEAR" | "relu" |
 
-|    Name                               | Batch Size |  LR  | Show Progress | Steps | LR Schedule | Num Procs | Num Threads | Checkpoints | Sparsity M | Sparsity N |
-| :-----------------------------------: | :--------: | :--: | :-----------: | :---: | :---------: | :-------: | :---------: | :---------: | :--------: | :--------: |
-| optimization-conv2d-pruning |     32     | 1e-3 |      True     | 48000 |   "cosine"  |     1     |      0      |     None    |     2      |      4     |
+|    Name                               | Batch Size |  LR  | Show Progress | Steps | LR Schedule | Num Procs | Num Threads | Checkpoints | Sparsity M | Sparsity N | Activation |
+| :-----------------------------------: | :--------: | :--: | :-----------: | :---: | :---------: | :-------: | :---------: | :---------: | :--------: | :--------: | :--------: |
+| optimization-conv2d-pruning |     32     | 1e-3 |      True     | 48000 |   "cosine"  |     1     |      0      |     None    |     2      |      4     | "relu" |
 
 These are summarized below:
 
@@ -250,6 +250,12 @@ These are summarized below:
 * optimization-fully-connected-pruning - Provides training parameters for rewrites and pruning specific parameters for the fully-connected-sparsity rewrite
 * optimization-conv2d-clustering - Provides training parameters for rewrites and cluster specific parameters for the conv2d-clustering rewrite
 * optimization-conv2d-pruning - Provides training parameters for rewrites and pruning specific parameters for the conv2d-sparsity rewrite
+
+Note for convolutional rewrites (e.g. optimization-conv2d-pruning). The activation function for the rewrite can be selected in the optimization profile from the following list:
+
+* "relu" - Standard ReLU activation function
+* "relu6" - ReLU6 activation function i.e. ReLU activation function capped at 6
+* "none" - No activation function
 
 The user can also specify custom augmentations as part of the training parameters. An example of this can be found in the following optimization profile:
 

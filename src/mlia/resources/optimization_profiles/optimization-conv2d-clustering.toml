@@ -15,3 +15,4 @@ augmentations.mixup_strength = 0.0
 [rewrite.conv2d-clustering]
 num_clusters = 16
 cluster_centroids_init = "CentroidInitialization.LINEAR"
+activation = "relu"

@@ -55,7 +55,7 @@ class Rewrite(ABC):
         try:
             return self.function(input_shape, output_shape, **kwargs)
         except TypeError as ex:
-            expected_args = getfullargspec(self.function).args
+            expected_args = self.return_rewrite_func_args()
             if "input_shape" in expected_args:
                 expected_args.remove("input_shape")
             if "output_shape" in expected_args:
@@ -71,6 +71,10 @@ class Rewrite(ABC):
     def quantize(self, model: keras.Model) -> keras.Model:
         """Return a quantized model if required."""
         return model
+
+    def return_rewrite_func_args(self) -> list[str]:
+        """Return the expected args of the rewrite function."""
+        return getfullargspec(self.function).args
 
     @abstractmethod
     def training_callbacks(self) -> list:
@@ -304,6 +308,9 @@ class RewritingOptimizer(Optimizer):
             output_tensors=[self.optimizer_configuration.layers_to_optimize[1]],
             train_params=self.optimizer_configuration.train_params,
             rewrite_specific_params=self.optimizer_configuration.rewrite_specific_params,  # pylint: disable=line-too-long
+            detect_activation_function=(
+                "activation" in rewrite.return_rewrite_func_args()
+            ),
         )
 
         if orig_vs_repl_stats:

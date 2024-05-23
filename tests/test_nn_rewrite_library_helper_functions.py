@@ -3,13 +3,16 @@
 """Tests for module mlia.nn.rewrite.library.helper_functions."""
 from __future__ import annotations
 
+from contextlib import ExitStack as does_not_raise
 from typing import Any
 
 import numpy as np
 import pytest
 from keras.api._v2 import keras  # Temporary workaround for now: MLIA-1107
 
+from mlia.nn.rewrite.library.helper_functions import ACTIVATION_FUNCTION_LIST
 from mlia.nn.rewrite.library.helper_functions import compute_conv2d_parameters
+from mlia.nn.rewrite.library.helper_functions import get_activation_function
 
 
 def compute_conv_output(
@@ -49,3 +52,44 @@ def test_compute_conv2d_parameters(
         np.random.rand(1, *input_shape), input_shape, conv_parameters
     )
     assert np.equal(computed_output_shape, output_shape).all()
+
+
+@pytest.mark.parametrize(
+    "activation, expected_function_type, expected_extra_args, expected_error",
+    [
+        ("relu", keras.layers.ReLU, {}, does_not_raise()),
+        ("relu6", keras.layers.ReLU, {"max_value": 6}, does_not_raise()),
+        ("none", keras.layers.Identity, {}, does_not_raise()),
+        (
+            "wrong_key",
+            keras.layers.Identity,
+            {},
+            pytest.raises(
+                KeyError,
+                match=(
+                    "Expected activation function to be "
+                    rf"in \{ACTIVATION_FUNCTION_LIST}\, found wrong_key"
+                ),
+            ),
+        ),
+    ],
+)
+def test_get_activation_functions(
+    activation: str,
+    expected_function_type: type[keras.layers.Layer],
+    expected_extra_args: dict,
+    expected_error: Any,
+) -> None:
+    """
+    Check the get_activation_function returns
+    the expected layer and extra arguments.
+    """
+    with expected_error:
+        activation_function, activation_function_extra_args = get_activation_function(
+            activation
+        )
+        assert isinstance(
+            activation_function(**activation_function_extra_args),
+            expected_function_type,
+        )
+        assert expected_extra_args == activation_function_extra_args

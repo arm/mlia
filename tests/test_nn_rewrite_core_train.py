@@ -16,6 +16,7 @@ from keras.api._v2 import keras  # Temporary workaround for now: MLIA-1107
 
 from mlia.nn.rewrite.core.train import augment_fn_twins
 from mlia.nn.rewrite.core.train import AUGMENTATION_PRESETS
+from mlia.nn.rewrite.core.train import detect_activation_from_rewrite_function
 from mlia.nn.rewrite.core.train import LearningRateSchedule
 from mlia.nn.rewrite.core.train import mixup
 from mlia.nn.rewrite.core.train import train
@@ -249,4 +250,42 @@ def test_train_checkpoint(
         train_params=MockTrainingParameters(steps=64, checkpoint_at=[24, 32]),
         use_unmodified_model=False,
         quantized=True,
+    )
+
+
+def test_detect_activation_from_rewrite_function_no_activation(
+    caplog: pytest.LogCaptureFixture, test_tflite_no_act_model: Path
+) -> None:
+    """
+    Test function detect_activation_from_rewrite_function()
+    with a model with no activation functions.
+    """
+    caplog.set_level(level=20)
+    activation = detect_activation_from_rewrite_function(
+        test_tflite_no_act_model.as_posix()
+    )
+    log_records = caplog.get_records(when="call")
+    logging_messages = [x.message for x in log_records if x.levelno == 20]
+    assert activation == "relu"
+    assert (
+        "No activation function specified, setting activation function to ReLU"
+        in logging_messages
+    )
+
+
+def test_detect_activation_from_rewrite_function_relu_activation(
+    caplog: pytest.LogCaptureFixture, test_tflite_model: Path
+) -> None:
+    """
+    Test function detect_activation_from_rewrite_function()
+    with a model with ReLU activation functions.
+    """
+    caplog.set_level(level=20)
+    activation = detect_activation_from_rewrite_function(test_tflite_model.as_posix())
+    log_records = caplog.get_records(when="call")
+    logging_messages = [x.message for x in log_records if x.levelno == 20]
+    assert activation == "relu"
+    assert (
+        "No activation function specified, setting activation function "
+        "to most common activation detected in rewrite graph: relu" in logging_messages
     )

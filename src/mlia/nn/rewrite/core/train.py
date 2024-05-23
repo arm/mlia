@@ -34,12 +34,12 @@ from mlia.nn.rewrite.core.graph_edit.record import record_model
 from mlia.nn.rewrite.core.utils.numpy_tfrecord import numpytf_count
 from mlia.nn.rewrite.core.utils.numpy_tfrecord import numpytf_read
 from mlia.nn.rewrite.core.utils.parallel import ParallelTFLiteModel
+from mlia.nn.rewrite.library.helper_functions import ACTIVATION_FUNCTION_LIST
 from mlia.nn.tensorflow.config import TFLiteModel
 from mlia.nn.tensorflow.tflite_convert import convert_to_tflite
 from mlia.nn.tensorflow.tflite_graph import load_fb
 from mlia.nn.tensorflow.tflite_graph import save_fb
 from mlia.utils.logging import log_action
-
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
@@ -84,6 +84,7 @@ def train(  # pylint: disable=too-many-arguments
     output_tensors: list,
     train_params: TrainingParameters = TrainingParameters(),
     rewrite_specific_params: dict | None = None,
+    detect_activation_function: bool = False,
 ) -> Any:
     """Extract and train a model, and return the results."""
     if unmodified_model:
@@ -124,6 +125,7 @@ def train(  # pylint: disable=too-many-arguments
             is_qat=is_qat,
             train_params=train_params,
             rewrite_specific_params=rewrite_specific_params,
+            detect_activation_function=detect_activation_function,
         )
 
         for i, filename in enumerate(tflite_filenames):
@@ -351,6 +353,41 @@ def set_up_data_pipeline(
     return dataset, steps_per_epoch
 
 
+def detect_activation_from_rewrite_function(model_path: str) -> str:
+    """Given a rewrite model, choose the most common activation function."""
+    interpreter = tf.lite.Interpreter(model_path=model_path)
+    interpreter.allocate_tensors()
+    act_func_match_list = []
+    for tensor_details in interpreter.get_tensor_details():
+        for act_func in ACTIVATION_FUNCTION_LIST:
+            tensor_name = tensor_details["name"].lower()
+            if act_func in tensor_name:
+                act_func_idx = tensor_name.index(act_func)
+                if (
+                    len(tensor_name) == act_func_idx + len(act_func)
+                    or tensor_name[act_func_idx + len(act_func)] == ";"
+                ):
+                    act_func_match_list.append(
+                        tensor_name[
+                            act_func_idx : act_func_idx + len(act_func)  # noqa: E203
+                        ]
+                    )
+    act_func_match = "relu"
+    if len(act_func_match_list) == 0:
+        logger.info(
+            "No activation function specified, setting activation function to ReLU"
+        )
+    else:
+        act_func_match = max(set(act_func_match_list), key=act_func_match.count)
+        logger.info(
+            "No activation function specified, "
+            "setting activation function to most "
+            "common activation detected in rewrite graph: %s",
+            act_func_match,
+        )
+    return act_func_match
+
+
 def train_in_dir(
     train_dir: str,
     baseline_dir: Any,
@@ -359,6 +396,7 @@ def train_in_dir(
     is_qat: bool,
     train_params: TrainingParameters = TrainingParameters(),
     rewrite_specific_params: dict | None = None,
+    detect_activation_function: bool = False,
 ) -> list[str]:
     """Train a replacement for replace.tflite using the input.tfrec \
         and output.tfrec in train_dir.
@@ -374,6 +412,18 @@ def train_in_dir(
         batch_size=train_params.batch_size,
     )
     replace = TFLiteModel(ExtractPaths.tflite.replace(train_dir))
+
+    if detect_activation_function and (
+        rewrite_specific_params is None
+        or "activation" not in list(rewrite_specific_params.keys())
+    ):
+        detected_activation_function = detect_activation_from_rewrite_function(
+            ExtractPaths.tflite.replace(train_dir).as_posix()
+        )
+        if rewrite_specific_params:
+            rewrite_specific_params["activation"] = detected_activation_function
+        else:
+            rewrite_specific_params = {"activation": detected_activation_function}
 
     input_name, output_name = _get_io_tensors(teacher)
 

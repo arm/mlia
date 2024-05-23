@@ -15,3 +15,4 @@ augmentations.mixup_strength = 0.0
 [rewrite.conv2d-sparsity]
 sparsity_m = 2
 sparsity_n = 4
+activation = "relu"
