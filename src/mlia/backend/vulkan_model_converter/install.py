@@ -19,10 +19,10 @@ def get_vulkan_model_converter_installation() -> BackendInstallation:
             url=(
                 "https://artifactory.arm.com:443/artifactory/ml-tooling.misc/"
                 "mlia/vulkan-model-converter/"
-                "nightly_2024-04-30/vulkan-ml-sdk-dev-converter.tar.gz"
+                "nightly_2024-05-22/vulkan-ml-sdk-dev-converter.tar.gz"
             ),
             sha256_hash=(
-                "6acd31066bc3486aa2f15cc14e95170c556edf512ab1e7a89f60bee7e9dba0bd"
+                "8439297a3735d7f1f50e96769be7861aa215393a62de2edd64a42ae265758703"
             ),
             header_gen_fn=artifactory_credential_headers,
         ),
@@ -31,7 +31,6 @@ def get_vulkan_model_converter_installation() -> BackendInstallation:
             expected_files=[
                 "back-end/vulkan-converter-back-end",
                 "front-ends/tflite/vulkan-converter-tflite-front-end",
-                "front-ends/tflite/libvulkan-converter-tflite-front-end-lib.so",
             ],
         ),
         backend_installer=None,

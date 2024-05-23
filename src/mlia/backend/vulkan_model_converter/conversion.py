@@ -122,36 +122,5 @@ class VulkanModelConverter:
         return spirv_file
 
     def _library_paths(self) -> list[Path]:
-        paths = [
-            self.converter_path / path
-            for path in (
-                self.FRONT_END_DIR,
-                "external/cpuinfo",
-                "external/local_xla/xla/mlir/utils",
-                "external/pthreadpool",
-                "external/ruy/ruy",
-                "external/stablehlo",
-                "front-ends/tflite",
-                "tensorflow",
-                "tensorflow/compiler/mlir/lite",
-                "tensorflow/compiler/mlir/lite/quantization",
-                "tensorflow/compiler/mlir/lite/quantization/ir",
-                "tensorflow/compiler/mlir/lite/quantization/lite",
-                "tensorflow/compiler/mlir/tensorflow",
-                "tensorflow/compiler/mlir/tensorflow/transforms",
-                "tensorflow/compiler/mlir/tosa",
-                "tensorflow/core/ir/importexport",
-                "tensorflow/core/ir/types",
-                "tensorflow/lite",
-                "tensorflow/lite/c",
-                "tensorflow/lite/core",
-                "tensorflow/lite/core/api",
-                "tensorflow/lite/core/c",
-                "tensorflow/lite/experimental/remat",
-                "tensorflow/lite/kernels",
-                "tensorflow/lite/kernels/internal",
-                "tensorflow/lite/schema",
-                "tensorflow/lite/tools/optimize",
-            )
-        ]
+        paths = [self.converter_path / path for path in (self.FRONT_END_DIR,)]
         return paths
