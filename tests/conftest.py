@@ -268,4 +268,6 @@ def set_training_steps(
                 "mlia.nn.select._get_rewrite_params",
                 MagicMock(return_value=MockTrainingParameters()),
             )
-    yield
+            yield
+    else:
+        yield
