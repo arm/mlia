@@ -30,11 +30,6 @@ def test_configure_and_get_hydra_advisor(test_tflite_model: Path) -> None:
 
     assert ctx.event_handlers is not None
     assert ctx.config_parameters == {
-        "hydra_inference_advisor": {
-            "backends": ["argo"],
-            "model": str(test_tflite_model),
-            "target_profile": "hydra",
-        },
         "common_optimizations": {
             "optimizations": [
                 [
@@ -50,7 +45,15 @@ def test_configure_and_get_hydra_advisor(test_tflite_model: Path) -> None:
                     },
                 ]
             ],
-            "training_parameters": None,
+            "rewrite_parameters": {
+                "rewrite_specific_params": None,
+                "train_params": None,
+            },
+        },
+        "hydra_inference_advisor": {
+            "backends": ["argo"],
+            "model": str(test_tflite_model),
+            "target_profile": "hydra",
         },
     }
 
