@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Utilities for TensorFlow Lite graphs."""
 from __future__ import annotations
@@ -178,9 +178,8 @@ def operator_names_to_types(model_path: Path) -> dict:
 
         for layer in subgraph:
             for input_tensor in layer.inputs:
-                try:
-                    tensor_names.get(input_tensor.name)
-                except KeyError:
+                layer_type = tensor_names.get(input_tensor.name)
+                if not layer_type:
                     tensor_names[input_tensor.name] = layer.type
 
     return tensor_names

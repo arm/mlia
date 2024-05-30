@@ -98,16 +98,21 @@ def test_supported_backends(target_name: str, expected_backends: list[str]) -> N
 @pytest.mark.parametrize(
     ("advice", "expected_targets"),
     (
-        (AdviceCategory.COMPATIBILITY, ["cortex-a", "ethos-u55", "ethos-u65", "tosa"]),
+        (
+            AdviceCategory.COMPATIBILITY,
+            ["cortex-a", "ethos-u55", "ethos-u65", "hydra", "tosa"],
+        ),
         (AdviceCategory.OPTIMIZATION, ["ethos-u55", "ethos-u65"]),
         (
             AdviceCategory.PERFORMANCE,
-            ["ethos-u55", "ethos-u65", "hydra"]
-            if any(
-                backend in backend_registry.items
-                for backend in ("argo", "ngp-graph-compiler")
-            )
-            else ["ethos-u55", "ethos-u65"],
+            (
+                ["ethos-u55", "ethos-u65", "hydra"]
+                if any(
+                    backend in backend_registry.items
+                    for backend in ("argo", "ngp-graph-compiler")
+                )
+                else ["ethos-u55", "ethos-u65"]
+            ),
         ),
     ),
 )

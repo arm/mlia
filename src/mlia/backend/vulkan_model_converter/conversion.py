@@ -15,7 +15,7 @@ from mlia.utils.proc import process_command_output
 logger = logging.getLogger(__name__)
 
 
-class VulkanModelConverter:
+class VulkanModelConverterBase:
     """Wrapper class to run the Vulkan Model Converter."""
 
     FRONT_END_DIR = "front-ends/tflite"
@@ -65,6 +65,7 @@ class VulkanModelConverter:
                 str(tflite_file),
                 "-o",
                 str(tosa_file),
+                *self._extra_front_end_arguments(),
             ],
             env=env,
         )
@@ -97,8 +98,7 @@ class VulkanModelConverter:
                 str(tosa_file),
                 "-o",
                 str(spirv_file),
-                "--package-spv",
-                "--experimental-analysis",
+                *self._extra_back_end_arguments(),
             ],
         )
         return cmd
@@ -108,6 +108,29 @@ class VulkanModelConverter:
         spirv_file = output_dir / f"{tosa_file.stem}_spirv.zip"
         cmd = self._create_back_end_command(tosa_file, spirv_file)
         process_command_output(cmd, self.output_consumers)
+
+        return spirv_file
+
+    def _library_paths(self) -> list[Path]:
+        paths = [self.converter_path / path for path in (self.FRONT_END_DIR,)]
+        return paths
+
+    def _extra_front_end_arguments(self) -> list[str]:
+        """Return any extra arguments to be used with the VMC front-end."""
+        return []
+
+    def _extra_back_end_arguments(self) -> list[str]:
+        """Return any extra arguments to be used with the VMC back-end."""
+        return []
+
+
+# pylint: disable=too-few-public-methods
+class VulkanModelConverter(VulkanModelConverterBase):
+    """Run the Vulkan Model Converter to produce a SPIR-v file."""
+
+    def _run_back_end(self, tosa_file: Path, output_dir: Path) -> Path:
+        """Run the backend and return the SPIR-V output archive."""
+        spirv_file = super()._run_back_end(tosa_file, output_dir)
 
         if not spirv_file.is_file():
             raise FileNotFoundError(
@@ -121,6 +144,6 @@ class VulkanModelConverter:
 
         return spirv_file
 
-    def _library_paths(self) -> list[Path]:
-        paths = [self.converter_path / path for path in (self.FRONT_END_DIR,)]
-        return paths
+    def _extra_back_end_arguments(self) -> list[str]:
+        """Return any extra arguments to be used with the VMC back-end."""
+        return ["--package-spv"]

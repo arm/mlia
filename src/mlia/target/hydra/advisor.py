@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2023-2024, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: LicenseRef-LICENSE
 """Hydra advisor module."""
 from __future__ import annotations
@@ -20,6 +20,7 @@ from mlia.target.common.optimization import add_common_optimization_params
 from mlia.target.hydra.advice_generation import HydraAdviceProducer
 from mlia.target.hydra.config import HydraConfiguration
 from mlia.target.hydra.data_analysis import HydraDataAnalyzer
+from mlia.target.hydra.data_collection import HydraCompatibility
 from mlia.target.hydra.data_collection import HydraOptimizingPerformance
 from mlia.target.hydra.data_collection import HydraPerformance
 from mlia.target.hydra.events import HydraAdvisorStartedEvent
@@ -48,11 +49,7 @@ class HydraInferenceAdvisor(DefaultInferenceAdvisor):
         elif context.category_enabled(AdviceCategory.OPTIMIZATION):
             collectors.append(HydraOptimizingPerformance(model, target_cfg))
         if context.category_enabled(AdviceCategory.COMPATIBILITY):
-            raise ValueError(
-                "Only advice category 'PERFORMANCE' and 'OPTIMIZATION' are "
-                "currently supported by Hydra."
-            )
-
+            collectors.append(HydraCompatibility(model, target_cfg))
         return collectors
 
     def get_analyzers(self, context: Context) -> list[DataAnalyzer]:

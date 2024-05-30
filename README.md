@@ -642,6 +642,8 @@ in the following example.
 mlia-backend install ngp-graph-compiler
 # Get a performance report for the Hydra target using the NGP Graph Compiler.
 mlia check --performance -t hydra -b ngp-graph-compiler ~/model_file.tflite
+# Get an NGP compatibility report for the same model.
+mlia check --compatibility -t hydra -b ngp-graph-compiler ~/model_file.tflite
 ```
 
 ### TOSA Checker

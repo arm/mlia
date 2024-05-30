@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 registry.register(
     "ngp-graph-compiler",
     BackendConfiguration(
-        supported_advice=[AdviceCategory.PERFORMANCE],
+        supported_advice=[AdviceCategory.PERFORMANCE, AdviceCategory.COMPATIBILITY],
         supported_systems=[System.LINUX_AMD64],
         backend_type=BackendType.CUSTOM,
         installation=get_ngp_graph_compiler_installation(),

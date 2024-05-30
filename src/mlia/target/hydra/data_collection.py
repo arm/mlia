@@ -1,9 +1,10 @@
-# SPDX-FileCopyrightText: Copyright 2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2023-2024, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: LicenseRef-LICENSE
 """Data collection module for Hydra."""
 from __future__ import annotations
 
 import logging
+import pprint
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -17,6 +18,8 @@ from mlia.backend.ngp_graph_compiler.performance import (
 from mlia.backend.ngp_graph_compiler.performance import (
     NGPGraphCompilerPerformanceMetrics,
 )
+from mlia.backend.vulkan_model_converter.compat import NGPCompatibilityChecker
+from mlia.backend.vulkan_model_converter.compat import NGPModelCompatibilityInfo
 from mlia.core.data_collection import ContextAwareDataCollector
 from mlia.core.errors import ConfigurationError
 from mlia.core.performance import P
@@ -106,3 +109,33 @@ class HydraOptimizingPerformance(OptimizingPerformaceDataCollector):
             original_perf_metrics=original_metrics,  # type: ignore
             optimizations_perf_metrics=optimizations_perf_metrics,  # type: ignore
         )
+
+
+class HydraCompatibility(ContextAwareDataCollector):
+    """Collect compatibility information."""
+
+    def __init__(self, model: Path, cfg: HydraConfiguration) -> None:
+        """Init operator compatibility data collector."""
+        self.model = model
+        self.cfg = cfg
+
+    def collect_data(
+        self,
+    ) -> NGPModelCompatibilityInfo:
+        """Run performance estimator."""
+        if not is_tflite_model(self.model):
+            raise ConfigurationError("Input must be a tflite file.")
+
+        checker = NGPCompatibilityChecker(self.context.output_dir)
+
+        comp_info = checker.check_compatibility(self.model)
+
+        # Temporary measure to print compatibility before reporting is done
+        print("Compatibility info:")
+        pprint.pprint(comp_info.dump())
+        return comp_info
+
+    @classmethod
+    def name(cls) -> str:
+        """Return name of the collector."""
+        return "hydra_compatibility"

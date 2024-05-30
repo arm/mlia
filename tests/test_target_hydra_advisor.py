@@ -3,8 +3,6 @@
 """Tests for Hydra MLIA module."""
 from pathlib import Path
 
-import pytest
-
 from mlia.core.common import AdviceCategory
 from mlia.core.context import ExecutionContext
 from mlia.core.workflow import DefaultWorkflowExecutor
@@ -58,18 +56,3 @@ def test_configure_and_get_hydra_advisor(test_tflite_model: Path) -> None:
     }
 
     assert isinstance(workflow, DefaultWorkflowExecutor)
-
-
-def test_unsupported_advice_categories(
-    tmp_path: Path,
-    test_tflite_model: Path,
-) -> None:
-    """Test that advisor should throw an exception for unsupported categories."""
-    category = AdviceCategory.COMPATIBILITY
-
-    with pytest.raises(ValueError):
-        ctx = ExecutionContext(output_dir=tmp_path, advice_category={category})
-        advisor = configure_and_get_hydra_advisor(
-            ctx, "hydra", test_tflite_model, backends=["argo"]
-        )
-        advisor.configure(ctx)
