@@ -42,7 +42,9 @@ Information on reporting security issues can be found in
 
 ## License
 
-ML Inference Advisor is licensed under [Apache License 2.0](LICENSES/Apache-2.0.txt).
+ML Inference Advisor is licensed under [Apache License 2.0](LICENSES/Apache-2.0.txt)
+unless otherwise indicated. This project contains software under a range of
+permissive licenses, see [LICENSES](LICENSES/).
 
 ## Trademarks and copyrights
 
