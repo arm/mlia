@@ -17,7 +17,6 @@ from mlia.nn.tensorflow.tflite_graph import TensorInfo
 from mlia.nn.tensorflow.tflite_graph import TFL_ACTIVATION_FUNCTION
 from mlia.nn.tensorflow.tflite_graph import TFL_OP
 from mlia.nn.tensorflow.tflite_graph import TFL_TYPE
-from mlia.utils.filesystem import get_mlia_resources
 from tests.utils.rewrite import models_are_equal
 
 
@@ -120,11 +119,9 @@ def test_operator_names_to_types_invalid_file() -> None:
         operator_names_to_types(Path("DOES_NOT_EXIST"))
 
 
-def test_operator_names_to_types_output() -> None:
+def test_operator_names_to_types_output(test_resources_path: Path) -> None:
     """Test that the output of the tests is as expected."""
-    resources_dir = get_mlia_resources()
-
-    test_model = Path(resources_dir / "argo/clampnet_v2_1-int8_qat_NE.tflite")
+    test_model = Path(test_resources_path / "clampnet_v2_1-int8_qat_NE.tflite")
 
     test_dict = operator_names_to_types(test_model)
     assert (
