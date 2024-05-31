@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2023-2024, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: LicenseRef-LICENSE
 """Tests for Hydra reporters."""
 from functools import partial
@@ -17,6 +17,7 @@ from mlia.backend.ngp_graph_compiler.performance import NGPGraphCompilerOutputFi
 from mlia.backend.ngp_graph_compiler.performance import (
     NGPGraphCompilerPerformanceMetrics,
 )
+from mlia.backend.vulkan_model_converter.compat import NGPModelCompatibilityInfo
 from mlia.core.reporting import Table
 from mlia.target.hydra.config import HydraConfiguration
 from mlia.target.hydra.reporters import hydra_formatters
@@ -179,6 +180,41 @@ def test_ngp_graph_compiler_reporting(monkeypatch: pytest.MonkeyPatch) -> None:
             "│        │        │        │ Input… │ 0.0625 │        │       │        │       │",
             "│        │        │        │ Input… │ 0.25   │        │       │        │       │",
             "└────────┴────────┴────────┴────────┴────────┴────────┴───────┴────────┴───────┘",
+            # pylint: enable=C0301
+        ],
+    )
+
+
+def test_ngp_compatibility_reporting(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test function hydra_formatters() with NGP compatibility data."""
+
+    comp_info = NGPModelCompatibilityInfo({"/myop1": "COMP2D", "/myop4": "NMS"})
+    comp_info.add_lowered_to_tosa("/myop1", "tosaop1")
+    comp_info.add_lowered_to_tosa("/myop2", "tosa.custom")
+    comp_info.add_lowered_to_tosa("/myop3", "tosaop3")
+    comp_info.add_lowering_error("/myop4", "Error occured when lowering")
+
+    formatter = hydra_formatters(comp_info)
+    report = formatter(comp_info)
+    assert isinstance(report, Table)
+
+    monkeypatch.setattr("mlia.utils.console.Console", partial(Console, width=80))
+    assert_table_lines(
+        report,
+        [
+            # pylint: disable=C0301
+            "Operators:",
+            "┌───┬───────────────────┬───────────────┬───────────────┬───────────────────┐",
+            "│ # │ Operator location │ Operator type │ NGP placement │ NGP compatibility │",
+            "╞═══╪═══════════════════╪═══════════════╪═══════════════╪═══════════════════╡",
+            "│ 1 │ /myop1            │ COMP2D        │ NE            │ TOSA              │",
+            "├───┼───────────────────┼───────────────┼───────────────┼───────────────────┤",
+            "│ 2 │ /myop2            │ Unknown       │ EE            │ Shader            │",
+            "├───┼───────────────────┼───────────────┼───────────────┼───────────────────┤",
+            "│ 3 │ /myop3            │ Unknown       │ NE            │ TOSA              │",
+            "├───┼───────────────────┼───────────────┼───────────────┼───────────────────┤",
+            "│ 4 │ /myop4            │ NMS           │ FAIL          │ Non-NGP           │",
+            "└───┴───────────────────┴───────────────┴───────────────┴───────────────────┘",
             # pylint: enable=C0301
         ],
     )

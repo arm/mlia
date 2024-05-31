@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2023-2024, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: LicenseRef-LICENSE
 """Reports module."""
 from __future__ import annotations
@@ -10,8 +10,10 @@ from mlia.backend.argo.performance import ArgoPerformanceMetrics
 from mlia.backend.ngp_graph_compiler.performance import (
     NGPGraphCompilerPerformanceMetrics,
 )
+from mlia.backend.vulkan_model_converter.compat import NGPModelCompatibilityInfo
 from mlia.core.advice_generation import Advice
 from mlia.core.reporters import report_advice
+from mlia.core.reporting import Cell
 from mlia.core.reporting import Column
 from mlia.core.reporting import Format
 from mlia.core.reporting import NestedReport
@@ -81,6 +83,53 @@ def report_hydra_performance(metrics: ArgoPerformanceMetrics) -> Report:
         name="Argo per-layer analysis",
         alias="argo_per_layer",
     ).sorted_by("duration", True)
+
+
+def style_improvement(result: bool) -> str:
+    """Return different text style based on result."""
+    return "green" if result else "yellow"
+
+
+def report_ngp_compatibility(comp_info: NGPModelCompatibilityInfo) -> Report:
+    """Report."""
+    return Table(
+        [
+            Column("#", only_for=["plain_text"]),
+            Column(
+                "Operator location",
+                alias="operator_location",
+                fmt=Format(wrap_width=30),
+            ),
+            Column("Operator type", alias="operator_type", fmt=Format(wrap_width=20)),
+            Column(
+                "NGP placement",
+                alias="ngp_placement",
+                fmt=Format(wrap_width=25),
+            ),
+            Column(
+                "NGP compatibility",
+                alias="ngp_compatibility",
+                fmt=Format(wrap_width=25),
+            ),
+        ],
+        [
+            (
+                index + 1,
+                op.location,
+                op.type or "Unknown",
+                Cell(
+                    op.placement or ("FAIL" if op.error else "Internal Error"),
+                    Format(
+                        style=style_improvement(op.placement == "NE"),
+                    ),
+                ),
+                op.compat_level or "N/A",
+            )
+            for index, op in enumerate(comp_info.get_records())
+        ],
+        name="Operators",
+        alias="operators",
+    )
 
 
 def report_ngp_graph_compiler_perf_db(
@@ -156,5 +205,8 @@ def hydra_formatters(data: Any) -> Callable[[Any], Report]:
 
     if isinstance(data, NGPGraphCompilerPerformanceMetrics):
         return report_ngp_graph_compiler_perf_db
+
+    if isinstance(data, NGPModelCompatibilityInfo):
+        return report_ngp_compatibility
 
     raise RuntimeError(f"Unable to find appropriate formatter for {data}.")

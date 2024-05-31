@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import logging
-import pprint
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -130,9 +129,6 @@ class HydraCompatibility(ContextAwareDataCollector):
 
         comp_info = checker.check_compatibility(self.model)
 
-        # Temporary measure to print compatibility before reporting is done
-        print("Compatibility info:")
-        pprint.pprint(comp_info.dump())
         return comp_info
 
     @classmethod
