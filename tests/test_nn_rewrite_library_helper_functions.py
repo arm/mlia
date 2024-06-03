@@ -64,7 +64,7 @@ def test_compute_conv2d_parameters(
     [
         ("relu", keras.layers.ReLU, {}, does_not_raise()),
         ("relu6", keras.layers.ReLU, {"max_value": 6}, does_not_raise()),
-        ("none", keras.layers.Identity, {}, does_not_raise()),
+        ("none", None, {}, does_not_raise()),
         (
             "wrong_key",
             keras.layers.Identity,
@@ -81,7 +81,7 @@ def test_compute_conv2d_parameters(
 )
 def test_get_activation_functions(
     activation: str,
-    expected_function_type: type[keras.layers.Layer],
+    expected_function_type: type,
     expected_extra_args: dict,
     expected_error: Any,
 ) -> None:
@@ -93,8 +93,11 @@ def test_get_activation_functions(
         activation_function, activation_function_extra_args = get_activation_function(
             activation
         )
-        assert isinstance(
-            activation_function(**activation_function_extra_args),
-            expected_function_type,
-        )
+        if activation_function:
+            assert isinstance(
+                activation_function(**activation_function_extra_args),
+                expected_function_type,
+            )
+        else:
+            assert activation_function is None
         assert expected_extra_args == activation_function_extra_args

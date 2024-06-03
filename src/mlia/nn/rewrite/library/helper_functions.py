@@ -10,7 +10,7 @@ from keras.api._v2 import keras  # Temporary workaround for now: MLIA-1107
 ACTIVATION_FUNCTION_PRESETS = {
     "relu": {"layer_func": keras.layers.ReLU, "extra_args": {}},
     "relu6": {"layer_func": keras.layers.ReLU, "extra_args": {"max_value": 6}},
-    "none": {"layer_func": keras.layers.Identity, "extra_args": {}},
+    "none": {"layer_func": None, "extra_args": {}},
 }
 ACTIVATION_FUNCTION_LIST = [
     act_func for act_func, _ in ACTIVATION_FUNCTION_PRESETS.items()
@@ -19,7 +19,7 @@ ACTIVATION_FUNCTION_LIST = [
 
 def get_activation_function(
     activation: str = "relu",
-) -> tuple[type[keras.layers.Layer], dict]:
+) -> tuple[type, dict]:
     """Get the activation function from a key."""
     if activation not in ACTIVATION_FUNCTION_LIST:
         raise KeyError(

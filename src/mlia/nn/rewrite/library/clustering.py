@@ -59,13 +59,18 @@ def conv2d_clustering_rewrite(  # pylint: disable=dangerous-default-value
     activation_function, activation_function_extra_args = get_activation_function(
         activation
     )
+    activation_func_found = (
+        [activation_function(**activation_function_extra_args)]
+        if activation_function
+        else []
+    )
     model = tfmot.clustering.keras.cluster_weights(
         to_cluster=keras.Sequential(
             [
                 keras.layers.InputLayer(input_shape=input_shape),
                 keras.layers.Conv2D(**conv2d_parameters),
                 keras.layers.BatchNormalization(),
-                activation_function(**activation_function_extra_args),
+                *activation_func_found,
             ]
         ),
         **rewrite_params
