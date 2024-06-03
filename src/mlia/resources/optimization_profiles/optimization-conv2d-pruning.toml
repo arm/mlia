@@ -16,3 +16,4 @@ augmentations.mixup_strength = 0.0
 sparsity_m = 2
 sparsity_n = 4
 activation = "relu"
+kernel_size = [3, 3]

@@ -30,23 +30,28 @@ def compute_conv_output(
 
 
 @pytest.mark.parametrize(
-    "input_shape, output_shape",
+    "input_shape, output_shape, kernel_size",
     [
-        (np.array([32, 32, 3]), np.array([16, 16, 3])),
-        (np.array([32, 32, 3]), np.array([8, 8, 3])),
-        (np.array([32, 32, 3]), np.array([8, 16, 3])),
-        (np.array([25, 10, 3]), np.array([13, 5, 3])),
-        (np.array([25, 10, 3]), np.array([7, 5, 3])),
-        (np.array([25, 10, 3]), np.array([6, 4, 3])),
-        (np.array([25, 10, 3]), np.array([5, 5, 3])),
+        (np.array([32, 32, 3]), np.array([16, 16, 3]), [3, 3]),
+        (np.array([32, 32, 3]), np.array([8, 8, 3]), [3, 3]),
+        (np.array([32, 32, 3]), np.array([8, 16, 3]), [3, 3]),
+        (np.array([25, 10, 3]), np.array([13, 5, 3]), [3, 3]),
+        (np.array([25, 10, 3]), np.array([7, 5, 3]), [3, 3]),
+        (np.array([25, 10, 3]), np.array([6, 4, 3]), [3, 3]),
+        (np.array([25, 10, 3]), np.array([5, 5, 3]), [3, 3]),
+        (np.array([32, 32, 3]), np.array([16, 16, 3]), [1, 3]),
+        (np.array([32, 32, 3]), np.array([16, 16, 3]), [1, 1]),
+        (np.array([32, 32, 3]), np.array([16, 16, 3]), [5, 5]),
     ],
 )
 def test_compute_conv2d_parameters(
-    input_shape: np.ndarray, output_shape: np.ndarray
+    input_shape: np.ndarray, output_shape: np.ndarray, kernel_size: list[int]
 ) -> None:
     """Test to check compute_conv2d_parameters works as expected."""
     conv_parameters = compute_conv2d_parameters(
-        input_shape=input_shape, output_shape=output_shape
+        input_shape=input_shape,
+        output_shape=output_shape,
+        kernel_size_input=kernel_size,
     )
     computed_output_shape = compute_conv_output(
         np.random.rand(1, *input_shape), input_shape, conv_parameters

@@ -237,13 +237,13 @@ There are a number of predefined profiles for rewrites shown below:
 | :-----------------------------------: | :--------: | :--: | :-----------: | :---: | :---------: | :-------: | :---------: | :---------: | :--------: | :--------: |
 | optimization-fully-connected-pruning |     32     | 1e-3 |      True     | 48000 |   "cosine"  |     1     |      0      |     None    |     2      |      4     |
 
-|    Name                                 | Batch Size |  LR  | Show Progress | Steps | LR Schedule | Num Procs | Num Threads | Checkpoints | Num Clusters | Cluster Centroids Init             | Activation |
-| :-------------------------------------: | :--------: | :--: | :-----------: | :---: | :---------: | :-------: | :---------: | :---------: | :----------: | :--------------------------------: | :--------: |
-| optimization-conv2d-clustering |     32     | 1e-3 |      True     | 48000 |   "cosine"  |     1     |      0      |     None    |      16     |    "CentroidInitialization.LINEAR" | "relu" |
+|    Name                                 | Batch Size |  LR  | Show Progress | Steps | LR Schedule | Num Procs | Num Threads | Checkpoints | Num Clusters | Cluster Centroids Init             | Activation | Kernel Size |
+| :-------------------------------------: | :--------: | :--: | :-----------: | :---: | :---------: | :-------: | :---------: | :---------: | :----------: | :--------------------------------: | :--------: | :---------: |
+| optimization-conv2d-clustering |     32     | 1e-3 |      True     | 48000 |   "cosine"  |     1     |      0      |     None    |      16     |    "CentroidInitialization.LINEAR" | "relu" | 3x3 |
 
-|    Name                               | Batch Size |  LR  | Show Progress | Steps | LR Schedule | Num Procs | Num Threads | Checkpoints | Sparsity M | Sparsity N | Activation |
-| :-----------------------------------: | :--------: | :--: | :-----------: | :---: | :---------: | :-------: | :---------: | :---------: | :--------: | :--------: | :--------: |
-| optimization-conv2d-pruning |     32     | 1e-3 |      True     | 48000 |   "cosine"  |     1     |      0      |     None    |     2      |      4     | "relu" |
+|    Name                               | Batch Size |  LR  | Show Progress | Steps | LR Schedule | Num Procs | Num Threads | Checkpoints | Sparsity M | Sparsity N | Activation | Kernel Size |
+| :-----------------------------------: | :--------: | :--: | :-----------: | :---: | :---------: | :-------: | :---------: | :---------: | :--------: | :--------: | :--------: | :---------: |
+| optimization-conv2d-pruning |     32     | 1e-3 |      True     | 48000 |   "cosine"  |     1     |      0      |     None    |     2      |      4     | "relu" | 3x3 |
 
 These are summarized below:
 
@@ -267,7 +267,7 @@ The user can also specify custom augmentations as part of the training parameter
 
 The augmentations consist of 2 parameters: mixup strength and gaussian strength.
 
-Augmenations can be selected from a number of pre-defined profiles (see the table below) or each individual parameter can be chosen (see optimization_custom_augmentation above for an example):
+Augmentations can be selected from a number of pre-defined profiles (see the table below) or each individual parameter can be chosen (see optimization_custom_augmentation above for an example):
 
 |         Name         | MixUp Strength | Gaussian Strength |
 | :------------------: | :------------: | :---------------: |

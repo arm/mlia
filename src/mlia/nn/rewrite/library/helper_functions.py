@@ -33,17 +33,20 @@ def get_activation_function(
     return activation_function, activation_function_extra_args
 
 
-def compute_conv2d_parameters(
-    input_shape: np.ndarray, output_shape: np.ndarray
+def compute_conv2d_parameters(  # pylint: disable=dangerous-default-value
+    input_shape: np.ndarray,
+    output_shape: np.ndarray,
+    kernel_size_input: list[int] = [3, 3],
 ) -> dict[str, Any]:
     """Compute needed kernel size and strides for a given input and output_shape."""
     input_shape = input_shape.tolist()
     output_shape = output_shape.tolist()
+    assert len(kernel_size_input) == 2, "Kernel size should have 2 entries"
     assert len(input_shape) == 3
     assert len(output_shape) == 3
+    kernel_size = tuple(kernel_size_input)
     num_filters = (output_shape[-1] - input_shape[-1]) + input_shape[-1]
     padding = "valid"
-    kernel_size = (3, 3)
     stride_h = round(input_shape[0] / output_shape[0])
     check_output_size_h = math.floor((input_shape[0] - kernel_size[0]) / stride_h) + 1
     stride_w = round(input_shape[1] / output_shape[1])

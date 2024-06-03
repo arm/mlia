@@ -16,3 +16,4 @@ augmentations.mixup_strength = 0.0
 num_clusters = 16
 cluster_centroids_init = "CentroidInitialization.LINEAR"
 activation = "relu"
+kernel_size = [3, 3]

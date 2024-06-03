@@ -36,7 +36,7 @@ def fc_clustering_rewrite(
     return model
 
 
-def conv2d_clustering_rewrite(
+def conv2d_clustering_rewrite(  # pylint: disable=dangerous-default-value
     input_shape: Any,
     output_shape: Any,
     num_clusters: int = 2,
@@ -44,6 +44,7 @@ def conv2d_clustering_rewrite(
         "CentroidInitialization.LINEAR"
     ),
     activation: str = "relu",
+    kernel_size: list[int] = [3, 3],
 ) -> keras.Model:
     """Conv2d TensorFlow Lite model ready for clustering."""
     rewrite_params = {
@@ -51,7 +52,9 @@ def conv2d_clustering_rewrite(
         "cluster_centroids_init": cluster_centroids_init,
     }
     conv2d_parameters = compute_conv2d_parameters(
-        input_shape=input_shape, output_shape=output_shape
+        input_shape=input_shape,
+        output_shape=output_shape,
+        kernel_size_input=kernel_size,
     )
     activation_function, activation_function_extra_args = get_activation_function(
         activation

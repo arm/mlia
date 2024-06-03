@@ -31,16 +31,19 @@ def fc_sparsity_rewrite(
     return model
 
 
-def conv2d_sparsity_rewrite(
+def conv2d_sparsity_rewrite(  # pylint: disable=dangerous-default-value
     input_shape: Any,
     output_shape: Any,
     sparsity_m: int = 2,
     sparsity_n: int = 4,
     activation: str = "relu",
+    kernel_size: list[int] = [3, 3],
 ) -> keras.Model:
     """Conv2d TensorFlow Lite model ready for sparse pruning."""
     conv2d_parameters = compute_conv2d_parameters(
-        input_shape=input_shape, output_shape=output_shape
+        input_shape=input_shape,
+        output_shape=output_shape,
+        kernel_size_input=kernel_size,
     )
     activation_function, activation_function_extra_args = get_activation_function(
         activation
