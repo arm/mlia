@@ -28,12 +28,15 @@ from mlia.nn.rewrite.core.rewrite import RewriteCallable
 from mlia.nn.rewrite.core.rewrite import RewriteConfiguration
 from mlia.nn.rewrite.core.rewrite import RewriteRegistry
 from mlia.nn.rewrite.core.rewrite import RewritingOptimizer
-from mlia.nn.rewrite.core.rewrite import SparsityRewrite
+from mlia.nn.rewrite.core.rewrite import StructuredSparsityRewrite
 from mlia.nn.rewrite.core.rewrite import TrainingParameters
+from mlia.nn.rewrite.core.rewrite import UnstructuredSparsityRewrite
 from mlia.nn.rewrite.core.train import train_in_dir
 from mlia.nn.rewrite.library.clustering import fc_clustering_rewrite
 from mlia.nn.rewrite.library.sparsity import conv2d_sparsity_rewrite
+from mlia.nn.rewrite.library.sparsity import conv2d_sparsity_unstructured_rewrite
 from mlia.nn.rewrite.library.sparsity import fc_sparsity_rewrite
+from mlia.nn.rewrite.library.sparsity import fc_sparsity_unstructured_rewrite
 from mlia.nn.tensorflow.config import TFLiteModel
 from tests.utils.rewrite import MockTrainingParameters
 
@@ -60,9 +63,9 @@ def test_rewrite() -> None:
     [
         ("fully-connected", 0, GenericRewrite),
         ("fully-connected-clustering", 0, ClusteringRewrite),
-        ("fully-connected-sparsity", 1, SparsityRewrite),
+        ("fully-connected-sparsity", 1, StructuredSparsityRewrite),
         ("conv2d-clustering", 0, ClusteringRewrite),
-        ("conv2d-sparsity", 1, SparsityRewrite),
+        ("conv2d-sparsity", 1, StructuredSparsityRewrite),
     ],
 )
 def test_rewrite_selection(
@@ -110,6 +113,7 @@ def train_rewrite_model(
     input_shape: tuple | np.ndarray,
     output_shape: int | np.ndarray,
     rewrite_model: keras.Model,
+    epochs: int = 1,
 ) -> keras.Model:
     """Helper function to quickly train a rewrite model."""
     rewrite_model.compile(
@@ -125,7 +129,7 @@ def train_rewrite_model(
         x=np.random.rand(16, *input_shape),
         y=np.random.rand(16, *output_shape_list),
         batch_size=1,
-        epochs=1,
+        epochs=epochs,
         callbacks=[tfmot.sparsity.keras.UpdatePruningStep()],
     )
     return rewrite_model
@@ -154,7 +158,7 @@ def test_rewrite_fully_connected_sparsity(caplog: pytest.LogCaptureFixture) -> N
     rewrite model is correctly sparse.
     """
 
-    rewrite = SparsityRewrite("fully-connected-sparsity", fc_sparsity_rewrite)
+    rewrite = StructuredSparsityRewrite("fully-connected-sparsity", fc_sparsity_rewrite)
     input_shape = (28, 28)
     output_shape = 10
     model = rewrite(
@@ -188,7 +192,7 @@ def test_rewrite_fully_connected_sparsity(caplog: pytest.LogCaptureFixture) -> N
 def test_rewrite_conv2d_sparsity(caplog: pytest.LogCaptureFixture) -> None:
     """Check that sparse conv2d rewrite model is correctly sparse."""
 
-    rewrite = SparsityRewrite("conv2d-sparsity", conv2d_sparsity_rewrite)
+    rewrite = StructuredSparsityRewrite("conv2d-sparsity", conv2d_sparsity_rewrite)
     input_shape = np.array([28, 28, 3])
     output_shape = np.array([14, 14, 3])
     model = rewrite(
@@ -216,6 +220,86 @@ def test_rewrite_conv2d_sparsity(caplog: pytest.LogCaptureFixture) -> None:
     assert rewrite.check_optimization(model)
 
 
+def test_rewrite_conv2d_unstructured_sparsity(caplog: pytest.LogCaptureFixture) -> None:
+    """Check that an unstructured sparse conv2d rewrite is correctly sparse."""
+
+    rewrite = UnstructuredSparsityRewrite(
+        "conv2d-unstructured-sparsity", conv2d_sparsity_unstructured_rewrite
+    )
+    input_shape = np.array([28, 28, 3])
+    output_shape = np.array([14, 14, 3])
+    model = rewrite(
+        input_shape=input_shape, output_shape=output_shape, final_sparsity=0.50
+    )
+    model = rewrite.post_process(model)
+    assert not rewrite.check_optimization(model)
+    log_records = caplog.records
+    warning_messages = [x.message for x in log_records if x.levelno == 30]
+    assert (
+        re.search(
+            r"\nWARNING: Found total sparsity of rewrite model: \d.\d\d "
+            r"expected total sparsity to be: 0.50\n",
+            warning_messages[0],
+        )
+        is not None
+    )
+    model = rewrite(
+        input_shape=input_shape,
+        output_shape=output_shape,
+        final_sparsity=0.5,
+        end_step=120,
+    )
+    train_rewrite_model(
+        input_shape=input_shape,
+        output_shape=output_shape,
+        rewrite_model=model,
+        epochs=10,
+    )
+    model = rewrite.post_process(model)
+    assert rewrite.check_optimization(model)
+
+
+def test_rewrite_fully_connected_unstructured_sparsity(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Check that an unstructured sparse FC rewrite is correctly sparse."""
+
+    rewrite = UnstructuredSparsityRewrite(
+        "fully-connected-unstructured-sparsity", fc_sparsity_unstructured_rewrite
+    )
+    input_shape = (28, 28)
+    output_shape = 10
+    model = rewrite(
+        input_shape=tuple(input_shape), output_shape=output_shape, final_sparsity=0.5
+    )
+    model = rewrite.post_process(model)
+    assert not rewrite.check_optimization(model)
+    log_records = caplog.records
+    warning_messages = [x.message for x in log_records if x.levelno == 30]
+    assert (
+        re.search(
+            r"\nWARNING: Found total sparsity of rewrite model: \d.\d\d "
+            r"expected total sparsity to be: 0.50\n",
+            warning_messages[0],
+        )
+        is not None
+    )
+    model = rewrite(
+        input_shape=input_shape,
+        output_shape=output_shape,
+        final_sparsity=0.5,
+        end_step=120,
+    )
+    train_rewrite_model(
+        input_shape=input_shape,
+        output_shape=output_shape,
+        rewrite_model=model,
+        epochs=10,
+    )
+    model = rewrite.post_process(model)
+    assert rewrite.check_optimization(model)
+
+
 @pytest.mark.parametrize(
     "rewrite_type, expected_layers, quant",
     [
@@ -233,6 +317,26 @@ def test_rewrite_conv2d_sparsity(caplog: pytest.LogCaptureFixture) -> None:
         ],
         [
             "conv2d-sparsity",
+            [PruneLowMagnitude, PruneLowMagnitude, PruneLowMagnitude],
+            True,
+        ],
+        [
+            "fully-connected-unstructured-sparsity",
+            [PruneLowMagnitude, PruneLowMagnitude],
+            False,
+        ],
+        [
+            "fully-connected-unstructured-sparsity",
+            [PruneLowMagnitude, PruneLowMagnitude],
+            True,
+        ],
+        [
+            "conv2d-unstructured-sparsity",
+            [PruneLowMagnitude, PruneLowMagnitude, PruneLowMagnitude],
+            False,
+        ],
+        [
+            "conv2d-unstructured-sparsity",
             [PruneLowMagnitude, PruneLowMagnitude, PruneLowMagnitude],
             True,
         ],
@@ -306,13 +410,15 @@ def test_register_rewrite_function() -> None:
 
 def test_builtin_rewrite_names() -> None:
     """Test if all builtin rewrites are properly registered and returned."""
-    assert RewritingOptimizer.builtin_rewrite_names() == [
+    assert set(RewritingOptimizer.builtin_rewrite_names()) == {
         "conv2d-clustering",
         "conv2d-sparsity",
+        "conv2d-unstructured-sparsity",
         "fully-connected",
         "fully-connected-clustering",
         "fully-connected-sparsity",
-    ]
+        "fully-connected-unstructured-sparsity",
+    }
 
 
 def test_rewrite_configuration_train_params(

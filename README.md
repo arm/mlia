@@ -187,8 +187,10 @@ The following rewrites are supported:
 
 * fully-connected - replaces a subgraph with a fully connected layer
 * fully-connected-sparsity - replaces a subgraph with a pruned 2:4 sparse fully connected layer
+* fully-connected-unstructured-sparsity - replaces a subgraph with an unstructured pruned fully connected layer
 * fully-connected-clustering - replaces a subgraph with a clustered fully connected layer
 * conv2d-sparsity - replaces a subgraph with a pruned 2:4 sparse conv2d layer
+* conv2d-unstructured-sparsity - replaces a subgraph with an unstructured pruned conv2d layer
 * conv2d-clustering  - replaces a subgraph with a clustered conv2d layer
 
 **Note:** A ***Keras model*** (.h5 or SavedModel) is required as input to
@@ -237,6 +239,10 @@ There are a number of predefined profiles for rewrites shown below:
 | :-----------------------------------: | :--------: | :--: | :-----------: | :---: | :---------: | :-------: | :---------: | :---------: | :--------: | :--------: |
 | optimization-fully-connected-pruning |     32     | 1e-3 |      True     | 48000 |   "cosine"  |     1     |      0      |     None    |     2      |      4     |
 
+|    Name                               | Batch Size |  LR  | Show Progress | Steps | LR Schedule | Num Procs | Num Threads | Checkpoints | Initial Sparsity | End Sparsity | End Step |
+| :-----------------------------------: | :--------: | :--: | :-----------: | :---: | :---------: | :-------: | :---------: | :---------: | :--------: | :--------: | :--------: |
+| optimization-fully-connected-unstructured-pruning |     32     | 1e-3 |      True     | 48000 |   "cosine"  |     1     |      0      |     None    |     0.25      |      0.5     | 48000 |
+
 |    Name                                 | Batch Size |  LR  | Show Progress | Steps | LR Schedule | Num Procs | Num Threads | Checkpoints | Num Clusters | Cluster Centroids Init             | Activation | Kernel Size |
 | :-------------------------------------: | :--------: | :--: | :-----------: | :---: | :---------: | :-------: | :---------: | :---------: | :----------: | :--------------------------------: | :--------: | :---------: |
 | optimization-conv2d-clustering |     32     | 1e-3 |      True     | 48000 |   "cosine"  |     1     |      0      |     None    |      16     |    "CentroidInitialization.LINEAR" | "relu" | 3x3 |
@@ -244,6 +250,10 @@ There are a number of predefined profiles for rewrites shown below:
 |    Name                               | Batch Size |  LR  | Show Progress | Steps | LR Schedule | Num Procs | Num Threads | Checkpoints | Sparsity M | Sparsity N | Activation | Kernel Size |
 | :-----------------------------------: | :--------: | :--: | :-----------: | :---: | :---------: | :-------: | :---------: | :---------: | :--------: | :--------: | :--------: | :---------: |
 | optimization-conv2d-pruning |     32     | 1e-3 |      True     | 48000 |   "cosine"  |     1     |      0      |     None    |     2      |      4     | "relu" | 3x3 |
+
+|    Name                               | Batch Size |  LR  | Show Progress | Steps | LR Schedule | Num Procs | Num Threads | Checkpoints | Initial Sparsity | End Sparsity | End Step | Activation | Kernel Size |
+| :-----------------------------------: | :--------: | :--: | :-----------: | :---: | :---------: | :-------: | :---------: | :---------: | :--------: | :--------: | :--------: | :--------:| :---------: |
+| optimization-conv2d-unstructured-pruning |     32     | 1e-3 |      True     | 48000 |   "cosine"  |     1     |      0      |     None |     0.25   |      0.5   |     48000  |    "relu" |         3x3 |
 
 These are summarized below:
 

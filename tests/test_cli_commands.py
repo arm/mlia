@@ -140,8 +140,9 @@ def test_performance_unknown_target(
                 match=re.escape(
                     "Invalid rewrite target: 'random'. "
                     "Supported rewrites: ['conv2d-clustering', 'conv2d-sparsity', "
-                    "'fully-connected', 'fully-connected-clustering', "
-                    "'fully-connected-sparsity']"
+                    "'conv2d-unstructured-sparsity', 'fully-connected', "
+                    "'fully-connected-clustering', 'fully-connected-sparsity', "
+                    "'fully-connected-unstructured-sparsity']"
                 ),
             ),
         ],
@@ -204,7 +205,33 @@ def test_performance_unknown_target(
             None,
             None,
             True,
+            "fully-connected-unstructured-sparsity",
+            "sequential/flatten/Reshape",
+            "StatefulPartitionedCall:0",
+            does_not_raise(),
+        ],
+        [
+            "ethos-u55-256",
+            False,
+            False,
+            None,
+            None,
+            None,
+            True,
             "conv2d-sparsity",
+            "sequential/conv1/Relu;sequential/conv1/Conv2D",
+            "sequential/conv2/Relu;sequential/conv2/Conv2D",
+            does_not_raise(),
+        ],
+        [
+            "ethos-u55-256",
+            False,
+            False,
+            None,
+            None,
+            None,
+            True,
+            "conv2d-unstructured-sparsity",
             "sequential/conv1/Relu;sequential/conv1/Conv2D",
             "sequential/conv2/Relu;sequential/conv2/Conv2D",
             does_not_raise(),

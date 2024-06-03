@@ -10,10 +10,13 @@ from abc import abstractmethod
 from dataclasses import dataclass
 from inspect import getfullargspec
 from pathlib import Path
+from statistics import fmean
 from typing import Any
 from typing import Callable
+from typing import Generator
 
 import numpy as np
+import tensorflow as tf
 import tensorflow_model_optimization as tfmot
 from keras.api._v2 import keras  # Temporary workaround for now: MLIA-1107
 from tensorflow_model_optimization.python.core.sparsity.keras.pruning_utils import (  # pylint: disable=no-name-in-module
@@ -32,7 +35,9 @@ from mlia.nn.rewrite.library.clustering import conv2d_clustering_rewrite
 from mlia.nn.rewrite.library.clustering import fc_clustering_rewrite
 from mlia.nn.rewrite.library.fc_layer import fc_rewrite
 from mlia.nn.rewrite.library.sparsity import conv2d_sparsity_rewrite
+from mlia.nn.rewrite.library.sparsity import conv2d_sparsity_unstructured_rewrite
 from mlia.nn.rewrite.library.sparsity import fc_sparsity_rewrite
+from mlia.nn.rewrite.library.sparsity import fc_sparsity_unstructured_rewrite
 from mlia.nn.tensorflow.config import TFLiteModel
 from mlia.utils.registry import Registry
 
@@ -117,9 +122,20 @@ class QuantizeAwareTrainingRewrite(Rewrite, ABC):
         """Apply optimization-aware quantization to a given model."""
         return model
 
+    def check_optimization_generator(
+        self, model: keras.Model
+    ) -> Generator[tuple[tf.Tensor, keras.layers.Layer], None, None]:
+        """Loop for check_optimization function."""
+        for layer in model.layers:
+            for weight in layer.weights:
+                if "kernel" in weight.name:
+                    if "kernel_min" in weight.name or "kernel_max" in weight.name:
+                        continue
+                    yield weight, layer
+
 
 class SparsityRewrite(QuantizeAwareTrainingRewrite):
-    """Rewrite class for sparsity rewrite e.g. fully-connected-sparsity."""
+    """Base rewrite class for sparsity rewrites."""
 
     pruning_callback = tfmot.sparsity.keras.UpdatePruningStep
 
@@ -147,8 +163,53 @@ class SparsityRewrite(QuantizeAwareTrainingRewrite):
             model,
             tfmot.experimental.combine.Default8BitPrunePreserveQuantizeScheme(),
         )
-
         return model
+
+    def check_optimization(self, model: keras.Model) -> bool:
+        """Not needed here."""
+        return True
+
+
+class UnstructuredSparsityRewrite(SparsityRewrite):
+    """
+    Rewrite class for unstructured sparsity rewrite.
+
+    e.g. fully-connected-unstructured-sparsity.
+    """
+
+    def check_optimization(
+        self, model: keras.Model, final_sparsity: float = 0.5, **_: Any
+    ) -> bool:
+        """Not needed here."""
+        found_sparsity_list = []
+        num_dec_places = str(final_sparsity)[::-1].find(".")
+        for weight, _ in self.check_optimization_generator(model=model):
+            weight_np = weight.numpy()
+            found_sparsity_list.append(
+                round(np.count_nonzero(weight_np) / weight_np.size, num_dec_places)
+            )
+        if len(found_sparsity_list) == 0:
+            logger.warning(
+                "\nWARNING: Could not find any layers "
+                "in rewrite that could be sparsely pruned"
+            )
+            return False
+        found_sparsity = fmean(found_sparsity_list)
+        if found_sparsity != final_sparsity:
+            logger.warning(
+                "\nWARNING: Found total sparsity of "
+                "rewrite model: %.2f "
+                "expected total sparsity to be: "
+                "%.2f\n",
+                found_sparsity,
+                final_sparsity,
+            )
+            return False
+        return True
+
+
+class StructuredSparsityRewrite(SparsityRewrite):
+    """Rewrite class for structured sparsity rewrite e.g. fully-connected-sparsity."""
 
     def check_optimization(
         self,
@@ -158,21 +219,17 @@ class SparsityRewrite(QuantizeAwareTrainingRewrite):
         **_: Any,
     ) -> bool:
         """Check if sparity has produced the correct result."""
-        for layer in model.layers:
-            for weight in layer.weights:
-                if "kernel" in weight.name:
-                    if "kernel_min" in weight.name or "kernel_max" in weight.name:
-                        continue
-                    if not is_pruned_m_by_n(weight, m_by_n=(sparsity_m, sparsity_n)):
-                        logger.warning(
-                            "\nWARNING: Could not find (%d, %d) sparsity, "
-                            "in layer %s for weight %s \n",
-                            sparsity_m,
-                            sparsity_n,
-                            layer.name,
-                            weight.name,
-                        )
-                        return False
+        for weight, layer in self.check_optimization_generator(model=model):
+            if not is_pruned_m_by_n(weight, m_by_n=(sparsity_m, sparsity_n)):
+                logger.warning(
+                    "\nWARNING: Could not find (%d, %d) sparsity, "
+                    "in layer %s for weight %s \n",
+                    sparsity_m,
+                    sparsity_n,
+                    layer.name,
+                    weight.name,
+                )
+                return False
         return True
 
 
@@ -194,22 +251,18 @@ class ClusteringRewrite(QuantizeAwareTrainingRewrite):
         self, model: keras.Model, num_clusters: int = 2, **_: Any
     ) -> bool:
         """Check if clustering has produced the correct result."""
-        for layer in model.layers:
-            for weight in layer.weights:
-                if "kernel" in weight.name:
-                    if "kernel_min" in weight.name or "kernel_max" in weight.name:
-                        continue
-                    number_of_found_clusters = len(np.unique(weight))
-                    if number_of_found_clusters != num_clusters:
-                        logger.warning(
-                            "\nWARNING: Expected %d cluster(s), found %d "
-                            "cluster(s) in layer %s for weight %s \n",
-                            num_clusters,
-                            number_of_found_clusters,
-                            layer.name,
-                            weight.name,
-                        )
-                        return False
+        for weight, layer in self.check_optimization_generator(model=model):
+            number_of_found_clusters = len(np.unique(weight))
+            if number_of_found_clusters != num_clusters:
+                logger.warning(
+                    "\nWARNING: Expected %d cluster(s), found %d "
+                    "cluster(s) in layer %s for weight %s \n",
+                    num_clusters,
+                    number_of_found_clusters,
+                    layer.name,
+                    weight.name,
+                )
+                return False
         return True
 
     def training_callbacks(self) -> list:
@@ -261,10 +314,17 @@ class RewritingOptimizer(Optimizer):
     registry = RewriteRegistry(
         [
             GenericRewrite("fully-connected", fc_rewrite),
-            SparsityRewrite("fully-connected-sparsity", fc_sparsity_rewrite),
+            StructuredSparsityRewrite("fully-connected-sparsity", fc_sparsity_rewrite),
             ClusteringRewrite("fully-connected-clustering", fc_clustering_rewrite),
             ClusteringRewrite("conv2d-clustering", conv2d_clustering_rewrite),
-            SparsityRewrite("conv2d-sparsity", conv2d_sparsity_rewrite),
+            StructuredSparsityRewrite("conv2d-sparsity", conv2d_sparsity_rewrite),
+            UnstructuredSparsityRewrite(
+                "conv2d-unstructured-sparsity", conv2d_sparsity_unstructured_rewrite
+            ),
+            UnstructuredSparsityRewrite(
+                "fully-connected-unstructured-sparsity",
+                fc_sparsity_unstructured_rewrite,
+            ),
         ]
     )
 

@@ -76,8 +76,10 @@ BUILTIN_SUPPORTED_OPTIMIZATION_NAMES = [
     "optimization-custom-augmentation",
     "optimization-fully-connected-clustering",
     "optimization-fully-connected-pruning",
+    "optimization-fully-connected-unstructured-pruning",
     "optimization-conv2d-clustering",
     "optimization-conv2d-pruning",
+    "optimization-conv2d-unstructured-pruning",
 ]
 
 
