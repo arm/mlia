@@ -385,8 +385,11 @@ class RewritingOptimizer(Optimizer):
         ]
         use_unmodified_model = True
         tflite_model = self.model.model_path
-        tfrecord = str(self.optimizer_configuration.dataset)
-
+        tfrecord = (
+            str(self.optimizer_configuration.dataset)
+            if self.optimizer_configuration.dataset
+            else None
+        )
         tmp_dir = tempfile.mkdtemp()
         tmp_output = Path(tmp_dir, "output.tflite")
 
@@ -398,7 +401,7 @@ class RewritingOptimizer(Optimizer):
             source_model=tflite_model,
             unmodified_model=tflite_model if use_unmodified_model else None,
             output_model=str(tmp_output),
-            input_tfrec=str(tfrecord),
+            input_tfrec=tfrecord,
             rewrite=rewrite,
             is_qat=isinstance(rewrite, QuantizeAwareTrainingRewrite),
             input_tensors=[self.optimizer_configuration.layers_to_optimize[0]],

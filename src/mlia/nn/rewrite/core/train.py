@@ -33,6 +33,7 @@ from mlia.nn.rewrite.core.graph_edit.join import join_models
 from mlia.nn.rewrite.core.graph_edit.record import record_model
 from mlia.nn.rewrite.core.utils.numpy_tfrecord import numpytf_count
 from mlia.nn.rewrite.core.utils.numpy_tfrecord import numpytf_read
+from mlia.nn.rewrite.core.utils.numpy_tfrecord import NumpyTFWriter
 from mlia.nn.rewrite.core.utils.parallel import ParallelTFLiteModel
 from mlia.nn.rewrite.library.helper_functions import ACTIVATION_FUNCTION_LIST
 from mlia.nn.tensorflow.config import TFLiteModel
@@ -73,11 +74,30 @@ class TrainingParameters:
     checkpoint_at: list | None = None
 
 
+def generate_random_dataset(source_model: str, dataset_path: str) -> str:
+    """Generate random dataset for model."""
+    model = TFLiteModel(model_path=source_model)
+    input_name = model.input_tensors()[0]
+    model_is_quantized = model.is_tensor_quantized(name=input_name)
+    input_shape = model.shape_from_name[input_name][1:]
+    rand_data_path = dataset_path + "/rand_data.tfrec"
+    with NumpyTFWriter(rand_data_path) as writer:
+        for _ in range(5000):
+            input_data = np.random.rand(1, *input_shape)
+            input_data = (
+                input_data.astype(np.int8)
+                if model_is_quantized
+                else input_data.astype(np.float32)
+            )
+            writer.write({input_name: input_data})
+    return rand_data_path
+
+
 def train(  # pylint: disable=too-many-arguments
     source_model: str,
     unmodified_model: Any,
     output_model: str,
-    input_tfrec: str,
+    input_tfrec: str | None,
     rewrite: Callable,
     is_qat: bool,
     input_tensors: list,
@@ -87,6 +107,15 @@ def train(  # pylint: disable=too-many-arguments
     detect_activation_function: bool = False,
 ) -> Any:
     """Extract and train a model, and return the results."""
+    rand_data_dir_path = None
+    if not input_tfrec:
+        logger.info(
+            "INFO: No dataset given, using random data to perform the rewrite! "
+        )
+        rand_data_dir_path = (
+            tempfile.TemporaryDirectory()  # pylint: disable=consider-using-with
+        )
+        input_tfrec = generate_random_dataset(source_model, rand_data_dir_path.name)
     if unmodified_model:
         unmodified_model_dir = (
             tempfile.TemporaryDirectory()  # pylint: disable=consider-using-with
@@ -167,7 +196,8 @@ def train(  # pylint: disable=too-many-arguments
 
     if unmodified_model_dir:
         cast(tempfile.TemporaryDirectory, unmodified_model_dir).cleanup()
-
+    if rand_data_dir_path:
+        cast(tempfile.TemporaryDirectory, rand_data_dir_path).cleanup()
     return results, [
         mae,
         nrmse,

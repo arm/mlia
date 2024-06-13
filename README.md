@@ -226,6 +226,10 @@ mlia optimize ~/models/ds_cnn_large_fp32.tflite \
     --rewrite-end MobileNet/fc1/BiasAdd
 ```
 
+### Random Dataset
+
+The dataset flag is optional. If you do not provide a dataset, then the rewrite will occur using random data to give the user an idea of the performance benefits of the rewrite on the model
+
 ### Optimization Profiles
 
 Training parameters for rewrites can be specified.

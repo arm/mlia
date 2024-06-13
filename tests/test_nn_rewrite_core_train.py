@@ -47,7 +47,7 @@ def replace_fully_connected_with_conv(
 
 def check_train(
     tflite_model: Path,
-    tfrecord: Path,
+    tfrecord: Path | None,
     train_params: TrainingParameters = MockTrainingParameters(),
     use_unmodified_model: bool = False,
     quantized: bool = False,
@@ -60,7 +60,7 @@ def check_train(
             source_model=str(tflite_model),
             unmodified_model=str(tflite_model) if use_unmodified_model else None,
             output_model=str(output_file),
-            input_tfrec=str(tfrecord),
+            input_tfrec=str(tfrecord) if tfrecord else None,
             rewrite=mock_rewrite,
             is_qat=False,
             input_tensors=["sequential/flatten/Reshape"],
@@ -288,4 +288,16 @@ def test_detect_activation_from_rewrite_function_relu_activation(
     assert (
         "No activation function specified, setting activation function "
         "to most common activation detected in rewrite graph: relu" in logging_messages
+    )
+
+
+def test_train_none_tf_record(
+    test_tflite_model: Path,
+) -> None:
+    """Test the train() function with valid parameters and no dataset."""
+    check_train(
+        tflite_model=test_tflite_model,
+        tfrecord=None,
+        train_params=MockTrainingParameters(),
+        quantized=True,
     )
