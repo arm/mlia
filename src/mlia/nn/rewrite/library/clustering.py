@@ -45,6 +45,7 @@ def conv2d_clustering_rewrite(  # pylint: disable=dangerous-default-value
     ),
     activation: str = "relu",
     kernel_size: list[int] = [3, 3],
+    layer_type: type[keras.layers.Layer] = keras.layers.Conv2D,
 ) -> keras.Model:
     """Conv2d TensorFlow Lite model ready for clustering."""
     rewrite_params = {
@@ -59,7 +60,7 @@ def conv2d_clustering_rewrite(  # pylint: disable=dangerous-default-value
     activation_function, activation_function_extra_args = get_activation_function(
         activation
     )
-    activation_func_found = (
+    activation_func_found = (  # pylint: disable=duplicate-code
         [activation_function(**activation_function_extra_args)]
         if activation_function
         else []
@@ -68,7 +69,7 @@ def conv2d_clustering_rewrite(  # pylint: disable=dangerous-default-value
         to_cluster=keras.Sequential(
             [
                 keras.layers.InputLayer(input_shape=input_shape),
-                keras.layers.Conv2D(**conv2d_parameters),
+                layer_type(**conv2d_parameters),
                 keras.layers.BatchNormalization(),
                 *activation_func_found,
             ]

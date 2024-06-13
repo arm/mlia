@@ -189,9 +189,14 @@ The following rewrites are supported:
 * fully-connected-sparsity - replaces a subgraph with a pruned 2:4 sparse fully connected layer
 * fully-connected-unstructured-sparsity - replaces a subgraph with an unstructured pruned fully connected layer
 * fully-connected-clustering - replaces a subgraph with a clustered fully connected layer
+* conv2d - replaces a subgraph with a conv2d layer
 * conv2d-sparsity - replaces a subgraph with a pruned 2:4 sparse conv2d layer
 * conv2d-unstructured-sparsity - replaces a subgraph with an unstructured pruned conv2d layer
 * conv2d-clustering  - replaces a subgraph with a clustered conv2d layer
+* depthwise-separable-conv2d - replaces a subgraph with a depthwise seperable conv2d layer
+* depthwise-separable-conv2d-sparsity - replaces a subgraph with a pruned 2:4 sparse depthwise seperable conv2d layer
+* depthwise-separable-conv2d-unstructured-sparsity - replaces a subgraph with an unstructured pruned depthwise seperable conv2d layer
+* depthwise-separable-conv2d-clustering - replaces a subgraph with a clustered depthwise seperable conv2d layer
 
 **Note:** A ***Keras model*** (.h5 or SavedModel) is required as input to
 perform pruning and clustering. A ***TensorFlow Lite model*** is required as input
@@ -260,8 +265,12 @@ These are summarized below:
 * optimization - Provides training parameters for rewrites
 * optimization-fully-connected-clustering - Provides training parameters for rewrites and cluster specific parameters for the fully-connected-clustering rewrite
 * optimization-fully-connected-pruning - Provides training parameters for rewrites and pruning specific parameters for the fully-connected-sparsity rewrite
+* optimization-fully-connected-unstructured-pruning - Provides training parameters for rewrites and pruning specific parameters for the fully-connected-unstructured-sparsity ewrite
 * optimization-conv2d-clustering - Provides training parameters for rewrites and cluster specific parameters for the conv2d-clustering rewrite
 * optimization-conv2d-pruning - Provides training parameters for rewrites and pruning specific parameters for the conv2d-sparsity rewrite
+* optimization-conv2d-unstructured-pruning - Provides training parameters for rewrites and pruning specific parameters for the conv2d-unstructured-sparsity rewrite
+
+The optimization profiles for conv2d rewrites are also applicable to the depthwise-seperable-conv2d rewrites
 
 Note for convolutional rewrites (e.g. optimization-conv2d-pruning). The activation function for the rewrite can be selected in the optimization profile from the following list:
 

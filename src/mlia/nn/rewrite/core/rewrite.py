@@ -33,7 +33,8 @@ from mlia.nn.rewrite.core.train import train
 from mlia.nn.rewrite.core.train import TrainingParameters
 from mlia.nn.rewrite.library.clustering import conv2d_clustering_rewrite
 from mlia.nn.rewrite.library.clustering import fc_clustering_rewrite
-from mlia.nn.rewrite.library.fc_layer import fc_rewrite
+from mlia.nn.rewrite.library.layers import conv2d_rewrite
+from mlia.nn.rewrite.library.layers import fc_rewrite
 from mlia.nn.rewrite.library.sparsity import conv2d_sparsity_rewrite
 from mlia.nn.rewrite.library.sparsity import conv2d_sparsity_unstructured_rewrite
 from mlia.nn.rewrite.library.sparsity import fc_sparsity_rewrite
@@ -48,16 +49,27 @@ RewriteCallable = Callable[..., keras.Model]
 class Rewrite(ABC):
     """Abstract class for rewrite logic to be used by RewritingOptimizer."""
 
-    def __init__(self, name: str, rewrite_fn: RewriteCallable):
+    def __init__(
+        self,
+        name: str,
+        rewrite_fn: RewriteCallable,
+        rewrite_fn_extra_args: dict[str, Any] | None = None,
+    ):
         """Initialize a Rewrite instance with a given name and an optional function."""
         self.name = name
         self.function = rewrite_fn
+        self.function_extra_args = rewrite_fn_extra_args
 
     def __call__(
         self, input_shape: Any, output_shape: Any, **kwargs: Any
     ) -> keras.Model:
         """Perform the rewrite operation using the configured function."""
         try:
+            if self.function_extra_args:
+                return self.function(
+                    input_shape, output_shape, **kwargs, **self.function_extra_args
+                )
+
             return self.function(input_shape, output_shape, **kwargs)
         except TypeError as ex:
             expected_args = self.return_rewrite_func_args()
@@ -109,7 +121,7 @@ class GenericRewrite(Rewrite):
         """Return default post-processing rewrite option."""
         return model
 
-    def check_optimization(self, model: keras.Model) -> bool:
+    def check_optimization(self, model: keras.Model, **_: Any) -> bool:
         """Not needed here."""
         return True
 
@@ -129,7 +141,11 @@ class QuantizeAwareTrainingRewrite(Rewrite, ABC):
         for layer in model.layers:
             for weight in layer.weights:
                 if "kernel" in weight.name:
-                    if "kernel_min" in weight.name or "kernel_max" in weight.name:
+                    if (
+                        "kernel_min" in weight.name
+                        or "kernel_max" in weight.name
+                        or "depthwise" in weight.name
+                    ):
                         continue
                     yield weight, layer
 
@@ -314,6 +330,12 @@ class RewritingOptimizer(Optimizer):
     registry = RewriteRegistry(
         [
             GenericRewrite("fully-connected", fc_rewrite),
+            GenericRewrite("conv2d", conv2d_rewrite),
+            GenericRewrite(
+                "depthwise-separable-conv2d",
+                conv2d_rewrite,
+                {"layer_type": keras.layers.SeparableConv2D},
+            ),
             StructuredSparsityRewrite("fully-connected-sparsity", fc_sparsity_rewrite),
             ClusteringRewrite("fully-connected-clustering", fc_clustering_rewrite),
             ClusteringRewrite("conv2d-clustering", conv2d_clustering_rewrite),
@@ -324,6 +346,21 @@ class RewritingOptimizer(Optimizer):
             UnstructuredSparsityRewrite(
                 "fully-connected-unstructured-sparsity",
                 fc_sparsity_unstructured_rewrite,
+            ),
+            ClusteringRewrite(
+                "depthwise-separable-conv2d-clustering",
+                conv2d_clustering_rewrite,
+                {"layer_type": keras.layers.SeparableConv2D},
+            ),
+            StructuredSparsityRewrite(
+                "depthwise-separable-conv2d-sparsity",
+                conv2d_sparsity_rewrite,
+                {"layer_type": keras.layers.SeparableConv2D},
+            ),
+            UnstructuredSparsityRewrite(
+                "depthwise-separable-conv2d-unstructured-sparsity",
+                conv2d_sparsity_unstructured_rewrite,
+                {"layer_type": keras.layers.SeparableConv2D},
             ),
         ]
     )
