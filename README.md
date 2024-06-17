@@ -179,29 +179,6 @@ More information about these techniques can be found online in the TensorFlow
 documentation, e.g. in the
 [TensorFlow model optimization guides](https://www.tensorflow.org/model_optimization/guide).
 
-* **rewrite**: Replaces certain subgraph/layer of the pre-trained model with
-    candidates from the rewrite library, with or without training using a
-    small portion of the training data, to achieve local performance gains.
-
-The following rewrites are supported:
-
-* fully-connected - replaces a subgraph with a fully connected layer
-* fully-connected-sparsity - replaces a subgraph with a pruned 2:4 sparse fully connected layer
-* fully-connected-unstructured-sparsity - replaces a subgraph with an unstructured pruned fully connected layer
-* fully-connected-clustering - replaces a subgraph with a clustered fully connected layer
-* conv2d - replaces a subgraph with a conv2d layer
-* conv2d-sparsity - replaces a subgraph with a pruned 2:4 sparse conv2d layer
-* conv2d-unstructured-sparsity - replaces a subgraph with an unstructured pruned conv2d layer
-* conv2d-clustering  - replaces a subgraph with a clustered conv2d layer
-* depthwise-separable-conv2d - replaces a subgraph with a depthwise seperable conv2d layer
-* depthwise-separable-conv2d-sparsity - replaces a subgraph with a pruned 2:4 sparse depthwise seperable conv2d layer
-* depthwise-separable-conv2d-unstructured-sparsity - replaces a subgraph with an unstructured pruned depthwise seperable conv2d layer
-* depthwise-separable-conv2d-clustering - replaces a subgraph with a clustered depthwise seperable conv2d layer
-
-**Note:** A ***Keras model*** (.h5 or SavedModel) is required as input to
-perform pruning and clustering. A ***TensorFlow Lite model*** is required as input
-to perform a rewrite.
-
 *Examples:*
 
 ```bash
@@ -215,8 +192,37 @@ mlia optimize ~/models/ds_cnn_l.h5 \
 
 # Get help and further information
 mlia optimize --help
+```
 
-# An example for using rewrite
+**Note:** A ***Keras model*** (.h5 or SavedModel) is required as input to
+perform pruning and clustering.
+
+## **rewrite**
+
+Replaces certain subgraph/layer of the pre-trained model with candidates from the rewrite library, with or without training using a small portion of the training data, to achieve local performance gains.
+
+The following rewrites are supported:
+
+* fully-connected - replaces a subgraph with a fully connected layer
+* fully-connected-sparsity - replaces a subgraph with a pruned M:N sparse fully connected layer
+* fully-connected-unstructured-sparsity - replaces a subgraph with an unstructured pruned fully connected layer
+* fully-connected-clustering - replaces a subgraph with a clustered fully connected layer
+* conv2d - replaces a subgraph with a conv2d layer
+* conv2d-sparsity - replaces a subgraph with a pruned M:N sparse conv2d layer
+* conv2d-unstructured-sparsity - replaces a subgraph with an unstructured pruned conv2d layer
+* conv2d-clustering  - replaces a subgraph with a clustered conv2d layer
+* depthwise-separable-conv2d - replaces a subgraph with a depthwise seperable conv2d layer
+* depthwise-separable-conv2d-sparsity - replaces a subgraph with a pruned M:N sparse depthwise seperable conv2d layer
+* depthwise-separable-conv2d-unstructured-sparsity - replaces a subgraph with an unstructured pruned depthwise seperable conv2d layer
+* depthwise-separable-conv2d-clustering - replaces a subgraph with a clustered depthwise seperable conv2d layer
+
+**Note:** A ***TensorFlow Lite model*** is required as input
+to perform a rewrite.
+
+*Examples:*
+
+```bash
+# Rewrite Example 1
 mlia optimize ~/models/ds_cnn_large_fp32.tflite \
     --target-profile ethos-u55-256 \
     --rewrite \
@@ -224,21 +230,54 @@ mlia optimize ~/models/ds_cnn_large_fp32.tflite \
     --rewrite-target fully-connected \
     --rewrite-start MobileNet/avg_pool/AvgPool \
     --rewrite-end MobileNet/fc1/BiasAdd
+
+# Rewrite Example 2
+mlia optimize ~/models/ds_cnn_large_fp32.tflite \
+    --target-profile ethos-u55-256 \
+    --rewrite \
+    --dataset input.tfrec \
+    --rewrite-target conv2d-clustering \
+    --rewrite-start model/re_lu_9/Relu \
+    --rewrite-end model/re_lu_10/Relu
 ```
 
 ### Random Dataset
 
-The dataset flag is optional. If you do not provide a dataset, then the rewrite will occur using random data to give the user an idea of the performance benefits of the rewrite on the model
+The dataset flag is optional. If you do not provide a dataset, then the rewrite will occur using random data to give the user an idea of the performance benefits of the rewrite on the model.
+
+### Conv2d Rewrites
+
+For conv2d rewrites, the conv2d layer parameters are calculated as followed:
+
+We first assume that valid (no) padding will be used, we calculate the conv2d parameters using the following formulae:
+
+Kernel size: set by the user, defaults to 3x3
+
+Output filters = $output\_shape[-1]$
+
+$stride[0] = input\_shape[0] / output\_shape[0]$ (rounded to nearest integer)
+
+$stride[1] = input\_shape[1] / output\_shape[1]$ (rounded to nearest integer)
+
+The input and output shapes are then calculated using the following formulae:
+
+$output\_shape[0] = \lfloor(input\_shape[0] - kernel\_size[0]) / stride[0] \rfloor + 1$
+
+$output\_shape[1] = \lfloor(input\_shape[1] - kernel\_size[1]) / stride[1] \rfloor + 1$
+
+If these resulting sizes do not match the desired output shape, we set the padding to 'same' such that they match it.
+
+This introduces some constraints into the size of the kernel that can be used with the rewrite subgraph to produce the desired output shape. The user should be aware of these formulae when performing rewrites.
 
 ### Optimization Profiles
 
 Training parameters for rewrites can be specified.
 
-There are a number of predefined profiles for rewrites shown below:
+There are a number of predefined profiles for rewrites. Some examples of these are shown below:
 
-|    Name      | Batch Size |  LR  | Show Progress | Steps | LR Schedule | Num Procs | Num Threads | Checkpoints |  Augmentations  |
-| :----------: | :--------: | :--: | :-----------: | :---: | :---------: | :-------: | :---------: | :---------: | :-------------: |
-| optimization |     32     | 1e-3 |      True     | 48000 |   "cosine"  |     1     |      0      |     None    |    "gaussian"   |
+|    Name      | Batch Size |  LR  | Show Progress | Steps | LR Schedule | Num Procs | Num Threads | Checkpoints |
+| :----------: | :--------: | :--: | :-----------: | :---: | :---------: | :-------: | :---------: | :---------: |
+| optimization |     32     | 1e-3 |      True     | 48000 |   "cosine"  |     1     |      0      |     None    |
 
 |    Name                                 | Batch Size |  LR  | Show Progress | Steps | LR Schedule | Num Procs | Num Threads | Checkpoints | Num Clusters | Cluster Centroids Init             |
 | :-------------------------------------: | :--------: | :--: | :-----------: | :---: | :---------: | :-------: | :---------: | :---------: | :----------: | :--------------------------------: |
@@ -246,37 +285,40 @@ There are a number of predefined profiles for rewrites shown below:
 
 |    Name                               | Batch Size |  LR  | Show Progress | Steps | LR Schedule | Num Procs | Num Threads | Checkpoints | Sparsity M | Sparsity N |
 | :-----------------------------------: | :--------: | :--: | :-----------: | :---: | :---------: | :-------: | :---------: | :---------: | :--------: | :--------: |
-| optimization-fully-connected-pruning |     32     | 1e-3 |      True     | 48000 |   "cosine"  |     1     |      0      |     None    |     2      |      4     |
+| optimization-fully-connected-pruning  |     32     | 1e-3 |      True     | 48000 |   "cosine"  |     1     |      0      |     None    |     2      |      4     |
 
-|    Name                               | Batch Size |  LR  | Show Progress | Steps | LR Schedule | Num Procs | Num Threads | Checkpoints | Initial Sparsity | End Sparsity | End Step |
-| :-----------------------------------: | :--------: | :--: | :-----------: | :---: | :---------: | :-------: | :---------: | :---------: | :--------: | :--------: | :--------: |
-| optimization-fully-connected-unstructured-pruning |     32     | 1e-3 |      True     | 48000 |   "cosine"  |     1     |      0      |     None    |     0.25      |      0.5     | 48000 |
+|    Name                                           | Batch Size |  LR  | Show Progress | Steps | LR Schedule | Num Procs | Num Threads | Checkpoints | Initial Sparsity | End Sparsity | End Step   |
+| :-----------------------------------------------: | :--------: | :--: | :-----------: | :---: | :---------: | :-------: | :---------: | :---------: | :--------------: | :----------: | :--------: |
+| optimization-fully-connected-unstructured-pruning |     32     | 1e-3 |      True     | 48000 |   "cosine"  |     1     |      0      |     None    |     0.25         |      0.5     | 48000      |
 
-|    Name                                 | Batch Size |  LR  | Show Progress | Steps | LR Schedule | Num Procs | Num Threads | Checkpoints | Num Clusters | Cluster Centroids Init             | Activation | Kernel Size |
-| :-------------------------------------: | :--------: | :--: | :-----------: | :---: | :---------: | :-------: | :---------: | :---------: | :----------: | :--------------------------------: | :--------: | :---------: |
-| optimization-conv2d-clustering |     32     | 1e-3 |      True     | 48000 |   "cosine"  |     1     |      0      |     None    |      16     |    "CentroidInitialization.LINEAR" | "relu" | 3x3 |
+|    Name                        | Batch Size |  LR  | Show Progress | Steps | LR Schedule | Num Procs | Num Threads | Checkpoints | Num Clusters | Cluster Centroids Init             | Activation | Kernel Size |
+| :----------------------------: | :--------: | :--: | :-----------: | :---: | :---------: | :-------: | :---------: | :---------: | :----------: | :--------------------------------: | :--------: | :---------: |
+| optimization-conv2d-clustering |     32     | 1e-3 |      True     | 48000 |   "cosine"  |     1     |      0      |     None    |      16      |    "CentroidInitialization.LINEAR" | "relu"     | 3x3         |
 
-|    Name                               | Batch Size |  LR  | Show Progress | Steps | LR Schedule | Num Procs | Num Threads | Checkpoints | Sparsity M | Sparsity N | Activation | Kernel Size |
-| :-----------------------------------: | :--------: | :--: | :-----------: | :---: | :---------: | :-------: | :---------: | :---------: | :--------: | :--------: | :--------: | :---------: |
-| optimization-conv2d-pruning |     32     | 1e-3 |      True     | 48000 |   "cosine"  |     1     |      0      |     None    |     2      |      4     | "relu" | 3x3 |
+|    Name                     | Batch Size |  LR  | Show Progress | Steps | LR Schedule | Num Procs | Num Threads | Checkpoints | Sparsity M | Sparsity N | Activation | Kernel Size |
+| :-------------------------: | :--------: | :--: | :-----------: | :---: | :---------: | :-------: | :---------: | :---------: | :--------: | :--------: | :--------: | :---------: |
+| optimization-conv2d-pruning |     32     | 1e-3 |      True     | 48000 |   "cosine"  |     1     |      0      |     None    |     2      |      4     | "relu"     | 3x3         |
 
-|    Name                               | Batch Size |  LR  | Show Progress | Steps | LR Schedule | Num Procs | Num Threads | Checkpoints | Initial Sparsity | End Sparsity | End Step | Activation | Kernel Size |
-| :-----------------------------------: | :--------: | :--: | :-----------: | :---: | :---------: | :-------: | :---------: | :---------: | :--------: | :--------: | :--------: | :--------:| :---------: |
-| optimization-conv2d-unstructured-pruning |     32     | 1e-3 |      True     | 48000 |   "cosine"  |     1     |      0      |     None |     0.25   |      0.5   |     48000  |    "relu" |         3x3 |
+|    Name                                  | Batch Size |  LR  | Show Progress | Steps | LR Schedule | Num Procs | Num Threads | Checkpoints | Initial Sparsity | End Sparsity | End Step   | Activation | Kernel Size |
+| :--------------------------------------: | :--------: | :--: | :-----------: | :---: | :---------: | :-------: | :---------: | :---------: | :--------------: | :----------: | :--------: | :---------:| :---------: |
+| optimization-conv2d-unstructured-pruning |     32     | 1e-3 |      True     | 48000 |   "cosine"  |     1     |      0      |     None    |     0.25         |      0.5     |     48000  |    "relu"  |         3x3 |
 
-These are summarized below:
+The complete list of built in optimization profiles is shown below. Each profile provides training parameters and parameters specific to the rewrite.
 
-* optimization - Provides training parameters for rewrites
-* optimization-fully-connected-clustering - Provides training parameters for rewrites and cluster specific parameters for the fully-connected-clustering rewrite
-* optimization-fully-connected-pruning - Provides training parameters for rewrites and pruning specific parameters for the fully-connected-sparsity rewrite
-* optimization-fully-connected-unstructured-pruning - Provides training parameters for rewrites and pruning specific parameters for the fully-connected-unstructured-sparsity ewrite
-* optimization-conv2d-clustering - Provides training parameters for rewrites and cluster specific parameters for the conv2d-clustering rewrite
-* optimization-conv2d-pruning - Provides training parameters for rewrites and pruning specific parameters for the conv2d-sparsity rewrite
-* optimization-conv2d-unstructured-pruning - Provides training parameters for rewrites and pruning specific parameters for the conv2d-unstructured-sparsity rewrite
+* optimization
+* optimization-fully-connected-clustering
+* optimization-fully-connected-pruning
+* optimization-fully-connected-unstructured-pruning
+* optimization-conv2d
+* optimization-conv2d-clustering
+* optimization-conv2d-pruning
+* optimization-conv2d-unstructured-pruning
+* optimization-depthwise-separable-conv2d
+* optimization-depthwise-separable-conv2d-clustering
+* optimization-depthwise-separable-conv2d-pruning
+* optimization-conv2d-depthwise-separable-unstructured-pruning
 
-The optimization profiles for conv2d rewrites are also applicable to the depthwise-seperable-conv2d rewrites
-
-Note for convolutional rewrites (e.g. optimization-conv2d-pruning). The activation function for the rewrite can be selected in the optimization profile from the following list:
+**Note:** For convolutional rewrites (e.g. optimization-conv2d-pruning). The activation function for the rewrite can be selected in the optimization profile from the following list:
 
 * "relu" - Standard ReLU activation function
 * "relu6" - ReLU6 activation function i.e. ReLU activation function capped at 6
@@ -301,6 +343,8 @@ Augmentations can be selected from a number of pre-defined profiles (see the tab
 | "mix_gaussian_large" |       2.0      |        1.0        |
 | "mix_gaussian_small" |       1.6      |        0.3        |
 
+An example of using an optimization profile can be seen below:
+
 ```bash
 ##### An example for using optimization Profiles
 mlia optimize ~/models/ds_cnn_large_fp32.tflite \
@@ -317,7 +361,7 @@ mlia optimize ~/models/ds_cnn_large_fp32.tflite \
 
 For the _custom optimization profiles_, the configuration file for a custom
 optimization profile is passed as path and needs to conform to the TOML file format.
-Each optimization in MLIA has a pre-defined set of parameters which need to be present
+Each optimization in MLIA has a pre-defined set of parameters which can be present
 in the config file. When using the built-in optimization profiles, the appropriate
 toml file is copied to `mlia-output` and can be used to understand what parameters
 apply for each optimization.
@@ -331,10 +375,10 @@ mlia optimize --optimization-profile ~/my_custom_optimization_profile.toml
 
 When providing rewrite-specific parameters e.g. for clustering, the rewrite name should be specified in the toml:
 
-For example, the following provides rewrite-specific parameters for the fully-connected-clustering rewrite
+For example, the following provides rewrite-specific parameters for the conv2d-clustering rewrite
 
 ``` bash
-[rewrite.fully-connected-clustering]
+[rewrite.conv2d-clustering]
 num_clusters = 16
 cluster_centroids_init = "CentroidInitialization.LINEAR"
 ```

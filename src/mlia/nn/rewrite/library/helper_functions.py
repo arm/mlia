@@ -45,7 +45,7 @@ def compute_conv2d_parameters(  # pylint: disable=dangerous-default-value
     assert len(input_shape) == 3
     assert len(output_shape) == 3
     kernel_size = tuple(kernel_size_input)
-    num_filters = (output_shape[-1] - input_shape[-1]) + input_shape[-1]
+    num_filters = output_shape[-1]
     padding = "valid"
     stride_h = round(input_shape[0] / output_shape[0])
     check_output_size_h = math.floor((input_shape[0] - kernel_size[0]) / stride_h) + 1

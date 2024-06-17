@@ -434,6 +434,136 @@ def test_rewriting_optimizer(  # pylint: disable=too-many-locals
     assert cfg
 
 
+@pytest.mark.parametrize(
+    "rewrite_type, rewrite_params, expected_error",
+    [
+        ["fully-connected", {}, does_not_raise()],
+        [
+            "fully-connected",
+            {"invalid_param": 10},
+            pytest.raises(
+                KeyError, match=(r"Found unexpected parameters for rewrite.*")
+            ),
+        ],
+        ["conv2d", {"activation": "none", "kernel_size": [3, 3]}, does_not_raise()],
+        [
+            "depthwise-separable-conv2d",
+            {"activation": "none", "kernel_size": [3, 3]},
+            does_not_raise(),
+        ],
+        ["conv2d", {"activation": "relu", "kernel_size": [3, 3]}, does_not_raise()],
+        [
+            "depthwise-separable-conv2d",
+            {"activation": "relu", "kernel_size": [3, 3]},
+            does_not_raise(),
+        ],
+        [
+            "fully-connected-sparsity",
+            {"sparsity_m": 2, "sparsity_n": 4},
+            does_not_raise(),
+        ],
+        [
+            "fully-connected-unstructured-sparsity",
+            {"initial_sparsity": 0.25, "final_sparsity": 0.5, "end_step": 16},
+            does_not_raise(),
+        ],
+        [
+            "fully-connected-clustering",
+            {
+                "num_clusters": 4,
+                "cluster_centroids_init": "CentroidInitialization.LINEAR",
+            },
+            does_not_raise(),
+        ],
+        [
+            "conv2d-sparsity",
+            {
+                "sparsity_m": 2,
+                "sparsity_n": 4,
+                "activation": "relu",
+                "kernel_size": [3, 3],
+            },
+            does_not_raise(),
+        ],
+        [
+            "conv2d-unstructured-sparsity",
+            {
+                "initial_sparsity": 0.25,
+                "final_sparsity": 0.5,
+                "end_step": 16,
+                "activation": "relu",
+                "kernel_size": [3, 3],
+            },
+            does_not_raise(),
+        ],
+        [
+            "conv2d-clustering",
+            {
+                "num_clusters": 4,
+                "cluster_centroids_init": "CentroidInitialization.LINEAR",
+                "activation": "relu",
+                "kernel_size": [3, 3],
+            },
+            does_not_raise(),
+        ],
+        [
+            "conv2d-sparsity",
+            {
+                "sparsity_m": 2,
+                "sparsity_n": 4,
+                "activation": "none",
+                "kernel_size": [3, 3],
+            },
+            does_not_raise(),
+        ],
+        [
+            "conv2d-unstructured-sparsity",
+            {
+                "initial_sparsity": 0.25,
+                "final_sparsity": 0.5,
+                "end_step": 16,
+                "activation": "none",
+                "kernel_size": [3, 3],
+            },
+            does_not_raise(),
+        ],
+        [
+            "conv2d-clustering",
+            {
+                "num_clusters": 4,
+                "cluster_centroids_init": "CentroidInitialization.LINEAR",
+                "activation": "none",
+                "kernel_size": [3, 3],
+            },
+            does_not_raise(),
+        ],
+    ],
+)
+def test_rewriting_optimizer_rewrite_params(  # pylint: disable=too-many-locals
+    test_tflite_model_fp32: Path,
+    test_tfrecord_fp32: Path,
+    rewrite_type: str,
+    rewrite_params: dict,
+    expected_error: Any,
+) -> None:
+    """Test the rewrite process with all rewrite types."""
+    config_obj = RewriteConfiguration(
+        rewrite_type,
+        ["sequential/flatten/Reshape", "StatefulPartitionedCall:0"]
+        if "fully-connected" in rewrite_type
+        else [
+            "sequential/conv1/Relu;sequential/conv1/Conv2D",
+            "sequential/conv2/Relu;sequential/conv2/Conv2D",
+        ],
+        test_tfrecord_fp32,
+        train_params=MockTrainingParameters(),
+        rewrite_specific_params=rewrite_params,
+    )
+    test_obj = RewritingOptimizer(test_tflite_model_fp32, config_obj)
+    with expected_error:
+        test_obj.apply_optimization()
+
+
 def test_register_rewrite_function() -> None:
     """Test adding rewrite functions and verify they are reported via the registry."""
     registry = RewriteRegistry()

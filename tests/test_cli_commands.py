@@ -86,7 +86,8 @@ def test_performance_unknown_target(
             "ethos-u55-256",
             False,
             False,
-            None,
+            "src/mlia/resources/optimization_profiles/"
+            "optimization-fully-connected-pruning.toml",
             None,
             None,
             True,
@@ -194,7 +195,8 @@ def test_performance_unknown_target(
             "ethos-u55-256",
             False,
             False,
-            None,
+            "src/mlia/resources/optimization_profiles/"
+            "optimization-fully-connected-clustering.toml",
             None,
             None,
             True,
@@ -207,7 +209,8 @@ def test_performance_unknown_target(
             "ethos-u55-256",
             False,
             False,
-            None,
+            "src/mlia/resources/optimization_profiles/"
+            "optimization-fully-connected-unstructured-pruning.toml",
             None,
             None,
             True,
@@ -220,7 +223,8 @@ def test_performance_unknown_target(
             "ethos-u55-256",
             False,
             False,
-            None,
+            "src/mlia/resources/optimization_profiles/"
+            "optimization-conv2d-pruning.toml",
             None,
             None,
             True,
@@ -233,7 +237,8 @@ def test_performance_unknown_target(
             "ethos-u55-256",
             False,
             False,
-            None,
+            "src/mlia/resources/optimization_profiles/"
+            "optimization-conv2d-unstructured-pruning.toml",
             None,
             None,
             True,
@@ -246,7 +251,8 @@ def test_performance_unknown_target(
             "ethos-u55-256",
             False,
             False,
-            None,
+            "src/mlia/resources/optimization_profiles/"
+            "optimization-conv2d-clustering.toml",
             None,
             None,
             True,
@@ -259,7 +265,7 @@ def test_performance_unknown_target(
             "ethos-u55-256",
             False,
             False,
-            None,
+            "src/mlia/resources/optimization_profiles/optimization-conv2d.toml",
             None,
             None,
             True,
@@ -272,7 +278,8 @@ def test_performance_unknown_target(
             "ethos-u55-256",
             False,
             False,
-            None,
+            "src/mlia/resources/optimization_profiles/"
+            "optimization-depthwise-separable-conv2d-pruning.toml",
             None,
             None,
             True,
@@ -285,7 +292,22 @@ def test_performance_unknown_target(
             "ethos-u55-256",
             False,
             False,
+            "src/mlia/resources/optimization_profiles/"
+            "optimization-depthwise-separable-conv2d-unstructured-pruning.toml",
             None,
+            None,
+            True,
+            "depthwise-separable-conv2d",
+            "sequential/conv1/Relu;sequential/conv1/Conv2D",
+            "sequential/conv2/Relu;sequential/conv2/Conv2D",
+            does_not_raise(),
+        ],
+        [
+            "ethos-u55-256",
+            False,
+            False,
+            "src/mlia/resources/optimization_profiles/"
+            "optimization-depthwise-separable-conv2d-clustering.toml",
             None,
             None,
             True,
@@ -298,7 +320,8 @@ def test_performance_unknown_target(
             "ethos-u55-256",
             False,
             False,
-            None,
+            "src/mlia/resources/optimization_profiles/"
+            "optimization-depthwise-separable-conv2d.toml",
             None,
             None,
             True,
@@ -332,7 +355,6 @@ def test_opt_valid_optimization_target(  # pylint: disable=too-many-locals,too-m
 
     model_type = test_tflite_model_fp32 if rewrite else test_keras_model
     data = test_tfrecord_fp32 if rewrite else None
-
     with expected_error:
         optimize(
             ctx=sample_context,

@@ -77,9 +77,14 @@ BUILTIN_SUPPORTED_OPTIMIZATION_NAMES = [
     "optimization-fully-connected-clustering",
     "optimization-fully-connected-pruning",
     "optimization-fully-connected-unstructured-pruning",
+    "optimization-conv2d",
     "optimization-conv2d-clustering",
     "optimization-conv2d-pruning",
     "optimization-conv2d-unstructured-pruning",
+    "optimization-depthwise-separable-conv2d",
+    "optimization-depthwise-separable-conv2d-clustering",
+    "optimization-depthwise-separable-conv2d-pruning",
+    "optimization-depthwise-separable-conv2d-unstructured-pruning",
 ]
 
 
