@@ -2,4 +2,4 @@
 # SPDX-License-Identifier: Apache-2.0
 
 [rewrite.training_parameters]
-steps = 100
+steps = 30
