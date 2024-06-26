@@ -117,7 +117,7 @@ class VulkanModelConverterBase:
 
     def _extra_front_end_arguments(self) -> list[str]:
         """Return any extra arguments to be used with the VMC front-end."""
-        return []
+        return ["--emit-byte-code"]
 
     def _extra_back_end_arguments(self) -> list[str]:
         """Return any extra arguments to be used with the VMC back-end."""
@@ -146,4 +146,4 @@ class VulkanModelConverter(VulkanModelConverterBase):
 
     def _extra_back_end_arguments(self) -> list[str]:
         """Return any extra arguments to be used with the VMC back-end."""
-        return ["--package-spv"]
+        return ["--package-spv", "--emit-debug-info"]

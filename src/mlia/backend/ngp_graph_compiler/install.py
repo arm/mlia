@@ -19,11 +19,11 @@ def get_ngp_graph_compiler_installation() -> BackendInstallation:
             url=(
                 "https://artifactory.arm.com:443/artifactory/ml-tooling.misc/"
                 "mlia/ngp-graph-compiler/"
-                "nightly_2024-06-10_drage/3bac0e93e555cc_369032118d0ef9_b1377aa94e1cfb/"
+                "nightly_2024-07-22_drage/97bc7e516e913d_c6c1ab2d18210a/"
                 "graph_compiler_drage_release.tar.gz"
             ),
             sha256_hash=(
-                "a465222f1faaca6e7df03b4dda27fea157575484a99ddea0bee459e1f84868b7"
+                "2201cb839ae48bff0aec29192ec331c12a372b2cdcd661adaa945411d73d59a2"
             ),
             header_gen_fn=artifactory_credential_headers,
         ),
