@@ -170,16 +170,15 @@ def operator_names_to_types(model_path: Path) -> dict:
         raise FileNotFoundError(f"TFLite file was not found at: {model_path}")
 
     model = parse_subgraphs(model_path)
+
     tensor_names = {}
     for subgraph in model:
         for layer in subgraph:
             for output_tensor in layer.outputs:
                 tensor_names[output_tensor.name] = layer.type
-
         for layer in subgraph:
             for input_tensor in layer.inputs:
                 layer_type = tensor_names.get(input_tensor.name)
                 if not layer_type:
                     tensor_names[input_tensor.name] = layer.type
-
     return tensor_names

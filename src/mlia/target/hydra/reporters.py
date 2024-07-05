@@ -21,6 +21,7 @@ from mlia.core.reporting import Report
 from mlia.core.reporting import ReportItem
 from mlia.core.reporting import Table
 from mlia.target.hydra.config import HydraConfiguration
+from mlia.utils.misc import dict_to_list
 from mlia.utils.types import is_list_of
 
 
@@ -136,12 +137,20 @@ def report_ngp_graph_compiler_perf_db(
     metrics: NGPGraphCompilerPerformanceMetrics,
 ) -> Report:
     """Report NGP graph compiler's graph DB."""
-    perf_records = sorted(
-        metrics.performance_db_parser.performance_db, key=lambda x: x["id"]
-    )
+    perf_records = dict(sorted(metrics.performance_metrics.items()))
 
-    columns = [
-        Column("Operator ID", alias="id", fmt=Format(wrap_width=25)),
+    general_column = [Column("ID", alias="id", fmt=Format(wrap_width=25))]
+
+    op_columns_titles = {
+        "opLocation": "TFLite Operator Location",
+        "opType": "TFLite Operator Type",
+    }
+    op_columns = [
+        Column(title, alias=key, fmt=Format(wrap_width=25))
+        for key, title in op_columns_titles.items()
+    ]
+
+    cycle_columns = [
         Column("Operator Cycles", alias="opCycles", fmt=Format(wrap_width=25)),
         Column("Total Cycles", alias="totalCycles", fmt=Format(wrap_width=25)),
     ]
@@ -150,19 +159,19 @@ def report_ngp_graph_compiler_perf_db(
         Column("HW Section", alias="hwSection", fmt=Format(wrap_width=25)),
         Column("HW Utilisation", alias="hwUtil", fmt=Format(wrap_width=25)),
     ]
+
     mem_column_titles = {
         "memoryName": "Memory Name",
         "readBytes": "Read bytes",
         "writeBytes": "Write bytes",
         "trafficCycles": "Traffic cycles",
     }
-
     mem_columns = [
         Column(title, alias=key, fmt=Format(wrap_width=25))
         for key, title in mem_column_titles.items()
     ]
 
-    def sub_table(
+    def sub_table_list_values(
         columns: list[Column], keys_values: list[dict[str, Any]], field: str
     ) -> Table:
         return Table(
@@ -173,21 +182,31 @@ def report_ngp_graph_compiler_perf_db(
 
     rows = [
         (
-            record["id"],
-            record["opCycles"],
-            record["totalCycles"],
-            sub_table(mem_columns, record["Utilization"], "sectionName"),
-            sub_table(mem_columns, record["Utilization"], "hwUtil"),
+            value.op_id,
             *[
-                sub_table(mem_columns, record["Memory"], field)
+                sub_table_list_values(op_columns, value.operators, field)
+                for field in op_columns_titles
+            ],
+            value.op_cycles,
+            value.total_cycles,
+            sub_table_list_values(hwutil_columns, value.utilization, "sectionName"),
+            sub_table_list_values(hwutil_columns, value.utilization, "hwUtil"),
+            *[
+                sub_table_list_values(
+                    mem_columns, dict_to_list(value.memory, "memoryName"), field
+                )
                 for field in mem_column_titles
             ],
         )
-        for record in perf_records
+        for _, value in perf_records.items()
     ]
 
     return Table(
-        columns=columns + hwutil_columns + mem_columns,
+        columns=general_column
+        + op_columns
+        + cycle_columns
+        + hwutil_columns
+        + mem_columns,
         rows=rows,
         name="NGP raw performance report",
         alias="ngp_perf_db",

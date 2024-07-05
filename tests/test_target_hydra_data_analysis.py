@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2023-2024, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: LicenseRef-LICENSE
 """Tests for Hydra data analysis module."""
 from __future__ import annotations
@@ -15,6 +15,7 @@ from mlia.backend.ngp_graph_compiler.performance import NGPGraphCompilerOutputFi
 from mlia.backend.ngp_graph_compiler.performance import (
     NGPGraphCompilerPerformanceMetrics,
 )
+from mlia.backend.ngp_graph_compiler.statistics import NGPOperatorPerformanceStats
 from mlia.target.hydra.data_analysis import ArgoModelPerformanceAnalyzed
 from mlia.target.hydra.data_analysis import HydraDataAnalyzer
 from mlia.target.hydra.data_analysis import NGPGraphCompilerModelPerformanceAnalyzed
@@ -37,7 +38,26 @@ from mlia.target.hydra.data_analysis import NGPGraphCompilerModelPerformanceAnal
                     Path("DOES_NOT_EXIST"), "TEST"
                 ),
                 performance_db_parser=NGPPerformanceDatabaseParser(),
-            ),
+                performance_metrics={
+                    "0": NGPOperatorPerformanceStats(
+                        op_id=[33],
+                        op_cycles=15,
+                        total_cycles=18,
+                        memory={
+                            "L1": {
+                                "readBytes": 4,
+                                "writeBytes": 6,
+                                "trafficCycles": 43530,
+                            },
+                        },
+                        utilization=[
+                            {"sectionName": "OutputWriter", "hwUtil": 1},
+                            {"sectionName": "VectorEngine", "hwUtil": 1},
+                        ],
+                        operators=["foo"],
+                    )
+                },
+            )
         ),
     ),
 )

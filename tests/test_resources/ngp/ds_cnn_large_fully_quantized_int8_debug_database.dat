@@ -1,87 +1,93 @@
 <?xml version='1.0' encoding='utf-8' ?>
-<regor_version>0.1.0</regor_version>
+<debug_database>
+<regor_version>1.0.0</regor_version>
 <table name="tosa_op_id">
 <![CDATA[
+"id", "tosa_op", "api_labels"
+336, Conv2D, deeplabv3plus_mbnV2__1080p/Conv_Relu6/Relu6;deeplabv3plus_mbnV2__1080p/Conv_BN/FusedBatchNormV3;deeplabv3plus_mbnV2__1080p/expanded_conv_5_project/Conv2D;deeplabv3plus_mbnV2__1080p/Conv/Conv2D;
+337, Rescale, deeplabv3plus_mbnV2__1080p/Conv_Relu6/Relu6;deeplabv3plus_mbnV2__1080p/Conv_BN/FusedBatchNormV3;deeplabv3plus_mbnV2__1080p/expanded_conv_5_project/Conv2D;deeplabv3plus_mbnV2__1080p/Conv/Conv2D;
+338, DepthwiseConv2D, model/re_lu_1/Relu;
+339, Rescale, model/re_lu_1/Relu;
+340, Conv2D, model/re_lu_2/Relu;
+341, Rescale, model/re_lu_2/Relu;
+342, DepthwiseConv2D, model/re_lu_3/Relu;
+343, Rescale, model/re_lu_3/Relu;
+344, Conv2D, model/re_lu_4/Relu;
+345, Rescale, model/re_lu_4/Relu;
+346, DepthwiseConv2D, model/re_lu_5/Relu;
+347, Rescale, model/re_lu_5/Relu;
+348, Conv2D, model/re_lu_6/Relu;
+349, Rescale, model/re_lu_6/Relu;
+350, DepthwiseConv2D, model/re_lu_7/Relu;test_location_string;
+351, Rescale, model/re_lu_7/Relu;
+352, Conv2D, model/re_lu_8/Relu;
+353, Rescale, model/re_lu_8/Relu;
+354, DepthwiseConv2D, model/re_lu_9/Relu;
+355, Rescale, model/re_lu_9/Relu;
+356, Conv2D, model/re_lu_10/Relu;
+357, Rescale, model/re_lu_10/Relu;
+358, AvgPool, model/average_pooling2d/AvgPool;
+410, Rescale, model/average_pooling2d/AvgPool;
+359, Reshape, model/dense/BiasAdd;
+413, Conv2D, model/dense/BiasAdd;
+361, Rescale, model/dense/BiasAdd;
+362, Rescale, Identity;
+363, ReduceMax, Identity;
+364, Sub, Identity;
+365, Rescale, Identity;
+368, LUT, Identity;
+372, SHL, Identity;
+366, LUT, Identity;
+367, LUT, Identity;
+370, SHL, Identity;
+371, SHL, Identity;
+374, Add, Identity;
+369, LUT, Identity;
+373, Asr, Identity;
+440, Rescale, Identity;
+375, Add, Identity;
+376, Add, Identity;
+377, Asr, Identity;
+443, Rescale, Identity;
+378, ReduceSum, Identity;
+379, CLZ, Identity;
+400, Sub, Identity;
+380, Sub, Identity;
+381, SHL, Identity;
+382, Mul, Identity;
+446, Rescale, Identity;
+383, Add, Identity;
+384, Mul, Identity;
+449, Rescale, Identity;
+385, Sub, Identity;
+386, Mul, Identity;
+452, Rescale, Identity;
+387, Mul, Identity;
+388, Add, Identity;
+389, Mul, Identity;
+455, Rescale, Identity;
+390, Sub, Identity;
+391, Mul, Identity;
+458, Rescale, Identity;
+392, Mul, Identity;
+393, Add, Identity;
+394, Mul, Identity;
+461, Rescale, Identity;
+395, Sub, Identity;
+396, Mul, Identity;
+464, Rescale, Identity;
+397, Mul, Identity;
+398, Add, Identity;
+399, Mul, Identity;
+467, Rescale, Identity;
+401, Asr, Identity;
+470, Rescale, Identity;
+402, Rescale, Identity;
+]]>
+</table>
+<table name="shader_op_id">
+<![CDATA[
 "id", "api_labels"
-336, conv2d_spirv_id_92;
-337, rescale_spirv_id_103;
-338, depthwise_conv2d_spirv_id_109;
-339, rescale_spirv_id_114;
-340, conv2d_spirv_id_116;
-341, rescale_spirv_id_119;
-342, depthwise_conv2d_spirv_id_121;
-343, rescale_spirv_id_124;
-344, conv2d_spirv_id_125;
-345, rescale_spirv_id_128;
-346, depthwise_conv2d_spirv_id_129;
-347, rescale_spirv_id_132;
-348, conv2d_spirv_id_133;
-349, rescale_spirv_id_136;
-350, depthwise_conv2d_spirv_id_137;
-351, rescale_spirv_id_140;
-352, conv2d_spirv_id_141;
-353, rescale_spirv_id_144;
-354, depthwise_conv2d_spirv_id_145;
-355, rescale_spirv_id_148;
-356, conv2d_spirv_id_149;
-357, rescale_spirv_id_152;
-358, avgpool2d_spirv_id_156;
-410, avgpool2d_spirv_id_156;
-359, reshape_spirv_id_160;
-413, fully_connected_spirv_id_163;
-361, rescale_spirv_id_171;
-362, rescale_spirv_id_174;
-363, reduce_max_spirv_id_175;
-364, sub_spirv_id_176;
-365, rescale_spirv_id_181;
-366, table_spirv_id_182;
-367, table_spirv_id_183;
-370, logical_left_shift_spirv_id_186;
-371, logical_left_shift_spirv_id_187;
-374, add_spirv_id_190;
-368, table_spirv_id_184;
-372, logical_left_shift_spirv_id_188;
-375, add_spirv_id_191;
-369, table_spirv_id_185;
-373, ars_spirv_id_189;
-440, ars_spirv_id_189;
-376, add_spirv_id_192;
-377, ars_spirv_id_193;
-443, ars_spirv_id_193;
-378, reduce_sum_spirv_id_194;
-379, clz_spirv_id_195;
-400, sub_spirv_id_218;
-380, sub_spirv_id_196;
-381, logical_left_shift_spirv_id_197;
-382, mul_spirv_id_199;
-446, mul_spirv_id_199;
-383, add_spirv_id_200;
-384, mul_spirv_id_201;
-449, mul_spirv_id_201;
-385, sub_spirv_id_202;
-386, mul_spirv_id_203;
-452, mul_spirv_id_203;
-387, mul_spirv_id_204;
-388, add_spirv_id_205;
-389, mul_spirv_id_206;
-455, mul_spirv_id_206;
-390, sub_spirv_id_207;
-391, mul_spirv_id_208;
-458, mul_spirv_id_208;
-392, mul_spirv_id_209;
-393, add_spirv_id_210;
-394, mul_spirv_id_211;
-461, mul_spirv_id_211;
-395, sub_spirv_id_212;
-396, mul_spirv_id_213;
-464, mul_spirv_id_213;
-397, mul_spirv_id_214;
-398, add_spirv_id_215;
-399, mul_spirv_id_217;
-467, mul_spirv_id_217;
-401, ars_spirv_id_219;
-470, ars_spirv_id_219;
-402, rescale_spirv_id_220;
 ]]>
 </table>
 <table name="fused_op_id">
@@ -117,16 +123,16 @@
 587, 362;
 589, 363;
 471, 364;365;
+595, 368;
+515, 372;
 591, 366;
 593, 367;
 511, 370;
 513, 371;
 517, 374;
-595, 368;
-515, 372;
-519, 375;
 597, 369;
 473, 373;440;
+519, 375;
 521, 376;
 475, 377;443;
 599, 378;
@@ -175,9 +181,9 @@
 907, 587;
 909, 589;
 911, 471;
+661, 595;515;
 639, 591;593;511;513;517;
-663, 595;515;519;
-675, 597;473;521;
+677, 597;473;519;521;
 749, 475;599;601;507;
 771, 477;523;
 787, 479;525;481;
@@ -203,13 +209,13 @@
 1677, 623;
 1675, 625;
 1673, 627;
-1671, 629;
+1671, 907;
 1669, 907;
 1667, 909;
 1665, 911;
+1661, 661;
 1663, 639;
-1661, 663;
-1659, 675;
+1659, 677;
 1657, 749;
 1655, 771;
 1653, 787;
@@ -231,17 +237,17 @@
 5, 615, 1685
 6, 617, 1683
 7, 619, 1681
-8, 621, 1679
-9, 623, 1677
+8, 619, 1679
+9, 619, 1677
 10, 625, 1675
 11, 627, 1673
-12, 629, 1671
+12, 907, 1671
 13, 907, 1669
 14, 909, 1667
 15, 911, 1665
-16, 639, 1663
-17, 663, 1661
-18, 675, 1659
+16, 661, 1661
+17, 639, 1663
+18, 677, 1659
 19, 749, 1657
 20, 771, 1655
 21, 787, 1653
@@ -271,8 +277,8 @@
 1669, 13;
 1667, 14;
 1665, 15;
-1663, 16;
-1661, 17;
+1661, 16;
+1663, 17;
 1659, 18;
 1657, 19;
 1655, 20;
@@ -284,3 +290,4 @@
 1643, 26;
 ]]>
 </table>
+</debug_database>

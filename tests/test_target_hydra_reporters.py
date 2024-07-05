@@ -12,11 +12,13 @@ from mlia.backend.argo.config import ArgoConfig
 from mlia.backend.argo.performance import ArgoPerformanceMetrics
 from mlia.backend.argo.performance import OperatorPerformanceData
 from mlia.backend.ngp_graph_compiler.config import NGPGraphCompilerConfig
+from mlia.backend.ngp_graph_compiler.output_parsing import NGPDebugDatabaseParser
 from mlia.backend.ngp_graph_compiler.output_parsing import NGPPerformanceDatabaseParser
 from mlia.backend.ngp_graph_compiler.performance import NGPGraphCompilerOutputFiles
 from mlia.backend.ngp_graph_compiler.performance import (
     NGPGraphCompilerPerformanceMetrics,
 )
+from mlia.backend.ngp_graph_compiler.statistics import NGPPerformanceStats
 from mlia.backend.vulkan_model_converter.compat import NGPModelCompatibilityInfo
 from mlia.core.reporting import Table
 from mlia.target.hydra.config import HydraConfiguration
@@ -119,7 +121,7 @@ def test_hydra_formatters(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_ngp_graph_compiler_reporting(monkeypatch: pytest.MonkeyPatch) -> None:
     """Test function hydra_formatters() with NGP performance data."""
 
-    contents = """
+    performance_contents = """
     <![CDATA[
     "id", "opCycles", "totalCycles", "memoryName;readBytes;writeBytes;trafficCycles", "sectionName;hwUtil"
     26, 18, 212, Undefined;0;0;0;Internal;0;0;0;L1;0;0;0;L2;0;0;0;SystemCache;0;0;0;DRAM;320;12;10;, OutputWriter;1;VectorEngine;0.25;VectorEngine;0.25;VectorEngine;0.25;TransformUnit;0.25;TransformUnit;0.25;InputReader;0.0625;InputReader;0.0625;InputReader;0.25;
@@ -127,9 +129,61 @@ def test_ngp_graph_compiler_reporting(monkeypatch: pytest.MonkeyPatch) -> None:
     ]]>
     """.strip()
 
+    debug_contents = """
+<?xml version='1.0' encoding='utf-8' ?>
+<debug_database>
+<regor_version>1.0.0</regor_version>
+<table name="tosa_op_id">
+<![CDATA[
+"id", "tosa_op", "api_labels"
+1077, DepthwiseConv2D, deeplabv3plus_mbnV2__1080p/expanded_conv_8_depthwise_relu/Relu6;deeplabv3plus_mbnV2__1080p/expanded_conv_8_depthwise_BN/FusedBatchNormV3;deeplabv3plus_mbnV2__1080p/expanded_conv_10_depthwise/depthwise;deeplabv3plus_mbnV2__1080p/expanded_conv_8_depthwise/depthwise;
+1078, Rescale, deeplabv3plus_mbnV2__1080p/expanded_conv_8_depthwise_relu/Relu6;deeplabv3plus_mbnV2__1080p/expanded_conv_8_depthwise_BN/FusedBatchNormV3;deeplabv3plus_mbnV2__1080p/expanded_conv_10_depthwise/depthwise;deeplabv3plus_mbnV2__1080p/expanded_conv_8_depthwise/depthwise;
+1079, Conv2D, deeplabv3plus_mbnV2__1080p/expanded_conv_8_project_BN/FusedBatchNormV3;deeplabv3plus_mbnV2__1080p/expanded_conv_9_project/Conv2D;deeplabv3plus_mbnV2__1080p/expanded_conv_8_project/Conv2D;
+1080, Rescale, deeplabv3plus_mbnV2__1080p/expanded_conv_8_project_BN/FusedBatchNormV3;deeplabv3plus_mbnV2__1080p/expanded_conv_9_project/Conv2D;deeplabv3plus_mbnV2__1080p/expanded_conv_8_project/Conv2D;
+1083, Rescale, deeplabv3plus_mbnV2__1080p/expanded_conv_8_add/add;
+1081, Rescale, deeplabv3plus_mbnV2__1080p/expanded_conv_8_add/add;
+1084, Add, deeplabv3plus_mbnV2__1080p/expanded_conv_8_add/add;
+1085, Rescale, deeplabv3plus_mbnV2__1080p/expanded_conv_8_add/add;
+]]>
+</table>
+<table name="fused_op_id">
+<![CDATA[
+"id", "tosa_op_ids"
+1361, 1077;
+1473, 1078;
+1363, 1079;
+1475, 1080;
+1299, 1083;1081;1084;1085;
+]]>
+</table>
+<table name="chain_op_id">
+<![CDATA[
+"id", "fused_op_ids"
+1613, 1361;1473;
+1617, 1363;1475;1299;
+]]>
+</table>
+<table name="stripe_op_id">
+<![CDATA[
+"id", "chain_op_id", "cascade_op_id"
+25, 1613, 2196
+26, 1617, 2194
+]]>
+</table>
+""".strip()
+    # pylint: disable=line-too-long
+    operator_types_mapping = {
+        "deeplabv3plus_mbnV2__1080p/expanded_conv_8_depthwise_relu/Relu6;deeplabv3plus_mbnV2__1080p/expanded_conv_8_depthwise_BN/FusedBatchNormV3;deeplabv3plus_mbnV2__1080p/expanded_conv_10_depthwise/depthwise;deeplabv3plus_mbnV2__1080p/expanded_conv_8_depthwise/depthwise": "type1",
+        "deeplabv3plus_mbnV2__1080p/expanded_conv_8_project_BN/FusedBatchNormV3;deeplabv3plus_mbnV2__1080p/expanded_conv_9_project/Conv2D;deeplabv3plus_mbnV2__1080p/expanded_conv_8_project/Conv2D": "type_2",
+        "deeplabv3plus_mbnV2__1080p/expanded_conv_8_add/add": "type_3",
+    }
+
     performance_db_parser = NGPPerformanceDatabaseParser()
-    performance_db_parser.raw_xmlish = contents
-    performance_db_parser.parse_performance_database()
+    performance_db_parser.raw_xmlish = performance_contents
+    performance_db = performance_db_parser.parse_performance_database()
+    debug_db_parser = NGPDebugDatabaseParser()
+    debug_db_parser.raw_xmlish = debug_contents
+    debug_db = debug_db_parser.parse_debug_database()
 
     sys_cfg, compiler_cfg = Path("system-config"), Path("compiler-config")
     cfg = NGPGraphCompilerConfig(sys_cfg, compiler_cfg)
@@ -148,6 +202,11 @@ def test_ngp_graph_compiler_reporting(monkeypatch: pytest.MonkeyPatch) -> None:
             ignored_path,
         ),
         performance_db_parser=performance_db_parser,
+        performance_metrics=NGPPerformanceStats(
+            debug_db=debug_db,
+            performance_db=performance_db,
+            operator_types_mapping=operator_types_mapping,
+        ).process_stats_per_chain(),
     )
 
     monkeypatch.setattr("mlia.utils.console.Console", partial(Console, width=80))
@@ -161,28 +220,59 @@ def test_ngp_graph_compiler_reporting(monkeypatch: pytest.MonkeyPatch) -> None:
         [
             # pylint: disable=C0301
             "NGP raw performance report:",
-            "┌────────┬────────┬────────┬────────┬────────┬────────┬───────┬────────┬───────┐",
-            "│ Opera… │ Opera… │ Total  │ HW     │ HW     │ Memory │ Read  │ Write  │ Traf… │",
-            "│ ID     │ Cycles │ Cycles │ Secti… │ Utili… │ Name   │ bytes │ bytes  │ cycl… │",
-            "╞════════╪════════╪════════╪════════╪════════╪════════╪═══════╪════════╪═══════╡",
-            "│ 25     │ 4      │ 13     │ Outpu… │ 0.0625 │ Undef… │ 0     │ 0      │ 0     │",
-            "│        │        │        │ Vecto… │ 0.125  │ Inter… │ 0     │ 0      │ 0     │",
-            "│        │        │        │ Vecto… │ 0.125  │ L1     │ 0     │ 4      │ 0     │",
-            "│        │        │        │ Vecto… │ 0.125  │ L2     │ 0     │ 0      │ 0     │",
-            "│        │        │        │ Vecto… │ 0.125  │ Syste… │ 0     │ 0      │ 0     │",
-            "│        │        │        │ Input… │ 0.0625 │ DRAM   │ 128   │ 4      │ 4     │",
-            "│        │        │        │ Input… │ 0.0625 │        │       │        │       │",
-            "├────────┼────────┼────────┼────────┼────────┼────────┼───────┼────────┼───────┤",
-            "│ 26     │ 18     │ 212    │ Outpu… │ 1      │ Undef… │ 0     │ 0      │ 0     │",
-            "│        │        │        │ Vecto… │ 0.25   │ Inter… │ 0     │ 0      │ 0     │",
-            "│        │        │        │ Vecto… │ 0.25   │ L1     │ 0     │ 0      │ 0     │",
-            "│        │        │        │ Vecto… │ 0.25   │ L2     │ 0     │ 0      │ 0     │",
-            "│        │        │        │ Trans… │ 0.25   │ Syste… │ 0     │ 0      │ 0     │",
-            "│        │        │        │ Trans… │ 0.25   │ DRAM   │ 320   │ 12     │ 10    │",
-            "│        │        │        │ Input… │ 0.0625 │        │       │        │       │",
-            "│        │        │        │ Input… │ 0.0625 │        │       │        │       │",
-            "│        │        │        │ Input… │ 0.25   │        │       │        │       │",
-            "└────────┴────────┴────────┴────────┴────────┴────────┴───────┴────────┴───────┘",
+            "┌────┬──────┬──────┬──────┬───────┬──────┬───────┬──────┬───────┬──────┬───────┐",
+            "│    │ TFL… │ TFL… │      │       │      │       │      │       │      │       │",
+            "│    │ Ope… │ Ope… │ Ope… │ Total │ HW   │ HW    │ Mem… │ Read  │ Wri… │ Traf… │",
+            "│ ID │ Loc… │ Type │ Cyc… │ Cycl… │ Sec… │ Util… │ Name │ bytes │ byt… │ cycl… │",
+            "╞════╪══════╪══════╪══════╪═══════╪══════╪═══════╪══════╪═══════╪══════╪═══════╡",
+            "│ 25 │ dee… │ typ… │ 4    │ 13    │ Out… │ 0.062 │ L1   │ 0     │ 4    │ 0     │",
+            "│    │ p/e… │ typ… │      │       │ Vec… │ 0.125 │ L2   │ 0     │ 0    │ 0     │",
+            "│    │ se_… │      │      │       │ Inp… │ 0.062 │ Sys… │ 0     │ 0    │ 0     │",
+            "│    │ us_… │      │      │       │      │       │ DRAM │ 128   │ 4    │ 4     │",
+            "│    │ con… │      │      │       │      │       │      │       │      │       │",
+            "│    │ Bat… │      │      │       │      │       │      │       │      │       │",
+            "│    │ _mb… │      │      │       │      │       │      │       │      │       │",
+            "│    │ nv_… │      │      │       │      │       │      │       │      │       │",
+            "│    │ ;de… │      │      │       │      │       │      │       │      │       │",
+            "│    │ 0p/… │      │      │       │      │       │      │       │      │       │",
+            "│    │ ise… │      │      │       │      │       │      │       │      │       │",
+            "│    │ dee… │      │      │       │      │       │      │       │      │       │",
+            "│    │ p/e… │      │      │       │      │       │      │       │      │       │",
+            "│    │ se_… │      │      │       │      │       │      │       │      │       │",
+            "│    │ us_… │      │      │       │      │       │      │       │      │       │",
+            "│    │ con… │      │      │       │      │       │      │       │      │       │",
+            "│    │ Bat… │      │      │       │      │       │      │       │      │       │",
+            "│    │ _mb… │      │      │       │      │       │      │       │      │       │",
+            "│    │ nv_… │      │      │       │      │       │      │       │      │       │",
+            "│    │ ;de… │      │      │       │      │       │      │       │      │       │",
+            "│    │ 0p/… │      │      │       │      │       │      │       │      │       │",
+            "│    │ ise… │      │      │       │      │       │      │       │      │       │",
+            "├────┼──────┼──────┼──────┼───────┼──────┼───────┼──────┼───────┼──────┼───────┤",
+            "│ 26 │ dee… │ typ… │ 18   │ 212   │ Out… │ 1.0   │ L1   │ 0     │ 0    │ 0     │",
+            "│    │ p/e… │ typ… │      │       │ Vec… │ 0.25  │ L2   │ 0     │ 0    │ 0     │",
+            "│    │ _BN… │ typ… │      │       │ Tra… │ 0.25  │ Sys… │ 0     │ 0    │ 0     │",
+            "│    │ lab… │ typ… │      │       │ Inp… │ 0.125 │ DRAM │ 320   │ 12   │ 10    │",
+            "│    │ pan… │ typ… │      │       │      │       │      │       │      │       │",
+            "│    │ v2D… │ typ… │      │       │      │       │      │       │      │       │",
+            "│    │ 108… │      │      │       │      │       │      │       │      │       │",
+            "│    │ jec… │      │      │       │      │       │      │       │      │       │",
+            "│    │ dee… │      │      │       │      │       │      │       │      │       │",
+            "│    │ p/e… │      │      │       │      │       │      │       │      │       │",
+            "│    │ _BN… │      │      │       │      │       │      │       │      │       │",
+            "│    │ lab… │      │      │       │      │       │      │       │      │       │",
+            "│    │ pan… │      │      │       │      │       │      │       │      │       │",
+            "│    │ v2D… │      │      │       │      │       │      │       │      │       │",
+            "│    │ 108… │      │      │       │      │       │      │       │      │       │",
+            "│    │ jec… │      │      │       │      │       │      │       │      │       │",
+            "│    │ dee… │      │      │       │      │       │      │       │      │       │",
+            "│    │ p/e… │      │      │       │      │       │      │       │      │       │",
+            "│    │ dee… │      │      │       │      │       │      │       │      │       │",
+            "│    │ p/e… │      │      │       │      │       │      │       │      │       │",
+            "│    │ dee… │      │      │       │      │       │      │       │      │       │",
+            "│    │ p/e… │      │      │       │      │       │      │       │      │       │",
+            "│    │ dee… │      │      │       │      │       │      │       │      │       │",
+            "│    │ p/e… │      │      │       │      │       │      │       │      │       │",
+            "└────┴──────┴──────┴──────┴───────┴──────┴───────┴──────┴───────┴──────┴───────┘",
             # pylint: enable=C0301
         ],
     )

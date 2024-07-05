@@ -20,16 +20,12 @@ def test_load(test_resources_path: Path) -> None:
         test_resources_path
         / "ngp/ds_cnn_large_fully_quantized_int8_performance_database.dat"
     )
-
     debug_db_file = str(
         test_resources_path / "ngp/ds_cnn_large_fully_quantized_int8_debug_database.dat"
     )
-
     parser = NGPOutputParser()
-
     loaded_perf_db = parser.load(Path(perf_db_file))
     assert loaded_perf_db == parser.raw_xmlish
-
     loaded_debug_db = parser.load(Path(debug_db_file))
     assert loaded_debug_db == parser.raw_xmlish
 
@@ -111,70 +107,62 @@ def test_performance_database_parser_from_file(test_resources_path: Path) -> Non
         test_resources_path
         / "ngp/ds_cnn_large_fully_quantized_int8_performance_database.dat"
     )
-    parser = NGPPerformanceDatabaseParser()
-    parser.load(Path(perf_db_file))
+    parser = NGPPerformanceDatabaseParser(db_path=Path(perf_db_file))
     records = parser.parse_performance_database()
     assert len(records) == 27
-    assert records[0] == {
-        "Memory": [
-            {
-                "memoryName": "Undefined",
-                "readBytes": "0",
-                "trafficCycles": "0",
-                "writeBytes": "0",
+    assert records[14] == {
+        "Memory": {
+            "Undefined": {
+                "readBytes": 0,
+                "writeBytes": 0,
+                "trafficCycles": 0,
             },
-            {
-                "memoryName": "Internal",
-                "readBytes": "0",
-                "trafficCycles": "0",
-                "writeBytes": "0",
+            "Internal": {
+                "readBytes": 0,
+                "writeBytes": 0,
+                "trafficCycles": 0,
             },
-            {
-                "memoryName": "L1",
-                "readBytes": "0",
-                "trafficCycles": "0",
-                "writeBytes": "0",
+            "L1": {
+                "readBytes": 0,
+                "writeBytes": 69000,
+                "trafficCycles": 269,
             },
-            {
-                "memoryName": "L2",
-                "readBytes": "0",
-                "trafficCycles": "0",
-                "writeBytes": "0",
+            "L2": {
+                "readBytes": 0,
+                "writeBytes": 0,
+                "trafficCycles": 0,
             },
-            {
-                "memoryName": "SystemCache",
-                "readBytes": "0",
-                "trafficCycles": "0",
-                "writeBytes": "0",
+            "SystemCache": {
+                "readBytes": 0,
+                "writeBytes": 0,
+                "trafficCycles": 0,
             },
-            {
-                "memoryName": "DRAM",
-                "readBytes": "320",
-                "trafficCycles": "10",
-                "writeBytes": "12",
+            "DRAM": {
+                "readBytes": 126613,
+                "writeBytes": 69000,
+                "trafficCycles": 4018,
             },
-        ],
+        },
         "Utilization": [
-            {"hwUtil": "1", "sectionName": "OutputWriter"},
-            {"hwUtil": "0.25", "sectionName": "VectorEngine"},
-            {"hwUtil": "0.25", "sectionName": "VectorEngine"},
-            {"hwUtil": "0.25", "sectionName": "VectorEngine"},
-            {"hwUtil": "0.25", "sectionName": "TransformUnit"},
-            {"hwUtil": "0.25", "sectionName": "TransformUnit"},
-            {"hwUtil": "0.0625", "sectionName": "InputReader"},
-            {"hwUtil": "0.0625", "sectionName": "InputReader"},
-            {"hwUtil": "0.25", "sectionName": "InputReader"},
+            {"hwUtil": 0.833333, "sectionName": "OutputWriter"},
+            {"hwUtil": 1, "sectionName": "VectorEngine"},
+            {"hwUtil": 0.729167, "sectionName": "ConvolutionEngine"},
+            {"hwUtil": 1, "sectionName": "WeightDecoder"},
+            {"hwUtil": 0.761905, "sectionName": "InputReader"},
+            {"hwUtil": 0.65, "sectionName": "InputReader"},
         ],
-        "id": 26,
-        "opCycles": 18,
-        "totalCycles": 212,
+        "id": 0,
+        "opCycles": 6912,
+        "totalCycles": 7343,
     }
 
 
 def test_register_sub_table() -> None:
     """Add a subtable to the performance db parser."""
     parser = NGPPerformanceDatabaseParser()
-    column_parsers = parser.register_sub_table(title="foo", header="bar")
+    column_parsers = parser.register_sub_table(
+        title="foo", header="bar", key_field="test"
+    )
     assert column_parsers == parser.column_parsers
 
 
@@ -189,108 +177,97 @@ def test_parse_performance_database() -> None:
     """.strip()
     pdb_parser = NGPPerformanceDatabaseParser()
     pdb_parser.raw_xmlish = contents
+
     assert pdb_parser.parse_performance_database() == [
         {
-            "Memory": [
-                {
-                    "memoryName": "Undefined",
-                    "readBytes": "0",
-                    "trafficCycles": "0",
-                    "writeBytes": "0",
+            "Memory": {
+                "Undefined": {
+                    "readBytes": 0,
+                    "writeBytes": 0,
+                    "trafficCycles": 0,
                 },
-                {
-                    "memoryName": "Internal",
-                    "readBytes": "0",
-                    "trafficCycles": "0",
-                    "writeBytes": "0",
+                "Internal": {
+                    "readBytes": 0,
+                    "writeBytes": 0,
+                    "trafficCycles": 0,
                 },
-                {
-                    "memoryName": "L1",
-                    "readBytes": "0",
-                    "trafficCycles": "0",
-                    "writeBytes": "0",
+                "L1": {
+                    "readBytes": 0,
+                    "writeBytes": 0,
+                    "trafficCycles": 0,
                 },
-                {
-                    "memoryName": "L2",
-                    "readBytes": "0",
-                    "trafficCycles": "0",
-                    "writeBytes": "0",
+                "L2": {
+                    "readBytes": 0,
+                    "writeBytes": 0,
+                    "trafficCycles": 0,
                 },
-                {
-                    "memoryName": "SystemCache",
-                    "readBytes": "0",
-                    "trafficCycles": "0",
-                    "writeBytes": "0",
+                "SystemCache": {
+                    "readBytes": 0,
+                    "writeBytes": 0,
+                    "trafficCycles": 0,
                 },
-                {
-                    "memoryName": "DRAM",
-                    "readBytes": "320",
-                    "trafficCycles": "10",
-                    "writeBytes": "12",
+                "DRAM": {
+                    "readBytes": 320,
+                    "writeBytes": 12,
+                    "trafficCycles": 10,
                 },
-            ],
+            },
             "Utilization": [
-                {"hwUtil": "1", "sectionName": "OutputWriter"},
-                {"hwUtil": "0.25", "sectionName": "VectorEngine"},
-                {"hwUtil": "0.25", "sectionName": "VectorEngine"},
-                {"hwUtil": "0.25", "sectionName": "VectorEngine"},
-                {"hwUtil": "0.25", "sectionName": "TransformUnit"},
-                {"hwUtil": "0.25", "sectionName": "TransformUnit"},
-                {"hwUtil": "0.0625", "sectionName": "InputReader"},
-                {"hwUtil": "0.0625", "sectionName": "InputReader"},
-                {"hwUtil": "0.25", "sectionName": "InputReader"},
+                {"hwUtil": 1, "sectionName": "OutputWriter"},
+                {"hwUtil": 0.25, "sectionName": "VectorEngine"},
+                {"hwUtil": 0.25, "sectionName": "VectorEngine"},
+                {"hwUtil": 0.25, "sectionName": "VectorEngine"},
+                {"hwUtil": 0.25, "sectionName": "TransformUnit"},
+                {"hwUtil": 0.25, "sectionName": "TransformUnit"},
+                {"hwUtil": 0.0625, "sectionName": "InputReader"},
+                {"hwUtil": 0.0625, "sectionName": "InputReader"},
+                {"hwUtil": 0.25, "sectionName": "InputReader"},
             ],
             "id": 26,
             "opCycles": 18,
             "totalCycles": 212,
         },
         {
-            "Memory": [
-                {
-                    "memoryName": "Undefined",
-                    "readBytes": "0",
-                    "trafficCycles": "0",
-                    "writeBytes": "0",
+            "Memory": {
+                "Undefined": {
+                    "readBytes": 0,
+                    "writeBytes": 0,
+                    "trafficCycles": 0,
                 },
-                {
-                    "memoryName": "Internal",
-                    "readBytes": "0",
-                    "trafficCycles": "0",
-                    "writeBytes": "0",
+                "Internal": {
+                    "readBytes": 0,
+                    "writeBytes": 0,
+                    "trafficCycles": 0,
                 },
-                {
-                    "memoryName": "L1",
-                    "readBytes": "0",
-                    "trafficCycles": "0",
-                    "writeBytes": "4",
+                "L1": {
+                    "readBytes": 0,
+                    "writeBytes": 4,
+                    "trafficCycles": 0,
                 },
-                {
-                    "memoryName": "L2",
-                    "readBytes": "0",
-                    "trafficCycles": "0",
-                    "writeBytes": "0",
+                "L2": {
+                    "readBytes": 0,
+                    "writeBytes": 0,
+                    "trafficCycles": 0,
                 },
-                {
-                    "memoryName": "SystemCache",
-                    "readBytes": "0",
-                    "trafficCycles": "0",
-                    "writeBytes": "0",
+                "SystemCache": {
+                    "readBytes": 0,
+                    "writeBytes": 0,
+                    "trafficCycles": 0,
                 },
-                {
-                    "memoryName": "DRAM",
-                    "readBytes": "128",
-                    "trafficCycles": "4",
-                    "writeBytes": "4",
+                "DRAM": {
+                    "readBytes": 128,
+                    "writeBytes": 4,
+                    "trafficCycles": 4,
                 },
-            ],
+            },
             "Utilization": [
-                {"hwUtil": "0.0625", "sectionName": "OutputWriter"},
-                {"hwUtil": "0.125", "sectionName": "VectorEngine"},
-                {"hwUtil": "0.125", "sectionName": "VectorEngine"},
-                {"hwUtil": "0.125", "sectionName": "VectorEngine"},
-                {"hwUtil": "0.125", "sectionName": "VectorEngine"},
-                {"hwUtil": "0.0625", "sectionName": "InputReader"},
-                {"hwUtil": "0.0625", "sectionName": "InputReader"},
+                {"hwUtil": 0.0625, "sectionName": "OutputWriter"},
+                {"hwUtil": 0.125, "sectionName": "VectorEngine"},
+                {"hwUtil": 0.125, "sectionName": "VectorEngine"},
+                {"hwUtil": 0.125, "sectionName": "VectorEngine"},
+                {"hwUtil": 0.125, "sectionName": "VectorEngine"},
+                {"hwUtil": 0.0625, "sectionName": "InputReader"},
+                {"hwUtil": 0.0625, "sectionName": "InputReader"},
             ],
             "id": 25,
             "opCycles": 4,
@@ -321,106 +298,94 @@ def test_make_parsed_db_performance_db() -> None:
             "id": 26,
             "opCycles": 18,
             "totalCycles": 212,
-            "Memory": [
-                {
-                    "memoryName": "Undefined",
-                    "readBytes": "0",
-                    "writeBytes": "0",
-                    "trafficCycles": "0",
+            "Memory": {
+                "Undefined": {
+                    "readBytes": 0,
+                    "writeBytes": 0,
+                    "trafficCycles": 0,
                 },
-                {
-                    "memoryName": "Internal",
-                    "readBytes": "0",
-                    "writeBytes": "0",
-                    "trafficCycles": "0",
+                "Internal": {
+                    "readBytes": 0,
+                    "writeBytes": 0,
+                    "trafficCycles": 0,
                 },
-                {
-                    "memoryName": "L1",
-                    "readBytes": "0",
-                    "writeBytes": "0",
-                    "trafficCycles": "0",
+                "L1": {
+                    "readBytes": 0,
+                    "writeBytes": 0,
+                    "trafficCycles": 0,
                 },
-                {
-                    "memoryName": "L2",
-                    "readBytes": "0",
-                    "writeBytes": "0",
-                    "trafficCycles": "0",
+                "L2": {
+                    "readBytes": 0,
+                    "writeBytes": 0,
+                    "trafficCycles": 0,
                 },
-                {
-                    "memoryName": "SystemCache",
-                    "readBytes": "0",
-                    "writeBytes": "0",
-                    "trafficCycles": "0",
+                "SystemCache": {
+                    "readBytes": 0,
+                    "writeBytes": 0,
+                    "trafficCycles": 0,
                 },
-                {
-                    "memoryName": "DRAM",
-                    "readBytes": "320",
-                    "writeBytes": "12",
-                    "trafficCycles": "10",
+                "DRAM": {
+                    "readBytes": 320,
+                    "writeBytes": 12,
+                    "trafficCycles": 10,
                 },
-            ],
+            },
             "Utilization": [
-                {"sectionName": "OutputWriter", "hwUtil": "1"},
-                {"sectionName": "VectorEngine", "hwUtil": "0.25"},
-                {"sectionName": "VectorEngine", "hwUtil": "0.25"},
-                {"sectionName": "VectorEngine", "hwUtil": "0.25"},
-                {"sectionName": "TransformUnit", "hwUtil": "0.25"},
-                {"sectionName": "TransformUnit", "hwUtil": "0.25"},
-                {"sectionName": "InputReader", "hwUtil": "0.0625"},
-                {"sectionName": "InputReader", "hwUtil": "0.0625"},
-                {"sectionName": "InputReader", "hwUtil": "0.25"},
+                {"sectionName": "OutputWriter", "hwUtil": 1},
+                {"sectionName": "VectorEngine", "hwUtil": 0.25},
+                {"sectionName": "VectorEngine", "hwUtil": 0.25},
+                {"sectionName": "VectorEngine", "hwUtil": 0.25},
+                {"sectionName": "TransformUnit", "hwUtil": 0.25},
+                {"sectionName": "TransformUnit", "hwUtil": 0.25},
+                {"sectionName": "InputReader", "hwUtil": 0.0625},
+                {"sectionName": "InputReader", "hwUtil": 0.0625},
+                {"sectionName": "InputReader", "hwUtil": 0.25},
             ],
         },
         {
             "id": 25,
             "opCycles": 4,
             "totalCycles": 13,
-            "Memory": [
-                {
-                    "memoryName": "Undefined",
-                    "readBytes": "0",
-                    "writeBytes": "0",
-                    "trafficCycles": "0",
+            "Memory": {
+                "Undefined": {
+                    "readBytes": 0,
+                    "writeBytes": 0,
+                    "trafficCycles": 0,
                 },
-                {
-                    "memoryName": "Internal",
-                    "readBytes": "0",
-                    "writeBytes": "0",
-                    "trafficCycles": "0",
+                "Internal": {
+                    "readBytes": 0,
+                    "writeBytes": 0,
+                    "trafficCycles": 0,
                 },
-                {
-                    "memoryName": "L1",
-                    "readBytes": "0",
-                    "writeBytes": "4",
-                    "trafficCycles": "0",
+                "L1": {
+                    "readBytes": 0,
+                    "writeBytes": 4,
+                    "trafficCycles": 0,
                 },
-                {
-                    "memoryName": "L2",
-                    "readBytes": "0",
-                    "writeBytes": "0",
-                    "trafficCycles": "0",
+                "L2": {
+                    "readBytes": 0,
+                    "writeBytes": 0,
+                    "trafficCycles": 0,
                 },
-                {
-                    "memoryName": "SystemCache",
-                    "readBytes": "0",
-                    "writeBytes": "0",
-                    "trafficCycles": "0",
+                "SystemCache": {
+                    "readBytes": 0,
+                    "writeBytes": 0,
+                    "trafficCycles": 0,
                 },
-                {
-                    "memoryName": "DRAM",
-                    "readBytes": "128",
-                    "writeBytes": "4",
-                    "trafficCycles": "4",
+                "DRAM": {
+                    "readBytes": 128,
+                    "writeBytes": 4,
+                    "trafficCycles": 4,
                 },
-            ],
+            },
             "Utilization": [
-                {"sectionName": "OutputWriter", "hwUtil": "0.0625"},
-                {"sectionName": "VectorEngine", "hwUtil": "0.125"},
-                {"sectionName": "VectorEngine", "hwUtil": "0.125"},
-                {"sectionName": "VectorEngine", "hwUtil": "0.125"},
-                {"sectionName": "VectorEngine", "hwUtil": "0.125"},
-                {"sectionName": "InputReader", "hwUtil": "0.0625"},
-                {"sectionName": "InputReader", "hwUtil": "0.0625"},
+                {"sectionName": "OutputWriter", "hwUtil": 0.0625},
+                {"sectionName": "VectorEngine", "hwUtil": 0.125},
+                {"sectionName": "VectorEngine", "hwUtil": 0.125},
+                {"sectionName": "VectorEngine", "hwUtil": 0.125},
+                {"sectionName": "VectorEngine", "hwUtil": 0.125},
+                {"sectionName": "InputReader", "hwUtil": 0.0625},
+                {"sectionName": "InputReader", "hwUtil": 0.0625},
             ],
         },
     ]
@@ -431,10 +396,9 @@ def test_debug_database_parser_from_file(test_resources_path: Path) -> None:
     debug_db_file = str(
         test_resources_path / "ngp/ds_cnn_large_fully_quantized_int8_debug_database.dat"
     )
-    parser = NGPDebugDatabaseParser()
-    parser.load(Path(debug_db_file))
+    parser = NGPDebugDatabaseParser(Path(debug_db_file))
     records = parser.parse_debug_database()
-    assert len(records) == 7
+    assert len(records) == 9
     assert records["fused_op_id_to_tosa_op_ids"]["531"] == ["398"]
     assert records["fused_op_id_to_tosa_op_ids"]["497"] == ["394", "461"]
     assert records["chain_op_id_to_fused_op_ids"]["639"] == [
@@ -443,6 +407,10 @@ def test_debug_database_parser_from_file(test_resources_path: Path) -> None:
         "511",
         "513",
         "517",
+    ]
+    # pylint: disable=line-too-long
+    assert records["tosa_op_id_to_api_labels"]["336"] == [
+        "deeplabv3plus_mbnV2__1080p/Conv_Relu6/Relu6;deeplabv3plus_mbnV2__1080p/Conv_BN/FusedBatchNormV3;deeplabv3plus_mbnV2__1080p/expanded_conv_5_project/Conv2D;deeplabv3plus_mbnV2__1080p/Conv/Conv2D"
     ]
 
 
@@ -457,6 +425,7 @@ def test_parse_debug_database() -> None:
     parser = NGPDebugDatabaseParser()
     parser.raw_xmlish = contents
     records = parser.parse_debug_database()
+    print(records)
     assert len(records) == 4
     assert records["fused_op_id_to_tosa_op_ids"]["531"] == ["334"]
     assert records["fused_op_id_to_tosa_op_ids"]["499"] == ["394", "462"]
@@ -516,108 +485,6 @@ def test_make_parsed_db_debug_db() -> None:
     assert parser.debug_db["stripe_op_id_to_chain_op_id"]["0"] == ["603"]
 
 
-def test_get_performance_stats(test_resources_path: Path) -> None:
-    """Test that given a performance db we can find all the corresponding TOSA ids."""
-    debug_db_file = str(
-        test_resources_path / "ngp/ds_cnn_large_fully_quantized_int8_debug_database.dat"
-    )
-    ddb_parser = NGPDebugDatabaseParser()
-    ddb_parser.load(Path(debug_db_file))
-    ddb_parser.parse_debug_database()
-
-    perf_db_file = str(
-        test_resources_path
-        / "ngp/ds_cnn_large_fully_quantized_int8_performance_database.dat"
-    )
-
-    pdb_parser = NGPPerformanceDatabaseParser()
-    pdb_parser.load(Path(perf_db_file))
-    performance_db = pdb_parser.parse_performance_database()
-
-    with pytest.raises(Exception) as exc_info:
-        performance_stats = ddb_parser.get_performance_stats(
-            performance_db=performance_db, target="foo"
-        )
-        assert str(exc_info.value) == "Tracking operation foo is not supported."
-
-    performance_stats = ddb_parser.get_performance_stats(performance_db=performance_db)
-
-    assert performance_stats[0] == {
-        "id": 26,
-        "opCycles": 18,
-        "totalCycles": 212,
-        "Memory": [
-            {
-                "memoryName": "Undefined",
-                "readBytes": "0",
-                "writeBytes": "0",
-                "trafficCycles": "0",
-            },
-            {
-                "memoryName": "Internal",
-                "readBytes": "0",
-                "writeBytes": "0",
-                "trafficCycles": "0",
-            },
-            {
-                "memoryName": "L1",
-                "readBytes": "0",
-                "writeBytes": "0",
-                "trafficCycles": "0",
-            },
-            {
-                "memoryName": "L2",
-                "readBytes": "0",
-                "writeBytes": "0",
-                "trafficCycles": "0",
-            },
-            {
-                "memoryName": "SystemCache",
-                "readBytes": "0",
-                "writeBytes": "0",
-                "trafficCycles": "0",
-            },
-            {
-                "memoryName": "DRAM",
-                "readBytes": "320",
-                "writeBytes": "12",
-                "trafficCycles": "10",
-            },
-        ],
-        "Utilization": [
-            {"sectionName": "OutputWriter", "hwUtil": "1"},
-            {"sectionName": "VectorEngine", "hwUtil": "0.25"},
-            {"sectionName": "VectorEngine", "hwUtil": "0.25"},
-            {"sectionName": "VectorEngine", "hwUtil": "0.25"},
-            {"sectionName": "TransformUnit", "hwUtil": "0.25"},
-            {"sectionName": "TransformUnit", "hwUtil": "0.25"},
-            {"sectionName": "InputReader", "hwUtil": "0.0625"},
-            {"sectionName": "InputReader", "hwUtil": "0.0625"},
-            {"sectionName": "InputReader", "hwUtil": "0.25"},
-        ],
-        "tosa_op_ids": [["399", "467"], ["401", "470"], ["402"]],
-    }
-
-
-def test_track_op() -> None:
-    """Test that given a stripe op id we can track the corresponding TOSA ops."""
-    contents = """<?xml version='1.0' encoding='utf-8' ?>
-    <![CDATA[\n"id", "api_id"\n]]>\n</table>\n<table name="fused_op_id">
-    <![CDATA[\n"id", "tosa_op_ids"\n531, 334;\n557, 335;\n499, 394;462;;\n]]>\n</table>\n<table name="chain_op_id">
-    <![CDATA[\n"id", "fused_op_ids"\n603, 531;557;\n605, 533;559;\n607, 535;561;\n637, 589;591;509;511;515;\n]]>\n<table name="stripe_op_id">
-    <![CDATA[\n"id", "chain_op_id", "cascade_op_id"\n0, 603, 1693;\n1, 605, 1691;\n]]>
-    </table>\n</debug>"""
-    parser = NGPDebugDatabaseParser()
-    parser.raw_xmlish = contents
-    parser.parse_debug_database()
-
-    with pytest.raises(Exception) as exc_info:
-        parser.track_op(stripe_op_id="0", target="foo")
-        assert str(exc_info.value) == "Tracking operation foo is not supported."
-
-    assert parser.track_op(stripe_op_id="0") == [["334"], ["335"]]
-
-
 def test_subtable_column() -> None:
     """Test the subtable columns have the expected labels."""
     parser = SubtableColumnParser(
@@ -635,29 +502,29 @@ def test_subtable_column() -> None:
     assert result == [
         {
             "memoryName": "Undefined",
-            "readBytes": "0",
-            "writeBytes": "0",
-            "trafficCycles": "0",
+            "readBytes": 0,
+            "writeBytes": 0,
+            "trafficCycles": 0,
         },
         {
             "memoryName": "Internal",
-            "readBytes": "0",
-            "writeBytes": "0",
-            "trafficCycles": "0",
+            "readBytes": 0,
+            "writeBytes": 0,
+            "trafficCycles": 0,
         },
-        {"memoryName": "L1", "readBytes": "0", "writeBytes": "0", "trafficCycles": "0"},
-        {"memoryName": "L2", "readBytes": "0", "writeBytes": "0", "trafficCycles": "0"},
+        {"memoryName": "L1", "readBytes": 0, "writeBytes": 0, "trafficCycles": 0},
+        {"memoryName": "L2", "readBytes": 0, "writeBytes": 0, "trafficCycles": 0},
         {
             "memoryName": "SystemCache",
-            "readBytes": "0",
-            "writeBytes": "0",
-            "trafficCycles": "0",
+            "readBytes": 0,
+            "writeBytes": 0,
+            "trafficCycles": 0,
         },
         {
             "memoryName": "DRAM",
-            "readBytes": "320",
-            "writeBytes": "12",
-            "trafficCycles": "10",
+            "readBytes": 320,
+            "writeBytes": 12,
+            "trafficCycles": 10,
         },
     ]
 

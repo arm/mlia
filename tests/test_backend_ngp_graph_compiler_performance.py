@@ -53,13 +53,20 @@ def test_ngp_graph_compiler_performance_estimator(
         MagicMock(),
     )
     monkeypatch.setattr(
+        "mlia.backend.ngp_graph_compiler.performance.NGPDebugDatabaseParser",
+        MagicMock(),
+    )
+    monkeypatch.setattr(
         "mlia.backend.ngp_graph_compiler.performance."
         "NGPGraphCompilerOutputFiles.check_exists",
         MagicMock(return_value=True),
     )
+    operator_types_mapping = {
+        "Identity": "identity_op_type",
+        "model/re_lu_7/Relu": "RELU",
+    }
     estimator = NGPGraphCompilerPerformanceEstimator(
-        tmp_path,
-        hydra_cfg.backend_config,
+        tmp_path, hydra_cfg.backend_config, operator_types_mapping
     )
     metrics = estimator.estimate(tmp_path / "model.tflite")
     assert isinstance(metrics.backend_config, NGPGraphCompilerConfig)

@@ -6,6 +6,10 @@ from importlib import metadata
 from pathlib import Path
 from subprocess import CalledProcessError  # nosec
 from subprocess import run  # nosec
+from typing import Any
+from typing import Dict
+from typing import List
+from typing import Union
 
 from mlia.utils.filesystem import sha256
 
@@ -47,3 +51,29 @@ def is_docker_available() -> bool:
 def is_docker_available_cached() -> bool:
     """Cache result of is_docker_available()."""
     return is_docker_available()
+
+
+def list_to_dict(list_mapping: list, key_field: Any) -> Union[Dict, List]:
+    """Convert a list to a dict with key key_field."""
+    if key_field:
+        dict_mapping = {}
+        for list_map in list_mapping:
+            try:
+                new_key = list_map.pop(key_field)
+                dict_mapping[new_key] = list_map
+            except KeyError as exc:
+                raise KeyError("The key_field isn't present in all dicts.") from exc
+        return dict_mapping
+
+    return list_mapping
+
+
+def dict_to_list(dict_mapping: dict, key_field: Any) -> list:
+    """Convert a dict to a list of dicts."""
+    output = []
+    for key, value in dict_mapping.items():
+        out = {**value}
+        out[key_field] = key
+        output.append(out)
+
+    return output

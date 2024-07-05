@@ -23,6 +23,7 @@ from mlia.core.data_collection import ContextAwareDataCollector
 from mlia.core.errors import ConfigurationError
 from mlia.core.performance import P
 from mlia.nn.select import OptimizationSettings
+from mlia.nn.tensorflow.tflite_graph import operator_names_to_types
 from mlia.nn.tensorflow.utils import is_tflite_model
 from mlia.target.common.optimization import OptimizingPerformaceDataCollector
 from mlia.target.hydra.config import HydraConfiguration
@@ -58,14 +59,15 @@ class HydraPerformance(ContextAwareDataCollector):
         if not is_tflite_model(self.model):
             raise ConfigurationError("Input must be a tflite file.")
 
+        operator_types_mapping = operator_names_to_types(model_path=self.model)
         estimator: ArgoPerformanceEstimator | NGPGraphCompilerPerformanceEstimator
         if self.backend == "argo":
             estimator = ArgoPerformanceEstimator(
-                self.context.output_dir, self.cfg.backend_config
+                self.context.output_dir, self.cfg.backend_config, operator_types_mapping
             )
         elif self.backend == "ngp-graph-compiler":
             estimator = NGPGraphCompilerPerformanceEstimator(
-                self.context.output_dir, self.cfg.backend_config
+                self.context.output_dir, self.cfg.backend_config, operator_types_mapping
             )
         else:
             raise ValueError(
@@ -95,9 +97,11 @@ class HydraOptimizingPerformance(OptimizingPerformaceDataCollector):
 
     def create_estimator(self) -> ArgoPerformanceEstimator:
         """Create the estimator object."""
+        operator_types_mapping = operator_names_to_types(model_path=self.model)
         return ArgoPerformanceEstimator(
             self.context.output_dir,
             cast(HydraConfiguration, self.target).backend_config,
+            operator_types_mapping,
         )
 
     def create_optimization_performance_metrics(

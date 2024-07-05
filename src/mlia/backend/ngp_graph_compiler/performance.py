@@ -9,7 +9,10 @@ from pathlib import Path
 from typing import Union
 
 from mlia.backend.ngp_graph_compiler.config import NGPGraphCompilerConfig
+from mlia.backend.ngp_graph_compiler.output_parsing import NGPDebugDatabaseParser
 from mlia.backend.ngp_graph_compiler.output_parsing import NGPPerformanceDatabaseParser
+from mlia.backend.ngp_graph_compiler.statistics import NGPOperatorPerformanceStats
+from mlia.backend.ngp_graph_compiler.statistics import NGPPerformanceStats
 from mlia.backend.repo import get_backend_repository
 from mlia.backend.vulkan_model_converter.conversion import VulkanModelConverter
 from mlia.core.performance import PerformanceEstimator
@@ -102,6 +105,7 @@ class NGPGraphCompilerPerformanceMetrics:
     backend_config: NGPGraphCompilerConfig
     output_files: NGPGraphCompilerOutputFiles
     performance_db_parser: NGPPerformanceDatabaseParser
+    performance_metrics: dict[str, NGPOperatorPerformanceStats]
 
 
 class NGPGraphCompilerPerformanceEstimator(
@@ -113,16 +117,20 @@ class NGPGraphCompilerPerformanceEstimator(
 
     resource_dir = get_mlia_resources() / "ngp-graph-compiler"
 
-    def __init__(self, output_dir: Path, backend_config: dict) -> None:
+    def __init__(
+        self, output_dir: Path, backend_config: dict, operator_types_mapping: dict
+    ) -> None:
         """Init performance estimator."""
         self.backend_config = NGPGraphCompilerConfig(
             **backend_config.get("ngp-graph-compiler", {})
         )
         self.backend_config.set_config_dir(self.resource_dir)
         self.output_dir = output_dir
+        self.operator_types_mapping = operator_types_mapping
 
     def estimate(
-        self, model: Path | ModelConfiguration
+        self,
+        model: Path | ModelConfiguration,
     ) -> NGPGraphCompilerPerformanceMetrics:
         """Estimate performance."""
         with log_action("Getting the performance data..."):
@@ -135,13 +143,26 @@ class NGPGraphCompilerPerformanceEstimator(
             spirv_file = self._run_vulkan_model_converter(model_path)
             output = self._run_ngp_graph_compiler(spirv_file, model_path.stem)
 
-            perf_db_parser = NGPPerformanceDatabaseParser()
-            perf_db_parser.load(Path(output.performance_database))
-            records = perf_db_parser.parse_performance_database()
-            logger.debug("Loaded [%d] records from performance database.", len(records))
+            perf_db_parser = NGPPerformanceDatabaseParser(
+                db_path=Path(output.performance_database)
+            )
+            performance_db = perf_db_parser.parse_performance_database()
+
+            ddb_parser = NGPDebugDatabaseParser(Path(output.debug_database))
+            debug_db = ddb_parser.parse_debug_database()
+
+            perf_stats = NGPPerformanceStats(
+                debug_db=debug_db,
+                performance_db=performance_db,
+                operator_types_mapping=self.operator_types_mapping,
+            )
+            stats_per_chain = perf_stats.process_stats_per_chain()
 
             return NGPGraphCompilerPerformanceMetrics(
-                self.backend_config, output, perf_db_parser
+                self.backend_config,
+                output,
+                perf_db_parser,
+                stats_per_chain,
             )
 
     def _run_vulkan_model_converter(self, model_path: Path) -> Path:

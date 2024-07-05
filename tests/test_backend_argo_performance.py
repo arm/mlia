@@ -48,7 +48,9 @@ def test_estimate_performance_docker(
     docker_mock.from_env = MagicMock(return_value=docker_client_mock)
     monkeypatch.setattr("mlia.backend.argo.performance.docker", docker_mock)
 
-    perf = ArgoPerformanceEstimator(output_dir=tmp_path, backend_config={})
+    perf = ArgoPerformanceEstimator(
+        output_dir=tmp_path, backend_config={}, operator_types_mapping={}
+    )
     metrics_file = perf._run_argo(test_model_path)  # pylint: disable=protected-access
     assert metrics_file.is_file()
     assert docker_run_mock.call_count == 1
@@ -83,7 +85,9 @@ def test_estimate_performance_subprocess(
         "mlia.backend.argo.performance.run_argo_in_subprocess", mock_run_in_subproc
     )
 
-    perf = ArgoPerformanceEstimator(output_dir=tmp_path, backend_config={})
+    perf = ArgoPerformanceEstimator(
+        output_dir=tmp_path, backend_config={}, operator_types_mapping={}
+    )
     metrics_file = perf._run_argo(test_model_path)  # pylint: disable=protected-access
     assert metrics_file.is_file()
     mock_run_in_subproc.assert_called_once()

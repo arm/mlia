@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2023-2024, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: LicenseRef-LICENSE
 """Backend module for Argo performance estimation."""
 from __future__ import annotations
@@ -24,7 +24,6 @@ from mlia.backend.errors import BackendExecutionFailed
 from mlia.backend.registry import registry as backend_registry
 from mlia.core.performance import PerformanceEstimator
 from mlia.nn.tensorflow.config import ModelConfiguration
-from mlia.nn.tensorflow.tflite_graph import operator_names_to_types
 from mlia.utils.chrometrace import parse_chrometrace
 from mlia.utils.logging import log_action
 from mlia.utils.proc import args_from_cfg
@@ -165,10 +164,13 @@ class ArgoPerformanceEstimator(
 ):
     """Performance estimator for Hydra."""
 
-    def __init__(self, output_dir: Path, backend_config: dict) -> None:
+    def __init__(
+        self, output_dir: Path, backend_config: dict, operator_types_mapping: dict
+    ) -> None:
         """Init performance estimator."""
         self.backend_config = ArgoConfig(**backend_config.get("argo", {}))
         self.output_dir = output_dir
+        self.operator_types_mapping = operator_types_mapping
 
     def estimate(self, model: Path | ModelConfiguration) -> ArgoPerformanceMetrics:
         """Estimate performance."""
@@ -182,14 +184,15 @@ class ArgoPerformanceEstimator(
             metrics_file = self._run_argo(model_path)
 
             trace = parse_chrometrace(metrics_file)
-            op_names_types_map = operator_names_to_types(model_path)
 
             op_row_durations_map = trace.summarize_durations_per_row(
                 # Keep only rows that belong to real rows
                 lambda slice: slice.name
-                in op_names_types_map
+                in self.operator_types_mapping
             )
-            pass_op_types = _get_pass_types(op_row_durations_map, op_names_types_map)
+            pass_op_types = _get_pass_types(
+                op_row_durations_map, self.operator_types_mapping
+            )
 
             op_data = []
             for op_name, row_durations_map in op_row_durations_map.items():
@@ -203,10 +206,10 @@ class ArgoPerformanceEstimator(
                 perf[0]["duration"] = _split_pass_times(
                     pass_op_types,
                     trace.get_pass_times(
-                        lambda slice: slice.name in op_names_types_map
+                        lambda slice: slice.name in self.operator_types_mapping
                     ),
                 )[op_name]
-                op_type = op_names_types_map.get(op_name, "<unknown>")
+                op_type = self.operator_types_mapping.get(op_name, "<unknown>")
                 op_data.append(OperatorPerformanceData(op_name, op_type, perf))
 
             return ArgoPerformanceMetrics(self.backend_config, metrics_file, op_data)
@@ -294,12 +297,12 @@ def _split_pass_times(
 
 def _get_pass_types(
     op_row_durations_map: dict[str, dict[tuple[int, int], float]],
-    op_names_types_map: dict,
+    operator_types_mapping: dict,
 ) -> dict[int, list[dict[str, Any]]]:
     """Get all operators and types in each pass."""
     pass_op_types = {}
     for op_name, row_durations_map in op_row_durations_map.items():
-        op_type = op_names_types_map.get(op_name, "<unknown>")
+        op_type = operator_types_mapping.get(op_name, "<unknown>")
         for _, tid in row_durations_map.keys():
             if tid not in pass_op_types:
                 pass_op_types[tid] = [

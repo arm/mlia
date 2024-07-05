@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: Copyright 2023-2024, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: LicenseRef-LICENSE
-"""Backend module for parsinng NGP Graph Compiler's output."""
+"""Backend module for parsing NGP Graph Compiler's output."""
 from __future__ import annotations
 
 import csv
@@ -12,6 +12,8 @@ from typing import Any
 from typing import Dict
 from typing import Iterator
 from typing import List
+
+from mlia.utils.misc import list_to_dict
 
 PerformanceDatabaseContentsType = List[Dict[str, Any]]
 DebugDatabaseContentsType = Dict[str, Dict[str, List]]
@@ -57,10 +59,21 @@ class SubtableColumnParser(ColumnParser):
         super().__init__(title)
         self.sub_columns = header.split(";")
 
+    def safe_convert_to_float(self, value: str) -> int | float | str:
+        """Convert strings to float or int if possible."""
+        try:
+            # Try to convert to integer first
+            if "." not in value:
+                return int(value)
+            # If it contains a dot, attempt to convert to float
+            return float(value)
+        except ValueError:
+            # If conversion fails, return the original value
+            return value
+
     def __call__(self, cell: str) -> Any:
         """Parse a cell based on header data."""
         raw_list = cell.split(";")
-
         iter_raw = iter(raw_list)
         size = len(self.sub_columns)
 
@@ -70,7 +83,9 @@ class SubtableColumnParser(ColumnParser):
                 if chunk == [""]:
                     continue
                 raise RuntimeError("Unmatched column entries: {chunk}")
-            mapping = dict(zip(self.sub_columns, chunk))
+
+            typed_chunk = [self.safe_convert_to_float(item) for item in chunk]
+            mapping = dict(zip(self.sub_columns, typed_chunk))
             mappings.append(mapping)
         return mappings
 
@@ -79,6 +94,20 @@ class SubtableColumnParser(ColumnParser):
         if isinstance(other, SubtableColumnParser):
             return self.sub_columns == other.sub_columns
         return False
+
+
+class SubtableColumnParserDict(SubtableColumnParser):
+    """Parse nested columns found in NGP compiler csv output into dict."""
+
+    def __init__(self, title: str, header: str, key_field: str | None):
+        """Initialize dict parser with header."""
+        super().__init__(title, header)
+        self.key_field = key_field
+
+    def __call__(self, cell: str) -> Any:
+        """Parse a cell based on header data."""
+        mappings = super().__call__(cell)
+        return list_to_dict(mappings, self.key_field)
 
 
 class NGPOutputParser:
@@ -93,15 +122,18 @@ class NGPOutputParser:
     There is an open ticket to modify the format of these files.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, db_path: Path | None = None) -> None:
         """Initialize output parser for NGP files."""
         self.db_path: Path
         self.raw_xmlish: str = ""
 
+        if db_path:
+            self.db_path = db_path
+            self.raw_xmlish = self.load(self.db_path)
+
     def load(self, db_path: Path) -> str:
         """Read NGP compiler's output into a string."""
-        self.db_path = db_path
-        with open(self.db_path, encoding="utf-8") as file:
+        with open(db_path, encoding="utf-8") as file:
             self.raw_xmlish = file.read()
 
         return self.raw_xmlish
@@ -118,7 +150,6 @@ class NGPOutputParser:
         """Extract contents of text field in a CSV table."""
         field = field.strip()
         field = re.sub(r"^(['\"])(.*?)\1$", r"\2", field)
-
         return field
 
     def extract_cdata(self, xml_string: str) -> str:
@@ -133,20 +164,22 @@ class NGPOutputParser:
 class NGPPerformanceDatabaseParser(NGPOutputParser):
     """Parser for NGP performance database."""
 
-    def __init__(self) -> None:
+    def __init__(self, db_path: Path | None = None) -> None:
         """Initialise the performance database parser."""
-        super().__init__()
+        super().__init__(db_path)
         self.performance_db: PerformanceDatabaseContentsType = []
         self.column_parsers: dict[str, ColumnParser] = {}
         self.register_sub_table(
-            "Memory", "memoryName;readBytes;writeBytes;trafficCycles"
+            "Memory", "memoryName;readBytes;writeBytes;trafficCycles", "memoryName"
         )
-        self.register_sub_table("Utilization", "sectionName;hwUtil")
+        self.register_sub_table("Utilization", "sectionName;hwUtil", None)
         self._column_parsers: dict[str, ColumnParser] = {}
 
-    def register_sub_table(self, title: str, header: str) -> dict[str, ColumnParser]:
+    def register_sub_table(
+        self, title: str, header: str, key_field: str | None
+    ) -> dict[str, ColumnParser]:
         """Add subtable column."""
-        self.column_parsers[header] = SubtableColumnParser(title, header)
+        self.column_parsers[header] = SubtableColumnParserDict(title, header, key_field)
         return self.column_parsers
 
     def parse_performance_database(self) -> PerformanceDatabaseContentsType:
@@ -182,7 +215,6 @@ class NGPPerformanceDatabaseParser(NGPOutputParser):
         self.performance_db = self.make_parsed_db(
             csv_reader=reader, headers=headers, column_parsers=int_column_parsers
         )
-
         return self.performance_db
 
     def make_parsed_db(
@@ -198,9 +230,7 @@ class NGPPerformanceDatabaseParser(NGPOutputParser):
                 for _, cparser, cell in zip(headers, column_parsers, row)
             ]
             record = dict(parsed_row)
-
             self.performance_db.append(record)
-
         return self.performance_db
 
     def set_column_parsers(
@@ -216,9 +246,9 @@ class NGPPerformanceDatabaseParser(NGPOutputParser):
 class NGPDebugDatabaseParser(NGPOutputParser):
     """Parser for NGP debug database."""
 
-    def __init__(self) -> None:
+    def __init__(self, db_path: Path | None = None) -> None:
         """Initialise the debug database parser."""
-        super().__init__()
+        super().__init__(db_path)
         self.debug_db: dict = {}
 
     def parse_debug_database(self) -> DebugDatabaseContentsType:
@@ -271,39 +301,6 @@ class NGPDebugDatabaseParser(NGPOutputParser):
 
         return self.debug_db
 
-    def get_performance_stats(
-        self,
-        performance_db: PerformanceDatabaseContentsType,
-        target: str = "tosa_op_ids",
-    ) -> PerformanceDatabaseContentsType:
-        """
-        Append to every entry of the performance database a new key "tosa_op_ids".
-
-        The value is a list of the tosa operation ids corresponding
-        that stripe operation id.
-        """
-        if target != "tosa_op_ids":
-            raise NotImplementedError("Tracking operation {target} is not supported.")
-
-        for index, row in enumerate(performance_db):
-            tosa_op_ids = self.track_op(stripe_op_id=str(row["id"]), target=target)
-            performance_db[index]["tosa_op_ids"] = tosa_op_ids
-
-        return performance_db
-
-    def track_op(self, stripe_op_id: str, target: str = "tosa_op_ids") -> list:
-        """Track the ID of a stripe to the ID of the target operation."""
-        if target != "tosa_op_ids":
-            raise NotImplementedError("Tracking operation {target} is not supported.")
-
-        chain_op_id = self.debug_db["stripe_op_id_to_chain_op_id"][stripe_op_id]
-        fused_op_ids = self.debug_db["chain_op_id_to_fused_op_ids"][chain_op_id[0]]
-        tosa_op_ids = []
-        for fused_op_id in fused_op_ids:
-            tosa_op_ids.append(self.debug_db["fused_op_id_to_tosa_op_ids"][fused_op_id])
-
-        return tosa_op_ids
-
     def make_parsed_db(self, csv_reader: Iterator[list[str]], headers: list) -> None:
         """Parse database into dictionary."""
         self.debug_db[headers[0]] = {}
@@ -323,7 +320,5 @@ class NGPDebugDatabaseParser(NGPOutputParser):
             ]
             self.debug_db[headers[0]][row[0]] = op_ids_list
             if len(headers) == MAX_NUM_DEBUG_DB_HEADERS:
-                op_ids_list = [
-                    op_id for op_id in row[2].strip().split(";") if op_id.strip()
-                ]
+                op_ids_list = [row[2].strip(";").strip()]
                 self.debug_db[headers[1]][row[0]] = op_ids_list
