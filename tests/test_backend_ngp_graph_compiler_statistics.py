@@ -14,6 +14,96 @@ from mlia.backend.ngp_graph_compiler.statistics import NGPOperatorPerformanceSta
 from mlia.backend.ngp_graph_compiler.statistics import NGPPerformanceStats
 
 
+def test_ngp_operator_performance_stats_to_dict() -> None:
+    """Test expected dictionary of NGPOperator."""
+
+    op_stats = NGPOperatorPerformanceStats(
+        op_id=[33],
+        op_cycles=15,
+        total_cycles=18,
+        memory={
+            "Undefined": {
+                "readBytes": 0,
+                "writeBytes": 0,
+                "trafficCycles": 0,
+            },
+            "Internal": {
+                "readBytes": 0,
+                "writeBytes": 0,
+                "trafficCycles": 0,
+            },
+            "L1": {
+                "readBytes": 4,
+                "writeBytes": 6,
+                "trafficCycles": 43530,
+            },
+            "L2": {
+                "readBytes": 5,
+                "writeBytes": 7,
+                "trafficCycles": 456570,
+            },
+            "SystemCache": {
+                "readBytes": 1,
+                "writeBytes": 2,
+                "trafficCycles": 3,
+            },
+            "DRAM": {
+                "readBytes": 312369600,
+                "writeBytes": 31104000,
+                "trafficCycles": 7056279,
+            },
+        },
+        utilization=[
+            {"sectionName": "OutputWriter", "hwUtil": 1},
+            {"sectionName": "VectorEngine", "hwUtil": 1},
+        ],
+        operators=["foo"],
+    )
+
+    assert op_stats.to_dict() == {
+        "stripe_ids": [33],
+        "op_cycles": 15,
+        "total_cycles": 18,
+        "memory": {
+            "Undefined": {
+                "readBytes": 0,
+                "writeBytes": 0,
+                "trafficCycles": 0,
+            },
+            "Internal": {
+                "readBytes": 0,
+                "writeBytes": 0,
+                "trafficCycles": 0,
+            },
+            "L1": {
+                "readBytes": 4,
+                "writeBytes": 6,
+                "trafficCycles": 43530,
+            },
+            "L2": {
+                "readBytes": 5,
+                "writeBytes": 7,
+                "trafficCycles": 456570,
+            },
+            "SystemCache": {
+                "readBytes": 1,
+                "writeBytes": 2,
+                "trafficCycles": 3,
+            },
+            "DRAM": {
+                "readBytes": 312369600,
+                "writeBytes": 31104000,
+                "trafficCycles": 7056279,
+            },
+        },
+        "utilization": [
+            {"sectionName": "OutputWriter", "hwUtil": 1},
+            {"sectionName": "VectorEngine", "hwUtil": 1},
+        ],
+        "operators": ["foo"],
+    }
+
+
 def test_sanitize_memory_fields_expected_input() -> None:
     """Sanitize memory attribute of NGPOperator."""
     op_stats = NGPOperatorPerformanceStats(

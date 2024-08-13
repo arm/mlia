@@ -3,6 +3,7 @@
 """Backend module for performance estimation with the NGP Graph Compiler."""
 from __future__ import annotations
 
+import json
 import logging
 from dataclasses import dataclass
 from pathlib import Path
@@ -157,6 +158,8 @@ class NGPGraphCompilerPerformanceEstimator(
                 operator_types_mapping=self.operator_types_mapping,
             )
             stats_per_chain = perf_stats.process_stats_per_chain()
+            output_file_path = self.output_dir / "ngp_performance_statistics.json"
+            self.json_dump(stats_per_chain, output_file_path)
 
             return NGPGraphCompilerPerformanceMetrics(
                 self.backend_config,
@@ -210,3 +213,11 @@ class NGPGraphCompilerPerformanceEstimator(
         )
         output_files.check_exists()
         return output_files
+
+    def json_dump(self, stats_per_chain: dict, output_file_path: Path) -> None:
+        """Make a json dump of the stats_per_chain dict."""
+        json_serializable_stats = {
+            key: obj.to_dict() for key, obj in stats_per_chain.items()
+        }
+        with output_file_path.open("w") as json_file:
+            json.dump(json_serializable_stats, json_file, indent=4)

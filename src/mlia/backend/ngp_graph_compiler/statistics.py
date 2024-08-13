@@ -23,6 +23,17 @@ class NGPOperatorPerformanceStats:
     utilization: list
     operators: list
 
+    def to_dict(self) -> dict:
+        """Convert one object to dictionary."""
+        return {
+            "stripe_ids": self.op_id,
+            "op_cycles": self.op_cycles,
+            "total_cycles": self.total_cycles,
+            "memory": self.memory,
+            "utilization": self.utilization,
+            "operators": self.operators,
+        }
+
     def sanitize_memory_fields(self) -> None:
         """Remove Undefined and Internal memory fields as they are meaningless."""
         del self.memory["Undefined"]

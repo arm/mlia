@@ -644,7 +644,8 @@ To download from the internal Artifactory use the following steps:
 1. Run this command: `mlia-backend install ngp-graph-compiler`
 
 After the installation was successful you can get a performance report as shown
-in the following example.
+in the following example. The raw report will be available as a json file
+"ngp_performance_statistics.json" in the output folder.
 
 *Examples:*
 

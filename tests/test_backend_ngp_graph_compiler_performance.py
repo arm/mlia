@@ -65,6 +65,7 @@ def test_ngp_graph_compiler_performance_estimator(
         "Identity": "identity_op_type",
         "model/re_lu_7/Relu": "RELU",
     }
+
     estimator = NGPGraphCompilerPerformanceEstimator(
         tmp_path, hydra_cfg.backend_config, operator_types_mapping
     )
@@ -75,3 +76,6 @@ def test_ngp_graph_compiler_performance_estimator(
     assert pco_mock.called
     cmd = pco_mock.call_args[0][0].cmd
     assert any(argument in cmd for argument in GRAPH_COMPILER_COMMAND_ARGS)
+
+    json_dump_path = Path(tmp_path / "ngp_performance_statistics.json")
+    assert json_dump_path.exists()
