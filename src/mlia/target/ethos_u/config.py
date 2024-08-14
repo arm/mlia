@@ -27,11 +27,17 @@ class EthosUConfiguration(TargetProfile):
 
         mac = kwargs["mac"]
 
+        if "config" in kwargs:
+            config_in=kwargs["config"]
+        else:
+            config_in=str(get_vela_config())
+        print (f'DEBUG Vela config file: {config_in}')
+
         self.mac = mac
         self.compiler_options = VelaCompilerOptions(
             system_config=kwargs["system_config"],
             memory_mode=kwargs["memory_mode"],
-            config_files=str(get_vela_config()),
+            config_files=str(config_in),
             accelerator_config=f"{self.target}-{mac}",  # type: ignore
         )
 

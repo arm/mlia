@@ -20,7 +20,6 @@ from ethosu.vela.nn_graph import NetworkType
 from ethosu.vela.operation import CustomType
 from ethosu.vela.vela import main
 
-from mlia.utils.filesystem import get_vela_config
 from mlia.utils.logging import redirect_output
 from mlia.utils.logging import redirect_raw_output
 
@@ -328,7 +327,7 @@ def resolve_compiler_config(
     instance of the Vela compiler first.
     """
     return parse_vela_initialisation_file(
-        get_vela_config(),
+        Path(str(vela_compiler_options.config_files)),
         vela_compiler_options.system_config,
         vela_compiler_options.memory_mode,
     )
