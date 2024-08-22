@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for config module."""
 from __future__ import annotations
@@ -17,7 +17,7 @@ def test_compiler_options_default_init() -> None:
     """Test compiler options default init."""
     opts = VelaCompilerOptions()
 
-    assert opts.config_files is None
+    assert opts.config_file is None
     assert opts.system_config == "internal-default"
     assert opts.memory_mode == "internal-default"
     assert opts.accelerator_config is None

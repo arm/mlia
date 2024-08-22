@@ -20,6 +20,7 @@ from ethosu.vela.nn_graph import NetworkType
 from ethosu.vela.operation import CustomType
 from ethosu.vela.vela import main
 
+from mlia.utils.filesystem import get_vela_config
 from mlia.utils.logging import redirect_output
 from mlia.utils.logging import redirect_raw_output
 
@@ -186,7 +187,7 @@ OptimizationStrategyType = Literal["Performance", "Size"]
 class VelaCompilerOptions:  # pylint: disable=too-many-instance-attributes
     """Vela compiler options."""
 
-    config_files: str | list[str] | None = None
+    config_file: str | None = None
     system_config: str = "internal-default"
     memory_mode: str = "internal-default"
     accelerator_config: AcceleratorConfigType | None = None
@@ -205,7 +206,7 @@ class VelaCompiler:  # pylint: disable=too-many-instance-attributes
 
     def __init__(self, compiler_options: VelaCompilerOptions):
         """Init Vela wrapper instance."""
-        self.config_files = compiler_options.config_files
+        self.config_file = compiler_options.config_file
         self.system_config = compiler_options.system_config
         self.memory_mode = compiler_options.memory_mode
         self.accelerator_config = compiler_options.accelerator_config
@@ -257,7 +258,7 @@ class VelaCompiler:  # pylint: disable=too-many-instance-attributes
                     str(self.optimization_strategy),
                     model_path.as_posix(),
                     "--config",
-                    str(self.config_files),
+                    str(self.config_file),
                 ]
                 if self.verbose_performance:
                     main_args.append("--verbose-performance")
@@ -326,8 +327,9 @@ def resolve_compiler_config(
     In order to get this information we need to create
     instance of the Vela compiler first.
     """
+    config_file = vela_compiler_options.config_file or get_vela_config()
     return parse_vela_initialisation_file(
-        Path(str(vela_compiler_options.config_files)),
+        Path(config_file),
         vela_compiler_options.system_config,
         vela_compiler_options.memory_mode,
     )

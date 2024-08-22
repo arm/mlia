@@ -426,6 +426,16 @@ Ethos-U is supported by these backends:
 * [Corstone-310](#corstone-310)
 * [Vela](#vela)
 
+As described in section [Custom target profiles](#custom-target-profiles), you can customize
+the target using the following parameters in the .toml files:
+
+* mac: number of MACs [256, 512]
+* memory_mode: [SRAM Only, Shared SRAM, Dedicated SRAM]
+* system_config: name of the system configuration. For Vela backend, it's defined in `vela.ini`.
+* config: for the Vela backend - the path to Vela configuration file,
+          passed in the `--config` argument.
+          If not given, uses the builtin path: `mlia/resources/vela/vela.ini`
+
 ## Cortex-A
 
 The profile *cortex-a* can be used to get the information about supported

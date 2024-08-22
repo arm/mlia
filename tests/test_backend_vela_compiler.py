@@ -26,7 +26,7 @@ def test_default_vela_compiler() -> None:
     default_compiler_options = VelaCompilerOptions(accelerator_config="ethos-u55-256")
     default_compiler = VelaCompiler(default_compiler_options)
 
-    assert default_compiler.config_files is None
+    assert default_compiler.config_file is None
     assert default_compiler.system_config == "internal-default"
     assert default_compiler.memory_mode == "internal-default"
     assert default_compiler.accelerator_config == "ethos-u55-256"
@@ -48,7 +48,7 @@ def test_vela_compiler_with_parameters(test_resources_path: Path) -> None:
     vela_ini_path = str(test_resources_path / "vela/sample_vela.ini")
 
     compiler_options = VelaCompilerOptions(
-        config_files=vela_ini_path,
+        config_file=vela_ini_path,
         system_config="Ethos_U65_High_End",
         memory_mode="Shared_Sram",
         accelerator_config="ethos-u65-256",
@@ -61,7 +61,7 @@ def test_vela_compiler_with_parameters(test_resources_path: Path) -> None:
     )
     compiler = VelaCompiler(compiler_options)
 
-    assert compiler.config_files == vela_ini_path
+    assert compiler.config_file == vela_ini_path
     assert compiler.system_config == "Ethos_U65_High_End"
     assert compiler.memory_mode == "Shared_Sram"
     assert compiler.accelerator_config == "ethos-u65-256"
@@ -120,9 +120,9 @@ def test_vela_compiler_with_parameters_inherit_memory_mode(
     vela_ini_path = str(test_resources_path / "vela/sample_vela.ini")
 
     compiler_options = VelaCompilerOptions(
-        config_files=vela_ini_path,
+        config_file=vela_ini_path,
         system_config="Ethos_U65_High_End",
-        memory_mode="Dedicated_Sram_512KB",
+        memory_mode="Dedicated_Sram_512KB_custom",
         accelerator_config="ethos-u65-256",
         max_block_dependency=1,
         arena_cache_size=10,
@@ -133,9 +133,9 @@ def test_vela_compiler_with_parameters_inherit_memory_mode(
     )
     compiler = VelaCompiler(compiler_options)
 
-    assert compiler.config_files == vela_ini_path
+    assert compiler.config_file == vela_ini_path
     assert compiler.system_config == "Ethos_U65_High_End"
-    assert compiler.memory_mode == "Dedicated_Sram_512KB"
+    assert compiler.memory_mode == "Dedicated_Sram_512KB_custom"
     assert compiler.accelerator_config == "ethos-u65-256"
     assert compiler.max_block_dependency == 1
     assert compiler.arena_cache_size == 10
@@ -151,7 +151,7 @@ def test_vela_compiler_with_parameters_inherit_memory_mode(
         core_clock=1000000000.0,
         axi0_port="Sram",
         axi1_port="Dram",
-        memory_mode="Dedicated_Sram_512KB",
+        memory_mode="Dedicated_Sram_512KB_custom",
         const_mem_area="Axi1",
         arena_mem_area="Axi1",
         cache_mem_area="Axi0",
