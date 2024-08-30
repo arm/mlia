@@ -45,11 +45,11 @@ class VulkanModelConverterBase:
             logger.debug("Vulkan Model Converter path: %s", self.converter_path)
 
             tosa_file = self._run_front_end(tflite_file, output_dir)
-            spirv_file = self._run_back_end(tosa_file, output_dir)
+            vgf_file = self._run_back_end(tosa_file, output_dir)
 
-            logger.debug("Output file: %s", spirv_file)
+            logger.debug("Output file: %s", vgf_file)
 
-        return spirv_file
+        return vgf_file
 
     def _create_front_end_command(self, tflite_file: Path, tosa_file: Path) -> Command:
         """Create the command to run the front end."""
@@ -89,7 +89,7 @@ class VulkanModelConverterBase:
 
         return tosa_file
 
-    def _create_back_end_command(self, tosa_file: Path, spirv_file: Path) -> Command:
+    def _create_back_end_command(self, tosa_file: Path, vgf_file: Path) -> Command:
         """Create the command to run the front end."""
         cmd = Command(
             cmd=[
@@ -97,7 +97,7 @@ class VulkanModelConverterBase:
                 "-i",
                 str(tosa_file),
                 "-o",
-                str(spirv_file),
+                str(vgf_file),
                 *self._extra_back_end_arguments(),
             ],
         )
@@ -105,11 +105,11 @@ class VulkanModelConverterBase:
 
     def _run_back_end(self, tosa_file: Path, output_dir: Path) -> Path:
         """Run the backend and return the SPIR-V output archive."""
-        spirv_file = output_dir / f"{tosa_file.stem}_spirv.zip"
-        cmd = self._create_back_end_command(tosa_file, spirv_file)
+        vgf_file = output_dir / f"{tosa_file.stem}.vgf"
+        cmd = self._create_back_end_command(tosa_file, vgf_file)
         process_command_output(cmd, self.output_consumers)
 
-        return spirv_file
+        return vgf_file
 
     def _library_paths(self) -> list[Path]:
         paths = [self.converter_path / path for path in (self.FRONT_END_DIR,)]
@@ -130,20 +130,20 @@ class VulkanModelConverter(VulkanModelConverterBase):
 
     def _run_back_end(self, tosa_file: Path, output_dir: Path) -> Path:
         """Run the backend and return the SPIR-V output archive."""
-        spirv_file = super()._run_back_end(tosa_file, output_dir)
+        vgf_file = super()._run_back_end(tosa_file, output_dir)
 
-        if not spirv_file.is_file():
+        if not vgf_file.is_file():
             raise FileNotFoundError(
                 "No output from the Vulkan Model Converter backend found. "
-                f"File {spirv_file} does not exist."
+                f"File {vgf_file} does not exist."
             )
         logger.debug(
             "Back end of Vulkan Model Converter run successfully. See output: %s",
-            spirv_file,
+            vgf_file,
         )
 
-        return spirv_file
+        return vgf_file
 
     def _extra_back_end_arguments(self) -> list[str]:
         """Return any extra arguments to be used with the VMC back-end."""
-        return ["--package-spv", "--emit-debug-info"]
+        return ["--emit-debug-info"]

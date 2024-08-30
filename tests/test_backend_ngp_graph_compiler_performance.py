@@ -42,7 +42,7 @@ def test_ngp_graph_compiler_performance_estimator(
     )
     monkeypatch.setattr(
         "mlia.backend.ngp_graph_compiler.performance.VulkanModelConverter",
-        MagicMock(return_value=MagicMock(return_value=tmp_path / "spirv_file")),
+        MagicMock(return_value=MagicMock(return_value=tmp_path / "vgf_file")),
     )
     monkeypatch.setattr(
         "mlia.backend.ngp_graph_compiler.performance.process_command_output",

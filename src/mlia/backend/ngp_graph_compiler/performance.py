@@ -141,8 +141,8 @@ class NGPGraphCompilerPerformanceEstimator(
                 else model
             )
 
-            spirv_file = self._run_vulkan_model_converter(model_path)
-            output = self._run_ngp_graph_compiler(spirv_file, model_path.stem)
+            vgf_file = self._run_vulkan_model_converter(model_path)
+            output = self._run_ngp_graph_compiler(vgf_file, model_path.stem)
 
             perf_db_parser = NGPPerformanceDatabaseParser(
                 db_path=Path(output.performance_database)
@@ -176,11 +176,11 @@ class NGPGraphCompilerPerformanceEstimator(
         output_dir.mkdir()
 
         model_converter = VulkanModelConverter(vmc_path)
-        spirv_file = model_converter(model_path, output_dir)
-        return spirv_file
+        vgf_file = model_converter(model_path, output_dir)
+        return vgf_file
 
     def _run_ngp_graph_compiler(
-        self, spirv_file: Path, output_name: str
+        self, vgf_file: Path, output_name: str
     ) -> NGPGraphCompilerOutputFiles:
         """Run NGP Graph Compiler and return the output files."""
         backend_repo = get_backend_repository()
@@ -195,7 +195,7 @@ class NGPGraphCompilerPerformanceEstimator(
             cmd=[
                 str(gc_path / "regorc-0.1.0"),
                 "-i",
-                str(spirv_file),
+                str(vgf_file),
                 "-o",
                 str(output),
             ]

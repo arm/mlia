@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2023-2024, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: LicenseRef-LICENSE
 """Tests for NGP Graph Compiler config."""
 from __future__ import annotations
@@ -48,12 +48,12 @@ def test_vulkan_model_converter_success(
     monkeypatch.setattr(
         "mlia.backend.vulkan_model_converter.conversion.VulkanModelConverter."
         "_create_back_end_command",
-        lambda _, __, spirv_file: Command(["touch", str(spirv_file)]),
+        lambda _, __, vgf_file: Command(["touch", str(vgf_file)]),
     )
 
-    spirv_file = vulkan_model_converter(tmp_path / "model.tflite", output_dir)
+    vgf_file = vulkan_model_converter(tmp_path / "model.tflite", output_dir)
 
-    assert spirv_file.is_file()
+    assert vgf_file.is_file()
 
 
 def test_vulkan_model_converter_front_end_fail(
