@@ -425,7 +425,6 @@ Ethos-U is supported by these backends:
 
 * [Corstone-300](#corstone-300)
 * [Corstone-310](#corstone-310)
-* [Corstone-315](#corstone-315)
 * [Vela](#vela)
 
 As described in section [Custom target profiles](#custom-target-profiles), you can customize
@@ -449,7 +448,6 @@ Please, find more details in the section for the
 
 The profile *hydra* is supported by the following backends:
 
-* [Argo](#argo)
 * [NGP Graph Compiler](#ngp-graph-compiler)
 * [Vulkan Model Converter](#vulkan-model-converter)
 
@@ -527,52 +525,11 @@ the following table shows some compatibility information:
 +-----------------------------------------------------------------------------
 | Corstone-310  | x86_64 and  AArch64    | Not compatible | Python>=3.8      |
 +-----------------------------------------------------------------------------
-| Corstone-315  | x86_64 and AArch64     | Not compatible | Python>=3.8      |
-+-----------------------------------------------------------------------------
 | TOSA checker  | x86_64 (manylinux2014) | Not compatible | 3.7<=Python<=3.9 |
 +-----------------------------------------------------------------------------
 | Vela          | x86_64 and  AArch64    | Windows 10     | Python~=3.7      |
 +----------------------------------------------------------------------------+
 ```
-
-### Argo
-
-Argo provides detailed performance information about the input model (in
-TensorFlow Lite format).
-
-Argo is used from the docker image 'argo-app'. It can either be
-
-* pulled from the internal docker registry or
-* built locally from the Argo source (see docs there).
-
-To pull Argo from the internal docker registry:
-
-1. Use the steps listed to set up Artifactory credentials for the
-   [NGP Graph Compiler](#ngp-graph-compiler).
-1. Run this command: `mlia-backend install argo`
-
-After the installation was successful you can get a performance report using
-Argo as shown in the following example.
-
-*Examples:*
-
-```bash
-# Download and install Argo (requires credentials to be set as described above)
-mlia-backend install argo
-# Get a performance report for the Hydra target using Argo.
-mlia check --performance -t hydra -b argo ~/model_file.tflite
-```
-
-**Running Argo from host machine**
-By assigning the Argo executable path to the env variable MLIA_BACKEND_ARGO_PATH,
-it is possible to use a local version of Argo from the host machine.
-MLIA will check if this variable is set, and if it is, run Argo using a
-subprocess, assuming the executable exists. If it is not set, it will assume
-the Docker image exists on the host and excute it
-using that image.
-
-In the Docker image that is installed using the `mlia-backend` call above above,
-that path is `/app/build-release/src/argo`
 
 ### Arm NN TensorFlow Lite Delegate
 
@@ -611,14 +568,6 @@ on Cortex-M85 and Ethos-U.
   <https://developer.arm.com/Processors/Corstone-310>
 * Please use the examples of MLIA using Corstone-310 here to get started:
   <https://github.com/ARM-software/open-iot-sdk>
-
-### Corstone-315
-
-Corstone-315 is a backend that provides performance metrics for systems based
-on Cortex-M85 and Ethos-U.
-
-* For access to AVH for Corstone-315 please refer to:
-  <https://developer.arm.com/Processors/Corstone-315>
 
 ### NGP Graph Compiler
 

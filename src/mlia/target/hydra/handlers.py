@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import logging
 
-from mlia.backend.argo.performance import ArgoPerformanceMetrics
 from mlia.backend.ngp_graph_compiler.performance import (
     NGPGraphCompilerPerformanceMetrics,
 )
@@ -33,7 +32,6 @@ class HydraEventHandler(WorkflowEventsHandler, HydraAdvisorEventHandler):
         if isinstance(
             data_item,
             (
-                ArgoPerformanceMetrics,
                 NGPGraphCompilerPerformanceMetrics,
                 NGPModelCompatibilityInfo,
             ),

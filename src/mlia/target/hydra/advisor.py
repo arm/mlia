@@ -21,7 +21,6 @@ from mlia.target.hydra.advice_generation import HydraAdviceProducer
 from mlia.target.hydra.config import HydraConfiguration
 from mlia.target.hydra.data_analysis import HydraDataAnalyzer
 from mlia.target.hydra.data_collection import HydraCompatibility
-from mlia.target.hydra.data_collection import HydraOptimizingPerformance
 from mlia.target.hydra.data_collection import HydraPerformance
 from mlia.target.hydra.events import HydraAdvisorStartedEvent
 from mlia.target.hydra.handlers import HydraEventHandler
@@ -46,8 +45,6 @@ class HydraInferenceAdvisor(DefaultInferenceAdvisor):
 
         if context.category_enabled(AdviceCategory.PERFORMANCE):
             collectors.append(HydraPerformance(model, target_cfg, backend))
-        elif context.category_enabled(AdviceCategory.OPTIMIZATION):
-            collectors.append(HydraOptimizingPerformance(model, target_cfg))
         if context.category_enabled(AdviceCategory.COMPATIBILITY):
             collectors.append(HydraCompatibility(model, target_cfg))
         return collectors

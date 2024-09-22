@@ -15,9 +15,7 @@ from mlia.backend.corstone.install import get_corstone_installation
 from mlia.backend.install import Installation
 
 
-@pytest.mark.parametrize(
-    "corstone_name", ["corstone-300", "corstone-310", "corstone-315"]
-)
+@pytest.mark.parametrize("corstone_name", ["corstone-300", "corstone-310"])
 def test_get_corstone_installation(corstone_name: str) -> None:
     """Test Corstone installation"""
     installation = get_corstone_installation(corstone_name)
@@ -63,27 +61,6 @@ def test_get_corstone_installation(corstone_name: str) -> None:
                         "-q",
                         "-d",
                         "corstone-310",
-                        "--nointeractive",
-                        "--i-agree-to-the-contained-eula",
-                    ]
-                )
-            ],
-        ],
-        [
-            "corstone-315",
-            True,
-            [call(["./FVP_Corstone_SSE-315.sh", "-q", "-d", "corstone-315"])],
-        ],
-        [
-            "corstone-315",
-            False,
-            [
-                call(
-                    [
-                        "./FVP_Corstone_SSE-315.sh",
-                        "-q",
-                        "-d",
-                        "corstone-315",
                         "--nointeractive",
                         "--i-agree-to-the-contained-eula",
                     ]

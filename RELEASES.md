@@ -70,9 +70,6 @@ scheme.
 
 * Add a graph rewriting flow to MLIA for local optimization
   (MLIA-750, MLIA-845, MLIA-843, MLIA-865, MLIA-749)
-* Add Argo backend for NGP performance analysis (MLIA-855,
-  MLIA-825, MLIA-826)
-
 ### Internal changes
 
 * Implicitly convert datasets for rewrites (MLIA-884)
@@ -85,8 +82,6 @@ scheme.
 * Add support for rewrites of int8 quantized input models (MLIA-906,
   MLIA-907, MLIA-927, MLIA-908)
 * Add functionality to list all available rewrites (MLIA-899)
-* Add Argo performance analysis report (MLIA-882, MLIA-858, MLIA-827)
-* Sort Argo performance report by percentage of time per layer (MLIA-896)
 
 ### Issues fixed
 

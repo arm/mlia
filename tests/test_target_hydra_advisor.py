@@ -20,7 +20,7 @@ def test_configure_and_get_hydra_advisor(test_tflite_model: Path) -> None:
     ctx = ExecutionContext(advice_category={AdviceCategory.PERFORMANCE})
 
     advisor = configure_and_get_hydra_advisor(
-        ctx, "hydra", test_tflite_model, backends=["argo"]
+        ctx, "hydra", test_tflite_model, backends=["ngp-graph-compiler"]
     )
     workflow = advisor.configure(ctx)
 
@@ -49,7 +49,7 @@ def test_configure_and_get_hydra_advisor(test_tflite_model: Path) -> None:
             },
         },
         "hydra_inference_advisor": {
-            "backends": ["argo"],
+            "backends": ["ngp-graph-compiler"],
             "model": str(test_tflite_model),
             "target_profile": "hydra",
         },

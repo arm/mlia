@@ -35,16 +35,6 @@ from mlia.core.common import AdviceCategory
             BackendType.CUSTOM,
         ),
         (
-            "corstone-315",
-            [
-                AdviceCategory.COMPATIBILITY,
-                AdviceCategory.PERFORMANCE,
-                AdviceCategory.OPTIMIZATION,
-            ],
-            [System.LINUX_AMD64, System.LINUX_AARCH64],
-            BackendType.CUSTOM,
-        ),
-        (
             "corstone-310",
             [
                 AdviceCategory.COMPATIBILITY,
@@ -102,11 +92,9 @@ def test_backend_registry(
 
 
 SUPPORTED_BACKENDS = {
-    "argo",
     "armnn-tflite-delegate",
     "corstone-300",
     "corstone-310",
-    "corstone-315",
     "ngp-graph-compiler",
     "tosa-checker",
     "vela",

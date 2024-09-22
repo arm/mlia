@@ -8,9 +8,6 @@ from typing import List
 import pytest
 from rich.console import Console
 
-from mlia.backend.argo.config import ArgoConfig
-from mlia.backend.argo.performance import ArgoPerformanceMetrics
-from mlia.backend.argo.performance import OperatorPerformanceData
 from mlia.backend.ngp_graph_compiler.config import NGPGraphCompilerConfig
 from mlia.backend.ngp_graph_compiler.output_parsing import NGPDebugDatabaseParser
 from mlia.backend.ngp_graph_compiler.output_parsing import NGPPerformanceDatabaseParser
@@ -55,67 +52,6 @@ def assert_table_lines(report: Table, expected_lines: list) -> None:
     actual = to_diff_string(actual_lines)
     expected = to_diff_string(expected_lines)
     assert actual_lines == expected_lines, f"Expected:\n{expected}\n\nActual:\n{actual}"
-
-
-def test_hydra_formatters(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Test function hydra_formatters() with valid input."""
-    op_performance_data = OperatorPerformanceData(
-        "BiasAdd",
-        "BIAS_ADD",
-        [{"n_pass": 4, "hw_block": "SE", "duration": 5.123456789}],
-    ).get_performance_metrics()
-    assert op_performance_data
-
-    metrics = ArgoPerformanceMetrics(
-        backend_config=ArgoConfig(),
-        metrics_file=Path("DOES_NOT_EXIST"),
-        operator_performance_data=[
-            OperatorPerformanceData(
-                "Relu",
-                "CONV_2D",
-                [
-                    {"n_pass": 1, "hw_block": "NE", "duration": 2.123456789},
-                    {"n_pass": 2, "hw_block": "NE", "duration": 3.123456789},
-                ],
-            ),
-            OperatorPerformanceData(
-                "Relu",
-                "DEPTHWISE_CONV_2D",
-                [{"n_pass": 3, "hw_block": "SE", "duration": 4.123456789}],
-            ),
-            OperatorPerformanceData(
-                "BiasAdd",
-                "BIAS_ADD",
-                [{"n_pass": 4, "hw_block": "SE", "duration": 5.123456789}],
-            ),
-        ],
-    )
-
-    monkeypatch.setattr("mlia.utils.console.Console", partial(Console, width=80))
-
-    formatter = hydra_formatters(metrics)
-    report = formatter(metrics)
-    assert isinstance(report, Table)
-
-    assert_table_lines(
-        report,
-        [
-            # pylint: disable=C0301
-            "Argo per-layer analysis:",
-            "┌──────────────┬──────────────┬────────┬──────────┬──────────────┬─────────────┐",
-            "│ Operator     │              │        │          │              │ Percentage  │",
-            "│ name         │ Type         │ Pass # │ HW Block │ Duration(µs) │ of time     │",
-            "╞══════════════╪══════════════╪════════╪══════════╪══════════════╪═════════════╡",
-            "│ Relu         │ CONV_2D      │ 1      │ NE       │ 2.1235       │ 14.65%      │",
-            "│              │              │ 2      │ NE       │ 3.1235       │ 21.55%      │",
-            "├──────────────┼──────────────┼────────┼──────────┼──────────────┼─────────────┤",
-            "│ BiasAdd      │ BIAS_ADD     │ 4      │ SE       │ 5.1235       │ 35.35%      │",
-            "├──────────────┼──────────────┼────────┼──────────┼──────────────┼─────────────┤",
-            "│ Relu         │ DEPTHWISE_C… │ 3      │ SE       │ 4.1235       │ 28.45%      │",
-            "└──────────────┴──────────────┴────────┴──────────┴──────────────┴─────────────┘",
-            # pylint: enable=C0301
-        ],
-    )
 
 
 def test_ngp_graph_compiler_reporting(monkeypatch: pytest.MonkeyPatch) -> None:

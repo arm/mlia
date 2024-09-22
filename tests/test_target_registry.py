@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import pytest
 
-from mlia.backend.registry import registry as backend_registry
 from mlia.core.common import AdviceCategory
 from mlia.target.config import get_builtin_optimization_profile_path
 from mlia.target.config import get_builtin_target_profile_path
@@ -78,10 +77,6 @@ def test_supported_advice(
         ("corstone-310", "ethos-u55", True),
         ("corstone-310", "ethos-u65", True),
         ("corstone-310", "cortex-a", False),
-        ("corstone-315", None, True),
-        ("corstone-315", "ethos-u55", False),
-        ("corstone-315", "ethos-u65", True),
-        ("corstone-315", "cortex-a", False),
     ),
 )
 def test_is_supported(backend: str, target: str | None, expected_result: bool) -> None:
@@ -94,7 +89,7 @@ def test_is_supported(backend: str, target: str | None, expected_result: bool) -
     (
         ("cortex-a", ["armnn-tflite-delegate"]),
         ("ethos-u55", ["corstone-300", "corstone-310", "vela"]),
-        ("ethos-u65", ["corstone-300", "corstone-310", "corstone-315", "vela"]),
+        ("ethos-u65", ["corstone-300", "corstone-310", "vela"]),
         ("tosa", ["tosa-checker"]),
     ),
 )
@@ -113,14 +108,7 @@ def test_supported_backends(target_name: str, expected_backends: list[str]) -> N
         (AdviceCategory.OPTIMIZATION, ["ethos-u55", "ethos-u65"]),
         (
             AdviceCategory.PERFORMANCE,
-            (
-                ["ethos-u55", "ethos-u65", "hydra"]
-                if any(
-                    backend in backend_registry.items
-                    for backend in ("argo", "ngp-graph-compiler")
-                )
-                else ["ethos-u55", "ethos-u65"]
-            ),
+            ["ethos-u55", "ethos-u65", "hydra"],
         ),
     ),
 )

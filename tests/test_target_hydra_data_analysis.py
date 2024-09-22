@@ -7,8 +7,6 @@ from pathlib import Path
 
 import pytest
 
-from mlia.backend.argo.config import ArgoConfig
-from mlia.backend.argo.performance import ArgoPerformanceMetrics
 from mlia.backend.ngp_graph_compiler.config import NGPGraphCompilerConfig
 from mlia.backend.ngp_graph_compiler.output_parsing import NGPPerformanceDatabaseParser
 from mlia.backend.ngp_graph_compiler.performance import NGPGraphCompilerOutputFiles
@@ -16,7 +14,6 @@ from mlia.backend.ngp_graph_compiler.performance import (
     NGPGraphCompilerPerformanceMetrics,
 )
 from mlia.backend.ngp_graph_compiler.statistics import NGPOperatorPerformanceStats
-from mlia.target.hydra.data_analysis import ArgoModelPerformanceAnalyzed
 from mlia.target.hydra.data_analysis import HydraDataAnalyzer
 from mlia.target.hydra.data_analysis import NGPGraphCompilerModelPerformanceAnalyzed
 
@@ -24,13 +21,6 @@ from mlia.target.hydra.data_analysis import NGPGraphCompilerModelPerformanceAnal
 @pytest.mark.parametrize(
     "analyzed_data",
     (
-        ArgoModelPerformanceAnalyzed(
-            ArgoPerformanceMetrics(
-                backend_config=ArgoConfig(),
-                metrics_file=Path("DOES_NOT_EXIST"),
-                operator_performance_data=[],
-            )
-        ),
         NGPGraphCompilerModelPerformanceAnalyzed(
             NGPGraphCompilerPerformanceMetrics(
                 backend_config=NGPGraphCompilerConfig("system.ini", "compiler.ini"),
@@ -62,8 +52,7 @@ from mlia.target.hydra.data_analysis import NGPGraphCompilerModelPerformanceAnal
     ),
 )
 def test_hydra_data_analyzer(
-    analyzed_data: ArgoModelPerformanceAnalyzed
-    | NGPGraphCompilerModelPerformanceAnalyzed,
+    analyzed_data: NGPGraphCompilerModelPerformanceAnalyzed,
 ) -> None:
     """Test Hydra data analyzer."""
     analyzer = HydraDataAnalyzer()

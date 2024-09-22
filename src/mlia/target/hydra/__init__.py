@@ -10,8 +10,8 @@ from mlia.target.registry import TargetInfo
 registry.register(
     "hydra",
     TargetInfo(
-        supported_backends=["argo", "ngp-graph-compiler", "vulkan-model-converter"],
-        default_backends=["argo"],
+        supported_backends=["ngp-graph-compiler", "vulkan-model-converter"],
+        default_backends=["ngp-graph-compiler"],
         advisor_factory_func=configure_and_get_hydra_advisor,
         target_profile_cls=HydraConfiguration,
     ),

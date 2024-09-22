@@ -11,7 +11,6 @@ from mlia.core.common import AdviceCategory
 # List of mutually exclusive Corstone backends ordered by priority
 
 CORSTONE_PRIORITY = {
-    "Corstone-315": get_corstone_installation(corstone_name="corstone-315"),
     "Corstone-310": get_corstone_installation(corstone_name="corstone-310"),
     "Corstone-300": get_corstone_installation(corstone_name="corstone-300"),
 }

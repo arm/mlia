@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for module backend/manager."""
 from __future__ import annotations
@@ -107,36 +107,6 @@ def test_generic_inference_output_parser_failure(wrong_fvp_output: list[str]) ->
                     "mps3_board.visualisation.disable-visualisation=1",
                     "--stat",
                 ]
-            ),
-        ],
-        [
-            Path("backend_path"),
-            "corstone-315",
-            "ethos-u65",
-            256,
-            Path("model.tflite"),
-            "default",
-            Command(
-                [
-                    "backend_path/FVP_Corstone_SSE-315",
-                    "-a",
-                    "apps/backends/applications/"
-                    "inference_runner-sse-315-22.08.02-ethos-U65-Default-noTA/"
-                    "ethos-u-inference_runner.axf",
-                    "--data",
-                    "model.tflite@0x90000000",
-                    "-C",
-                    "mps4_board.subsystem.ethosu.num_macs=256",
-                    "-C",
-                    "mps4_board.telnetterminal0.start_telnet=0",
-                    "-C",
-                    "mps4_board.uart0.out_file='-'",
-                    "-C",
-                    "mps4_board.uart0.shutdown_on_eot=1",
-                    "-C",
-                    "mps4_board.visualisation.disable-visualisation=1",
-                    "--stat",
-                ],
             ),
         ],
     ],

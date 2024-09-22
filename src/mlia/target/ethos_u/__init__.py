@@ -10,7 +10,6 @@ from mlia.target.registry import TargetInfo
 ETHOS_U65 = "Ethos-U65"
 SUPPORTED_BACKENDS_PRIORITY_ETHOS_U65 = [
     "vela",
-    "corstone-315",
     "corstone-310",
     "corstone-300",
 ]

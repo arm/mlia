@@ -7,7 +7,6 @@ from mlia.core.advice_generation import advice_category
 from mlia.core.advice_generation import FactBasedAdviceProducer
 from mlia.core.common import AdviceCategory
 from mlia.core.common import DataItem
-from mlia.target.hydra.data_analysis import ArgoModelPerformanceAnalyzed
 from mlia.target.hydra.data_analysis import NGPGraphCompilerModelPerformanceAnalyzed
 
 
@@ -17,12 +16,6 @@ class HydraAdviceProducer(FactBasedAdviceProducer):
     @singledispatchmethod
     def produce_advice(self, _data_item: DataItem) -> None:  # type: ignore
         """Produce advice."""
-
-    @produce_advice.register
-    @advice_category(AdviceCategory.PERFORMANCE)
-    def handle_argo_performance_analyzed(self, _: ArgoModelPerformanceAnalyzed) -> None:
-        """Advice for Hydra performance estimated by Argo."""
-        self._point_to_performance_table()
 
     @produce_advice.register
     @advice_category(AdviceCategory.PERFORMANCE)
