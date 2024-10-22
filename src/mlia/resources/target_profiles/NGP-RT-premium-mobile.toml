@@ -1,0 +1,8 @@
+# SPDX-FileCopyrightText: Copyright 2023-2024, Arm Limited and/or its affiliates.
+# SPDX-License-Identifier: LicenseRef-LICENSE
+
+target = "hydra"
+
+[backend.ngp-graph-compiler]
+system_config = "NGP-RT-premium-mobile.ini"
+compiler_config = "ngp-graph-compiler/compiler_config.ini"

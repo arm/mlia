@@ -25,6 +25,8 @@ def test_builtin_supported_profile_names() -> None:
     """Test built-in profile names."""
     assert BUILTIN_SUPPORTED_PROFILE_NAMES == get_builtin_supported_profile_names()
     assert BUILTIN_SUPPORTED_PROFILE_NAMES == [
+        "NGP-RT-premium-mobile",
+        "NGP-sustained-premium-mobile",
         "cortex-a",
         "ethos-u55-128",
         "ethos-u55-256",

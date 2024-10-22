@@ -11,19 +11,25 @@ from pathlib import Path
 class NGPGraphCompilerConfig:
     """Configuration for the NGP Graph Compiler."""
 
+    DEFAULT = Path("default")
+
     system_config: str | Path
     compiler_config: str | Path
 
     def set_config_dir(self, config_dir: Path) -> None:
         """Prepend config file paths (if relative) with the given config dir."""
 
-        def make_absolute(config_file: Path) -> Path:
-            if config_file.is_absolute():
-                return config_file
-            return config_dir / config_file
+        def make_absolute(config: str | Path) -> Path:
+            if config == "default":
+                return NGPGraphCompilerConfig.DEFAULT
 
-        self.system_config = make_absolute(Path(self.system_config))
-        self.compiler_config = make_absolute(Path(self.compiler_config))
+            config_path = Path(config)
+            if config_path.is_absolute():
+                return config_path
+            return config_dir / config_path
+
+        self.system_config = make_absolute(self.system_config)
+        self.compiler_config = make_absolute(self.compiler_config)
 
 
 CONFIG_TO_CLI_OPTION = {
