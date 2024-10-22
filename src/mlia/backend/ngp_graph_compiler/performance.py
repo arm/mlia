@@ -54,6 +54,8 @@ GRAPH_COMPILER_COMMAND_ARGS = [
     "8",
     "--enable-external-brick-formats",
     "--enable-performance-summary-dump",
+    "--enable-direct-striping",
+    "--enable-pairwise-striping",
 ]
 
 
