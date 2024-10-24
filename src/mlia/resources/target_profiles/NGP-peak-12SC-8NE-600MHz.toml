@@ -4,5 +4,5 @@
 target = "hydra"
 
 [backend.ngp-graph-compiler]
-system_config = "NGP-RT-premium-mobile.ini"
-compiler_config = "ngp-graph-compiler/compiler_config.ini"
+system_config = "peak-12SC-8NE-600MHz.ini"
+compiler_config = "default"

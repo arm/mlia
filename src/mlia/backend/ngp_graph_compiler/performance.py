@@ -193,13 +193,18 @@ class NGPGraphCompilerPerformanceEstimator(
         # the output directory or the specific output file.
         output = output_dir / output_name
         system_config = self.backend_config.system_config
+        compiler_config = self.backend_config.compiler_config
 
-        gc_path = Path("/home/gernag01/ml/ia/ngp/oct15/gc")
-
-        config_args = (
+        system_config_args = (
             []
             if system_config == NGPGraphCompilerConfig.DEFAULT
             else ["--system_config", str(system_config)]
+        )
+
+        compiler_config_args = (
+            GRAPH_COMPILER_COMMAND_ARGS
+            if compiler_config == NGPGraphCompilerConfig.DEFAULT
+            else ["--compiler_config", str(compiler_config)]
         )
 
         cmd = Command(
@@ -210,8 +215,8 @@ class NGPGraphCompilerPerformanceEstimator(
                 "-o",
                 str(output),
             ]
-            + config_args
-            + GRAPH_COMPILER_COMMAND_ARGS,
+            + system_config_args
+            + compiler_config_args
             # Use system and compiler config here. There is currently a crash
             # when using them, so using the command line args above is a
             # workaround.
