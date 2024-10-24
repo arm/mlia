@@ -101,7 +101,7 @@ def test_ngp_graph_compiler_reporting(monkeypatch: pytest.MonkeyPatch) -> None:
 </table>
 <table name="stripe_op_id">
 <![CDATA[
-"id", "chain_op_id", "cascade_op_id"
+"id", "op_id", "cascade_op_id"
 25, 1613, 2196
 26, 1617, 2194
 ]]>

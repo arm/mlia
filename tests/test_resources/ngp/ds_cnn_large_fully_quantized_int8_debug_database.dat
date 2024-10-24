@@ -228,7 +228,7 @@
 </table>
 <table name="stripe_op_id">
 <![CDATA[
-"id", "chain_op_id", "cascade_op_id"
+"id", "op_id", "cascade_op_id"
 0, 605, 1695
 1, 607, 1693
 2, 609, 1691

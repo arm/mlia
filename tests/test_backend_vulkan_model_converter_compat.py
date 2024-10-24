@@ -172,8 +172,8 @@ def test_checker_calls_vmc_correctly(
 
     def front_end_call(consumer: OutputConsumer, program: str, *args: str) -> None:
         """Fake Frontend call."""
-        if not program.endswith("front-end"):
-            pytest.fail("Expected front-end call")
+        if not program.endswith("frontend"):
+            pytest.fail("Expected frontend call")
         assert "--experimental-analysis" in args
         output_index = args.index("-o") + 1
         output_path = args[output_index]
@@ -183,8 +183,8 @@ def test_checker_calls_vmc_correctly(
 
     def back_end_call(consumer: OutputConsumer, program: str, *args: list[str]) -> None:
         """Fake Backend call."""
-        if not program.endswith("back-end"):
-            pytest.fail("Expected back-end call")
+        if not program.endswith("backend"):
+            pytest.fail("Expected backend call")
         assert "--experimental-analysis" in args
         for line in back_end_output:
             consumer(line)

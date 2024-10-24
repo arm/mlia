@@ -158,7 +158,7 @@ class NGPPerformanceStats:
 
     def track_op(self, stripe_op_id: str) -> tuple[str, list]:
         """Track the ID of a stripe to the location string."""
-        chain_op_id = self.debug_db["stripe_op_id_to_chain_op_id"][stripe_op_id]
+        chain_op_id = self.debug_db["stripe_op_id_to_op_id"][stripe_op_id]
 
         if len(chain_op_id) > 1:
             raise ValueError("There should be only one chain per stripe, found more!")
