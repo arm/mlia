@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2023-2024, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Utils for files downloading."""
 from __future__ import annotations
@@ -48,6 +48,7 @@ class DownloadConfig:
     url: str
     sha256_hash: str
     header_gen_fn: Callable[[], dict[str, str]] | None = None
+    chained_download: DownloadConfig | None = None
 
     @property
     def filename(self) -> str:
@@ -58,6 +59,11 @@ class DownloadConfig:
     def headers(self) -> dict[str, str]:
         """Get the headers using the header_gen_fn."""
         return self.header_gen_fn() if self.header_gen_fn else {}
+
+    def __add__(self, next_download: DownloadConfig) -> DownloadConfig:
+        """Allow multiple downloads via chaining."""
+        next_download.chained_download = self
+        return next_download
 
 
 def download(
@@ -89,4 +95,4 @@ def download(
                 file.write(chunk)
 
     if cfg.sha256_hash and sha256(dest) != cfg.sha256_hash:
-        raise ValueError("Hashes do not match.")
+        raise ValueError(f"Hashes do not match. {sha256(dest)}")

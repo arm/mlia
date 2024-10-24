@@ -222,34 +222,39 @@ class BackendInstallation(Installation):
     def _download_and_install(self, cfg: DownloadConfig, eula_agrement: bool) -> None:
         """Download and install the backend."""
         with temp_directory() as tmpdir:
-            try:
-                dest = tmpdir / cfg.filename
-                download(
-                    dest=dest,
-                    cfg=cfg,
-                    show_progress=True,
-                )
-
-            except Exception as err:
-                raise RuntimeError("Unable to download backend artifact.") from err
-
             with working_directory(tmpdir / "dist", create_dir=True) as dist_dir:
-                with tarfile.open(dest) as archive:
-                    # Filter files from the tarfile to avoid traversal attacks.
-                    # Note: bandit is still putting out a low severity /
-                    # low confidence warning despite the check
-                    # From Python 3.9.17 on there is a built-in feature to fix
-                    # this using the new argument filter="data", see
-                    # https://docs.python.org/3.9/library/tarfile.html#tarfile.TarFile.extractall
-                    logger.debug(
-                        "Extracting downloaded artifact %s to %s.", dest, dist_dir
-                    )
-                    archive.extractall(  # nosec
-                        dist_dir,
-                        members=self._filter_tar_members(
-                            archive.getmembers(), dist_dir
-                        ),
-                    )
+                current: DownloadConfig | None = cfg
+                while current:
+                    try:
+                        dest = tmpdir / current.filename
+                        download(
+                            dest=dest,
+                            cfg=current,
+                            show_progress=True,
+                        )
+
+                    except Exception as err:
+                        raise RuntimeError(
+                            "Unable to download backend artifact."
+                        ) from err
+
+                    with tarfile.open(dest) as archive:
+                        # Filter files from the tarfile to avoid traversal attacks.
+                        # Note: bandit is still putting out a low severity /
+                        # low confidence warning despite the check
+                        # From Python 3.9.17 on there is a built-in feature to fix
+                        # this using the new argument filter="data", see
+                        # https://docs.python.org/3.9/library/tarfile.html#tarfile.TarFile.extractall
+                        logger.debug(
+                            "Extracting downloaded artifact %s to %s.", dest, dist_dir
+                        )
+                        archive.extractall(  # nosec
+                            dist_dir,
+                            members=self._filter_tar_members(
+                                archive.getmembers(), dist_dir
+                            ),
+                        )
+                    current = current.chained_download
 
                 backend_path = dist_dir
                 if self.backend_installer:
