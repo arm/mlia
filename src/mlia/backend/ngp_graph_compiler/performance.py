@@ -26,36 +26,13 @@ from mlia.utils.proc import process_command_output
 
 logger = logging.getLogger(__name__)
 
-GRAPH_COMPILER_COMMAND_ARGS = [
-    "--enable-dot-dump",
-    "--enable-irrigation-output",
-    "--enable-command-list-summary-dump",
-    "--enable-debug-database-dump",
-    "--enable-performance-database-dump",
-    "--enable-speculative-Scaching",
-    "--enable-speculative-Lcaching",
-    "--enable-weight-looping",
-    "--gpuFrequency",
-    "750.0",
-    "--num-l2-slices",
-    "8",
-    "--l2-slice-size",
-    "256",
-    "--enable-search-chaining",
-    "--max-cores",
-    "8",
-    "--enable-search-task-splitting",
-    "--task-split-enable-axes",
-    "1111",
-    "--task-split-enable-minor-axis",
-    "--enable-tosa-rewrites",
-    "--enable-fusing",
-    "-j",
-    "8",
-    "--enable-external-brick-formats",
-    "--enable-performance-summary-dump",
-    "--enable-direct-striping",
-    "--enable-pairwise-striping",
+GC_OUTPUT_CONTROL_PARAMS = [  # #               | Corresponding option in the .ini file
+    "--enable-irrigation-output",  # #          | <no equivalent .ini option>
+    "--enable-command-list-summary-dump",  # #  | commandListSummary
+    "--enable-debug-database-dump",  # #        | debugDatabase
+    "--enable-performance-database-dump",  # #  | performanceDatabase
+    "--enable-performance-summary-dump",  # #   | networkPerformanceEstimation
+    "--enable-dot-dump",  # #                   | enableDotDump
 ]
 
 
@@ -195,6 +172,8 @@ class NGPGraphCompilerPerformanceEstimator(
         system_config = self.backend_config.system_config
         compiler_config = self.backend_config.compiler_config
 
+        output.mkdir()
+
         system_config_args = (
             []
             if system_config == NGPGraphCompilerConfig.DEFAULT
@@ -202,7 +181,7 @@ class NGPGraphCompilerPerformanceEstimator(
         )
 
         compiler_config_args = (
-            GRAPH_COMPILER_COMMAND_ARGS
+            []
             if compiler_config == NGPGraphCompilerConfig.DEFAULT
             else ["--compiler_config", str(compiler_config)]
         )
@@ -214,13 +193,11 @@ class NGPGraphCompilerPerformanceEstimator(
                 str(vgf_file),
                 "-o",
                 str(output),
+                "--enable-config-file-dump",
+                *system_config_args,
+                *compiler_config_args,
+                *GC_OUTPUT_CONTROL_PARAMS,
             ]
-            + system_config_args
-            + compiler_config_args
-            # Use system and compiler config here. There is currently a crash
-            # when using them, so using the command line args above is a
-            # workaround.
-            # *args_from_cfg(self.backend_config, CONFIG_TO_CLI_OPTION)
         )
 
         process_command_output(cmd, [OutputLogger(logger, logging.INFO)])

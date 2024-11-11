@@ -5,4 +5,4 @@ target = "hydra"
 
 [backend.ngp-graph-compiler]
 system_config = "sustained-12SC-8NE-350MHz.ini"
-compiler_config = "default"
+compiler_config = "gc-config-upstream.ini"
