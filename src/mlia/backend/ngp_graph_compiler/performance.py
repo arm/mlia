@@ -192,12 +192,13 @@ class NGPGraphCompilerPerformanceEstimator(
                 "-i",
                 str(vgf_file),
                 "-o",
-                str(output),
+                str(output.stem),
                 "--enable-config-file-dump",
                 *system_config_args,
                 *compiler_config_args,
                 *GC_OUTPUT_CONTROL_PARAMS,
-            ]
+            ],
+            cwd=output_dir
         )
 
         process_command_output(cmd, [OutputLogger(logger, logging.INFO)])
