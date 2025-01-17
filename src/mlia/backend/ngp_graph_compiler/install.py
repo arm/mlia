@@ -18,11 +18,11 @@ def get_ngp_graph_compiler_installation() -> BackendInstallation:
         download_config=DownloadConfig(
             url=(
                 # pylint: disable=line-too-long
-                "https://artifactory.arm.com:443/artifactory/ml-tooling.misc/mlia/ngp-2024-11-18/graph_compiler_drage_release/a26d54081c0b6a_dd79d3d93f43a5/graph_compiler_drage_release.tar.gz"
+                "https://artifactory.arm.com:443/artifactory/ml-tooling.misc/mlia/ngp-r54p0_00eac0/graph_compiler_drage_release/latest/graph_compiler_drage_release.tar.gz"
                 # pylint: enable=line-too-long
             ),
             sha256_hash=(
-                "445e92a787f8e806662744bc42d55f172baef08a600223bf84429458d42a4327"
+                "cff890214750d8db5c80132a699c34c429e696c02a9cf1fd7a69845ff30a162e"
             ),
             header_gen_fn=artifactory_credential_headers,
         ),

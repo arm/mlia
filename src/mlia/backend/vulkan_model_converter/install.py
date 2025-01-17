@@ -18,28 +18,24 @@ def get_vulkan_model_converter_installation() -> BackendInstallation:
         download_config=DownloadConfig(
             url=(
                 # pylint: disable=line-too-long
-                "https://artifactory.arm.com:443/artifactory/ml-tooling.misc/mlia/ngp-2024-11-18/"
-                "ml-sdk-model-converter-backend_r53-0.80/"
-                "c4e3767e265808_68fd0277eea541_0100f6a5779831_df962081abf254_c7bebe78189804_434d3d9b47fe88_23e9b0f022b6e4_dee82ef0eb7b17/"
-                "ml-sdk-model-converter-backend_r53-0.80.tar.gz"
+                "https://artifactory.arm.com:443/artifactory/ml-tooling.misc/mlia/ngp-r54p0_00eac0/ml-sdk-model-converter-backend-0.80/latest/"
+                "ml-sdk-model-converter-backend-0.80.tar.gz"
                 # pylint: enable=line-too-long
             ),
             sha256_hash=(
-                "88887afd26b78aa227f142543b6edb04e86f4e75aa57e58e3977259266308ae2"
+                "c36f5425f6e7b874d1a877c20e1a3a36d8716058f24af0b810a886a95dbc14c1"
             ),
             header_gen_fn=artifactory_credential_headers,
         )
         + DownloadConfig(
             url=(
                 # pylint: disable=line-too-long
-                "https://artifactory.arm.com:443/artifactory/ml-tooling.misc/mlia/ngp-2024-11-18/"
-                "ml-sdk-model-converter-frontend-for-tflite-r53-0.80/"
-                "68fd0277eea541_0100f6a5779831_c7bebe78189804_e843b88409039f_fd8b31a1ac6045/"
-                "ml-sdk-model-converter-frontend-for-tflite-r53-0.80.tar.gz"
+                "https://artifactory.arm.com:443/artifactory/ml-tooling.misc/mlia/ngp-r54p0_00eac0/ml-sdk-model-converter-frontend-for-tflite/latest/"
+                "ml-sdk-model-converter-frontend-for-tflite.tar.gz"
                 # pylint: enable=line-too-long
             ),
             sha256_hash=(
-                "3c59e7815fc2868a40874e1d1a102510186fde7fb254aa62cb8eb04e6c914e63"
+                "5a7724625dd87f7d145bceabbc4caa73ea4b2c760dd8fdb870e55aebe85e0580"
             ),
             header_gen_fn=artifactory_credential_headers,
         ),

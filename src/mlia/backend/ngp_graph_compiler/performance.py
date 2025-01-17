@@ -198,7 +198,7 @@ class NGPGraphCompilerPerformanceEstimator(
                 *compiler_config_args,
                 *GC_OUTPUT_CONTROL_PARAMS,
             ],
-            cwd=output_dir
+            cwd=output_dir,
         )
 
         process_command_output(cmd, [OutputLogger(logger, logging.INFO)])
