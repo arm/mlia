@@ -1,5 +1,5 @@
-# SPDX-FileCopyrightText: Copyright 2024, Arm Limited and/or its affiliates.
-# SPDX-License-Identifier: LicenseRef-LICENSE
+# SPDX-FileCopyrightText: Copyright 2024-2025, Arm Limited and/or its affiliates.
+# SPDX-License-Identifier: Apache-2.0
 """NGP operator compatibility module."""
 from __future__ import annotations
 
