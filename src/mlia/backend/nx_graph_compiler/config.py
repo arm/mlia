@@ -1,6 +1,6 @@
-# SPDX-FileCopyrightText: Copyright 2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2023,2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: LicenseRef-LICENSE
-"""NGP Graph Compiler backend configuration."""
+"""Neural Accelerator Graph Compiler backend configuration."""
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -8,8 +8,8 @@ from pathlib import Path
 
 
 @dataclass
-class NGPGraphCompilerConfig:
-    """Configuration for the NGP Graph Compiler."""
+class NXGraphCompilerConfig:
+    """Configuration for the Neural Accelerator Graph Compiler."""
 
     DEFAULT = Path("default")
 
@@ -21,7 +21,7 @@ class NGPGraphCompilerConfig:
 
         def make_absolute(config: str | Path) -> Path:
             if config == "default":
-                return NGPGraphCompilerConfig.DEFAULT
+                return NXGraphCompilerConfig.DEFAULT
 
             config_path = Path(config)
             if config_path.is_absolute():

@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2023-2024, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2023-2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: LicenseRef-LICENSE
 """Reports module."""
 from __future__ import annotations
@@ -6,10 +6,10 @@ from __future__ import annotations
 from typing import Any
 from typing import Callable
 
-from mlia.backend.ngp_graph_compiler.performance import (
-    NGPGraphCompilerPerformanceMetrics,
+from mlia.backend.nx_graph_compiler.performance import (
+    NXGraphCompilerPerformanceMetrics,
 )
-from mlia.backend.vulkan_model_converter.compat import NGPModelCompatibilityInfo
+from mlia.backend.vulkan_model_converter.compat import NXModelCompatibilityInfo
 from mlia.core.advice_generation import Advice
 from mlia.core.reporters import report_advice
 from mlia.core.reporting import Cell
@@ -19,12 +19,12 @@ from mlia.core.reporting import NestedReport
 from mlia.core.reporting import Report
 from mlia.core.reporting import ReportItem
 from mlia.core.reporting import Table
-from mlia.target.hydra.config import HydraConfiguration
+from mlia.target.neural_technology.config import NeuralTechnologyConfiguration
 from mlia.utils.misc import dict_to_list
 from mlia.utils.types import is_list_of
 
 
-def report_target(target_cfg: HydraConfiguration) -> Report:
+def report_target(target_cfg: NeuralTechnologyConfiguration) -> Report:
     """Generate report for the device."""
     return NestedReport(
         "Target information",
@@ -40,7 +40,7 @@ def style_improvement(result: bool) -> str:
     return "green" if result else "yellow"
 
 
-def report_ngp_compatibility(comp_info: NGPModelCompatibilityInfo) -> Report:
+def report_nx_compatibility(comp_info: NXModelCompatibilityInfo) -> Report:
     """Report."""
     return Table(
         [
@@ -52,13 +52,13 @@ def report_ngp_compatibility(comp_info: NGPModelCompatibilityInfo) -> Report:
             ),
             Column("Operator type", alias="operator_type", fmt=Format(wrap_width=20)),
             Column(
-                "NGP placement",
-                alias="ngp_placement",
+                "NX placement",
+                alias="nx_placement",
                 fmt=Format(wrap_width=25),
             ),
             Column(
-                "NGP compatibility",
-                alias="ngp_compatibility",
+                "NX compatibility",
+                alias="nx_compatibility",
                 fmt=Format(wrap_width=25),
             ),
         ],
@@ -82,10 +82,10 @@ def report_ngp_compatibility(comp_info: NGPModelCompatibilityInfo) -> Report:
     )
 
 
-def report_ngp_graph_compiler_perf_db(
-    metrics: NGPGraphCompilerPerformanceMetrics,
+def report_nx_graph_compiler_perf_db(
+    metrics: NXGraphCompilerPerformanceMetrics,
 ) -> Report:
-    """Report NGP graph compiler's graph DB."""
+    """Report Neural Accelerator graph compiler's graph DB."""
     perf_records = dict(sorted(metrics.performance_metrics.items()))
 
     general_column = [Column("ID", alias="id", fmt=Format(wrap_width=25))]
@@ -157,23 +157,23 @@ def report_ngp_graph_compiler_perf_db(
         + hwutil_columns
         + mem_columns,
         rows=rows,
-        name="NGP raw performance report",
-        alias="ngp_perf_db",
+        name="Neural Accelerator raw performance report",
+        alias="nx_perf_db",
     )
 
 
-def hydra_formatters(data: Any) -> Callable[[Any], Report]:
+def neural_technology_formatters(data: Any) -> Callable[[Any], Report]:
     """Find appropriate formatter for the provided data."""
     if is_list_of(data, Advice):
         return report_advice
 
-    if isinstance(data, HydraConfiguration):
+    if isinstance(data, NeuralTechnologyConfiguration):
         return report_target
 
-    if isinstance(data, NGPGraphCompilerPerformanceMetrics):
-        return report_ngp_graph_compiler_perf_db
+    if isinstance(data, NXGraphCompilerPerformanceMetrics):
+        return report_nx_graph_compiler_perf_db
 
-    if isinstance(data, NGPModelCompatibilityInfo):
-        return report_ngp_compatibility
+    if isinstance(data, NXModelCompatibilityInfo):
+        return report_nx_compatibility
 
     raise RuntimeError(f"Unable to find appropriate formatter for {data}.")

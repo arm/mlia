@@ -1,6 +1,6 @@
-# SPDX-FileCopyrightText: Copyright 2023-2024, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2023-2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: LicenseRef-LICENSE
-"""Tests for NGP Graph Compiler performance estimation."""
+"""Tests for Neural Accelerator Graph Compiler performance estimation."""
 from __future__ import annotations
 
 import csv
@@ -8,22 +8,22 @@ from pathlib import Path
 
 import pytest
 
-from mlia.backend.ngp_graph_compiler.output_parsing import NGPDebugDatabaseParser
-from mlia.backend.ngp_graph_compiler.output_parsing import NGPOutputParser
-from mlia.backend.ngp_graph_compiler.output_parsing import NGPPerformanceDatabaseParser
-from mlia.backend.ngp_graph_compiler.output_parsing import SubtableColumnParser
+from mlia.backend.nx_graph_compiler.output_parsing import NXDebugDatabaseParser
+from mlia.backend.nx_graph_compiler.output_parsing import NXOutputParser
+from mlia.backend.nx_graph_compiler.output_parsing import NXPerformanceDatabaseParser
+from mlia.backend.nx_graph_compiler.output_parsing import SubtableColumnParser
 
 
 def test_load(test_resources_path: Path) -> None:
-    """Load a file into an NGP output parser."""
+    """Load a file into a Neural Accelerator output parser."""
     perf_db_file = str(
         test_resources_path
-        / "ngp/ds_cnn_large_fully_quantized_int8_performance_database.dat"
+        / "nx/ds_cnn_large_fully_quantized_int8_performance_database.dat"
     )
     debug_db_file = str(
-        test_resources_path / "ngp/ds_cnn_large_fully_quantized_int8_debug_database.dat"
+        test_resources_path / "nx/ds_cnn_large_fully_quantized_int8_debug_database.dat"
     )
-    parser = NGPOutputParser()
+    parser = NXOutputParser()
     loaded_perf_db = parser.load(Path(perf_db_file))
     assert loaded_perf_db == parser.raw_xmlish
     loaded_debug_db = parser.load(Path(debug_db_file))
@@ -37,7 +37,7 @@ def test_get_csv_reader() -> None:
     26, 18, 212, Undefined;0;0;0;Internal;0;0;0;L1;0;0;0;L2;0;0;0;SystemCache;0;0;0;DRAM;320;12;10;, OutputWriter;1;VectorEngine;0.25;VectorEngine;0.25;VectorEngine;0.25;TransformUnit;0.25;TransformUnit;0.25;InputReader;0.0625;InputReader;0.0625;InputReader;0.25;
     25, 4, 13, Undefined;0;0;0;Internal;0;0;0;L1;0;4;0;L2;0;0;0;SystemCache;0;0;0;DRAM;128;4;4;, OutputWriter;0.0625;VectorEngine;0.125;VectorEngine;0.125;VectorEngine;0.125;VectorEngine;0.125;InputReader;0.0625;InputReader;0.0625;
     """.strip()
-    parser = NGPOutputParser()
+    parser = NXOutputParser()
     csv_reader = parser.get_csv_reader(table_data=contents)
     expected_csv_reader = csv.reader(contents.splitlines())
 
@@ -52,7 +52,7 @@ def test_get_csv_headers() -> None:
     26, 18, 212, Undefined;0;0;0;Internal;0;0;0;L1;0;0;0;L2;0;0;0;SystemCache;0;0;0;DRAM;320;12;10;, OutputWriter;1;VectorEngine;0.25;VectorEngine;0.25;VectorEngine;0.25;TransformUnit;0.25;TransformUnit;0.25;InputReader;0.0625;InputReader;0.0625;InputReader;0.25;
     25, 4, 13, Undefined;0;0;0;Internal;0;0;0;L1;0;4;0;L2;0;0;0;SystemCache;0;0;0;DRAM;128;4;4;, OutputWriter;0.0625;VectorEngine;0.125;VectorEngine;0.125;VectorEngine;0.125;VectorEngine;0.125;InputReader;0.0625;InputReader;0.0625;
     """.strip()
-    parser = NGPOutputParser()
+    parser = NXOutputParser()
     csv_reader = parser.get_csv_reader(table_data=contents)
     csv_headers = parser.get_csv_headers(csv_reader=csv_reader)
     assert csv_headers == [
@@ -75,13 +75,13 @@ def test_get_csv_headers() -> None:
 )
 def test_extract_field(variant: str) -> None:
     """Test extract field."""
-    parser = NGPOutputParser()
+    parser = NXOutputParser()
     assert "field" == parser.extract_field(variant)
 
 
 def test_extract_cdata() -> None:
     """Test util method to extract cdata."""
-    parser = NGPOutputParser()
+    parser = NXOutputParser()
     with pytest.raises(Exception) as exc_info:
         parser.extract_cdata("<![CDATA[a]]>....<![CDATA[b]]>")
         assert str(exc_info.value) == "No single CDATA section"
@@ -105,9 +105,9 @@ def test_performance_database_parser_from_file(test_resources_path: Path) -> Non
     """Parse the whole file."""
     perf_db_file = str(
         test_resources_path
-        / "ngp/ds_cnn_large_fully_quantized_int8_performance_database.dat"
+        / "nx/ds_cnn_large_fully_quantized_int8_performance_database.dat"
     )
-    parser = NGPPerformanceDatabaseParser(db_path=Path(perf_db_file))
+    parser = NXPerformanceDatabaseParser(db_path=Path(perf_db_file))
     records = parser.parse_performance_database()
     assert len(records) == 27
     assert records[14] == {
@@ -159,7 +159,7 @@ def test_performance_database_parser_from_file(test_resources_path: Path) -> Non
 
 def test_register_sub_table() -> None:
     """Add a subtable to the performance db parser."""
-    parser = NGPPerformanceDatabaseParser()
+    parser = NXPerformanceDatabaseParser()
     column_parsers = parser.register_sub_table(
         title="foo", header="bar", key_field="test"
     )
@@ -175,7 +175,7 @@ def test_parse_performance_database() -> None:
     25, 4, 13, Undefined;0;0;0;Internal;0;0;0;L1;0;4;0;L2;0;0;0;SystemCache;0;0;0;DRAM;128;4;4;, OutputWriter;0.0625;VectorEngine;0.125;VectorEngine;0.125;VectorEngine;0.125;VectorEngine;0.125;InputReader;0.0625;InputReader;0.0625;
     ]]>
     """.strip()
-    pdb_parser = NGPPerformanceDatabaseParser()
+    pdb_parser = NXPerformanceDatabaseParser()
     pdb_parser.raw_xmlish = contents
 
     assert pdb_parser.parse_performance_database() == [
@@ -285,7 +285,7 @@ def test_make_parsed_db_performance_db() -> None:
     26, 18, 212, Undefined;0;0;0;Internal;0;0;0;L1;0;0;0;L2;0;0;0;SystemCache;0;0;0;DRAM;320;12;10;, OutputWriter;1;VectorEngine;0.25;VectorEngine;0.25;VectorEngine;0.25;TransformUnit;0.25;TransformUnit;0.25;InputReader;0.0625;InputReader;0.0625;InputReader;0.25;
     25, 4, 13, Undefined;0;0;0;Internal;0;0;0;L1;0;4;0;L2;0;0;0;SystemCache;0;0;0;DRAM;128;4;4;, OutputWriter;0.0625;VectorEngine;0.125;VectorEngine;0.125;VectorEngine;0.125;VectorEngine;0.125;InputReader;0.0625;InputReader;0.0625;
     """.strip()
-    parser = NGPPerformanceDatabaseParser()
+    parser = NXPerformanceDatabaseParser()
     reader = parser.get_csv_reader(table_data=contents)
     headers = parser.get_csv_headers(csv_reader=reader)
     int_column_parsers = parser.set_column_parsers(headers=headers, content_type=int)
@@ -394,9 +394,9 @@ def test_make_parsed_db_performance_db() -> None:
 def test_debug_database_parser_from_file(test_resources_path: Path) -> None:
     """Parse the whole file."""
     debug_db_file = str(
-        test_resources_path / "ngp/ds_cnn_large_fully_quantized_int8_debug_database.dat"
+        test_resources_path / "nx/ds_cnn_large_fully_quantized_int8_debug_database.dat"
     )
-    parser = NGPDebugDatabaseParser(Path(debug_db_file))
+    parser = NXDebugDatabaseParser(Path(debug_db_file))
     records = parser.parse_debug_database()
     assert len(records) == 9
     assert records["fused_op_id_to_tosa_op_ids"]["531"] == ["398"]
@@ -422,7 +422,7 @@ def test_parse_debug_database() -> None:
     <![CDATA[\n"id", "fused_op_ids"\n603, 531;557;\n605, 533;559;\n607, 535;561;\n637, 589;591;509;511;515;\n]]>\n<table name="stripe_op_id">
     <![CDATA[\n"id", "chain_op_id", "cascade_op_id"\n0, 603, 1693;\n1, 605, 1691;\n]]>
     </table>\n</debug>"""
-    parser = NGPDebugDatabaseParser()
+    parser = NXDebugDatabaseParser()
     parser.raw_xmlish = contents
     records = parser.parse_debug_database()
     print(records)
@@ -447,7 +447,7 @@ def test_parse_debug_database_invalid_num_db_headers() -> None:
     <![CDATA[\n"id", "chain_op_id", "cascade_op_id", "foo"\n0, 603, 1693, 100\n1, 605, 1691, 200\n<table name="chain_op_id">
     <![CDATA[\n"id", "fused_op_ids"\n603, 531;557;\n605, 533;559;\n607, 535;561;\n637, 589;591;509;511;515;\n]]>
     </table>\n</debug>"""
-    parser = NGPDebugDatabaseParser()
+    parser = NXDebugDatabaseParser()
     parser.raw_xmlish = contents
     with pytest.raises(Exception) as exc_info:
         parser.parse_debug_database()
@@ -462,7 +462,7 @@ def test_make_parsed_db_debug_db() -> None:
     <![CDATA[\n"id", "fused_op_ids"\n603, 531;557;\n605, 533;559;\n607, 535;561;\n637, 589;591;509;511;515;\n]]>\n<table name="stripe_op_id">
     <![CDATA[\n"id", "chain_op_id", "cascade_op_id"\n0, 603, 1693;\n1, 605, 1691;\n]]>
     </table>\n</debug>"""
-    parser = NGPDebugDatabaseParser()
+    parser = NXDebugDatabaseParser()
     table_elements = contents.split('<table name="')[1:]
     for table_element in table_elements:
         table_name = table_element.split('">')[0]
@@ -531,7 +531,7 @@ def test_subtable_column() -> None:
 
 def test_column_parsers() -> None:
     """Test if column parsers are set up properly."""
-    pdb = NGPPerformanceDatabaseParser()
+    pdb = NXPerformanceDatabaseParser()
     parsers = pdb.column_parsers  # pylint: disable=protected-access
     col1 = "memoryName;readBytes;writeBytes;trafficCycles"
     col2 = "sectionName;hwUtil"

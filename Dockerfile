@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022,2025, Arm Limited and/or its affiliates.
 # SPDX-FileCopyrightText: Copyright (c) 2013-2019 Yamashita, Yuu
 # SPDX-FileCopyrightText: Copyright (c) 2013 Sam Stephenson
 # SPDX-License-Identifier: Apache-2.0 AND MIT
@@ -12,7 +12,7 @@
 #   --build-arg UID="$(id -u)" \
 #   --build-arg GID="$(id -g)" \
 #   --build-arg PYTHON_VERSIONS="3.10" \
-#   --build-arg BASE_IMAGE="ubuntu:20.04" \
+#   --build-arg BASE_IMAGE="ubuntu:22.04" \
 #   -t "mlia-test" \
 #   .
 #
@@ -24,7 +24,7 @@
 #   "mlia-test" \
 #   tox --workdir /home/foo/tox/ -e lint
 
-ARG BASE_IMAGE=ubuntu:20.04
+ARG BASE_IMAGE=ubuntu:22.04
 
 FROM ${BASE_IMAGE}
 

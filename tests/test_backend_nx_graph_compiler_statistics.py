@@ -1,6 +1,6 @@
-# SPDX-FileCopyrightText: Copyright 2023-2024, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2023-2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: LicenseRef-LICENSE
-"""Tests for NGP Graph Compiler performance estimation."""
+"""Tests for Neural Accelerator Graph Compiler performance estimation."""
 from __future__ import annotations
 
 import copy
@@ -8,16 +8,16 @@ from pathlib import Path
 
 import pytest
 
-from mlia.backend.ngp_graph_compiler.output_parsing import NGPDebugDatabaseParser
-from mlia.backend.ngp_graph_compiler.output_parsing import NGPPerformanceDatabaseParser
-from mlia.backend.ngp_graph_compiler.statistics import NGPOperatorPerformanceStats
-from mlia.backend.ngp_graph_compiler.statistics import NGPPerformanceStats
+from mlia.backend.nx_graph_compiler.output_parsing import NXDebugDatabaseParser
+from mlia.backend.nx_graph_compiler.output_parsing import NXPerformanceDatabaseParser
+from mlia.backend.nx_graph_compiler.statistics import NXOperatorPerformanceStats
+from mlia.backend.nx_graph_compiler.statistics import NXPerformanceStats
 
 
-def test_ngp_operator_performance_stats_to_dict() -> None:
-    """Test expected dictionary of NGPOperator."""
+def test_nx_operator_performance_stats_to_dict() -> None:
+    """Test expected dictionary of NXOperator."""
 
-    op_stats = NGPOperatorPerformanceStats(
+    op_stats = NXOperatorPerformanceStats(
         op_id=[33],
         op_cycles=15,
         total_cycles=18,
@@ -105,8 +105,8 @@ def test_ngp_operator_performance_stats_to_dict() -> None:
 
 
 def test_sanitize_memory_fields_expected_input() -> None:
-    """Sanitize memory attribute of NGPOperator."""
-    op_stats = NGPOperatorPerformanceStats(
+    """Sanitize memory attribute of NXOperator."""
+    op_stats = NXOperatorPerformanceStats(
         op_id=[33],
         op_cycles=15,
         total_cycles=18,
@@ -168,7 +168,7 @@ def test_sanitize_memory_fields_expected_input() -> None:
 
 def test_sanitize_memory_fields_missing_memory_name_input() -> None:
     """Throw error when the memoryName key is absent."""
-    op_stats = NGPOperatorPerformanceStats(
+    op_stats = NXOperatorPerformanceStats(
         op_id=[33],
         op_cycles=15,
         total_cycles=18,
@@ -190,8 +190,8 @@ def test_sanitize_memory_fields_missing_memory_name_input() -> None:
 
 
 def test_sanitize_utilization_fields_expected_input() -> None:
-    """Sanitize utilization attribute of the NGP Operator."""
-    op_stats = NGPOperatorPerformanceStats(
+    """Sanitize utilization attribute of the Neural Accelerator Operator."""
+    op_stats = NXOperatorPerformanceStats(
         op_id=[33],
         op_cycles=15,
         total_cycles=18,
@@ -252,7 +252,7 @@ def test_sanitize_utilization_fields_expected_input() -> None:
 
 def test_sanitize_utilization_fields_additional_utilization_field_input() -> None:
     """Sanitize utilization attribute when a new sectionName is added."""
-    op_stats = NGPOperatorPerformanceStats(
+    op_stats = NXOperatorPerformanceStats(
         op_id=[33],
         op_cycles=15,
         total_cycles=18,
@@ -303,7 +303,7 @@ def test_sanitize_utilization_fields_additional_utilization_field_input() -> Non
 
 def test_sanitize_utilization_fields_missing_keys_input() -> None:
     """Throw error when the sectionName key is missing from the utilization attibute."""
-    op_stats = NGPOperatorPerformanceStats(
+    op_stats = NXOperatorPerformanceStats(
         op_id=[33],
         op_cycles=15,
         total_cycles=18,
@@ -324,9 +324,9 @@ def test_sanitize_utilization_fields_missing_keys_input() -> None:
         op_stats.sanitize_utilization_fields()
 
 
-def test_merge_ngp_operator_performance_stats() -> None:
+def test_merge_nx_operator_performance_stats() -> None:
     """Merge the performance stats of two performance operators."""
-    op_stats_1 = NGPOperatorPerformanceStats(
+    op_stats_1 = NXOperatorPerformanceStats(
         op_id=[33],
         op_cycles=15,
         total_cycles=18,
@@ -362,7 +362,7 @@ def test_merge_ngp_operator_performance_stats() -> None:
         operators=["foo", "bar"],
     )
 
-    op_stats_2 = NGPOperatorPerformanceStats(
+    op_stats_2 = NXOperatorPerformanceStats(
         op_id=[11],
         op_cycles=5345,
         total_cycles=465,
@@ -410,7 +410,7 @@ def test_merge_ngp_operator_performance_stats() -> None:
 
 def test_merge_different_location_strings_error() -> None:
     """Throw an error when the same chain is mapped to different location strings."""
-    op_stats_1 = NGPOperatorPerformanceStats(
+    op_stats_1 = NXOperatorPerformanceStats(
         op_id=[33],
         op_cycles=15,
         total_cycles=18,
@@ -449,7 +449,7 @@ def test_merge_different_location_strings_error() -> None:
         operators=[{"foo": "bar"}],
     )
 
-    op_stats_2 = NGPOperatorPerformanceStats(
+    op_stats_2 = NXOperatorPerformanceStats(
         op_id=[11],
         op_cycles=5345,
         total_cycles=465,
@@ -488,7 +488,7 @@ def test_merge_different_location_strings_error() -> None:
 
 def test_merge_missing_memory_name_input() -> None:
     """Throw an error when the memoryName key is missing."""
-    op_stats_1 = NGPOperatorPerformanceStats(
+    op_stats_1 = NXOperatorPerformanceStats(
         op_id=[33],
         op_cycles=15,
         total_cycles=18,
@@ -527,7 +527,7 @@ def test_merge_missing_memory_name_input() -> None:
         operators=["foo", "bar"],
     )
 
-    op_stats_2 = NGPOperatorPerformanceStats(
+    op_stats_2 = NXOperatorPerformanceStats(
         op_id=[33],
         op_cycles=15,
         total_cycles=18,
@@ -552,17 +552,17 @@ def test_merge_missing_memory_name_input() -> None:
 def test_process_stats_per_chain(test_resources_path: Path) -> None:
     """Test that we can find all location strings."""
     debug_db_file = str(
-        test_resources_path / "ngp/ds_cnn_large_fully_quantized_int8_debug_database.dat"
+        test_resources_path / "nx/ds_cnn_large_fully_quantized_int8_debug_database.dat"
     )
-    ddb_parser = NGPDebugDatabaseParser(Path(debug_db_file))
+    ddb_parser = NXDebugDatabaseParser(Path(debug_db_file))
     debug_db = ddb_parser.parse_debug_database()
 
     perf_db_file = str(
         test_resources_path
-        / "ngp/ds_cnn_large_fully_quantized_int8_performance_database.dat"
+        / "nx/ds_cnn_large_fully_quantized_int8_performance_database.dat"
     )
 
-    pdb_parser = NGPPerformanceDatabaseParser(Path(perf_db_file))
+    pdb_parser = NXPerformanceDatabaseParser(Path(perf_db_file))
     performance_db = pdb_parser.parse_performance_database()
 
     operator_types_mapping = {
@@ -570,13 +570,13 @@ def test_process_stats_per_chain(test_resources_path: Path) -> None:
         "model/re_lu_7/Relu": "RELU",
     }
 
-    performance_stats = NGPPerformanceStats(
+    performance_stats = NXPerformanceStats(
         debug_db, performance_db, operator_types_mapping
     )
     performance_stats_per_chain = performance_stats.process_stats_per_chain()
 
     # One chain per stripe, no accumulation of statistics
-    performance_stats_chain_901 = NGPOperatorPerformanceStats(
+    performance_stats_chain_901 = NXOperatorPerformanceStats(
         op_id=["26"],
         op_cycles=18,
         total_cycles=218,
@@ -621,7 +621,7 @@ def test_process_stats_per_chain(test_resources_path: Path) -> None:
 
     # One chain shared by two stripes, accumulation of statistics
     # Note: the debug db was edited manually to create this scenario
-    performance_stats_per_chain_907 = NGPOperatorPerformanceStats(
+    performance_stats_per_chain_907 = NXOperatorPerformanceStats(
         op_id=["13", "12"],
         op_cycles=46,
         total_cycles=474,
@@ -664,7 +664,7 @@ def test_process_stats_per_chain(test_resources_path: Path) -> None:
     # One chain shared by three stripes, accumulation of statistics
     # One TOSA op maps to multiple tflite location strings
     # Note: the debug db was edited manually to create this scenario
-    performance_stats_per_chain_619 = NGPOperatorPerformanceStats(
+    performance_stats_per_chain_619 = NXOperatorPerformanceStats(
         op_id=["7", "8", "9"],
         op_cycles=3042,
         total_cycles=11822,
@@ -712,19 +712,19 @@ def test_process_stats_per_chain(test_resources_path: Path) -> None:
 def test_track_op(test_resources_path: Path) -> None:
     """Test that we can track location strings from a chain id."""
     debug_db_file = str(
-        test_resources_path / "ngp/ds_cnn_large_fully_quantized_int8_debug_database.dat"
+        test_resources_path / "nx/ds_cnn_large_fully_quantized_int8_debug_database.dat"
     )
-    ddb_parser = NGPDebugDatabaseParser(Path(debug_db_file))
+    ddb_parser = NXDebugDatabaseParser(Path(debug_db_file))
     debug_db = ddb_parser.parse_debug_database()
 
     perf_db_file = str(
         test_resources_path
-        / "ngp/ds_cnn_large_fully_quantized_int8_performance_database.dat"
+        / "nx/ds_cnn_large_fully_quantized_int8_performance_database.dat"
     )
 
-    pdb_parser = NGPPerformanceDatabaseParser(Path(perf_db_file))
+    pdb_parser = NXPerformanceDatabaseParser(Path(perf_db_file))
     performance_db = pdb_parser.parse_performance_database()
-    performance_stats = NGPPerformanceStats(
+    performance_stats = NXPerformanceStats(
         debug_db=debug_db, performance_db=performance_db, operator_types_mapping={}
     )
 

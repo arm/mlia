@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2024, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2024-2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: LicenseRef-LICENSE
 """Module to track stripe-level statistics to TFLite granularity."""
 from collections import defaultdict
@@ -6,14 +6,14 @@ from dataclasses import dataclass
 from typing import Dict
 from typing import Union
 
-from mlia.backend.ngp_graph_compiler.output_parsing import DebugDatabaseContentsType
-from mlia.backend.ngp_graph_compiler.output_parsing import (
+from mlia.backend.nx_graph_compiler.output_parsing import DebugDatabaseContentsType
+from mlia.backend.nx_graph_compiler.output_parsing import (
     PerformanceDatabaseContentsType,
 )
 
 
 @dataclass
-class NGPOperatorPerformanceStats:
+class NXOperatorPerformanceStats:
     """Defines the performance stats for one operator."""
 
     op_id: list
@@ -61,7 +61,7 @@ class NGPOperatorPerformanceStats:
             }
             self.utilization.append(util)
 
-    def merge(self, op_perf_stats: "NGPOperatorPerformanceStats") -> None:
+    def merge(self, op_perf_stats: "NXOperatorPerformanceStats") -> None:
         """Merge statistics belonging to different stripes."""
         if self.operators != op_perf_stats.operators:
             raise ValueError("The same chain should map to the same location strings!")
@@ -88,7 +88,7 @@ class NGPOperatorPerformanceStats:
         self.sanitize_utilization_fields()
 
 
-class NGPPerformanceStats:
+class NXPerformanceStats:
     """Class that contains the performance stats pertaining to a model."""
 
     def __init__(
@@ -103,7 +103,7 @@ class NGPPerformanceStats:
         self.operator_types_mapping: Union[
             Dict[str, str], None
         ] = operator_types_mapping
-        self.performance_stats_per_chain: Dict[str, NGPOperatorPerformanceStats] = {}
+        self.performance_stats_per_chain: Dict[str, NXOperatorPerformanceStats] = {}
 
     def process_stats_per_chain(
         self,
@@ -135,7 +135,7 @@ class NGPPerformanceStats:
                 operators.append(op_location_type)
 
             # create the Operator Performance Stats object and sanitize its fields
-            operator_stats = NGPOperatorPerformanceStats(
+            operator_stats = NXOperatorPerformanceStats(
                 op_id=[str(row["id"])],
                 op_cycles=row["opCycles"],
                 total_cycles=row["totalCycles"],

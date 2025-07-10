@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: Copyright 2023-2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
-"""Tests for NGP Graph Compiler config."""
+"""Tests for the Neural Accelerator Graph Compiler config."""
 from __future__ import annotations
 
 from pathlib import Path

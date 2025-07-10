@@ -1,6 +1,6 @@
-# SPDX-FileCopyrightText: Copyright 2023-2024, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2023-2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: LicenseRef-LICENSE
-"""Hydra advisor module."""
+"""Neural Technology advisor module."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -17,22 +17,22 @@ from mlia.core.data_collection import DataCollector
 from mlia.core.errors import ConfigurationError
 from mlia.core.events import Event
 from mlia.target.common.optimization import add_common_optimization_params
-from mlia.target.hydra.advice_generation import HydraAdviceProducer
-from mlia.target.hydra.config import HydraConfiguration
-from mlia.target.hydra.data_analysis import HydraDataAnalyzer
-from mlia.target.hydra.data_collection import HydraCompatibility
-from mlia.target.hydra.data_collection import HydraPerformance
-from mlia.target.hydra.events import HydraAdvisorStartedEvent
-from mlia.target.hydra.handlers import HydraEventHandler
+from mlia.target.neural_technology.advice_generation import NeuralTechnologyAdviceProducer
+from mlia.target.neural_technology.config import NeuralTechnologyConfiguration
+from mlia.target.neural_technology.data_analysis import NeuralTechnologyDataAnalyzer
+from mlia.target.neural_technology.data_collection import NeuralTechnologyCompatibility
+from mlia.target.neural_technology.data_collection import NeuralTechnologyPerformance
+from mlia.target.neural_technology.events import NeuralTechnologyAdvisorStartedEvent
+from mlia.target.neural_technology.handlers import NeuralTechnologyEventHandler
 
 
-class HydraInferenceAdvisor(DefaultInferenceAdvisor):
-    """Hydra Inference Advisor."""
+class NeuralTechnologyInferenceAdvisor(DefaultInferenceAdvisor):
+    """Neural Technology Inference Advisor."""
 
     @classmethod
     def name(cls) -> str:
         """Return name of the advisor."""
-        return "hydra_inference_advisor"
+        return "neural_technology_inference_advisor"
 
     def get_collectors(self, context: Context) -> list[DataCollector]:
         """Return list of the data collectors."""
@@ -44,20 +44,20 @@ class HydraInferenceAdvisor(DefaultInferenceAdvisor):
         backend = self._get_backends(context)[0]
 
         if context.category_enabled(AdviceCategory.PERFORMANCE):
-            collectors.append(HydraPerformance(model, target_cfg, backend))
+            collectors.append(NeuralTechnologyPerformance(model, target_cfg, backend))
         if context.category_enabled(AdviceCategory.COMPATIBILITY):
-            collectors.append(HydraCompatibility(model, target_cfg))
+            collectors.append(NeuralTechnologyCompatibility(model, target_cfg))
         return collectors
 
     def get_analyzers(self, context: Context) -> list[DataAnalyzer]:
         """Return list of the data analyzers."""
         return [
-            HydraDataAnalyzer(),
+            NeuralTechnologyDataAnalyzer(),
         ]
 
     def get_producers(self, context: Context) -> list[AdviceProducer]:
         """Return list of the advice producers."""
-        return [HydraAdviceProducer()]
+        return [NeuralTechnologyAdviceProducer()]
 
     def get_events(self, context: Context) -> list[Event]:
         """Return list of the startup events."""
@@ -65,15 +65,15 @@ class HydraInferenceAdvisor(DefaultInferenceAdvisor):
         target_profile = self.get_target_profile(context)
 
         return [
-            HydraAdvisorStartedEvent(
-                model, HydraConfiguration.load_profile(target_profile)
+            NeuralTechnologyAdvisorStartedEvent(
+                model, NeuralTechnologyConfiguration.load_profile(target_profile)
             ),
         ]
 
-    def _get_target_cfg(self, context: Context) -> HydraConfiguration:
+    def _get_target_cfg(self, context: Context) -> NeuralTechnologyConfiguration:
         """Get target configuration."""
         target_profile = self.get_target_profile(context)
-        return HydraConfiguration.load_profile(target_profile)
+        return NeuralTechnologyConfiguration.load_profile(target_profile)
 
     def _get_backends(self, context: Context) -> str:
         """Get list of backends."""
@@ -86,22 +86,22 @@ class HydraInferenceAdvisor(DefaultInferenceAdvisor):
         )
 
 
-def configure_and_get_hydra_advisor(
+def configure_and_get_neural_technology_advisor(
     context: ExecutionContext,
     target_profile: str | Path,
     model: str | Path,
     **extra_args: Any,
 ) -> InferenceAdvisor:
-    """Create and configure Hydra advisor."""
+    """Create and configure Neural Technology advisor."""
     if context.event_handlers is None:
-        context.event_handlers = [HydraEventHandler()]
+        context.event_handlers = [NeuralTechnologyEventHandler()]
 
     if context.config_parameters is None:
         context.config_parameters = _get_config_parameters(
             model, target_profile, **extra_args
         )
 
-    return HydraInferenceAdvisor()
+    return NeuralTechnologyInferenceAdvisor()
 
 
 def _get_config_parameters(
@@ -109,13 +109,13 @@ def _get_config_parameters(
 ) -> dict[str, Any]:
     """Get configuration parameters for the advisor."""
     advisor_parameters: dict[str, Any] = {
-        HydraInferenceAdvisor.name(): {
+        NeuralTechnologyInferenceAdvisor.name(): {
             "model": str(model),
             "target_profile": target_profile,
         },
     }
 
-    # Hydra requires exactly one backend specified
+    # Neural Technology requires exactly one backend specified
     backends = extra_args.get("backends")
     if not backends:
         raise ConfigurationError("One backend is required but was not specified.")
@@ -124,7 +124,7 @@ def _get_config_parameters(
             f"Only one backend is supported but {len(backends)} were provided: "
             f"{backends}"
         )
-    advisor_parameters[HydraInferenceAdvisor.name()]["backends"] = backends
+    advisor_parameters[NeuralTechnologyInferenceAdvisor.name()]["backends"] = backends
 
     add_common_optimization_params(advisor_parameters, extra_args)
 

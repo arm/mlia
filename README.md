@@ -1,5 +1,5 @@
 <!---
-SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
+SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
 SPDX-License-Identifier: Apache-2.0
 SPDX-License-Identifier: LicenseRef-LICENSE
 --->
@@ -444,11 +444,11 @@ operators for Cortex-A CPUs when using the Arm NN TensorFlow Lite Delegate.
 Please, find more details in the section for the
 [corresponding backend](#arm-nn-tensorflow-lite-delegate).
 
-## Hydra
+## Neural Technology
 
-The profile *hydra* is supported by the following backends:
+The profile *neural-technology* is supported by the following backends:
 
-* [NGP Graph Compiler](#ngp-graph-compiler)
+* [Neural Accelerator Graph Compiler](#neural-accelerator-graph-compiler)
 * [Vulkan Model Converter](#vulkan-model-converter)
 
 ## TOSA
@@ -569,9 +569,9 @@ on Cortex-M85 and Ethos-U.
 * Please use the examples of MLIA using Corstone-310 here to get started:
   <https://github.com/ARM-software/open-iot-sdk>
 
-### NGP Graph Compiler
+### Neural Accelerator Graph Compiler
 
-The NGP Graph Compiler provides detailed performance information about the input
+The Neural Accelerator (NX) Graph Compiler provides detailed performance information about the input
 model (in TensorFlow Lite format).
 
 It can be installed via
@@ -590,21 +590,21 @@ To download from the internal Artifactory use the following steps:
   1.5 Assign the API Key to the env var MLIA_ARTIFACTORY_PASSWORD  \
   1.6 Assign your email address to MLIA_ARTIFACTORY_USERNAME  \
 
-1. Run this command: `mlia-backend install ngp-graph-compiler`
+1. Run this command: `mlia-backend install nx-graph-compiler`
 
 After the installation was successful you can get a performance report as shown
 in the following example. The raw report will be available as a json file
-"ngp_performance_statistics.json" in the output folder.
+"nx_performance_statistics.json" in the output folder.
 
 *Examples:*
 
 ```bash
 # Download and install (requires credentials to be set as described above)
-mlia-backend install ngp-graph-compiler
-# Get a performance report for the Hydra target using the NGP Graph Compiler.
-mlia check --performance -t hydra -b ngp-graph-compiler ~/model_file.tflite
-# Get an NGP compatibility report for the same model.
-mlia check --compatibility -t hydra -b ngp-graph-compiler ~/model_file.tflite
+mlia-backend install nx-graph-compiler
+# Get a performance report for the Neural Technology target using the Neural Accelerator (NX) Graph Compiler.
+mlia check --performance -t neural-technology -b nx-graph-compiler ~/model_file.tflite
+# Get a Neural Accelerator compatibility report for the same model.
+mlia check --compatibility -t neural-technology -b nx-graph-compiler ~/model_file.tflite
 ```
 
 ### TOSA Checker
@@ -634,7 +634,7 @@ Additional resources:
 
 ### Vulkan Model Converter
 
-The Vulkan Model Converter is currently required by the NGP Graph Compiler to
+The Vulkan Model Converter is currently required by the Neural Accelerator Graph Compiler to
 convert the input model from TensorFlow Lite to SPIR-V. The installation works
-as for the [NGP Graph Compiler](#ngp-graph-compiler) (please detailed
+as for the [Neural Accelerator Graph Compiler](#neural-accelerator-graph-compiler) (please detailed
 information there).

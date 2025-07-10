@@ -1,5 +1,5 @@
 <!---
-SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
+SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
 SPDX-License-Identifier: Apache-2.0
 --->
 # MLIA Releases
@@ -44,9 +44,9 @@ scheme.
 
 ### Feature changes
 
-* NGP Graph Compiler as performance backend: Integrate Vulkan Model Converter
-  and NGP Graph Compiler as backends to enable per-layer performance estimations
-  for NGP (MLIA-916)
+* Neural Accelerator Graph Compiler as performance backend: Integrate Vulkan Model Converter
+  and Neural Accelerator Graph Compiler as backends to enable per-layer performance estimations
+  for Neural Technology (MLIA-916)
 
 ### Internal changes
 

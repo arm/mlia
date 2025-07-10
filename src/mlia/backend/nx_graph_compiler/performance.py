@@ -1,6 +1,6 @@
-# SPDX-FileCopyrightText: Copyright 2023-2024, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2023-2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: LicenseRef-LICENSE
-"""Backend module for performance estimation with the NGP Graph Compiler."""
+"""Backend module for performance estimation with the Neural Accellerator Graph Compiler."""
 from __future__ import annotations
 
 import json
@@ -9,11 +9,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Union
 
-from mlia.backend.ngp_graph_compiler.config import NGPGraphCompilerConfig
-from mlia.backend.ngp_graph_compiler.output_parsing import NGPDebugDatabaseParser
-from mlia.backend.ngp_graph_compiler.output_parsing import NGPPerformanceDatabaseParser
-from mlia.backend.ngp_graph_compiler.statistics import NGPOperatorPerformanceStats
-from mlia.backend.ngp_graph_compiler.statistics import NGPPerformanceStats
+from mlia.backend.nx_graph_compiler.config import NXGraphCompilerConfig
+from mlia.backend.nx_graph_compiler.output_parsing import NXDebugDatabaseParser
+from mlia.backend.nx_graph_compiler.output_parsing import NXPerformanceDatabaseParser
+from mlia.backend.nx_graph_compiler.statistics import NXOperatorPerformanceStats
+from mlia.backend.nx_graph_compiler.statistics import NXPerformanceStats
 from mlia.backend.repo import get_backend_repository
 from mlia.backend.vulkan_model_converter.conversion import VulkanModelConverter
 from mlia.core.performance import PerformanceEstimator
@@ -37,8 +37,8 @@ GC_OUTPUT_CONTROL_PARAMS = [  # #               | Corresponding option in the .i
 
 
 @dataclass
-class NGPGraphCompilerOutputFiles:
-    """Collection of output files of the NGP Graph Compiler."""
+class NXGraphCompilerOutputFiles:
+    """Collection of output files of the Neural Accellerator Graph Compiler."""
 
     cmd_stream_summary: Path
     debug_database: Path
@@ -51,8 +51,8 @@ class NGPGraphCompilerOutputFiles:
     @classmethod
     def from_output_dir(
         cls, output_dir: Path, output_name: str
-    ) -> NGPGraphCompilerOutputFiles:
-        """Create files relative to the output dir of the NGP Graph Compiler."""
+    ) -> NXGraphCompilerOutputFiles:
+        """Create files relative to the output dir of the Neural Accellerator Graph Compiler."""
         name_to_suffix = {
             "cmd_stream_summary": "_command_stream_summary.dat",
             "debug_database": "_debug_database.dat",
@@ -73,36 +73,36 @@ class NGPGraphCompilerOutputFiles:
         for path in vars(self).values():
             if isinstance(path, Path) and not path.is_file():
                 raise FileNotFoundError(
-                    f"Expected output file '{path}' of NGP Graph compiler does "
+                    f"Expected output file '{path}' of the Neural Accelerator Graph compiler does "
                     "not exist."
                 )
 
 
 @dataclass
-class NGPGraphCompilerPerformanceMetrics:
-    """Collection of NGP Graph Compiler configuration and performance metrics."""
+class NXGraphCompilerPerformanceMetrics:
+    """Collection of Neural Accellerator Graph Compiler configuration and performance metrics."""
 
-    backend_config: NGPGraphCompilerConfig
-    output_files: NGPGraphCompilerOutputFiles
-    performance_db_parser: NGPPerformanceDatabaseParser
-    performance_metrics: dict[str, NGPOperatorPerformanceStats]
+    backend_config: NXGraphCompilerConfig
+    output_files: NXGraphCompilerOutputFiles
+    performance_db_parser: NXPerformanceDatabaseParser
+    performance_metrics: dict[str, NXOperatorPerformanceStats]
 
 
-class NGPGraphCompilerPerformanceEstimator(
+class NXGraphCompilerPerformanceEstimator(
     PerformanceEstimator[
-        Union[Path, ModelConfiguration], NGPGraphCompilerPerformanceMetrics
+        Union[Path, ModelConfiguration], NXGraphCompilerPerformanceMetrics
     ]
 ):
-    """Performance estimator for NGP Graph Compiler."""
+    """Performance estimator for the Neural Accellerator Graph Compiler."""
 
-    resource_dir = get_mlia_resources() / "ngp-graph-compiler"
+    resource_dir = get_mlia_resources() / "nx-graph-compiler"
 
     def __init__(
         self, output_dir: Path, backend_config: dict, operator_types_mapping: dict
     ) -> None:
         """Init performance estimator."""
-        self.backend_config = NGPGraphCompilerConfig(
-            **backend_config.get("ngp-graph-compiler", {})
+        self.backend_config = NXGraphCompilerConfig(
+            **backend_config.get("nx-graph-compiler", {})
         )
         self.backend_config.set_config_dir(self.resource_dir)
         self.output_dir = output_dir
@@ -111,7 +111,7 @@ class NGPGraphCompilerPerformanceEstimator(
     def estimate(
         self,
         model: Path | ModelConfiguration,
-    ) -> NGPGraphCompilerPerformanceMetrics:
+    ) -> NXGraphCompilerPerformanceMetrics:
         """Estimate performance."""
         with log_action("Getting the performance data..."):
             model_path = (
@@ -121,26 +121,26 @@ class NGPGraphCompilerPerformanceEstimator(
             )
 
             vgf_file = self._run_vulkan_model_converter(model_path)
-            output = self._run_ngp_graph_compiler(vgf_file, model_path.stem)
+            output = self._run_nx_graph_compiler(vgf_file, model_path.stem)
 
-            perf_db_parser = NGPPerformanceDatabaseParser(
+            perf_db_parser = NXPerformanceDatabaseParser(
                 db_path=Path(output.performance_database)
             )
             performance_db = perf_db_parser.parse_performance_database()
 
-            ddb_parser = NGPDebugDatabaseParser(Path(output.debug_database))
+            ddb_parser = NXDebugDatabaseParser(Path(output.debug_database))
             debug_db = ddb_parser.parse_debug_database()
 
-            perf_stats = NGPPerformanceStats(
+            perf_stats = NXPerformanceStats(
                 debug_db=debug_db,
                 performance_db=performance_db,
                 operator_types_mapping=self.operator_types_mapping,
             )
             stats_per_chain = perf_stats.process_stats_per_chain()
-            output_file_path = self.output_dir / "ngp_performance_statistics.json"
+            output_file_path = self.output_dir / "nx_performance_statistics.json"
             self.json_dump(stats_per_chain, output_file_path)
 
-            return NGPGraphCompilerPerformanceMetrics(
+            return NXGraphCompilerPerformanceMetrics(
                 self.backend_config,
                 output,
                 perf_db_parser,
@@ -148,7 +148,7 @@ class NGPGraphCompilerPerformanceEstimator(
             )
 
     def _run_vulkan_model_converter(self, model_path: Path) -> Path:
-        """Run NGP Graph Compiler and return the path to the SPIR-V file."""
+        """Run the Neural Accellerator Graph Compiler and return the path to the SPIR-V file."""
         backend_repo = get_backend_repository()
         vmc_path, _ = backend_repo.get_backend_settings("vulkan-model-converter")
         output_dir = self.output_dir / "vulkan-model-converter"
@@ -158,13 +158,13 @@ class NGPGraphCompilerPerformanceEstimator(
         vgf_file = model_converter(model_path, output_dir)
         return vgf_file
 
-    def _run_ngp_graph_compiler(
+    def _run_nx_graph_compiler(
         self, vgf_file: Path, output_name: str
-    ) -> NGPGraphCompilerOutputFiles:
-        """Run NGP Graph Compiler and return the output files."""
+    ) -> NXGraphCompilerOutputFiles:
+        """Run the Neural Accellerator Graph Compiler and return the output files."""
         backend_repo = get_backend_repository()
-        gc_path, _ = backend_repo.get_backend_settings("ngp-graph-compiler")
-        output_dir = self.output_dir / "ngp-graph-compiler"
+        gc_path, _ = backend_repo.get_backend_settings("nx-graph-compiler")
+        output_dir = self.output_dir / "nx-graph-compiler"
         output_dir.mkdir()
         # We need to specify the stem of the output files here, i.e. neither
         # the output directory or the specific output file.
@@ -176,13 +176,13 @@ class NGPGraphCompilerPerformanceEstimator(
 
         system_config_args = (
             []
-            if system_config == NGPGraphCompilerConfig.DEFAULT
+            if system_config == NXGraphCompilerConfig.DEFAULT
             else ["--system_config", str(system_config)]
         )
 
         compiler_config_args = (
             []
-            if compiler_config == NGPGraphCompilerConfig.DEFAULT
+            if compiler_config == NXGraphCompilerConfig.DEFAULT
             else ["--compiler_config", str(compiler_config)]
         )
 
@@ -203,7 +203,7 @@ class NGPGraphCompilerPerformanceEstimator(
 
         process_command_output(cmd, [OutputLogger(logger, logging.INFO)])
 
-        output_files = NGPGraphCompilerOutputFiles.from_output_dir(
+        output_files = NXGraphCompilerOutputFiles.from_output_dir(
             output_dir, output_name
         )
         output_files.check_exists()

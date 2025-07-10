@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: Copyright 2024-2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
-"""NGP operator compatibility module."""
+"""Neural Accelerator operator compatibility module."""
 from __future__ import annotations
 
 import logging
@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 class VMCCompatibilityLogReader:
-    """Read log from VMC and extract low-level NGP compatibility information."""
+    """Read log from VMC and extract low-level Neural Accelerator compatibility information."""
 
     _lowered_ops: dict[str, str]
     _lowering_errors: dict[str, str]
@@ -68,7 +68,7 @@ class VMCCompatibilityLogReader:
 
 
 class VMCCompatbilityChecker(VulkanModelConverterBase):
-    """Run the Vulkan Model Converter to check for NGP compatibility."""
+    """Run the Vulkan Model Converter to check for Neural Accelerator compatibility."""
 
     def __init__(self, converter_path: Path) -> None:
         """Set up compatilibity checking for Vulkan Model Converter."""
@@ -91,8 +91,8 @@ class VMCCompatbilityChecker(VulkanModelConverterBase):
 
 
 @dataclass
-class NGPOperatorCompatibilityInfo:
-    """Describes a particular operator's compatibility with NGP."""
+class NXOperatorCompatibilityInfo:
+    """Describes a particular operator's compatibility with NX."""
 
     location: str
     compat_level: str | None = None
@@ -102,21 +102,21 @@ class NGPOperatorCompatibilityInfo:
     placement: str | None = None
 
 
-class NGPModelCompatibilityInfo:
-    """Contains information about a model's compatibility with NGP."""
+class NXModelCompatibilityInfo:
+    """Contains information about a model's compatibility with NX."""
 
-    _layer_map: dict[str, NGPOperatorCompatibilityInfo]
+    _layer_map: dict[str, NXOperatorCompatibilityInfo]
 
     def __init__(self, location_to_type: dict[str, str] | None = None) -> None:
         """Initialize the database."""
         self._layer_map = {}
         self._location_to_type = location_to_type or {}
 
-    def _find_or_create_record(self, location: str) -> NGPOperatorCompatibilityInfo:
+    def _find_or_create_record(self, location: str) -> NXOperatorCompatibilityInfo:
         """Get a record for a particular model location, create if necessary."""
-        record: NGPOperatorCompatibilityInfo | None = self._layer_map.get(location)
+        record: NXOperatorCompatibilityInfo | None = self._layer_map.get(location)
         if record is None:
-            record = NGPOperatorCompatibilityInfo(location)
+            record = NXOperatorCompatibilityInfo(location)
             record.type = self._location_to_type.get(location)
             self._layer_map[location] = record
         return record
@@ -137,14 +137,14 @@ class NGPModelCompatibilityInfo:
         """Add an op to the database, which can't be lowered due to some error."""
         record = self._find_or_create_record(location)
         record.error = error
-        record.compat_level = "Non-NGP"
+        record.compat_level = "Non-NX"
 
     @property
-    def layer_map(self) -> dict[str, NGPOperatorCompatibilityInfo]:
+    def layer_map(self) -> dict[str, NXOperatorCompatibilityInfo]:
         """Returns the underlying compatibilty records mapped to locations strings."""
         return self._layer_map
 
-    def get_records(self) -> list[NGPOperatorCompatibilityInfo]:
+    def get_records(self) -> list[NXOperatorCompatibilityInfo]:
         """Return an ordered list of records."""
         return [self.layer_map[loc] for loc in sorted(self.layer_map.keys())]
 
@@ -157,14 +157,14 @@ class NGPModelCompatibilityInfo:
         return [filter_no_values(asdict(record)) for record in self.get_records()]
 
 
-class NGPCompatibilityChecker:
-    """Checker operator compability for NGP targets."""
+class NXCompatibilityChecker:
+    """Checker operator compability for Neural Accelerator targets."""
 
     def __init__(self, output_dir: Path) -> None:
         """Initialize the checker."""
         self.output_dir = output_dir
 
-    def check_compatibility(self, tflite_model_path: Path) -> NGPModelCompatibilityInfo:
+    def check_compatibility(self, tflite_model_path: Path) -> NXModelCompatibilityInfo:
         """Run compabitlity check using Vulkan Model Converter."""
         backend_repo = get_backend_repository()
         vmc_path, _ = backend_repo.get_backend_settings("vulkan-model-converter")
@@ -175,9 +175,7 @@ class NGPCompatibilityChecker:
         vmc(tflite_model_path, output_dir)
         reader: VMCCompatibilityLogReader = vmc.compatibility_log_reader
 
-        comp_info = NGPModelCompatibilityInfo(
-            operator_names_to_types(tflite_model_path)
-        )
+        comp_info = NXModelCompatibilityInfo(operator_names_to_types(tflite_model_path))
 
         for lowered_op, tosa_op in reader.lowered_ops.items():
             comp_info.add_lowered_to_tosa(lowered_op, tosa_op)

@@ -1,6 +1,6 @@
-# SPDX-FileCopyrightText: Copyright 2023-2024, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2023-2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: LicenseRef-LICENSE
-"""Backend module for parsing NGP Graph Compiler's output."""
+"""Backend module for parsing the Neural Accellerator Graph Compiler's output."""
 from __future__ import annotations
 
 import csv
@@ -52,7 +52,7 @@ class NumberColumnParser(ColumnParser):
 
 
 class SubtableColumnParser(ColumnParser):
-    """Parse nested columns found in NGP compiler csv output."""
+    """Parse nested columns found in the Neural Accellerator compiler csv output."""
 
     def __init__(self, title: str, header: str):
         """Initialize parser with header."""
@@ -97,7 +97,7 @@ class SubtableColumnParser(ColumnParser):
 
 
 class SubtableColumnParserDict(SubtableColumnParser):
-    """Parse nested columns found in NGP compiler csv output into dict."""
+    """Parse nested columns found in the Neural Accellerator compiler csv output into dict."""
 
     def __init__(self, title: str, header: str, key_field: str | None):
         """Initialize dict parser with header."""
@@ -110,8 +110,8 @@ class SubtableColumnParserDict(SubtableColumnParser):
         return list_to_dict(mappings, self.key_field)
 
 
-class NGPOutputParser:
-    """Parser for NGP output files with .dat extension.
+class NXOutputParser:
+    """Parser for Neural Accellerator output files with a .dat extension.
 
     Current versions of the graph compiler produce an
     invalid XML (eg. a closing <table> element without the
@@ -123,7 +123,7 @@ class NGPOutputParser:
     """
 
     def __init__(self, db_path: Path | None = None) -> None:
-        """Initialize output parser for NGP files."""
+        """Initialize output parser for the Neural Accellerator files."""
         self.db_path: Path
         self.raw_xmlish: str = ""
 
@@ -132,7 +132,7 @@ class NGPOutputParser:
             self.raw_xmlish = self.load(self.db_path)
 
     def load(self, db_path: Path) -> str:
-        """Read NGP compiler's output into a string."""
+        """Read the Neural Accellerator compiler's output into a string."""
         with open(db_path, encoding="utf-8") as file:
             self.raw_xmlish = file.read()
 
@@ -161,8 +161,8 @@ class NGPOutputParser:
         return str(matches[0]).strip()
 
 
-class NGPPerformanceDatabaseParser(NGPOutputParser):
-    """Parser for NGP performance database."""
+class NXPerformanceDatabaseParser(NXOutputParser):
+    """Parser for the Neural Accellerator performance database."""
 
     def __init__(self, db_path: Path | None = None) -> None:
         """Initialise the performance database parser."""
@@ -243,8 +243,8 @@ class NGPPerformanceDatabaseParser(NGPOutputParser):
         ]
 
 
-class NGPDebugDatabaseParser(NGPOutputParser):
-    """Parser for NGP debug database."""
+class NXDebugDatabaseParser(NXOutputParser):
+    """Parser for Neural Accellerator debug database."""
 
     def __init__(self, db_path: Path | None = None) -> None:
         """Initialise the debug database parser."""

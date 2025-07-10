@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for the target registry module."""
 from __future__ import annotations
@@ -103,12 +103,12 @@ def test_supported_backends(target_name: str, expected_backends: list[str]) -> N
     (
         (
             AdviceCategory.COMPATIBILITY,
-            ["cortex-a", "ethos-u55", "ethos-u65", "hydra", "tosa"],
+            ["cortex-a", "ethos-u55", "ethos-u65", "neural-technology", "tosa"],
         ),
         (AdviceCategory.OPTIMIZATION, ["ethos-u55", "ethos-u65"]),
         (
             AdviceCategory.PERFORMANCE,
-            ["ethos-u55", "ethos-u65", "hydra"],
+            ["ethos-u55", "ethos-u65", "neural-technology"],
         ),
     ),
 )

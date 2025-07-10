@@ -1,35 +1,37 @@
-# SPDX-FileCopyrightText: Copyright 2023-2024, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2023-2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: LicenseRef-LICENSE
-"""Tests for Hydra data analysis module."""
+"""Tests for Neural Technology data analysis module."""
 from __future__ import annotations
 
 from pathlib import Path
 
 import pytest
 
-from mlia.backend.ngp_graph_compiler.config import NGPGraphCompilerConfig
-from mlia.backend.ngp_graph_compiler.output_parsing import NGPPerformanceDatabaseParser
-from mlia.backend.ngp_graph_compiler.performance import NGPGraphCompilerOutputFiles
-from mlia.backend.ngp_graph_compiler.performance import (
-    NGPGraphCompilerPerformanceMetrics,
+from mlia.backend.nx_graph_compiler.config import NXGraphCompilerConfig
+from mlia.backend.nx_graph_compiler.output_parsing import NXPerformanceDatabaseParser
+from mlia.backend.nx_graph_compiler.performance import NXGraphCompilerOutputFiles
+from mlia.backend.nx_graph_compiler.performance import (
+    NXGraphCompilerPerformanceMetrics,
 )
-from mlia.backend.ngp_graph_compiler.statistics import NGPOperatorPerformanceStats
-from mlia.target.hydra.data_analysis import HydraDataAnalyzer
-from mlia.target.hydra.data_analysis import NGPGraphCompilerModelPerformanceAnalyzed
+from mlia.backend.nx_graph_compiler.statistics import NXOperatorPerformanceStats
+from mlia.target.neural_technology.data_analysis import NeuralTechnologyDataAnalyzer
+from mlia.target.neural_technology.data_analysis import (
+    NXGraphCompilerModelPerformanceAnalyzed,
+)
 
 
 @pytest.mark.parametrize(
     "analyzed_data",
     (
-        NGPGraphCompilerModelPerformanceAnalyzed(
-            NGPGraphCompilerPerformanceMetrics(
-                backend_config=NGPGraphCompilerConfig("system.ini", "compiler.ini"),
-                output_files=NGPGraphCompilerOutputFiles.from_output_dir(
+        NXGraphCompilerModelPerformanceAnalyzed(
+            NXGraphCompilerPerformanceMetrics(
+                backend_config=NXGraphCompilerConfig("system.ini", "compiler.ini"),
+                output_files=NXGraphCompilerOutputFiles.from_output_dir(
                     Path("DOES_NOT_EXIST"), "TEST"
                 ),
-                performance_db_parser=NGPPerformanceDatabaseParser(),
+                performance_db_parser=NXPerformanceDatabaseParser(),
                 performance_metrics={
-                    "0": NGPOperatorPerformanceStats(
+                    "0": NXOperatorPerformanceStats(
                         op_id=[33],
                         op_cycles=15,
                         total_cycles=18,
@@ -51,10 +53,10 @@ from mlia.target.hydra.data_analysis import NGPGraphCompilerModelPerformanceAnal
         ),
     ),
 )
-def test_hydra_data_analyzer(
-    analyzed_data: NGPGraphCompilerModelPerformanceAnalyzed,
+def test_neural_technology_data_analyzer(
+    analyzed_data: NXGraphCompilerModelPerformanceAnalyzed,
 ) -> None:
-    """Test Hydra data analyzer."""
-    analyzer = HydraDataAnalyzer()
+    """Test Neural Technology data analyzer."""
+    analyzer = NeuralTechnologyDataAnalyzer()
     analyzer.analyze_data(analyzed_data.metrics)
     assert analyzer.get_analyzed_data() == [analyzed_data]

@@ -11,7 +11,7 @@ from mlia.utils.download import DownloadConfig
 
 def get_vulkan_model_converter_installation() -> BackendInstallation:
     """Get all information to install Vulkan Model Converter."""
-    ngp_graph_compiler_installation = BackendInstallation(
+    nx_graph_compiler_installation = BackendInstallation(
         name="vulkan-model-converter",
         description="Vulkan Model Converter",
         fvp_dir_name="vulkan-model-converter",
@@ -49,4 +49,4 @@ def get_vulkan_model_converter_installation() -> BackendInstallation:
         backend_installer=None,
     )
 
-    return ngp_graph_compiler_installation
+    return nx_graph_compiler_installation

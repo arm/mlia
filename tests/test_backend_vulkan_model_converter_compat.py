@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2024, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2024-2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for tflite_compat module."""
 from __future__ import annotations
@@ -9,9 +9,9 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from mlia.backend.vulkan_model_converter.compat import NGPCompatibilityChecker
-from mlia.backend.vulkan_model_converter.compat import NGPModelCompatibilityInfo
-from mlia.backend.vulkan_model_converter.compat import NGPOperatorCompatibilityInfo
+from mlia.backend.vulkan_model_converter.compat import NXCompatibilityChecker
+from mlia.backend.vulkan_model_converter.compat import NXModelCompatibilityInfo
+from mlia.backend.vulkan_model_converter.compat import NXOperatorCompatibilityInfo
 from mlia.backend.vulkan_model_converter.compat import VMCCompatibilityLogReader
 from mlia.utils.proc import OutputConsumer
 
@@ -208,14 +208,14 @@ def test_checker_calls_vmc_correctly(
         MagicMock(return_value={"model/tf.math.multiply_75/Mul1": "MUL"}),
     )
 
-    checker = NGPCompatibilityChecker(tmp_path)
+    checker = NXCompatibilityChecker(tmp_path)
 
     result = checker.check_compatibility(Path("model.tflite"))
 
     assert len(vmc_commands) == 0
     assert result.dump() == [
         {
-            "compat_level": "Non-NGP",
+            "compat_level": "Non-NX",
             "error": "failed to materialize conversion for result #0 ofoperation "
             "'tfl.broadcast_to' that remained live after conversion",
             "location": "model/tf.math.multiply_75/Mul1",
@@ -230,10 +230,10 @@ def test_checker_calls_vmc_correctly(
     ]
 
 
-def test_ngp_compatiblity_info() -> None:
-    """Test NGPCompatibilityInfo additions."""
+def test_nx_compatiblity_info() -> None:
+    """Test Neural Accelerator CompatibilityInfo additions."""
 
-    info = NGPModelCompatibilityInfo()
+    info = NXModelCompatibilityInfo()
     info.add_lowered_to_tosa("model/myloc1/op1", "mytosa_op")
     assert info.dump() == [
         {
@@ -247,7 +247,7 @@ def test_ngp_compatiblity_info() -> None:
     info.add_lowering_error("model/myloc2/op3", "Can't be lowered")
 
     assert info.get_records() == [
-        NGPOperatorCompatibilityInfo(
+        NXOperatorCompatibilityInfo(
             location="model/myloc1/op1",
             compat_level="TOSA",
             type=None,
@@ -255,9 +255,9 @@ def test_ngp_compatiblity_info() -> None:
             error=None,
             placement="NE",
         ),
-        NGPOperatorCompatibilityInfo(
+        NXOperatorCompatibilityInfo(
             location="model/myloc2/op3",
-            compat_level="Non-NGP",
+            compat_level="Non-NX",
             type=None,
             tosa_op=None,
             error="Can't be lowered",
@@ -273,7 +273,7 @@ def test_ngp_compatiblity_info() -> None:
         },
         {
             "location": "model/myloc2/op3",
-            "compat_level": "Non-NGP",
+            "compat_level": "Non-NX",
             "error": "Can't be lowered",
         },
     ]
@@ -288,7 +288,7 @@ def test_ngp_compatiblity_info() -> None:
         },
         {
             "location": "model/myloc2/op3",
-            "compat_level": "Non-NGP",
+            "compat_level": "Non-NX",
             "error": "Can't be lowered",
         },
         {
@@ -315,7 +315,7 @@ def test_ngp_compatiblity_info() -> None:
         },
         {
             "location": "model/myloc2/op3",
-            "compat_level": "Non-NGP",
+            "compat_level": "Non-NX",
             "error": "Can't be lowered",
         },
         {

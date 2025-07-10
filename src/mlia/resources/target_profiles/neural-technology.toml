@@ -1,8 +1,8 @@
-# SPDX-FileCopyrightText: Copyright 2024, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2024-2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: LicenseRef-LICENSE
 
-target = "hydra"
+target = "neural-technology"
 
-[backend.ngp-graph-compiler]
-system_config = "system-config-hydra-default.ini"
-compiler_config = "gc-config-hydra-default.ini"
+[backend.nx-graph-compiler]
+system_config = "system-config-neural-technology-default.ini"
+compiler_config = "gc-config-neural-technology-default.ini"

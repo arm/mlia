@@ -1,6 +1,6 @@
-# SPDX-FileCopyrightText: Copyright 2023-2024, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2023-2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: LicenseRef-LICENSE
-"""Tests for Hydra reporters."""
+"""Tests for Neural Technology reporters."""
 from functools import partial
 from pathlib import Path
 from typing import List
@@ -8,25 +8,27 @@ from typing import List
 import pytest
 from rich.console import Console
 
-from mlia.backend.ngp_graph_compiler.config import NGPGraphCompilerConfig
-from mlia.backend.ngp_graph_compiler.output_parsing import NGPDebugDatabaseParser
-from mlia.backend.ngp_graph_compiler.output_parsing import NGPPerformanceDatabaseParser
-from mlia.backend.ngp_graph_compiler.performance import NGPGraphCompilerOutputFiles
-from mlia.backend.ngp_graph_compiler.performance import (
-    NGPGraphCompilerPerformanceMetrics,
+from mlia.backend.nx_graph_compiler.config import NXGraphCompilerConfig
+from mlia.backend.nx_graph_compiler.output_parsing import NXDebugDatabaseParser
+from mlia.backend.nx_graph_compiler.output_parsing import NXPerformanceDatabaseParser
+from mlia.backend.nx_graph_compiler.performance import NXGraphCompilerOutputFiles
+from mlia.backend.nx_graph_compiler.performance import (
+    NXGraphCompilerPerformanceMetrics,
 )
-from mlia.backend.ngp_graph_compiler.statistics import NGPPerformanceStats
-from mlia.backend.vulkan_model_converter.compat import NGPModelCompatibilityInfo
+from mlia.backend.nx_graph_compiler.statistics import NXPerformanceStats
+from mlia.backend.vulkan_model_converter.compat import NXModelCompatibilityInfo
 from mlia.core.reporting import Table
-from mlia.target.hydra.config import HydraConfiguration
-from mlia.target.hydra.reporters import hydra_formatters
-from mlia.target.hydra.reporters import report_target
+from mlia.target.neural_technology.config import NeuralTechnologyConfiguration
+from mlia.target.neural_technology.reporters import neural_technology_formatters
+from mlia.target.neural_technology.reporters import report_target
 from mlia.utils.console import remove_ascii_codes
 
 
 def test_report_target() -> None:
     """Test function report_target()."""
-    report = report_target(HydraConfiguration.load_profile("hydra"))
+    report = report_target(
+        NeuralTechnologyConfiguration.load_profile("neural-technology")
+    )
     assert report.to_plain_text()
 
 
@@ -54,8 +56,8 @@ def assert_table_lines(report: Table, expected_lines: list) -> None:
     assert actual_lines == expected_lines, f"Expected:\n{expected}\n\nActual:\n{actual}"
 
 
-def test_ngp_graph_compiler_reporting(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Test function hydra_formatters() with NGP performance data."""
+def test_nx_graph_compiler_reporting(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test function neural_technology_formatters() with Neural Accelerator performance data."""
 
     performance_contents = """
     <![CDATA[
@@ -114,21 +116,21 @@ def test_ngp_graph_compiler_reporting(monkeypatch: pytest.MonkeyPatch) -> None:
         "deeplabv3plus_mbnV2__1080p/expanded_conv_8_add/add": "type_3",
     }
 
-    performance_db_parser = NGPPerformanceDatabaseParser()
+    performance_db_parser = NXPerformanceDatabaseParser()
     performance_db_parser.raw_xmlish = performance_contents
     performance_db = performance_db_parser.parse_performance_database()
-    debug_db_parser = NGPDebugDatabaseParser()
+    debug_db_parser = NXDebugDatabaseParser()
     debug_db_parser.raw_xmlish = debug_contents
     debug_db = debug_db_parser.parse_debug_database()
 
     sys_cfg, compiler_cfg = Path("system-config"), Path("compiler-config")
-    cfg = NGPGraphCompilerConfig(sys_cfg, compiler_cfg)
+    cfg = NXGraphCompilerConfig(sys_cfg, compiler_cfg)
 
     ignored_path = Path("ignored")
 
-    metrics = NGPGraphCompilerPerformanceMetrics(
+    metrics = NXGraphCompilerPerformanceMetrics(
         backend_config=cfg,
-        output_files=NGPGraphCompilerOutputFiles(
+        output_files=NXGraphCompilerOutputFiles(
             ignored_path,
             ignored_path,
             ignored_path,
@@ -138,7 +140,7 @@ def test_ngp_graph_compiler_reporting(monkeypatch: pytest.MonkeyPatch) -> None:
             ignored_path,
         ),
         performance_db_parser=performance_db_parser,
-        performance_metrics=NGPPerformanceStats(
+        performance_metrics=NXPerformanceStats(
             debug_db=debug_db,
             performance_db=performance_db,
             operator_types_mapping=operator_types_mapping,
@@ -147,7 +149,7 @@ def test_ngp_graph_compiler_reporting(monkeypatch: pytest.MonkeyPatch) -> None:
 
     monkeypatch.setattr("mlia.utils.console.Console", partial(Console, width=80))
 
-    formatter = hydra_formatters(metrics)
+    formatter = neural_technology_formatters(metrics)
     report = formatter(metrics)
     assert isinstance(report, Table)
 
@@ -155,7 +157,7 @@ def test_ngp_graph_compiler_reporting(monkeypatch: pytest.MonkeyPatch) -> None:
         report,
         [
             # pylint: disable=C0301
-            "NGP raw performance report:",
+            "Neural Accelerator raw performance report:",
             "┌────┬──────┬──────┬──────┬───────┬──────┬───────┬──────┬───────┬──────┬───────┐",
             "│    │ TFL… │ TFL… │      │       │      │       │      │       │      │       │",
             "│    │ Ope… │ Ope… │ Ope… │ Total │ HW   │ HW    │ Mem… │ Read  │ Wri… │ Traf… │",
@@ -214,16 +216,16 @@ def test_ngp_graph_compiler_reporting(monkeypatch: pytest.MonkeyPatch) -> None:
     )
 
 
-def test_ngp_compatibility_reporting(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Test function hydra_formatters() with NGP compatibility data."""
+def test_nx_compatibility_reporting(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test function neural_technology_formatters() with Neural Accelerator compatibility data."""
 
-    comp_info = NGPModelCompatibilityInfo({"/myop1": "COMP2D", "/myop4": "NMS"})
+    comp_info = NXModelCompatibilityInfo({"/myop1": "COMP2D", "/myop4": "NMS"})
     comp_info.add_lowered_to_tosa("/myop1", "tosaop1")
     comp_info.add_lowered_to_tosa("/myop2", "tosa.custom")
     comp_info.add_lowered_to_tosa("/myop3", "tosaop3")
     comp_info.add_lowering_error("/myop4", "Error occured when lowering")
 
-    formatter = hydra_formatters(comp_info)
+    formatter = neural_technology_formatters(comp_info)
     report = formatter(comp_info)
     assert isinstance(report, Table)
 
@@ -233,29 +235,29 @@ def test_ngp_compatibility_reporting(monkeypatch: pytest.MonkeyPatch) -> None:
         [
             # pylint: disable=C0301
             "Operators:",
-            "┌───┬───────────────────┬───────────────┬───────────────┬───────────────────┐",
-            "│ # │ Operator location │ Operator type │ NGP placement │ NGP compatibility │",
-            "╞═══╪═══════════════════╪═══════════════╪═══════════════╪═══════════════════╡",
-            "│ 1 │ /myop1            │ COMP2D        │ NE            │ TOSA              │",
-            "├───┼───────────────────┼───────────────┼───────────────┼───────────────────┤",
-            "│ 2 │ /myop2            │ Unknown       │ EE            │ Shader            │",
-            "├───┼───────────────────┼───────────────┼───────────────┼───────────────────┤",
-            "│ 3 │ /myop3            │ Unknown       │ NE            │ TOSA              │",
-            "├───┼───────────────────┼───────────────┼───────────────┼───────────────────┤",
-            "│ 4 │ /myop4            │ NMS           │ FAIL          │ Non-NGP           │",
-            "└───┴───────────────────┴───────────────┴───────────────┴───────────────────┘",
+            "┌───┬───────────────────┬───────────────┬──────────────┬──────────────────┐",
+            "│ # │ Operator location │ Operator type │ NX placement │ NX compatibility │",
+            "╞═══╪═══════════════════╪═══════════════╪══════════════╪══════════════════╡",
+            "│ 1 │ /myop1            │ COMP2D        │ NE           │ TOSA             │",
+            "├───┼───────────────────┼───────────────┼──────────────┼──────────────────┤",
+            "│ 2 │ /myop2            │ Unknown       │ EE           │ Shader           │",
+            "├───┼───────────────────┼───────────────┼──────────────┼──────────────────┤",
+            "│ 3 │ /myop3            │ Unknown       │ NE           │ TOSA             │",
+            "├───┼───────────────────┼───────────────┼──────────────┼──────────────────┤",
+            "│ 4 │ /myop4            │ NMS           │ FAIL         │ Non-NX           │",
+            "└───┴───────────────────┴───────────────┴──────────────┴──────────────────┘",
             # pylint: enable=C0301
         ],
     )
 
 
-def test_hydra_formatters_invalid_data() -> None:
-    """Test hydra_formatters() with invalid input."""
+def test_neural_technology_formatters_invalid_data() -> None:
+    """Test neural_technology_formatters() with invalid input."""
     with pytest.raises(
         Exception,
         match=r"^Unable to find appropriate formatter for .*",
     ):
-        hydra_formatters(12)
+        neural_technology_formatters(12)
 
 
 # %%
