@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 # Pre-commit checks
 #
@@ -110,6 +110,7 @@ repos:
       types: [python]
       require_serial: true
       additional_dependencies: []
+      args: ["--config-file=pyproject.toml"]
 
 - repo: local
   hooks:

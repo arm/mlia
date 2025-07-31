@@ -20,5 +20,7 @@ class NeuralTechnologyAdvisorStartedEvent(Event):
 class NeuralTechnologyAdvisorEventHandler(EventDispatcher):
     """Event handler for the Neural Technology inference advisor."""
 
-    def on_neural_technology_advisor_started(self, event: NeuralTechnologyAdvisorStartedEvent) -> None:
+    def on_neural_technology_advisor_started(
+        self, event: NeuralTechnologyAdvisorStartedEvent
+    ) -> None:
         """Handle NeuralTechnologyAdvisorStarted event."""

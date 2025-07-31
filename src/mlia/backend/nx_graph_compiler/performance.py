@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: Copyright 2023-2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: LicenseRef-LICENSE
-"""Backend module for performance estimation with the Neural Accellerator Graph Compiler."""
+"""Backend module for Neural Accelerator Graph Compiler performance estimation."""
 from __future__ import annotations
 
 import json
@@ -38,7 +38,7 @@ GC_OUTPUT_CONTROL_PARAMS = [  # #               | Corresponding option in the .i
 
 @dataclass
 class NXGraphCompilerOutputFiles:
-    """Collection of output files of the Neural Accellerator Graph Compiler."""
+    """Collection of output files of the Neural Accelerator Graph Compiler."""
 
     cmd_stream_summary: Path
     debug_database: Path
@@ -52,7 +52,7 @@ class NXGraphCompilerOutputFiles:
     def from_output_dir(
         cls, output_dir: Path, output_name: str
     ) -> NXGraphCompilerOutputFiles:
-        """Create files relative to the output dir of the Neural Accellerator Graph Compiler."""
+        """Create files in the Neural Accelerator Graph Compiler output dir."""
         name_to_suffix = {
             "cmd_stream_summary": "_command_stream_summary.dat",
             "debug_database": "_debug_database.dat",
@@ -73,14 +73,14 @@ class NXGraphCompilerOutputFiles:
         for path in vars(self).values():
             if isinstance(path, Path) and not path.is_file():
                 raise FileNotFoundError(
-                    f"Expected output file '{path}' of the Neural Accelerator Graph compiler does "
-                    "not exist."
+                    f"Expected output file '{path}' of the Neural Accelerator Graph "
+                    "compiler does not exist."
                 )
 
 
 @dataclass
 class NXGraphCompilerPerformanceMetrics:
-    """Collection of Neural Accellerator Graph Compiler configuration and performance metrics."""
+    """Neural Accelerator Graph Compiler configuration and performance metrics."""
 
     backend_config: NXGraphCompilerConfig
     output_files: NXGraphCompilerOutputFiles
@@ -93,7 +93,7 @@ class NXGraphCompilerPerformanceEstimator(
         Union[Path, ModelConfiguration], NXGraphCompilerPerformanceMetrics
     ]
 ):
-    """Performance estimator for the Neural Accellerator Graph Compiler."""
+    """Performance estimator for the Neural Accelerator Graph Compiler."""
 
     resource_dir = get_mlia_resources() / "nx-graph-compiler"
 
@@ -148,7 +148,7 @@ class NXGraphCompilerPerformanceEstimator(
             )
 
     def _run_vulkan_model_converter(self, model_path: Path) -> Path:
-        """Run the Neural Accellerator Graph Compiler and return the path to the SPIR-V file."""
+        """Run the Vulkan Model Converter and return the path to the SPIR-V file."""
         backend_repo = get_backend_repository()
         vmc_path, _ = backend_repo.get_backend_settings("vulkan-model-converter")
         output_dir = self.output_dir / "vulkan-model-converter"
@@ -161,7 +161,7 @@ class NXGraphCompilerPerformanceEstimator(
     def _run_nx_graph_compiler(
         self, vgf_file: Path, output_name: str
     ) -> NXGraphCompilerOutputFiles:
-        """Run the Neural Accellerator Graph Compiler and return the output files."""
+        """Run the Neural Accelerator Graph Compiler and return the output files."""
         backend_repo = get_backend_repository()
         gc_path, _ = backend_repo.get_backend_settings("nx-graph-compiler")
         output_dir = self.output_dir / "nx-graph-compiler"

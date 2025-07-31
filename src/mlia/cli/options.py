@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Module for the CLI options."""
 from __future__ import annotations
@@ -351,7 +351,9 @@ def parse_optimization_parameters(  # pylint: disable=too-many-arguments
             {
                 "optimization_type": "rewrite",
                 "optimization_target": rewrite_target,
-                "layers_to_optimize": [rewrite_start, rewrite_end],
+                "layers_to_optimize": [
+                    v for v in (rewrite_start, rewrite_end) if v is not None
+                ],
                 "dataset": dataset,
             }
         )

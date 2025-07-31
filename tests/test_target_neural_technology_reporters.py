@@ -57,7 +57,8 @@ def assert_table_lines(report: Table, expected_lines: list) -> None:
 
 
 def test_nx_graph_compiler_reporting(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Test function neural_technology_formatters() with Neural Accelerator performance data."""
+    """Test function neural_technology_formatters() with Neural Accelerator performance
+    data."""
 
     performance_contents = """
     <![CDATA[
@@ -217,7 +218,8 @@ def test_nx_graph_compiler_reporting(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_nx_compatibility_reporting(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Test function neural_technology_formatters() with Neural Accelerator compatibility data."""
+    """Test function neural_technology_formatters() with Neural Accelerator
+    compatibility data."""
 
     comp_info = NXModelCompatibilityInfo({"/myop1": "COMP2D", "/myop4": "NMS"})
     comp_info.add_lowered_to_tosa("/myop1", "tosaop1")

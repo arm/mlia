@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023,2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Cortex-A tools module."""
 from __future__ import annotations
@@ -98,9 +98,12 @@ class CortexACompatibilityInfo:
     def supported_activation_functions(self, operator: Operator) -> list[str]:
         """Return a list of fused activation functions supported by this op."""
         op_name = operator.custom_name if operator.custom_name else operator.name
-        return self.compatibility_data(operator)[op_name].get(
+        result = self.compatibility_data(operator)[op_name].get(
             "supported_fused_activation", []
         )
+        if not isinstance(result, list) or not all(isinstance(x, str) for x in result):
+            return []
+        return result
 
     def get_support_type(
         self, operator: Operator

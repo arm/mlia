@@ -17,7 +17,9 @@ from mlia.core.data_collection import DataCollector
 from mlia.core.errors import ConfigurationError
 from mlia.core.events import Event
 from mlia.target.common.optimization import add_common_optimization_params
-from mlia.target.neural_technology.advice_generation import NeuralTechnologyAdviceProducer
+from mlia.target.neural_technology.advice_generation import (
+    NeuralTechnologyAdviceProducer,
+)
 from mlia.target.neural_technology.config import NeuralTechnologyConfiguration
 from mlia.target.neural_technology.data_analysis import NeuralTechnologyDataAnalyzer
 from mlia.target.neural_technology.data_collection import NeuralTechnologyCompatibility

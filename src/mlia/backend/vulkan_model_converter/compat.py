@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 class VMCCompatibilityLogReader:
-    """Read log from VMC and extract low-level Neural Accelerator compatibility information."""
+    """Read log from VMC and extract low-level NX compatibility information."""
 
     _lowered_ops: dict[str, str]
     _lowering_errors: dict[str, str]
@@ -68,7 +68,7 @@ class VMCCompatibilityLogReader:
 
 
 class VMCCompatbilityChecker(VulkanModelConverterBase):
-    """Run the Vulkan Model Converter to check for Neural Accelerator compatibility."""
+    """Run the Vulkan Model Converter to check for NX compatibility."""
 
     def __init__(self, converter_path: Path) -> None:
         """Set up compatilibity checking for Vulkan Model Converter."""

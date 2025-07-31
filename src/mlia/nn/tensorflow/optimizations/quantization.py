@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2023,2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Contains functionality for quantization and de-quantization."""
 from __future__ import annotations
@@ -30,7 +30,7 @@ class QuantizationParameters:
 
 def is_quantized(quant_params: QuantizationParameters) -> bool:
     """Check if the quantization parameters describe a quantized tensor."""
-    return quant_params.scales.size > 0
+    return bool(quant_params.scales.size > 0)
 
 
 def dequantize(

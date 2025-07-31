@@ -40,6 +40,8 @@ class NeuralTechnologyEventHandler(
         ):
             self.reporter.submit(data_item, delay_print=True, space=True)
 
-    def on_neural_technology_advisor_started(self, event: NeuralTechnologyAdvisorStartedEvent) -> None:
+    def on_neural_technology_advisor_started(
+        self, event: NeuralTechnologyAdvisorStartedEvent
+    ) -> None:
         """Handle NeuralTechnologyAdvisorStarted event."""
         self.reporter.submit(event.device)

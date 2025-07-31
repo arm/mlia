@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Data collector support for performance optimizations."""
 from __future__ import annotations
@@ -124,7 +124,7 @@ class OptimizingDataCollector(ContextAwareDataCollector):
             context=context,
         )
 
-    def _get_rewrite_settings(self, context: Context) -> list[dict]:
+    def _get_rewrite_settings(self, context: Context) -> dict:
         """Get optimization settings."""
         return self.get_parameter(  # type: ignore
             OptimizingDataCollector.name(),

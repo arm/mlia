@@ -20,4 +20,6 @@ class NeuralTechnologyConfiguration(TargetProfile):
         """Check the parameters."""
         super().verify()
         if self.target != "neural-technology":
-            raise ValueError(f"Wrong target {self.target} for Neural Technology configuration.")
+            raise ValueError(
+                f"Wrong target {self.target} for Neural Technology configuration."
+            )

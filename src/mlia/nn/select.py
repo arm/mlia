@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Module for optimization selection."""
 from __future__ import annotations
@@ -133,12 +133,11 @@ def get_optimizer(
         return Clusterer(model, config)
 
     if isinstance(config, RewriteConfiguration):
-        return RewritingOptimizer(model, config)
+        config_path = Path(model)
+        return RewritingOptimizer(config_path, config)
 
     if isinstance(config, OptimizationSettings):
-        return _get_optimizer(
-            model, cast(OptimizationSettings, config), rewrite_parameters
-        )
+        return _get_optimizer(model, config, rewrite_parameters)
 
     if is_list_of(config, OptimizationSettings):
         return _get_optimizer(

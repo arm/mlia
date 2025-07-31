@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Reporting module."""
 from __future__ import annotations
@@ -587,7 +587,7 @@ class TextReporter(Reporter):
             data, formatters = zip(*self.delayed)
             self.produce_report(
                 data,
-                formatter=CompoundFormatter(formatters),
+                formatter=CompoundFormatter(list(formatters)),
             )
             self.delayed = []
 
@@ -625,7 +625,7 @@ class JSONReporter(Reporter):
         data, formatters = zip(*self.data)
         self.produce_report(
             data,
-            formatter=CompoundFormatter(formatters),
+            formatter=CompoundFormatter(list(formatters)),
         )
 
     def produce_report(

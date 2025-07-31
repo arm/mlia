@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023,2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Console output utility functions."""
 from __future__ import annotations
@@ -88,10 +88,10 @@ def _convert_to_text(*renderables: RenderableType) -> str:
             console.print(item)
 
     text = capture.get()
-    return text.rstrip()
+    return str(text.rstrip())
 
 
 def remove_ascii_codes(value: str) -> str:
     """Decode and remove ASCII codes."""
     text = Text.from_ansi(value)
-    return text.plain
+    return str(text.plain)

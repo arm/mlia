@@ -1,8 +1,9 @@
-# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Target configuration module."""
 from __future__ import annotations
 
+import sys
 from abc import ABC
 from abc import abstractmethod
 from dataclasses import dataclass
@@ -13,16 +14,16 @@ from typing import Callable
 from typing import cast
 from typing import TypeVar
 
-try:
-    import tomllib
-except ModuleNotFoundError:
-    import tomli as tomllib
-
 from mlia.backend.registry import registry as backend_registry
-from mlia.core.common import AdviceCategory
 from mlia.core.advisor import InferenceAdvisor
-from mlia.utils.filesystem import get_mlia_target_profiles_dir
+from mlia.core.common import AdviceCategory
 from mlia.utils.filesystem import get_mlia_target_optimization_dir
+from mlia.utils.filesystem import get_mlia_target_profiles_dir
+
+if sys.version_info >= (3, 11):
+    import tomllib
+else:
+    import tomli as tomllib
 
 
 def get_builtin_target_profile_path(target_profile: str) -> Path:

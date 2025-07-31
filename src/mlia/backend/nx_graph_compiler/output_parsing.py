@@ -52,7 +52,7 @@ class NumberColumnParser(ColumnParser):
 
 
 class SubtableColumnParser(ColumnParser):
-    """Parse nested columns found in the Neural Accellerator compiler csv output."""
+    """Parse nested columns found in the Neural Accelerator compiler csv output."""
 
     def __init__(self, title: str, header: str):
         """Initialize parser with header."""
@@ -97,7 +97,7 @@ class SubtableColumnParser(ColumnParser):
 
 
 class SubtableColumnParserDict(SubtableColumnParser):
-    """Parse nested columns found in the Neural Accellerator compiler csv output into dict."""
+    """Parse nested columns found in the NX compiler csv output into dict."""
 
     def __init__(self, title: str, header: str, key_field: str | None):
         """Initialize dict parser with header."""
@@ -111,7 +111,7 @@ class SubtableColumnParserDict(SubtableColumnParser):
 
 
 class NXOutputParser:
-    """Parser for Neural Accellerator output files with a .dat extension.
+    """Parser for Neural Accelerator output files with a .dat extension.
 
     Current versions of the graph compiler produce an
     invalid XML (eg. a closing <table> element without the
@@ -123,7 +123,7 @@ class NXOutputParser:
     """
 
     def __init__(self, db_path: Path | None = None) -> None:
-        """Initialize output parser for the Neural Accellerator files."""
+        """Initialize output parser for the Neural Accelerator files."""
         self.db_path: Path
         self.raw_xmlish: str = ""
 
@@ -132,7 +132,7 @@ class NXOutputParser:
             self.raw_xmlish = self.load(self.db_path)
 
     def load(self, db_path: Path) -> str:
-        """Read the Neural Accellerator compiler's output into a string."""
+        """Read the Neural Accelerator compiler's output into a string."""
         with open(db_path, encoding="utf-8") as file:
             self.raw_xmlish = file.read()
 
@@ -162,7 +162,7 @@ class NXOutputParser:
 
 
 class NXPerformanceDatabaseParser(NXOutputParser):
-    """Parser for the Neural Accellerator performance database."""
+    """Parser for the Neural Accelerator performance database."""
 
     def __init__(self, db_path: Path | None = None) -> None:
         """Initialise the performance database parser."""
@@ -244,7 +244,7 @@ class NXPerformanceDatabaseParser(NXOutputParser):
 
 
 class NXDebugDatabaseParser(NXOutputParser):
-    """Parser for Neural Accellerator debug database."""
+    """Parser for Neural Accelerator debug database."""
 
     def __init__(self, db_path: Path | None = None) -> None:
         """Initialise the debug database parser."""
