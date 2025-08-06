@@ -1,5 +1,5 @@
 <!---
-SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
+SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
 SPDX-License-Identifier: Apache-2.0
 --->
 # ML Inference Advisor - Introduction
@@ -20,7 +20,7 @@ with differing knowledge on hardware optimization and machine learning.
 This product conforms to Arm's inclusive language policy and, to the best of
 our knowledge, does not contain any non-inclusive language.
 
-If you find something that concerns you, email terms@arm.com.
+If you find something that concerns you, email <terms@arm.com>.
 
 ## Releases
 
@@ -29,11 +29,12 @@ Release notes can be found in [MLIA releases](RELEASES.md).
 ## Getting support
 
 In case you need support or want to report an issue, give us feedback or
-simply ask a question about MLIA, please send an email to mlia@arm.com.
+simply ask a question about MLIA, please send an email to <mlia@arm.com>.
 
 Alternatively, use the
 [AI and ML forum](https://community.arm.com/support-forums/f/ai-and-ml-forum)
-to get support by marking your post with the **MLIA** tag.
+to get support by marking your post with the **MLIA** tag,
+or tag the @mlia team directly for assistance.
 
 ## Reporting vulnerabilities
 
@@ -70,8 +71,9 @@ typical setup requires:
   tested on this one specifically)
 * Python® >= 3.8.1
 * Ethos™-U Vela dependencies (Linux® only)
-   * For more details, please refer to the
-     [prerequisites of Vela](https://pypi.org/project/ethos-u-vela/)
+
+  For more details, please refer to the
+  [prerequisites of Vela](https://pypi.org/project/ethos-u-vela/).
 
 ## Installation
 
@@ -400,7 +402,7 @@ backends that need to be installed separately, see
 There are a number of predefined profiles for Ethos-U with the following
 attributes:
 
-```
+```table
 +--------------------------------------------------------------------+
 | Profile name  | MAC | System config               | Memory mode    |
 +=====================================================================
@@ -505,7 +507,7 @@ path is provided.
 This section lists available backends. As not all backends work on any platform
 the following table shows some compatibility information:
 
-```
+```table
 +----------------------------------------------------------------------------+
 | Backend       | Linux                  | Windows        | Python           |
 +=============================================================================
@@ -532,7 +534,7 @@ For version 23.05 the classic delegate is used.
 
 For more information see:
 
-* [Arm NN TensorFlow Lite Delegate documentation](https://arm-software.github.io/armnn/latest/delegate.xhtml)
+* [Arm NN TensorFlow Lite Delegate documentation](https://arm-software.github.io/armnn/latest/md_delegate__delegate_quick_start_guide.html)
 
 ### Corstone-300
 
@@ -574,7 +576,7 @@ mlia-backend install tosa-checker
 
 Additional resources:
 
-* Source code: <https://review.mlplatform.org/admin/repos/tosa/tosa_checker>
+* Source code: <https://gitlab.arm.com/tosa/tosa-checker>
 * PyPi package <https://pypi.org/project/tosa-checker/>
 
 ### Vela

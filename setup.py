@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022,2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Module to setup the python package."""
 from __future__ import annotations
@@ -14,11 +14,10 @@ from setuptools import setup
 def replace_markdown_relative_paths(
     path: Path, file_name: str, revision_tag: str
 ) -> str:
-    """Replace relative paths in md file with links to review.mlplatform.org."""
-    md_url = Template(
-        "https://review.mlplatform.org/plugins/gitiles/ml/mlia/+/refs/tags/$tag/$link"
-    )
-    img_url = Template("https://git.mlplatform.org/ml/mlia.git/plain/$link?h=$tag")
+    """Replace relative paths in md file with links to GitHub."""
+    # Update the GitHub URL templates
+    md_url = Template("https://github.com/arm/mlia/blob/$tag/$link")
+    img_url = Template("https://raw.githubusercontent.com/arm/mlia/$tag/$link")
     md_link_pattern = r"(!?\[.+?\]\((.+?)\))"
 
     content = path.joinpath(file_name).read_text()
@@ -26,7 +25,7 @@ def replace_markdown_relative_paths(
     for match, link in re.findall(md_link_pattern, content):
         if path.joinpath(link).exists():
             # Choose appropriate url template depending on wheteher the
-            # orginal link points to a file or an image.
+            # original link points to a file or an image.
             template = img_url if match[0] == "!" else md_url
             new_url = template.substitute(tag=revision_tag, link=link)
             md_link = match.replace(link, new_url)
