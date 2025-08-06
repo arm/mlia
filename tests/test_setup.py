@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022,2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Test for module setup."""
 from __future__ import annotations
@@ -17,18 +17,17 @@ from setup import replace_markdown_relative_paths
         [
             True,
             "[Test](README.md)",
-            "[Test](https://review.mlplatform.org/plugins/gitiles/"
-            "ml/mlia/+/refs/tags/0.1.0/README.md)",
+            "[Test](https://github.com/arm/mlia/blob/0.1.0/README.md)",
         ],
         [
             True,
             "![Test](image.png)",
-            "![Test](https://git.mlplatform.org/ml/mlia.git/plain/image.png?h=0.1.0)",
+            "![Test](https://raw.githubusercontent.com/arm/mlia/0.1.0/image.png)",
         ],
         [
             False,
-            "[Test](http://review.mlplatform.org)",
-            "[Test](http://review.mlplatform.org)",
+            "[Test](https://github.com/arm/mlia)",
+            "[Test](https://github.com/arm/mlia)",
         ],
         [False, "[Test](README.md)", "[Test](README.md)"],
         [
@@ -45,7 +44,7 @@ def test_replace_markdown_relative_paths(
     file_content: str,
     expected_result: str,
 ) -> None:
-    """Test replacement of relative md paths with links to review.mlplatform.org."""
+    """Test replacement of relative md paths with links to GitHub."""
     # Set a mock setuptools scm version for testing
     tag = "0.1.0"
     path_mock.read_text.return_value = file_content
