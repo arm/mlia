@@ -27,12 +27,10 @@ from mlia.utils.proc import process_command_output
 logger = logging.getLogger(__name__)
 
 GC_OUTPUT_CONTROL_PARAMS = [  # #               | Corresponding option in the .ini file
-    "--enable-irrigation-output",  # #          | <no equivalent .ini option>
     "--enable-command-list-summary-dump",  # #  | commandListSummary
     "--enable-debug-database-dump",  # #        | debugDatabase
     "--enable-performance-database-dump",  # #  | performanceDatabase
     "--enable-performance-summary-dump",  # #   | networkPerformanceEstimation
-    "--enable-dot-dump",  # #                   | enableDotDump
 ]
 
 
@@ -42,9 +40,6 @@ class NXGraphCompilerOutputFiles:
 
     cmd_stream_summary: Path
     debug_database: Path
-    dot_file: Path
-    irrigation_bin: Path
-    irrigation_json: Path
     network_performance_summary: Path
     performance_database: Path
 
@@ -56,9 +51,6 @@ class NXGraphCompilerOutputFiles:
         name_to_suffix = {
             "cmd_stream_summary": "_command_stream_summary.dat",
             "debug_database": "_debug_database.dat",
-            "dot_file": ".dot",
-            "irrigation_bin": "_irrigation.bin",
-            "irrigation_json": "_irrigation.json",
             "network_performance_summary": "_network_performance_summary.json",
             "performance_database": "_performance_database.dat",
         }
@@ -188,7 +180,10 @@ class NXGraphCompilerPerformanceEstimator(
 
         cmd = Command(
             cmd=[
-                str(gc_path / "regorc-0.1.0"),
+                str(
+                    gc_path
+                    / "performance_estimator/graph_compiler_performance_estimator-0.1.0"
+                ),
                 "-i",
                 str(vgf_file),
                 "-o",

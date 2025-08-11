@@ -20,7 +20,7 @@ class VulkanModelConverterBase:
 
     FRONT_END_DIR = "front-ends/tflite"
     FRONT_END_EXE = "converter-tflite-frontend"
-    BACK_END_EXE = "converter-backend"
+    BACK_END_EXE = "model-converter"
 
     def __init__(self, converter_path: Path) -> None:
         """Set up some paths to run the Vulkan Model Converter."""

@@ -18,31 +18,29 @@ def get_vulkan_model_converter_installation() -> BackendInstallation:
         download_config=DownloadConfig(
             url=(
                 # pylint: disable=line-too-long
-                "https://artifactory.arm.com:443/artifactory/ml-tooling.misc/mlia/ngp-r54p0_00eac0/ml-sdk-model-converter-backend-0.80/latest/"
-                "ml-sdk-model-converter-backend-0.80.tar.gz"
+                "https://artifactory.arm.com:443/artifactory/ml-tooling.misc/mlia/vulkan-model-converter/latest/ml-sdk-model-converter-backend-1.00.tar.gz"
                 # pylint: enable=line-too-long
             ),
             sha256_hash=(
-                "c36f5425f6e7b874d1a877c20e1a3a36d8716058f24af0b810a886a95dbc14c1"
+                "8c6802107a478fc2ccd4a208776401663a167e472aa3c738a90bcf4121b08d34"
             ),
             header_gen_fn=artifactory_credential_headers,
         )
         + DownloadConfig(
             url=(
                 # pylint: disable=line-too-long
-                "https://artifactory.arm.com:443/artifactory/ml-tooling.misc/mlia/ngp-r54p0_00eac0/ml-sdk-model-converter-frontend-for-tflite/latest/"
-                "ml-sdk-model-converter-frontend-for-tflite.tar.gz"
+                "https://artifactory.arm.com:443/artifactory/ml-tooling.misc/mlia/vulkan-model-converter/latest/ml-sdk-model-converter-frontend-for-tflite-1.00.tar.gz"
                 # pylint: enable=line-too-long
             ),
             sha256_hash=(
-                "5a7724625dd87f7d145bceabbc4caa73ea4b2c760dd8fdb870e55aebe85e0580"
+                "e6364584fec17714da1745a0567d5e115abe5f33d97ae070048d9471585017ad"
             ),
             header_gen_fn=artifactory_credential_headers,
         ),
         supported_platforms=["Linux"],
         path_checker=PackagePathChecker(
             expected_files=[
-                "converter-backend",
+                "model-converter",
                 "converter-tflite-frontend",
             ],
         ),
