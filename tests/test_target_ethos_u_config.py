@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for config module."""
 from __future__ import annotations
@@ -85,6 +85,28 @@ def test_ethosu_target() -> None:
                 "target": "ethos-u65",
                 "mac": 512,
                 "system_config": "Ethos_U65_Embedded",
+                "memory_mode": "Shared_Sram",
+            },
+            does_not_raise(),
+        ],
+        [
+            {
+                "target": "ethos-u85",
+                "mac": 32,
+                "system_config": "Ethos_U85_SYS_DRAM_High",
+                "memory_mode": "Shared_Sram",
+            },
+            pytest.raises(
+                Exception,
+                match="Mac value for selected target should be "
+                r"in \[128, 256, 512, 1024, 2048\]",
+            ),
+        ],
+        [
+            {
+                "target": "ethos-u85",
+                "mac": 1024,
+                "system_config": "Ethos_U85_SYS_DRAM_High",
                 "memory_mode": "Shared_Sram",
             },
             does_not_raise(),

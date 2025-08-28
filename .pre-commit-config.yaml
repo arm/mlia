@@ -93,7 +93,7 @@ repos:
   rev: 1.8.6
   hooks:
     - id: bandit
-      args: ["--skip", "B101"]
+      args: ["--skip", "B311,B101"]
 
 - repo: https://github.com/macisamuele/language-formatters-pre-commit-hooks
   rev: v2.11.0

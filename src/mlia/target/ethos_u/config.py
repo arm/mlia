@@ -85,6 +85,7 @@ class EthosUConfiguration(TargetProfile):
         target_mac_ranges = {
             "ethos-u55": [32, 64, 128, 256],
             "ethos-u65": [256, 512],
+            "ethos-u85": [128, 256, 512, 1024, 2048],
         }
 
         if self.target not in target_mac_ranges:

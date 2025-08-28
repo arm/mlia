@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for the target registry module."""
 from __future__ import annotations
@@ -72,6 +72,10 @@ def test_supported_advice(
         ("corstone-310", "ethos-u55", True),
         ("corstone-310", "ethos-u65", True),
         ("corstone-310", "cortex-a", False),
+        ("corstone-320", None, True),
+        ("corstone-320", "ethos-u55", False),
+        ("corstone-320", "ethos-u85", True),
+        ("corstone-320", "cortex-a", False),
     ),
 )
 def test_is_supported(backend: str, target: str | None, expected_result: bool) -> None:
@@ -85,6 +89,7 @@ def test_is_supported(backend: str, target: str | None, expected_result: bool) -
         ("cortex-a", ["armnn-tflite-delegate"]),
         ("ethos-u55", ["corstone-300", "corstone-310", "vela"]),
         ("ethos-u65", ["corstone-300", "corstone-310", "vela"]),
+        ("ethos-u85", ["corstone-320", "vela"]),
         ("tosa", ["tosa-checker"]),
     ),
 )
@@ -96,9 +101,12 @@ def test_supported_backends(target_name: str, expected_backends: list[str]) -> N
 @pytest.mark.parametrize(
     ("advice", "expected_targets"),
     (
-        (AdviceCategory.COMPATIBILITY, ["cortex-a", "ethos-u55", "ethos-u65", "tosa"]),
-        (AdviceCategory.OPTIMIZATION, ["ethos-u55", "ethos-u65"]),
-        (AdviceCategory.PERFORMANCE, ["ethos-u55", "ethos-u65"]),
+        (
+            AdviceCategory.COMPATIBILITY,
+            ["cortex-a", "ethos-u55", "ethos-u65", "ethos-u85", "tosa"],
+        ),
+        (AdviceCategory.OPTIMIZATION, ["ethos-u55", "ethos-u65", "ethos-u85"]),
+        (AdviceCategory.PERFORMANCE, ["ethos-u55", "ethos-u65", "ethos-u85"]),
     ),
 )
 def test_supported_targets(advice: AdviceCategory, expected_targets: list[str]) -> None:
@@ -112,6 +120,7 @@ def test_all_supported_backends() -> None:
         "vela",
         "tosa-checker",
         "armnn-tflite-delegate",
+        "corstone-320",
         "corstone-310",
         "corstone-300",
     }
@@ -124,6 +133,7 @@ def test_all_supported_backends() -> None:
         ["tosa", ["tosa-checker"], False],
         ["ethos-u55", ["vela"], True],
         ["ethos-u65", ["vela"], True],
+        ["ethos-u85", ["vela"], True],
     ],
 )
 def test_default_backends(

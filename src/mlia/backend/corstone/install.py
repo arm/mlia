@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Module for Corstone based FVPs.
 
@@ -26,7 +26,7 @@ from mlia.utils.filesystem import working_directory
 logger = logging.getLogger(__name__)
 
 ARM_ECOSYSTEM_FVP_URL = (
-    "https://developer.arm.com/-/media/Arm%20Developer%20Community/Downloads/OSS/FVP/"
+    "https://developer.arm.com/-/cdn-downloads/permalink/FVPs-Corstone-IoT/"
 )
 
 
@@ -93,6 +93,18 @@ CORSTONE_FVPS: dict[str, dict[str, CorstoneFVP]] = {
             ],
         ),
     },
+    "corstone-320": {
+        "x86": CorstoneFVP(
+            archive="Corstone-320/FVP_Corstone_SSE-320_11.27_25_Linux64.tgz",
+            sha256_hash="6986af8805de54fa8dcbc54ea2cd63b305ebf5f1c07d3cba09641e2f8cc4e2f5",
+            fvp_expected_files=["models/Linux64_GCC-9.3/FVP_Corstone_SSE-320"],
+        ),
+        "aarch64": CorstoneFVP(
+            archive="Corstone-320/FVP_Corstone_SSE-320_11.27_25_Linux64_armv8l.tgz",
+            sha256_hash="6766fd2ba138473c6b01c7e2f98125439ba68b638a08c6d11e3e1aeffb88878a",
+            fvp_expected_files=["models/Linux64_armv8l_GCC-9.3/FVP_Corstone_SSE-320"],
+        ),
+    },
 }
 
 
@@ -112,6 +124,8 @@ class CorstoneInstaller:
                 fvp = "./FVP_Corstone_SSE-300.sh"
             elif self.name == "corstone-310":
                 fvp = "./FVP_Corstone_SSE-310.sh"
+            elif self.name == "corstone-320":
+                fvp = "./FVP_Corstone_SSE-320.sh"
             else:
                 raise RuntimeError(
                     f"Couldn't find fvp file during '{self.name}' installation"
@@ -186,6 +200,7 @@ def get_corstone_installation(corstone_name: str) -> Installation:
             ),
         ),
         backend_installer=CorstoneInstaller(name=corstone_name),
+        dependencies=["vela"],
     )
 
     return corstone_install

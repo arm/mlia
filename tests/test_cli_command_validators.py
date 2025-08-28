@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2023, 2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for cli.command_validators module."""
 from __future__ import annotations
@@ -113,6 +113,20 @@ def test_validate_check_target_profile(
             ["corstone-310"],
             True,
             "Backend corstone-310 not supported with target-profile tosa.",
+            None,
+        ],
+        [
+            "ethos-u85-1024",
+            ["corstone-320"],
+            False,
+            None,
+            ["corstone-320"],
+        ],
+        [
+            "ethos-u55-256",
+            ["corstone-320"],
+            True,
+            "Backend corstone-320 not supported with target-profile ethos-u55-256.",
             None,
         ],
         [

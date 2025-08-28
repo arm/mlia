@@ -208,6 +208,11 @@ AcceleratorConfigType = Literal[
     "ethos-u55-256",
     "ethos-u65-256",
     "ethos-u65-512",
+    "ethos-u85-128",
+    "ethos-u85-256",
+    "ethos-u85-512",
+    "ethos-u85-1024",
+    "ethos-u85-2048",
 ]
 
 TensorAllocatorType = Literal["LinearAlloc", "Greedy", "HillClimb"]

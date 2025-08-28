@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Module for backend integration."""
 from __future__ import annotations
@@ -21,6 +21,26 @@ from mlia.utils.proc import process_command_output
 
 logger = logging.getLogger(__name__)
 
+TARGET_METRIC_MAPS = {
+    "default": [
+        "NPU ACTIVE",
+        "NPU IDLE",
+        "NPU TOTAL",
+        "NPU AXI0_RD_DATA_BEAT_RECEIVED",
+        "NPU AXI0_WR_DATA_BEAT_WRITTEN",
+        "NPU AXI1_RD_DATA_BEAT_RECEIVED",
+    ],
+    "corstone-320": [
+        "NPU ACTIVE",
+        "NPU IDLE",
+        "NPU TOTAL",
+        "NPU ETHOSU_PMU_SRAM_RD_DATA_BEAT_RECEIVED",
+        "NPU ETHOSU_PMU_SRAM_WR_DATA_BEAT_WRITTEN",
+        "NPU ETHOSU_PMU_EXT_RD_DATA_BEAT_RECEIVED",
+        "NPU ETHOSU_PMU_EXT_WR_DATA_BEAT_WRITTEN",
+    ],
+}
+
 
 @dataclass
 class PerformanceMetrics:
@@ -32,6 +52,7 @@ class PerformanceMetrics:
     npu_axi0_rd_data_beat_received: int
     npu_axi0_wr_data_beat_written: int
     npu_axi1_rd_data_beat_received: int
+    npu_axi1_wr_data_beat_written: int | None = None
 
 
 class GenericInferenceOutputParser:
@@ -48,19 +69,26 @@ class GenericInferenceOutputParser:
         if res_b64 := self.pattern.search(line):
             self.base64_data.append(res_b64.group(1))
 
-    def get_metrics(self) -> PerformanceMetrics:
+    def get_metrics(self, target: str = "default") -> PerformanceMetrics:
         """Parse the collected data and return perf metrics."""
         try:
             parsed_metrics = self._parse_data()
 
-            return PerformanceMetrics(
-                parsed_metrics["NPU ACTIVE"],
-                parsed_metrics["NPU IDLE"],
-                parsed_metrics["NPU TOTAL"],
-                parsed_metrics["NPU AXI0_RD_DATA_BEAT_RECEIVED"],
-                parsed_metrics["NPU AXI0_WR_DATA_BEAT_WRITTEN"],
-                parsed_metrics["NPU AXI1_RD_DATA_BEAT_RECEIVED"],
-            )
+            metric_names = TARGET_METRIC_MAPS.get(target, TARGET_METRIC_MAPS["default"])
+
+            metrics_kwargs = {}
+            field_names = [
+                f.name
+                for f in PerformanceMetrics.__dataclass_fields__.values()  # pylint: disable=no-member
+            ]
+            for idx, metric_name in enumerate(metric_names):
+                # Only add if metric exists in parsed_metrics and field exists
+                if metric_name in parsed_metrics and idx < len(field_names):
+                    metrics_kwargs[field_names[idx]] = parsed_metrics[metric_name]
+                else:
+                    raise KeyError(f"Metric {metric_name} not found in parsed data.")
+
+            return PerformanceMetrics(**metrics_kwargs)
         except Exception as err:
             raise ValueError("Unable to parse output and get metrics.") from err
 
@@ -96,8 +124,8 @@ def get_generic_inference_app_path(fvp: str, target: str) -> Path:
     """Return path to the generic inference runner binary."""
     apps_path = get_mlia_resources() / "backends/applications"
 
-    fvp_mapping = {"corstone-300": "300", "corstone-310": "310"}
-    target_mapping = {"ethos-u55": "U55", "ethos-u65": "U65"}
+    fvp_mapping = {"corstone-300": "300", "corstone-310": "310", "corstone-320": "320"}
+    target_mapping = {"ethos-u55": "U55", "ethos-u65": "U65", "ethos-u85": "U85"}
 
     fvp_version = f"sse-{fvp_mapping[fvp]}"
     app_version = f"22.08.02-ethos-{target_mapping[target]}-Default-noTA"
@@ -117,6 +145,8 @@ def get_executable_name(fvp: str, profile: str, target: str) -> str:
         ("corstone-310", "AVH", "ethos-u65"): "VHT_Corstone_SSE-310_Ethos-U65",
         ("corstone-310", "default", "ethos-u55"): "FVP_Corstone_SSE-310",
         ("corstone-310", "default", "ethos-u65"): "FVP_Corstone_SSE-310_Ethos-U65",
+        ("corstone-320", "AVH", "ethos-u85"): "VHT_Corstone_SSE-320",
+        ("corstone-320", "default", "ethos-u85"): "FVP_Corstone_SSE-320",
     }
 
     return executable_name_mapping[(fvp, profile, target)]
@@ -131,60 +161,72 @@ def get_fvp_metadata(fvp: str, profile: str, target: str) -> FVPMetadata:
     return FVPMetadata(executable_name, app)
 
 
-def build_corstone_command(
-    backend_path: Path,
-    fvp: str,
-    target: str,
-    mac: int,
-    model: Path,
-    profile: str,
-) -> Command:
+@dataclass
+class CorstoneRunConfig:
+    """Configuration for running Corstone FVP generic inference."""
+
+    backend_path: Path
+    fvp: str
+    target: str
+    mac: int
+    model: Path
+    profile: str = "default"
+
+
+def build_corstone_command(cfg: CorstoneRunConfig) -> Command:
     """Build command to run Corstone FVP."""
-    fvp_metadata = get_fvp_metadata(fvp, profile, target)
+    fvp_metadata = get_fvp_metadata(cfg.fvp, cfg.profile, cfg.target)
 
-    cmd = [
-        backend_path.joinpath(fvp_metadata.executable).as_posix(),
-        "-a",
-        fvp_metadata.generic_inf_app.as_posix(),
-        "--data",
-        f"{model}@0x90000000",
-        "-C",
-        f"ethosu.num_macs={mac}",
-        "-C",
-        "mps3_board.telnetterminal0.start_telnet=0",
-        "-C",
-        "mps3_board.uart0.out_file='-'",
-        "-C",
-        "mps3_board.uart0.shutdown_on_eot=1",
-        "-C",
-        "mps3_board.visualisation.disable-visualisation=1",
-        "--stat",
-    ]
-
+    if cfg.fvp == "corstone-320":
+        cmd = [
+            cfg.backend_path.joinpath(fvp_metadata.executable).as_posix(),
+            "-a",
+            fvp_metadata.generic_inf_app.as_posix(),
+            "--data",
+            f"{cfg.model}@0x90000000",
+            "-C",
+            f"mps4_board.subsystem.ethosu.num_macs={cfg.mac}",
+            "-C",
+            "mps4_board.telnetterminal0.start_telnet=0",
+            "-C",
+            "mps4_board.uart0.out_file='-'",
+            "-C",
+            "mps4_board.uart0.shutdown_on_eot=1",
+            "-C",
+            "mps4_board.visualisation.disable-visualisation=1",
+            "-C",
+            "vis_hdlcd.disable_visualisation=1",
+            "--stat",
+        ]
+    else:
+        cmd = [
+            cfg.backend_path.joinpath(fvp_metadata.executable).as_posix(),
+            "-a",
+            fvp_metadata.generic_inf_app.as_posix(),
+            "--data",
+            f"{cfg.model}@0x90000000",
+            "-C",
+            f"ethosu.num_macs={cfg.mac}",
+            "-C",
+            "mps3_board.telnetterminal0.start_telnet=0",
+            "-C",
+            "mps3_board.uart0.out_file='-'",
+            "-C",
+            "mps3_board.uart0.shutdown_on_eot=1",
+            "-C",
+            "mps3_board.visualisation.disable-visualisation=1",
+            "--stat",
+        ]
     return Command(cmd)
 
 
-def get_metrics(
-    backend_path: Path,
-    fvp: str,
-    target: str,
-    mac: int,
-    model: Path,
-    profile: str = "default",
-) -> PerformanceMetrics:
+def get_metrics(cfg: CorstoneRunConfig) -> PerformanceMetrics:
     """Run generic inference and return perf metrics."""
     try:
-        command = build_corstone_command(
-            backend_path,
-            fvp,
-            target,
-            mac,
-            model,
-            profile,
-        )
-    except Exception as err:
+        command = build_corstone_command(cfg)
+    except Exception as err:  # noqa: BLE001 - we want to wrap any construction errors
         raise BackendExecutionFailed(
-            f"Unable to construct a command line for {fvp}"
+            f"Unable to construct a command line for {cfg.fvp}"
         ) from err
 
     output_parser = GenericInferenceOutputParser()
@@ -198,7 +240,7 @@ def get_metrics(
     except subprocess.CalledProcessError as err:
         raise BackendExecutionFailed("Backend execution failed.") from err
 
-    return output_parser.get_metrics()
+    return output_parser.get_metrics(cfg.fvp)
 
 
 def estimate_performance(
@@ -211,11 +253,12 @@ def estimate_performance(
     if not settings or "profile" not in settings:
         raise BackendExecutionFailed(f"Unable to configure backend {backend}.")
 
-    return get_metrics(
-        backend_path,
-        backend,
-        target,
-        mac,
-        model,
-        settings["profile"],
+    cfg = CorstoneRunConfig(
+        backend_path=backend_path,
+        fvp=backend,
+        target=target,
+        mac=mac,
+        model=model,
+        profile=settings["profile"],
     )
+    return get_metrics(cfg)

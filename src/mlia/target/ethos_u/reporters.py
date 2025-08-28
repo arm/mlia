@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Reports module."""
 from __future__ import annotations
@@ -337,6 +337,10 @@ def metrics_as_records(
             metric_map["NPU AXI1 RD data beat received"].append(
                 metrics.npu_cycles.npu_axi1_rd_data_beat_received
             )
+            if (metrics.npu_cycles.npu_axi1_wr_data_beat_written) is not None:
+                metric_map["NPU AXI1 WR data beat written"].append(
+                    metrics.npu_cycles.npu_axi1_wr_data_beat_written
+                )
 
         return [
             (name, *(Cell(value, Format(str_fmt="12,d")) for value in values), "beats")
