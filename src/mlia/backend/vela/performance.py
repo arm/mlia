@@ -84,9 +84,9 @@ class LayerwisePerfInfo:
 
 
 complete_layer_metrics = [
-    ("tflite_operator", "TFLite_operator", "TFLite Operator"),
+    ("tflite_operator", ["TFLite_operator", "Original Operator"], "TFLite Operator"),
     ("nng_operator", "NNG Operator", "NNG Operator"),
-    ("sram_usage", "SRAM Usage", "SRAM Usage"),
+    ("sram_usage", ["SRAM Usage", "Staging Usage"], "SRAM Usage"),
     ("peak_percentage", "Peak%", "Peak SRAM Usage (%)"),
     ("op_cycles", "Op Cycles", "OP Cycles"),
     ("network_percentage_1", "Network%", "OP Cycles in Network (%)"),
@@ -96,8 +96,12 @@ complete_layer_metrics = [
     ("on_chip_flash_access_cycles", "OnFlash AC", "OnFlash AC"),
     ("off_chip_flash_access_cycles", "OffFlash AC", "OffFlash AC"),
     ("mac_count", "MAC Count", "MAC Count"),
-    ("network_percentage_2", "Network% (1)", "MAC Count in Network (%)"),
-    ("util_mac_percentage", "Util%", "MAC Util (%)"),
+    (
+        "network_percentage_2",
+        ["Network% (1)", "Network% (MAC)"],
+        "MAC Count in Network (%)",
+    ),
+    ("util_mac_percentage", ["Util%", "Util% (MAC)"], "MAC Util (%)"),
     ("name", "Name", "Layer Name"),
 ]
 
@@ -109,6 +113,31 @@ layer_metrics = [
     if layer_metric[0] in OUTPUT_METRICS
 ]
 layer_metrics.sort(key=lambda e: OUTPUT_METRICS.index(e[0]))
+
+
+def extract_metrics_from_row(row_as_dict: dict, metrics: list, key_types: dict) -> dict:
+    """Extract metrics from a CSV row."""
+    ids_to_metrics = {}
+    for key, title_options, _ in metrics:
+        title_found = False
+        for title in (
+            title_options if isinstance(title_options, list) else [title_options]
+        ):
+            try:
+                ids_to_metrics[key] = key_types[key](row_as_dict[title])
+                title_found = True
+                break
+            except KeyError:
+                continue
+            except ValueError as err:
+                if "invalid literal for int() with base 10" in str(err):
+                    ids_to_metrics[key] = key_types[key](float(row_as_dict[title]))
+                    title_found = True
+                    break
+                raise
+        if not title_found:
+            raise KeyError(f"Title not found for metric key: {key}")
+    return ids_to_metrics
 
 
 def parse_layerwise_perf_csv(  # pylint: disable=too-many-locals
@@ -147,17 +176,9 @@ def parse_layerwise_perf_csv(  # pylint: disable=too-many-locals
                     for field in fields(LayerPerfInfo)
                 }
                 # pylint: enable=eval-used
-                ids_to_metrics = {}
-                for key, title, _ in metrics:
-                    try:
-                        ids_to_metrics[key] = key_types[key](row_as_dict[title])
-                    except ValueError as err:
-                        if "invalid literal for int() with base 10" in str(err):
-                            ids_to_metrics[key] = key_types[key](
-                                float(row_as_dict[title])
-                            )
-                        else:
-                            raise
+                ids_to_metrics = extract_metrics_from_row(
+                    row_as_dict, metrics, key_types
+                )
                 layerwise_info.append(LayerPerfInfo(**ids_to_metrics))
             except KeyError as err:
                 raise KeyError("Generated CSV missing expected headers") from err

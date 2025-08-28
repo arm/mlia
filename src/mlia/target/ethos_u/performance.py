@@ -37,6 +37,7 @@ class NPUCycles:
     npu_axi0_rd_data_beat_received: int
     npu_axi0_wr_data_beat_written: int
     npu_axi1_rd_data_beat_received: int
+    npu_axi1_wr_data_beat_written: int | None = None
 
 
 BYTES_PER_KILOBYTE = 1024
@@ -177,6 +178,7 @@ class CorstonePerformanceEstimator(
                 corstone_perf_metrics.npu_axi0_rd_data_beat_received,
                 corstone_perf_metrics.npu_axi0_wr_data_beat_written,
                 corstone_perf_metrics.npu_axi1_rd_data_beat_received,
+                corstone_perf_metrics.npu_axi1_wr_data_beat_written,
             )
 
 

@@ -1,9 +1,10 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, 2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for module backend/manager."""
 from __future__ import annotations
 
 import base64
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Generator
 from unittest.mock import MagicMock
@@ -11,6 +12,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from mlia.backend.corstone.performance import build_corstone_command
+from mlia.backend.corstone.performance import CorstoneRunConfig
 from mlia.backend.corstone.performance import estimate_performance
 from mlia.backend.corstone.performance import GenericInferenceOutputParser
 from mlia.backend.corstone.performance import get_metrics
@@ -25,7 +27,7 @@ def encode_b64(data: str) -> str:
 
 
 def valid_fvp_output() -> list[str]:
-    """Return valid FVP output that could be succesfully parsed."""
+    """Return valid FVP output that could be successfully parsed."""
     json_data = """[
     {
         "profiling_group": "Inference",
@@ -76,17 +78,30 @@ def test_generic_inference_output_parser_failure(wrong_fvp_output: list[str]) ->
         output_parser.get_metrics()
 
 
+@dataclass(frozen=True)
+class BuildCmdCase:
+    """Build Command Case function."""
+
+    backend_path: Path
+    fvp: str
+    target: str
+    mac: int
+    model: Path
+    profile: str
+    expected_command: Command
+
+
 @pytest.mark.parametrize(
-    "backend_path, fvp, target, mac, model, profile, expected_command",
+    "case",
     [
-        [
-            Path("backend_path"),
-            "corstone-300",
-            "ethos-u55",
-            256,
-            Path("model.tflite"),
-            "default",
-            Command(
+        BuildCmdCase(
+            backend_path=Path("backend_path"),
+            fvp="corstone-300",
+            target="ethos-u55",
+            mac=256,
+            model=Path("model.tflite"),
+            profile="default",
+            expected_command=Command(
                 [
                     "backend_path/FVP_Corstone_SSE-300_Ethos-U55",
                     "-a",
@@ -108,26 +123,61 @@ def test_generic_inference_output_parser_failure(wrong_fvp_output: list[str]) ->
                     "--stat",
                 ]
             ),
-        ],
+        ),
+        BuildCmdCase(
+            backend_path=Path("backend_path"),
+            fvp="corstone-320",
+            target="ethos-u85",
+            mac=1024,
+            model=Path("model.tflite"),
+            profile="default",
+            expected_command=Command(
+                [
+                    "backend_path/FVP_Corstone_SSE-320",
+                    "-a",
+                    "apps/backends/applications/"
+                    "inference_runner-sse-320-22.08.02-ethos-U85-Default-noTA/"
+                    "ethos-u-inference_runner.axf",
+                    "--data",
+                    "model.tflite@0x90000000",
+                    "-C",
+                    "mps4_board.subsystem.ethosu.num_macs=1024",
+                    "-C",
+                    "mps4_board.telnetterminal0.start_telnet=0",
+                    "-C",
+                    "mps4_board.uart0.out_file='-'",
+                    "-C",
+                    "mps4_board.uart0.shutdown_on_eot=1",
+                    "-C",
+                    "mps4_board.visualisation.disable-visualisation=1",
+                    "-C",
+                    "vis_hdlcd.disable_visualisation=1",
+                    "--stat",
+                ],
+            ),
+        ),
     ],
 )
 def test_build_corsone_command(
     monkeypatch: pytest.MonkeyPatch,
-    backend_path: Path,
-    fvp: str,
-    target: str,
-    mac: int,
-    model: Path,
-    profile: str,
-    expected_command: Command,
+    case: BuildCmdCase,
 ) -> None:
     """Test function build_corstone_command."""
     monkeypatch.setattr(
         "mlia.backend.corstone.performance.get_mlia_resources", lambda: Path("apps")
     )
 
-    command = build_corstone_command(backend_path, fvp, target, mac, model, profile)
-    assert command == expected_command
+    command = build_corstone_command(
+        CorstoneRunConfig(
+            case.backend_path,
+            case.fvp,
+            case.target,
+            case.mac,
+            case.model,
+            case.profile,
+        )
+    )
+    assert command == case.expected_command
 
 
 def test_get_metrics_wrong_fvp() -> None:
@@ -136,11 +186,13 @@ def test_get_metrics_wrong_fvp() -> None:
         BackendExecutionFailed, match=r"Unable to construct a command line for some_fvp"
     ):
         get_metrics(
-            Path("backend_path"),
-            "some_fvp",
-            "ethos-u55",
-            256,
-            Path("model.tflite"),
+            CorstoneRunConfig(
+                Path("backend_path"),
+                "some_fvp",
+                "ethos-u55",
+                256,
+                Path("model.tflite"),
+            )
         )
 
 

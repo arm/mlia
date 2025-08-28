@@ -1,0 +1,10 @@
+# SPDX-FileCopyrightText: Copyright 2025, Arm Limited and/or its affiliates.
+# SPDX-License-Identifier: Apache-2.0
+
+target = "ethos-u85"
+# Number of MACs [128, 256, 512, 1024, 2048]
+mac = 2048
+# Memory mode: [SRAM Only, Shared SRAM, Dedicated SRAM]
+memory_mode = "Dedicated_Sram"
+# System configuration
+system_config = "Ethos_U85_SYS_DRAM_High"

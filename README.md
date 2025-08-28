@@ -67,9 +67,10 @@ permissive licenses, see [LICENSES](LICENSES/).
 It is recommended to use a virtual environment for MLIA installation, and a
 typical setup requires:
 
-* Ubuntu® 20.04.03 LTS (other OSs may work, the ML Inference Advisor has been
+* Ubuntu® 22.04.5 LTS (other OSs may work, the ML Inference Advisor has been
   tested on this one specifically)
-* Python® >= 3.8.1
+* Python® >= 3.9
+* libpython3.9-dev (part of python3.9-dev)
 
 ## Installation
 
@@ -209,10 +210,10 @@ The following rewrites are supported:
 * conv2d-sparsity - replaces a subgraph with a pruned M:N sparse conv2d layer
 * conv2d-unstructured-sparsity - replaces a subgraph with an unstructured pruned conv2d layer
 * conv2d-clustering  - replaces a subgraph with a clustered conv2d layer
-* depthwise-separable-conv2d - replaces a subgraph with a depthwise seperable conv2d layer
-* depthwise-separable-conv2d-sparsity - replaces a subgraph with a pruned M:N sparse depthwise seperable conv2d layer
-* depthwise-separable-conv2d-unstructured-sparsity - replaces a subgraph with an unstructured pruned depthwise seperable conv2d layer
-* depthwise-separable-conv2d-clustering - replaces a subgraph with a clustered depthwise seperable conv2d layer
+* depthwise-separable-conv2d - replaces a subgraph with a depthwise separable conv2d layer
+* depthwise-separable-conv2d-sparsity - replaces a subgraph with a pruned M:N sparse depthwise separable conv2d layer
+* depthwise-separable-conv2d-unstructured-sparsity - replaces a subgraph with an unstructured pruned depthwise separable conv2d layer
+* depthwise-separable-conv2d-clustering - replaces a subgraph with a clustered depthwise separable conv2d layer
 
 **Note:** A ***TensorFlow Lite model*** is required as input
 to perform a rewrite.
@@ -398,12 +399,17 @@ backends that need to be installed separately, see
 There are a number of predefined profiles for Ethos-U with the following
 attributes:
 
-| Profile name  | MAC | System config               | Memory mode    |
-|---------------|-----|-----------------------------|----------------|
-| ethos-u55-256 | 256 | Ethos_U55_High_End_Embedded | Shared_Sram    |
-| ethos-u55-128 | 128 | Ethos_U55_High_End_Embedded | Shared_Sram    |
-| ethos-u65-512 | 512 | Ethos_U65_High_End          | Dedicated_Sram |
-| ethos-u65-256 | 256 | Ethos_U65_High_End          | Dedicated_Sram |
+| Profile name   | MAC  | System config                | Memory mode    |
+|----------------|------|------------------------------|----------------|
+| ethos-u55-256  | 256  | Ethos_U55_High_End_Embedded  | Shared_Sram    |
+| ethos-u55-128  | 128  | Ethos_U55_High_End_Embedded  | Shared_Sram    |
+| ethos-u65-512  | 512  | Ethos_U65_High_End           | Dedicated_Sram |
+| ethos-u65-256  | 256  | Ethos_U65_High_End           | Dedicated_Sram |
+| ethos-u85-2048 | 2048 | Ethos_U85_SYS_DRAM_High_2048 | Dedicated_Sram |
+| ethos-u85-1024 | 1024 | Ethos_U85_SYS_DRAM_Mid_1024  | Dedicated_Sram |
+| ethos-u85-512  | 512  | Ethos_U85_SYS_DRAM_Mid_512   | Dedicated_Sram |
+| ethos-u85-256  | 256  | Ethos_U85_SYS_DRAM_Low       | Dedicated_Sram |
+| ethos-u85-128  | 128  | Ethos_U85_SYS_DRAM_Low       | Dedicated_Sram |
 
 Example:
 
@@ -415,6 +421,7 @@ Ethos-U is supported by these backends:
 
 * [Corstone-300](#corstone-300)
 * [Corstone-310](#corstone-310)
+* [Corstone-320](#corstone-320)
 * [Vela](#vela)
 
 As described in section [Custom target profiles](#custom-target-profiles), you can customize
@@ -501,6 +508,7 @@ the following table shows some compatibility information:
 | Arm NN TensorFlow  Lite Delegate  | x86_64 and AArch64     | Windows 10     | Python>=3.8      |
 | Corstone-300                      | x86_64 and  AArch64    | Not compatible | Python>=3.8      |
 | Corstone-310                      | x86_64 and  AArch64    | Not compatible | Python>=3.8      |
+| Corstone-320                      | x86_64 and  AArch64    | Not compatible | Python>=3.8      |
 | TOSA checker                      | x86_64 (manylinux2014) | Not compatible | 3.7<=Python<=3.9 |
 | Vela                              | x86_64 and  AArch64    | Windows 10     | Python~=3.7      |
 
@@ -514,8 +522,6 @@ For version 23.05 the classic delegate is used.
 For more information see:
 
 * [Arm NN TensorFlow Lite Delegate documentation](https://arm-software.github.io/armnn/latest/md_delegate__delegate_quick_start_guide.html)
-
-### Corstone-300
 
 ### Corstone-300
 
@@ -543,6 +549,16 @@ or [Arm® Ethos™-U65 NPU](https://www.arm.com/products/silicon-ip-cpu/ethos/et
 * For access to AVH for Corstone-310 please refer to:
   <https://developer.arm.com/Processors/Corstone-310>
 * Please use the examples of MLIA using Corstone-310 here to get started:
+  <https://github.com/ARM-software/open-iot-sdk>
+
+### Corstone-320
+
+Corstone-320 is a backend that provides performance metrics for systems based
+on [Arm® Cortex™-M85 processor](https://www.arm.com/products/silicon-ip-cpu/cortex-m/cortex-m85) and [Arm® Ethos™-U85 NPU](https://www.arm.com/products/silicon-ip-cpu/ethos/ethos-u85).
+
+* For access to AVH for Corstone-310 please refer to:
+  <https://developer.arm.com/Processors/Corstone-320>
+* Please use the examples of MLIA using Corstone-320 here to get started:
   <https://github.com/ARM-software/open-iot-sdk>
 
 ### TOSA Checker
