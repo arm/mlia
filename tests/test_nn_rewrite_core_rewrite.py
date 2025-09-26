@@ -21,6 +21,7 @@ from tensorflow_model_optimization.python.core.sparsity.keras.pruning_wrapper im
     PruneLowMagnitude,
 )
 
+from mlia.core.errors import ConfigurationError
 from mlia.nn.rewrite.core.rewrite import ClusteringRewrite
 from mlia.nn.rewrite.core.rewrite import GenericRewrite
 from mlia.nn.rewrite.core.rewrite import Rewrite
@@ -52,11 +53,18 @@ def test_rewrite() -> None:
     def bad_rewrite_func() -> Any:
         raise NotImplementedError()
 
+    def failing_rewrite_func(*_: Any) -> Any:
+        raise RecursionError()
+
     rewrite = GenericRewrite(
         "BAD_REWRITE", rewrite_fn=cast(RewriteCallable, bad_rewrite_func)
     )
     with pytest.raises(KeyError):
         rewrite((1, 2), (1, 2))
+
+    rewrite = GenericRewrite("BAD_REWRITE", rewrite_fn=failing_rewrite_func)
+    with pytest.raises(RuntimeError, match="Rewrite 'BAD_REWRITE' failed."):
+        rewrite(None, None)
 
 
 @pytest.mark.slow
@@ -313,6 +321,22 @@ def test_rewrite_unstructured_sparsity(
     assert rewrite.check_optimization(model)
 
 
+def test_empty_model() -> None:
+    """Test if check_optimization returns False for an empty model"""
+    rewrite_name = "conv2d-unstructured-sparsity"
+    rewrite_instance = (
+        fc_sparsity_unstructured_rewrite
+        if "fully-connected" in rewrite_name
+        else conv2d_sparsity_unstructured_rewrite
+    )
+    rewrite = UnstructuredSparsityRewrite(
+        rewrite_name, cast(RewriteCallable, rewrite_instance)
+    )
+    model = keras.Model()
+    assert not rewrite.check_optimization(model)
+
+
+@pytest.mark.slow
 @pytest.mark.parametrize(
     "rewrite_type, expected_layers, quant",
     [
@@ -434,6 +458,10 @@ def test_rewriting_optimizer(  # pylint: disable=too-many-locals
     cfg = test_obj.optimization_config()
     assert isinstance(cfg, str)
     assert cfg
+
+    test_obj.optimizer_configuration.layers_to_optimize = None
+    with pytest.raises(ConfigurationError):
+        test_obj.apply_optimization()
 
 
 @pytest.mark.parametrize(

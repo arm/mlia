@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for module select."""
 from __future__ import annotations
@@ -19,6 +19,7 @@ from mlia.nn.rewrite.core.rewrite import TrainingParameters
 from mlia.nn.select import get_optimizer
 from mlia.nn.select import MultiStageOptimizer
 from mlia.nn.select import OptimizationSettings
+from mlia.nn.tensorflow.config import TFLiteModel
 from mlia.nn.tensorflow.optimizations.clustering import Clusterer
 from mlia.nn.tensorflow.optimizations.clustering import ClusteringConfiguration
 from mlia.nn.tensorflow.optimizations.pruning import Pruner
@@ -141,6 +142,27 @@ from mlia.nn.tensorflow.optimizations.pruning import PruningConfiguration
             "pruning: 0.5 - clustering: 32",
         ),
         (
+            [
+                OptimizationSettings(
+                    optimization_type="rewrite",
+                    optimization_target={"bad_type": 12},  # type: ignore
+                    layers_to_optimize=None,
+                ),
+                OptimizationSettings(
+                    optimization_type="clustering",
+                    optimization_target=32,
+                    layers_to_optimize=None,
+                ),
+            ],
+            pytest.raises(
+                ConfigurationError,
+                match="Optimization target should be a string indicating a"
+                "choice from rewrite library. ",
+            ),
+            MultiStageOptimizer,
+            "pruning: 0.5 - clustering: 32",
+        ),
+        (
             OptimizationSettings(
                 optimization_type="rewrite",
                 optimization_target="fully-connected",  # type: ignore
@@ -181,6 +203,25 @@ def test_get_optimizer(
         )
         assert isinstance(optimizer, expected_type)
         assert optimizer.optimization_config() == expected_config
+        assert optimizer.get_model() is not None
+
+
+def test_get_optimizer_tflite(
+    test_tflite_model: Path,
+) -> None:
+    """Test get_optimizer for a TFLiteModel input model"""
+    config = OptimizationSettings(
+        optimization_type="clustering",
+        optimization_target=32,
+        layers_to_optimize=None,
+    )
+    tflite_model = TFLiteModel(test_tflite_model)
+    optimizer = get_optimizer(
+        tflite_model, config, {"train_params": None, "rewrite_specific_params": None}
+    )
+    assert isinstance(optimizer, Clusterer)
+    assert optimizer.optimization_config() == "clustering: 32"
+    assert optimizer.get_model() is not None
 
 
 # pylint: disable=line-too-long
@@ -205,6 +246,10 @@ def test_get_optimizer(
         ],
         [
             {"train_params": None, "rewrite_specific_params": None},
+            "fully-connected",
+        ],
+        [
+            {"train_params": {"batch_size": 16}, "rewrite_specific_params": None},
             "fully-connected",
         ],
     ],
@@ -319,6 +364,11 @@ def test_optimization_settings_create_from(
                 Exception, match="Optimization type super_optimization is unknown."
             ),
         ],
+        [
+            OptimizationSettings("rewrite", 32, None),
+            OptimizationSettings("rewrite", 32, None),
+            does_not_raise(),
+        ],
     ],
 )
 def test_optimization_settings_next_target(
@@ -329,3 +379,27 @@ def test_optimization_settings_next_target(
     """Test getting next optimization target."""
     with expected_error:
         assert settings.next_target() == expected_next_target
+
+
+def test_apply_optimization(
+    test_keras_model: Path,
+) -> None:
+    """Test apply_optimization in MultiStageOptimizer"""
+    config = [
+        OptimizationSettings(
+            optimization_type="pruning",
+            optimization_target=0.5,
+            layers_to_optimize=None,
+        ),
+        OptimizationSettings(
+            optimization_type="clustering",
+            optimization_target=32,
+            layers_to_optimize=None,
+        ),
+    ]
+    model = keras.models.load_model(str(test_keras_model))
+    optimizer = get_optimizer(
+        model, config, {"train_params": None, "rewrite_specific_params": None}
+    )
+    assert isinstance(optimizer, MultiStageOptimizer)
+    optimizer.apply_optimization()

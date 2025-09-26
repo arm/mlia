@@ -48,6 +48,7 @@ def test_wrong_install_type() -> None:
         None,
     )
 
+    assert installation.already_installed is False
     # Create a proper InstallFromPath object instead of a string
     install_from_path = InstallFromPath(Path("some_path"))
     assert not installation.supports(install_from_path)
@@ -141,6 +142,9 @@ def test_backend_installation_download_and_install(
     installation.install(DownloadAndInstall())
 
     backend_repo.add_backend.assert_called_with("sample_backend", ANY, None)
+    installation.path_checker = lambda _: None
+    with pytest.raises(ValueError, match="Downloaded artifact has invalid structure."):
+        installation.install(DownloadAndInstall())
 
 
 def test_backend_installation_unable_to_download() -> None:
