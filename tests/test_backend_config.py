@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, 2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for the backend config module."""
 from mlia.backend.config import BackendConfiguration
@@ -15,6 +15,7 @@ def test_system() -> None:
     assert not UNSUPPORTED_SYSTEM.is_compatible()
     assert UNSUPPORTED_SYSTEM != System.CURRENT
     assert System.LINUX_AMD64 != System.LINUX_AARCH64
+    assert System.CURRENT != {"different": "type"}  # Type mismatch
 
 
 def test_backend_config() -> None:
