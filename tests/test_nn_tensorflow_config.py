@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for config module."""
 from contextlib import ExitStack as does_not_raise
@@ -48,6 +48,13 @@ def test_convert_tf_to_tflite(tmp_path: Path, test_tf_model: Path) -> None:
 
     assert tflite_model_path.is_file()
     assert tflite_model_path.stat().st_size > 0
+
+
+def test_convert_keras_invalid_path() -> None:
+    """Check if RuntimeError is raised when a Keras model path is invalid."""
+    keras_model = KerasModel("no_model.h5")
+    with pytest.raises(RuntimeError, match="Unable to load model content"):
+        _ = keras_model.get_keras_model()
 
 
 def test_invalid_tflite_model(tmp_path: Path) -> None:
