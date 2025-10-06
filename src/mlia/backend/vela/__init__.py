@@ -1,10 +1,11 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, 2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Vela backend module."""
 from mlia.backend.config import BackendConfiguration
 from mlia.backend.config import BackendType
 from mlia.backend.config import System
 from mlia.backend.registry import registry
+from mlia.backend.vela.install import get_vela_installation
 from mlia.core.common import AdviceCategory
 
 registry.register(
@@ -21,8 +22,8 @@ registry.register(
             System.WINDOWS_AMD64,
             System.WINDOWS_AARCH64,
         ],
-        backend_type=BackendType.BUILTIN,
-        installation=None,
+        backend_type=BackendType.WHEEL,
+        installation=get_vela_installation(),
     ),
     pretty_name="Vela",
 )

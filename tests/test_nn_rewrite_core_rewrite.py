@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2023-2024, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2023-2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for module mlia.nn.rewrite.core.rewrite."""
 from __future__ import annotations
@@ -59,6 +59,7 @@ def test_rewrite() -> None:
         rewrite((1, 2), (1, 2))
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize(
     "rewrite_name, callbacks_length, instance",
     [
@@ -74,15 +75,16 @@ def test_rewrite() -> None:
     ],
 )
 def test_rewrite_selection(
-    rewrite_name: str, callbacks_length: int, instance: Rewrite
+    rewrite_name: str, callbacks_length: int, instance: type[Rewrite]
 ) -> None:
     """Test that the correct rewrite class is instantiated."""
     rewrite = RewritingOptimizer.registry.items[rewrite_name]
     assert rewrite.name == rewrite_name
-    assert isinstance(rewrite, instance)  # type: ignore
+    assert isinstance(rewrite, instance)
     assert len(rewrite.training_callbacks()) == callbacks_length
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize(
     "rewrite_name, expected_error",
     [

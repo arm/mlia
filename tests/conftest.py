@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Pytest conf module."""
 import shutil
@@ -13,6 +13,7 @@ import pytest
 import tensorflow as tf
 from keras.api._v2 import keras  # Temporary workaround for now: MLIA-1107
 
+from mlia.backend.errors import BackendUnavailableError
 from mlia.backend.vela.compiler import compile_model
 from mlia.core.context import ExecutionContext
 from mlia.nn.rewrite.core.utils.numpy_tfrecord import NumpyTFWriter
@@ -183,9 +184,14 @@ def fixture_test_models_path(
     tflite_model_path = tmp_path / TEST_MODEL_TFLITE_INT8_FILE
     convert_to_tflite(keras_model, quantized=True, output_path=tflite_model_path)
 
-    # Vela-optimized TensorFlow Lite model (int8)
-    target_config = EthosUConfiguration.load_profile("ethos-u55-256")
-    compile_model(tflite_model_path, target_config.compiler_options)
+    # Vela-optimized TensorFlow Lite model (int8) - only if vela is available
+    try:
+        target_config = EthosUConfiguration.load_profile("ethos-u55-256")
+        if target_config.compiler_options is not None:
+            compile_model(tflite_model_path, target_config.compiler_options)
+    except (ModuleNotFoundError, BackendUnavailableError):
+        # Skip vela compilation if ethosu.vela is not available
+        pass
 
     tf.saved_model.save(keras_model, str(tmp_path / TEST_MODEL_TF_SAVED_MODEL_FILE))
 

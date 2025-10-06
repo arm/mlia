@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Performance estimation."""
 from __future__ import annotations
@@ -13,6 +13,7 @@ import mlia.backend.vela.compiler as vela_comp
 import mlia.backend.vela.performance as vela_perf
 from mlia.backend.corstone import is_corstone_backend
 from mlia.backend.corstone.performance import estimate_performance
+from mlia.backend.errors import BackendUnavailableError
 from mlia.backend.vela.performance import LayerwisePerfInfo
 from mlia.core.context import Context
 from mlia.core.performance import PerformanceEstimator
@@ -110,6 +111,9 @@ class VelaPerformanceEstimator(
                 else model
             )
 
+            if self.target.compiler_options is None:
+                raise BackendUnavailableError("Backend vela is not available", "vela")
+
             vela_perf_metrics = vela_perf.estimate_performance(
                 model_path, self.target.compiler_options
             )
@@ -151,6 +155,9 @@ class CorstonePerformanceEstimator(
                 if isinstance(model, ModelConfiguration)
                 else model
             )
+
+            if self.target_config.compiler_options is None:
+                raise BackendUnavailableError("Backend vela is not available", "vela")
 
             optimized_model_path = vela_comp.compile_model(
                 model_path, self.target_config.compiler_options

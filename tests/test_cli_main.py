@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for main module."""
 from __future__ import annotations
@@ -396,6 +396,18 @@ def test_commands_execution_backend_main(
                 "Error: Backend tosa-checker is not available.",
                 "Please use next command to install it: "
                 'mlia-backend install "tosa-checker"',
+            ],
+        ],
+        [
+            False,
+            MagicMock(
+                side_effect=BackendUnavailableError(
+                    "Backend vela is not available", "vela"
+                )
+            ),
+            [
+                "Error: Backend vela is not available.",
+                'Please use next command to install it: mlia-backend install "vela"',
             ],
         ],
         [

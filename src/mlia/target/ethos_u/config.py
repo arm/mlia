@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Ethos-U configuration."""
 from __future__ import annotations
@@ -7,12 +7,39 @@ import logging
 from typing import Any
 
 from mlia.backend.corstone import is_corstone_backend
+from mlia.backend.errors import BackendUnavailableError
 from mlia.backend.manager import get_available_backends
-from mlia.backend.vela.compiler import resolve_compiler_config
-from mlia.backend.vela.compiler import VelaCompilerOptions
-from mlia.backend.vela.compiler import VelaInitData
 from mlia.target.config import TargetProfile
 from mlia.utils.filesystem import get_vela_config
+
+# Dynamic imports with fallback for when Vela is not available
+try:
+    from mlia.backend.vela.compiler import resolve_compiler_config
+    from mlia.backend.vela.compiler import VelaCompilerOptions
+    from mlia.backend.vela.compiler import VelaInitData  # pylint: disable=unused-import
+
+    _VELA_AVAILABLE = True
+except ImportError:
+    # Type stubs for when Vela is not available
+    from typing import TYPE_CHECKING
+
+    if TYPE_CHECKING:
+        from mlia.backend.vela.compiler import resolve_compiler_config
+        from mlia.backend.vela.compiler import VelaCompilerOptions
+        from mlia.backend.vela.compiler import VelaInitData
+    else:
+
+        def __getattr__(name: str) -> Any:
+            """Raise BackendUnavailableError for Vela-related attributes."""
+            if name in {
+                "VelaCompilerOptions",
+                "VelaInitData",
+                "resolve_compiler_config",
+            }:
+                raise BackendUnavailableError("Backend vela is not available", "vela")
+            raise AttributeError(name)
+
+    _VELA_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
@@ -33,12 +60,23 @@ class EthosUConfiguration(TargetProfile):
         logger.debug("DEBUG Vela config file: %s", config_in)
 
         self.mac = mac
-        self.compiler_options = VelaCompilerOptions(
-            system_config=kwargs["system_config"],
-            memory_mode=kwargs["memory_mode"],
-            config_file=str(config_in),
-            accelerator_config=f"{self.target}-{mac}",  # type: ignore
-        )
+
+        if not _VELA_AVAILABLE:
+            # Store parameters for later use when Vela becomes available
+            self._vela_options_kwargs = {
+                "system_config": kwargs["system_config"],
+                "memory_mode": kwargs["memory_mode"],
+                "config_file": str(config_in),
+                "accelerator_config": f"{self.target}-{mac}",
+            }
+            self.compiler_options: VelaCompilerOptions | None = None
+        else:
+            self.compiler_options = VelaCompilerOptions(
+                system_config=kwargs["system_config"],
+                memory_mode=kwargs["memory_mode"],
+                config_file=str(config_in),
+                accelerator_config=f"{self.target}-{mac}",  # type: ignore
+            )
 
     def verify(self) -> None:
         """Check the parameters."""
@@ -61,14 +99,19 @@ class EthosUConfiguration(TargetProfile):
     @property
     def resolved_compiler_config(self) -> VelaInitData:
         """Resolve compiler configuration."""
+        if not _VELA_AVAILABLE:
+            raise BackendUnavailableError("Backend vela is not available", "vela")
+        if self.compiler_options is None:
+            raise BackendUnavailableError("Backend vela is not available", "vela")
         return resolve_compiler_config(self.compiler_options)
 
     def __str__(self) -> str:
         """Return string representation."""
+        compiler_opts = getattr(self, "compiler_options", "N/A (Vela not available)")
         return (
             f"Ethos-U target={self.target} "
             f"mac={self.mac} "
-            f"compiler_options={self.compiler_options}"
+            f"compiler_options={compiler_opts}"
         )
 
     def __repr__(self) -> str:
@@ -85,6 +128,13 @@ def get_default_ethos_u_backends(
     default_backends = []
     corstone_added = False
     for backend in supported_backends_priority_order:
+        # Include vela as a conceptual default even if not installed
+        # (CLI will warn user if it's missing)
+        if backend == "vela":
+            default_backends.append(backend)
+            continue
+
+        # For other backends, only include if available
         if backend not in available_backends:
             continue
         if is_corstone_backend(backend):

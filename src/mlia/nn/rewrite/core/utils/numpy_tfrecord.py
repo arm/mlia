@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2023, 2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Numpy TFRecord utils."""
 from __future__ import annotations
@@ -104,7 +104,9 @@ class NumpyTFWriter:
 def sample_tfrec(input_file: str, k: int, output_file: str) -> None:
     """Count, read and write TFRecord input and output data."""
     total = numpytf_count(input_file)
-    next_sample = sorted(random.sample(range(total), k=k), reverse=True)
+    # We are not using random.sample for managing passwords or cryptographic keys,
+    # so skip the bandit check
+    next_sample = sorted(random.sample(range(total), k=k), reverse=True)  # nosec B311
 
     reader = numpytf_read(input_file)
     with NumpyTFWriter(output_file) as writer:

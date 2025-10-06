@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """CLI main entry point."""
 from __future__ import annotations
@@ -224,8 +224,8 @@ def run_command(args: argparse.Namespace) -> int:
         logger.error(err)
     except BackendUnavailableError as err:
         logger.error("Error: Backend %s is not available.", err.backend)
-        # apart from tosa-checker all other backends are currently optional
-        if err.backend in ("tosa-checker",):
+        # Show installation instructions for optional backends
+        if err.backend in ("tosa-checker", "vela"):
             logger.error(
                 'Please use next command to install it: mlia-backend install "%s"',
                 err.backend,

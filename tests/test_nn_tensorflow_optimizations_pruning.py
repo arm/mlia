@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Test for module optimizations/pruning."""
 from __future__ import annotations
@@ -55,6 +55,7 @@ def _get_tflite_metrics(
     return TFLiteMetrics(str(temp_file))
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize("target_sparsity", (0.5, 0.9))
 @pytest.mark.parametrize("mock_data", (False, True))
 @pytest.mark.parametrize("layers_to_prune", (["conv1"], ["conv1", "conv2"], None))

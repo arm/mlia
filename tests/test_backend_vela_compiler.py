@@ -1,24 +1,35 @@
-# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for module vela/compiler."""
+from __future__ import annotations
+
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
-from ethosu.vela.vela import main
 
-from mlia.backend.vela.compiler import compile_model
-from mlia.backend.vela.compiler import parse_summary_csv_file
-from mlia.backend.vela.compiler import parse_vela_initialisation_file
-from mlia.backend.vela.compiler import resolve_compiler_config
-from mlia.backend.vela.compiler import VelaCompiler
-from mlia.backend.vela.compiler import VelaCompilerOptions
-from mlia.backend.vela.compiler import VelaInitData
-from mlia.backend.vela.compiler import VelaInitMemoryData
-from mlia.backend.vela.compiler import VelaSummary
-from mlia.target.ethos_u.config import EthosUConfiguration
-from mlia.utils.filesystem import recreate_directory
+try:
+    import ethosu.vela  # noqa: F401
+except ImportError:
+    pytest.skip(
+        "All tests require ethosu.vela package to be installed", allow_module_level=True
+    )
+else:
+    # Only reference ethosu.vela if it was successfully imported
+    _ = ethosu.vela
+
+from mlia.backend.vela.compiler import compile_model  # noqa: E402
+from mlia.backend.vela.compiler import parse_summary_csv_file  # noqa: E402
+from mlia.backend.vela.compiler import parse_vela_initialisation_file  # noqa: E402
+from mlia.backend.vela.compiler import resolve_compiler_config  # noqa: E402
+from mlia.backend.vela.compiler import VelaCompiler  # noqa: E402
+from mlia.backend.vela.compiler import VelaCompilerOptions  # noqa: E402
+from mlia.backend.vela.compiler import VelaInitData  # noqa: E402
+from mlia.backend.vela.compiler import VelaInitMemoryData  # noqa: E402
+from mlia.backend.vela.compiler import VelaSummary  # noqa: E402
+from mlia.target.ethos_u.config import EthosUConfiguration  # noqa: E402
+from mlia.utils.filesystem import recreate_directory  # noqa: E402
 
 
 def test_default_vela_compiler() -> None:
@@ -185,9 +196,11 @@ def test_vela_compiler_with_parameters_inherit_memory_mode(
 
 def test_compile_model(test_tflite_model: Path) -> None:
     """Test model optimization."""
-    compiler = VelaCompiler(
-        EthosUConfiguration.load_profile("ethos-u55-256").compiler_options
-    )
+    target_config = EthosUConfiguration.load_profile("ethos-u55-256")
+    assert (
+        target_config.compiler_options is not None
+    ), "Vela should be available in tests"
+    compiler = VelaCompiler(target_config.compiler_options)
 
     expected_model_path = Path(
         compiler.output_dir.as_posix()
@@ -204,9 +217,11 @@ def test_compile_model(test_tflite_model: Path) -> None:
 
 def test_csv_file_created(test_tflite_model: Path) -> None:
     """Test that a csv file is created by the vela backend"""
-    compiler = VelaCompiler(
-        EthosUConfiguration.load_profile("ethos-u55-256").compiler_options
-    )
+    target_config = EthosUConfiguration.load_profile("ethos-u55-256")
+    assert (
+        target_config.compiler_options is not None
+    ), "Vela should be available in tests"
+    compiler = VelaCompiler(target_config.compiler_options)
     csv_file_name = test_tflite_model.stem + "_per-layer.csv"
     compiler.compile_model(test_tflite_model)
     assert (compiler.output_dir / csv_file_name).is_file()
@@ -215,9 +230,11 @@ def test_csv_file_created(test_tflite_model: Path) -> None:
 # Test to see if the new flag is passed to Vela
 def test_verbose_flag_passed() -> None:
     """Test that the verbose_performance flag is passed to vela backend"""
-    compiler = VelaCompiler(
-        EthosUConfiguration.load_profile("ethos-u55-256").compiler_options
-    )
+    target_config = EthosUConfiguration.load_profile("ethos-u55-256")
+    assert (
+        target_config.compiler_options is not None
+    ), "Vela should be available in tests"
+    compiler = VelaCompiler(target_config.compiler_options)
     assert compiler.verbose_performance
 
 
@@ -225,9 +242,11 @@ def test_compile_model_fail_sram_exceeded(
     test_tflite_model: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Test model optimization."""
-    compiler = VelaCompiler(
-        EthosUConfiguration.load_profile("ethos-u55-256").compiler_options
-    )
+    target_config = EthosUConfiguration.load_profile("ethos-u55-256")
+    assert (
+        target_config.compiler_options is not None
+    ), "Vela should be available in tests"
+    compiler = VelaCompiler(target_config.compiler_options)
 
     def fake_compiler(*_: Any) -> None:
         print("Warning: SRAM target for arena memory area exceeded.")
@@ -243,6 +262,9 @@ def test_optimize_model(tmp_path: Path, test_tflite_model: Path) -> None:
     """Test model optimization and saving into file."""
     tmp_file = tmp_path / "test_model_int8_vela.tflite"
     target_config = EthosUConfiguration.load_profile("ethos-u55-256")
+    assert (
+        target_config.compiler_options is not None
+    ), "Vela should be available in tests"
     target_config.compiler_options.output_dir = tmp_path
     compile_model(test_tflite_model, target_config.compiler_options)
 
@@ -631,6 +653,7 @@ def test_backend_compiler_parsing_vela_ini_file_missing_header(
         )
 
 
+@pytest.mark.skip(reason="Requires ethosu.vela package to be installed")
 def test_backend_compiler_model_already_compiled(
     test_tflite_model: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -638,15 +661,22 @@ def test_backend_compiler_model_already_compiled(
     the correct flag is passed and that main is called only once.
     """
     target_config = EthosUConfiguration.load_profile("ethos-u55-256")
+    assert (
+        target_config.compiler_options is not None
+    ), "Vela should be available in tests"
     recreate_directory(Path(target_config.compiler_options.output_dir))
 
-    main_mock = MagicMock(side_effect=main)
+    def simple_main(*_args: Any) -> None:
+        pass
+
+    main_mock = MagicMock(side_effect=simple_main)
     monkeypatch.setattr("mlia.backend.vela.compiler.main", main_mock)
     compile_model(test_tflite_model, target_config.compiler_options)
 
     def vela_compiler_compile_model_mock(
         model_path: Path, *_: Any
     ) -> tuple[None, Path]:
+        assert target_config.compiler_options is not None
         return None, Path(
             Path(target_config.compiler_options.output_dir).as_posix()
             + "/"

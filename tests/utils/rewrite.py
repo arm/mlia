@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2023, 2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Common test utils for the rewrite tests."""
 from __future__ import annotations
@@ -42,4 +42,5 @@ class MockTrainingParameters(
 
     def __init__(self, *args: Any, steps: int = 32, **kwargs: Any) -> None:
         """Initialize TrainingParameters with different defaults."""
-        super().__init__(*args, steps=steps, **kwargs)  # type: ignore
+        kwargs.setdefault("steps", steps)
+        super().__init__(*args, **kwargs)

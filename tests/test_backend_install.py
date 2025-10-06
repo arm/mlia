@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for common management functionality."""
 from __future__ import annotations
@@ -6,6 +6,7 @@ from __future__ import annotations
 import tarfile
 import tempfile
 from pathlib import Path
+from typing import Any
 from typing import Callable
 from unittest.mock import ANY
 from unittest.mock import MagicMock
@@ -18,8 +19,11 @@ from mlia.backend.install import CompoundPathChecker
 from mlia.backend.install import DownloadAndInstall
 from mlia.backend.install import InstallFromPath
 from mlia.backend.install import PackagePathChecker
+from mlia.backend.install import PyPackageBackendInstallation
 from mlia.backend.install import StaticPathChecker
 from mlia.backend.repo import BackendRepository
+from mlia.backend.tosa_checker.install import get_tosa_backend_installation
+from mlia.backend.vela.install import get_vela_installation
 from mlia.utils.download import DownloadConfig
 
 
@@ -44,10 +48,12 @@ def test_wrong_install_type() -> None:
         None,
     )
 
-    assert not installation.supports("some_path")  # type: ignore
+    # Create a proper InstallFromPath object instead of a string
+    install_from_path = InstallFromPath(Path("some_path"))
+    assert not installation.supports(install_from_path)
 
     with pytest.raises(Exception):
-        installation.install("some_path")  # type: ignore
+        installation.install(install_from_path)
 
 
 @pytest.mark.parametrize(
@@ -286,3 +292,63 @@ def test_filter_tar_members(
                 BackendInstallation._filter_tar_members(orig_members, tmp_path)
             )
             assert len(filtered_members) == num_members_out
+
+
+@pytest.mark.parametrize(
+    ("name", "backend", "installation_name", "installation", "expected_description"),
+    (
+        (
+            "tosa-checker",
+            "tosa-checker",
+            "tosa-checker",
+            get_tosa_backend_installation,
+            "Tool to check if a ML model is compatible with the TOSA specification",
+        ),
+        (
+            "vela",
+            "ethos-u-vela",
+            "ethos-u-vela",
+            get_vela_installation,
+            "Neural network model compiler for Arm Ethos-U NPUs",
+        ),
+    ),
+)
+def test_get_backend_installation(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    name: str,
+    backend: str,
+    installation_name: str,
+    installation: Any,
+    expected_description: str,
+) -> None:
+    """Test the backend installation functions."""
+    mock_package_manager = MagicMock()
+    monkeypatch.setattr(
+        "mlia.backend.install.get_package_manager",
+        lambda: mock_package_manager,
+    )
+
+    installation_func = installation()
+    assert installation_func.name == name
+    assert installation_func.description == expected_description
+
+    assert isinstance(installation_func, PyPackageBackendInstallation)
+    assert installation_func.could_be_installed
+    assert installation_func.supports(DownloadAndInstall())
+    assert not installation_func.supports(InstallFromPath(tmp_path))
+
+    mock_package_manager.packages_installed.return_value = True
+    assert installation_func.already_installed
+    mock_package_manager.packages_installed.assert_called_once_with([backend])
+
+    with pytest.raises(Exception, match=r"Unsupported installation type.*"):
+        installation_func.install(InstallFromPath(tmp_path))
+
+    mock_package_manager.install.assert_not_called()
+
+    installation_func.install(DownloadAndInstall())
+    mock_package_manager.install.assert_called_once_with([installation_name])
+
+    installation_func.uninstall()
+    mock_package_manager.uninstall.assert_called_once_with([backend])

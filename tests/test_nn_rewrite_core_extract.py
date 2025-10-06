@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2023, 2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for module mlia.nn.rewrite.core.extract."""
 from __future__ import annotations
@@ -13,6 +13,7 @@ from mlia.nn.rewrite.core.extract import ExtractPaths
 from mlia.nn.rewrite.core.graph_edit.record import DEQUANT_SUFFIX
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize("dir_path", ("/dev/null", Path("/dev/null")))
 @pytest.mark.parametrize("model_is_quantized", (False, True))
 @pytest.mark.parametrize(

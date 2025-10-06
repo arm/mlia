@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 # Pre-commit checks
 #
@@ -90,7 +90,7 @@ repos:
       exclude: setup.cfg
 
 - repo: https://github.com/PyCQA/bandit
-  rev: 1.7.5
+  rev: 1.8.6
   hooks:
     - id: bandit
       args: ["--skip", "B101"]

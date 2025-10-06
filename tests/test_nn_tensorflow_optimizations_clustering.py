@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Test for module optimizations/clustering."""
 from __future__ import annotations
@@ -87,6 +87,7 @@ def _test_sparsity(
 # Additionally, flaky is (as of 2023) untyped and thus we need to silence the
 # warning from mypy.
 @flaky(max_runs=4, min_passes=1)  # type: ignore
+@pytest.mark.slow
 @pytest.mark.parametrize("target_num_clusters", (32, 4))
 @pytest.mark.parametrize("sparsity_aware", (False, True))
 @pytest.mark.parametrize("layers_to_cluster", (["conv1"], ["conv1", "conv2"], None))

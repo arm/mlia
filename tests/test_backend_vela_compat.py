@@ -1,11 +1,16 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, 2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for module vela/compat."""
+from __future__ import annotations
+
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
 
+from mlia.backend.errors import BackendUnavailableError
 from mlia.backend.vela.compat import generate_supported_operators_report
+from mlia.backend.vela.compat import get_vela
 from mlia.backend.vela.compat import NpuSupported
 from mlia.backend.vela.compat import Operator
 from mlia.backend.vela.compat import Operators
@@ -13,6 +18,16 @@ from mlia.backend.vela.compat import supported_operators
 from mlia.target.ethos_u.config import EthosUConfiguration
 from mlia.utils.filesystem import working_directory
 from tests.conftest import TEST_MODEL_TFLITE_INT8_FILE
+
+
+def replace_get_vela_with_mock(
+    monkeypatch: pytest.MonkeyPatch, mock: MagicMock | None
+) -> None:
+    """Replace Vela with mock."""
+    monkeypatch.setattr(
+        "mlia.backend.vela.compat.get_vela",
+        MagicMock(return_value=mock),
+    )
 
 
 @pytest.mark.parametrize(
@@ -58,20 +73,68 @@ def test_operators(test_models_path: Path, model: str, expected_ops: Operators) 
     """Test operators function."""
     target_config = EthosUConfiguration.load_profile("ethos-u55-256")
 
-    operators = supported_operators(
-        test_models_path / model, target_config.compiler_options
-    )
-    for expected, actual in zip(expected_ops.ops, operators.ops):
-        # do not compare names as they could be different on each model generation
-        assert expected.op_type == actual.op_type
-        assert expected.run_on_npu == actual.run_on_npu
+    try:
+        operators = supported_operators(
+            test_models_path / model, target_config.compiler_options
+        )
+        for expected, actual in zip(expected_ops.ops, operators.ops):
+            # do not compare names as they could be different on each model generation
+            assert expected.op_type == actual.op_type
+            assert expected.run_on_npu == actual.run_on_npu
+    except BackendUnavailableError:
+        # If Vela is not available, the test should pass (expected behavior)
+        pytest.skip("Vela backend not available, skipping operators test")
 
 
 def test_generate_supported_operators_report(tmp_path: Path) -> None:
     """Test generating supported operators report."""
-    with working_directory(tmp_path):
-        generate_supported_operators_report()
+    try:
+        with working_directory(tmp_path):
+            generate_supported_operators_report()
 
-        md_file = tmp_path / "SUPPORTED_OPS.md"
-        assert md_file.is_file()
-        assert md_file.stat().st_size > 0
+            md_file = tmp_path / "SUPPORTED_OPS.md"
+            assert md_file.is_file()
+            assert md_file.stat().st_size > 0
+    except BackendUnavailableError:
+        # If Vela is not available, the test should pass (expected behavior)
+        pytest.skip(
+            "Vela backend not available, skipping supported operators report test"
+        )
+
+
+def test_compatibility_check_should_fail_if_checker_not_available(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path | Path
+) -> None:
+    """Test that compatibility check should fail if Vela is not available."""
+    replace_get_vela_with_mock(monkeypatch, None)
+
+    with working_directory(tmp_path):
+        with pytest.raises(
+            BackendUnavailableError, match="Backend vela is not available"
+        ):
+            generate_supported_operators_report()
+
+
+def test_compatibility_check_should_fail_if_checker_returns_false(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path | Path
+) -> None:
+    """Test that compatibility check should fail if Vela checker returns False."""
+    # Mock get_vela to return False directly
+    monkeypatch.setattr(
+        "mlia.backend.vela.compat.get_vela",
+        MagicMock(return_value=False),
+    )
+
+    with working_directory(tmp_path):
+        with pytest.raises(
+            BackendUnavailableError, match="Backend vela is not available"
+        ):
+            generate_supported_operators_report()
+
+
+def test_get_vela_returns_availability_status() -> None:
+    """Test that get_vela returns the correct availability status."""
+    # The function should return True if ethosu.vela is available, False otherwise
+    result = get_vela()
+    # The result should be a boolean indicating vela availability
+    assert isinstance(result, bool)

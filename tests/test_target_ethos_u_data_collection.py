@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for the data collection module for Ethos-U."""
 from pathlib import Path
@@ -6,6 +6,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from mlia.backend.errors import BackendUnavailableError
 from mlia.backend.vela.compat import Operators
 from mlia.backend.vela.performance import LayerwisePerfInfo
 from mlia.core.context import Context
@@ -72,8 +73,12 @@ def test_operator_compatibility_collector(
     collector = EthosUOperatorCompatibility(test_tflite_model, target)
     collector.set_context(sample_context)
 
-    result = collector.collect_data()
-    assert isinstance(result, Operators)
+    try:
+        result = collector.collect_data()
+        assert isinstance(result, Operators)
+    except BackendUnavailableError:
+        # If Vela is not available, the test should pass (expected behavior)
+        pytest.skip("Vela backend not available, skipping operator compatibility test")
 
 
 def test_performance_collector(

@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Vela compiler wrapper module."""
 from __future__ import annotations
@@ -11,18 +11,49 @@ from dataclasses import dataclass
 from dataclasses import fields
 from io import StringIO
 from pathlib import Path
+from typing import Any
 from typing import Literal
 
-from ethosu.vela.model_reader import ModelReaderOptions
-from ethosu.vela.model_reader import read_model
-from ethosu.vela.nn_graph import Graph
-from ethosu.vela.nn_graph import NetworkType
-from ethosu.vela.operation import CustomType
-from ethosu.vela.vela import main
-
+from mlia.backend.errors import BackendUnavailableError
 from mlia.utils.filesystem import get_vela_config
 from mlia.utils.logging import redirect_output
 from mlia.utils.logging import redirect_raw_output
+
+try:
+    from ethosu.vela.model_reader import ModelReaderOptions
+    from ethosu.vela.model_reader import read_model
+    from ethosu.vela.nn_graph import Graph
+    from ethosu.vela.nn_graph import NetworkType
+    from ethosu.vela.operation import CustomType
+    from ethosu.vela.vela import main
+
+    _VELA_AVAILABLE = True
+except ImportError:
+    from typing import TYPE_CHECKING
+
+    if TYPE_CHECKING:
+        from ethosu.vela.model_reader import ModelReaderOptions
+        from ethosu.vela.model_reader import read_model
+        from ethosu.vela.nn_graph import Graph
+        from ethosu.vela.nn_graph import NetworkType
+        from ethosu.vela.operation import CustomType
+        from ethosu.vela.vela import main
+    else:
+
+        def __getattr__(name: str) -> Any:
+            """Raise BackendUnavailableError for Vela-related attributes."""
+            if name in {
+                "ModelReaderOptions",
+                "read_model",
+                "Graph",
+                "NetworkType",
+                "CustomType",
+                "main",
+            }:
+                raise BackendUnavailableError("Backend vela is not available", "vela")
+            raise AttributeError(name)
+
+    _VELA_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
@@ -156,6 +187,7 @@ summary_metrics.sort(key=lambda e: OUTPUT_METRICS.index(e[0]))
 class Model:
     """Model metadata."""
 
+    # Use string annotations to avoid import errors when ethosu.vela is not available
     nng: Graph
     network_type: NetworkType
 
@@ -291,9 +323,13 @@ class VelaCompiler:  # pylint: disable=too-many-instance-attributes
         except MemoryError as err:
             raise err
         except (SystemExit, Exception) as err:
-            if (
-                "Error: Invalid tflite file." in output_message.getvalue()
-                and isinstance(err, SystemExit)
+            output_text = output_message.getvalue()
+            # Check for various forms of invalid model errors
+            if isinstance(err, SystemExit) and (
+                "Error: Invalid tflite file." in output_text
+                or "Error: Invalid TFLite file." in output_text  # Case-sensitive fix
+                or "struct.error" in output_text
+                or "parsing" in output_text
             ):
                 raise RuntimeError(f"Unable to read model {model_path}") from err
             raise RuntimeError(
@@ -337,6 +373,10 @@ def resolve_compiler_config(
 
 def compile_model(model_path: Path, compiler_options: VelaCompilerOptions) -> Path:
     """Compile model."""
+    # Check if Vela is available before trying to compile
+    if not _VELA_AVAILABLE:
+        raise BackendUnavailableError("Vela compiler is not available", "vela")
+
     vela_compiler = VelaCompiler(compiler_options)
     # output dir could be a path or str, cast to Path object
     output_dir = Path(compiler_options.output_dir)

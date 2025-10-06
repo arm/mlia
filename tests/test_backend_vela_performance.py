@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for module vela/performance."""
 from pathlib import Path
@@ -6,19 +6,32 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from mlia.backend.vela.compiler import compile_model
-from mlia.backend.vela.performance import estimate_performance
-from mlia.backend.vela.performance import layer_metrics
-from mlia.backend.vela.performance import LayerwisePerfInfo
-from mlia.backend.vela.performance import parse_layerwise_perf_csv
-from mlia.backend.vela.performance import PerformanceMetrics
-from mlia.target.ethos_u.config import EthosUConfiguration
-from mlia.utils.filesystem import recreate_directory
+try:
+    import ethosu.vela  # noqa: F401
+except ImportError:
+    pytest.skip(
+        "All tests require ethosu.vela package to be installed", allow_module_level=True
+    )
+else:
+    # Only reference ethosu.vela if it was successfully imported
+    _ = ethosu.vela
+
+from mlia.backend.vela.compiler import compile_model  # noqa: E402
+from mlia.backend.vela.performance import estimate_performance  # noqa: E402
+from mlia.backend.vela.performance import layer_metrics  # noqa: E402
+from mlia.backend.vela.performance import LayerwisePerfInfo  # noqa: E402
+from mlia.backend.vela.performance import parse_layerwise_perf_csv  # noqa: E402
+from mlia.backend.vela.performance import PerformanceMetrics  # noqa: E402
+from mlia.target.ethos_u.config import EthosUConfiguration  # noqa: E402
+from mlia.utils.filesystem import recreate_directory  # noqa: E402
 
 
 def test_estimate_performance(test_tflite_model: Path) -> None:
     """Test getting performance estimations."""
     target_config = EthosUConfiguration.load_profile("ethos-u55-256")
+    assert (
+        target_config.compiler_options is not None
+    ), "Vela should be available in tests"
     perf_metrics = estimate_performance(
         test_tflite_model, target_config.compiler_options
     )
@@ -31,6 +44,9 @@ def test_estimate_performance_csv_parser_called(
 ) -> None:
     """Test that estimate_performance from backend.vela.performance is called."""
     target_config = EthosUConfiguration.load_profile("ethos-u55-256")
+    assert (
+        target_config.compiler_options is not None
+    ), "Vela should be available in tests"
     csv_file_name = target_config.compiler_options.output_dir / (
         test_tflite_model.stem + "_per-layer.csv"
     )
@@ -149,6 +165,9 @@ def test_read_invalid_model(test_tflite_invalid_model: Path) -> None:
         Exception, match=f"Unable to read model {test_tflite_invalid_model}"
     ):
         target_config = EthosUConfiguration.load_profile("ethos-u55-256")
+        assert (
+            target_config.compiler_options is not None
+        ), "Vela should be available in tests"
         estimate_performance(test_tflite_invalid_model, target_config.compiler_options)
 
 
@@ -167,6 +186,9 @@ def test_compile_invalid_model(
         Exception, match="Model could not be optimized with Vela compiler"
     ):
         target_config = EthosUConfiguration.load_profile("ethos-u55-256")
+        assert (
+            target_config.compiler_options is not None
+        ), "Vela should be available in tests"
         recreate_directory(Path(target_config.compiler_options.output_dir))
         compile_model(test_tflite_model, target_config.compiler_options)
 
