@@ -1,15 +1,9 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, 2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, 2025-2026, Arm Limited
+# and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Arm NN TensorFlow Lite Delegate backend module."""
 import logging
 import warnings
-from typing import cast
-
-from mlia.backend.armnn_tflite_delegate.compat import ARMNN_TFLITE_DELEGATE
-from mlia.backend.config import BackendConfiguration
-from mlia.backend.config import BackendType
-from mlia.backend.registry import registry
-from mlia.core.common import AdviceCategory
 
 logger = logging.getLogger(__name__)
 
@@ -24,15 +18,4 @@ warnings.warn(
 logger.warning(
     "ArmNN TensorFlow Lite Delegate backend is deprecated and will be removed "
     "in the next major release due to dependency on unmaintained project."
-)
-
-registry.register(
-    "armnn-tflite-delegate",
-    BackendConfiguration(
-        supported_advice=[AdviceCategory.COMPATIBILITY],
-        supported_systems=None,
-        backend_type=BackendType.BUILTIN,
-        installation=None,
-    ),
-    pretty_name=cast(str, ARMNN_TFLITE_DELEGATE["backend"]),
 )

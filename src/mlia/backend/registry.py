@@ -1,11 +1,13 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023,2026 Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Backend module."""
 from mlia.backend.config import BackendConfiguration
 from mlia.utils.registry import Registry
 
+BackendRegistry = Registry[BackendConfiguration]
+
 # All supported targets are required to be registered here.
-registry = Registry[BackendConfiguration]()
+registry = BackendRegistry()
 
 
 def get_supported_backends() -> list:
