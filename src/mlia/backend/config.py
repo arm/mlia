@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023,2026 Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Backend config module."""
 from __future__ import annotations
@@ -71,6 +71,17 @@ class BackendConfiguration:
     def __str__(self) -> str:
         """List supported advice."""
         return ", ".join(cast(str, adv.name).lower() for adv in self.supported_advice)
+
+    def __eq__(self, other: object) -> bool:
+        """Check equality with another BackendConfiguration."""
+        if isinstance(other, BackendConfiguration):
+            return (
+                self.supported_advice == other.supported_advice
+                and self.supported_systems == other.supported_systems
+                and self.type == other.type
+                and self.installation == other.installation
+            )
+        raise NotImplementedError
 
     def is_supported(
         self, advice: AdviceCategory | None = None, check_system: bool = False

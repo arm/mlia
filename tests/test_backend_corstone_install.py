@@ -1,8 +1,9 @@
-# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for Corstone related installation functions.."""
 from __future__ import annotations
 
+import platform
 from pathlib import Path
 from typing import Any
 from unittest.mock import call
@@ -91,6 +92,7 @@ def test_coverstone_fvp_no_version_found() -> None:
         corestone_fvp.get_fvp_version()
 
 
+@pytest.mark.skipif(platform.system() == "Darwin", reason="No runner for platform")
 @pytest.mark.parametrize(
     "corstone_name", ["corstone-300", "corstone-310", "corstone-320"]
 )
@@ -98,6 +100,14 @@ def test_get_corstone_installation(corstone_name: str) -> None:
     """Test Corstone installation"""
     installation = get_corstone_installation(corstone_name)
     assert isinstance(installation, Installation)
+
+
+@pytest.mark.skipif(platform.system() != "Darwin", reason="No runner for platform")
+@pytest.mark.parametrize("corstone_name", ["corstone-300", "corstone-310"])
+def test_get_corstone_installation_not_found(corstone_name: str) -> None:
+    """Test Corstone installation"""
+    installation = get_corstone_installation(corstone_name)
+    assert installation is None
 
 
 @pytest.mark.parametrize(
