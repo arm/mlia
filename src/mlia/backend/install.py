@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Module for installation process."""
 from __future__ import annotations
@@ -80,6 +80,16 @@ class Installation(ABC):
     @abstractmethod
     def uninstall(self) -> None:
         """Uninstall the backend."""
+
+    def __eq__(self, other: object) -> bool:
+        """Check equality with another Installation."""
+        if isinstance(other, Installation):
+            return (
+                self.name == other.name
+                and self.description == other.description
+                and self.dependencies == other.dependencies
+            )
+        raise NotImplementedError
 
 
 @dataclass
