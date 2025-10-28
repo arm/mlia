@@ -1,5 +1,5 @@
 <!---
-SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
+SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
 SPDX-License-Identifier: Apache-2.0
 --->
 # MLIA Releases
@@ -15,6 +15,15 @@ scheme.
 * Arm®, Cortex®-A, Ethos™-U, Corstone™ are registered trademarks or trademarks
   of Arm® Limited (or its subsidiaries) in the U.S. and/or elsewhere.
 * TensorFlow™ is a trademark of Google® LLC.
+
+## 0.9.3 (2025-10-31)
+
+### Deprecations
+
+* **ArmNN TensorFlow Lite Delegate backend deprecation**: The ArmNN TensorFlow Lite
+  Delegate backend (`armnn-tflite-delegate`) is now deprecated and will be removed
+  in the next major release. This backend relies on an unmaintained project and is
+  no longer actively supported. Deprecation warnings will be displayed when using this backend.
 
 ## 0.8.0 (2024-02-09)
 
