@@ -436,6 +436,10 @@ the target using the following parameters in the .toml files:
 
 ## Cortex-A
 
+> **DEPRECATION WARNING**
+> The *cortex-a* target profile uses the deprecated Arm NN TensorFlow Lite Delegate
+> backend which will be removed in the next major release.
+
 The profile *cortex-a* can be used to get the information about supported
 operators for Cortex-A CPUs when using the Arm NN TensorFlow Lite Delegate.
 Please, find more details in the section for the
@@ -513,6 +517,11 @@ the following table shows some compatibility information:
 | Vela                              | x86_64 and  AArch64    | Windows 10     | Python~=3.7      |
 
 ### Arm NN TensorFlow Lite Delegate
+
+> **DEPRECATION WARNING**
+> This backend is **deprecated** and will be **removed in the next major release**.
+> The Arm NN TensorFlow Lite Delegate backend relies on an unmaintained project
+> and is no longer actively supported.
 
 This backend provides general information about the compatibility of operators
 with the Arm NN TensorFlow Lite Delegate for Cortex-A. It comes pre-installed.
