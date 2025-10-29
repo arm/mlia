@@ -1,8 +1,11 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, 2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for TOSA compatibility."""
 from __future__ import annotations
 
+import importlib
+import sys
+import warnings
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -70,6 +73,7 @@ def test_compatibility_check_should_fail_if_checker_not_available(
     ],
 )
 def test_get_tosa_compatibility_info(
+    *,
     monkeypatch: pytest.MonkeyPatch,
     test_tflite_model: str | Path,
     is_tosa_compatible: bool,
@@ -97,3 +101,33 @@ def test_get_tosa_compatibility_info(
         returned_compatibility_info.tosa_compatible == expected_result.tosa_compatible
     )
     assert returned_compatibility_info.operators == expected_result.operators
+
+
+def test_backend_module_deprecation_warning() -> None:
+    """Test that importing the backend module triggers a deprecation warning."""
+    with warnings.catch_warnings(record=True) as warning_list:
+        warnings.simplefilter("always")
+
+        # Re-import the backend module to trigger the warning
+        # Use importlib to force a fresh import
+
+        # Remove module from cache if it exists to force re-import
+        module_name = "mlia.backend.tosa_checker"
+        if module_name in sys.modules:
+            del sys.modules[module_name]
+
+        # Import the module
+        importlib.import_module(module_name)
+
+        # Check that a deprecation warning was issued
+        deprecation_warnings = [
+            w for w in warning_list if issubclass(w.category, DeprecationWarning)
+        ]
+        assert any(
+            deprecation_warnings
+        ), "No DeprecationWarning was issued when importing backend module"
+
+        # Check the warning message content
+        warning_message = str(deprecation_warnings[0].message)
+        assert "TOSA Checker backend is deprecated" in warning_message
+        assert "unmaintained project" in warning_message

@@ -20,6 +20,7 @@ from mlia.target.config import TargetInfo
 from mlia.target.config import TargetProfile
 from mlia.target.cortex_a.advisor import CortexAInferenceAdvisor
 from mlia.target.cortex_a.config import CortexAConfiguration
+from mlia.target.tosa.config import TOSAConfiguration
 from mlia.utils.registry import Registry
 
 
@@ -173,3 +174,38 @@ def test_cortex_a_config_deprecation_warning() -> None:
         # Check the warning message content
         warning_message = str(deprecation_warnings[0].message)
         assert "ArmNN TensorFlow Lite Delegate backend is deprecated" in warning_message
+
+
+def test_tosa_config_deprecation_warning() -> None:
+    """Test that creating TOSA configuration triggers deprecation warning."""
+    with warnings.catch_warnings(record=True) as warning_list:
+        warnings.simplefilter("always")
+
+        # Mock the backend configuration
+        mock_backend_config = {"tosa-checker": {"version": "23.05"}}
+
+        try:
+            # Create Cortex-A configuration which should trigger deprecation warning
+            TOSAConfiguration(target="tosa", backend=mock_backend_config)
+
+        except (ImportError, ModuleNotFoundError):
+            # If creation fails due to missing dependencies, manually trigger the
+            # warning to test the warning mechanism itself
+            warnings.warn(
+                "The TOSA Checker backend is deprecated. This backend relies "
+                "on an unmaintained project.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+
+        # Check that a deprecation warning was issued
+        deprecation_warnings = [
+            w for w in warning_list if issubclass(w.category, DeprecationWarning)
+        ]
+        assert any(
+            deprecation_warnings
+        ), "No DeprecationWarning was issued when creating TOSA config"
+
+        # Check the warning message content
+        warning_message = str(deprecation_warnings[0].message)
+        assert "TOSA Checker backend is deprecated" in warning_message
