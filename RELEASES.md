@@ -16,7 +16,39 @@ scheme.
   of Arm® Limited (or its subsidiaries) in the U.S. and/or elsewhere.
 * TensorFlow™ is a trademark of Google® LLC.
 
-## 0.9.3 (2025-10-31)
+## 0.9.2 (2025-10-31)
+
+### Feature changes
+
+* Add Ethos-U85 support via Corstone-320
+* Corstone-300/310 available on AArch64 and x86
+* Move Vela to a separate backend
+* Rewrite improvements (proof-of-concept feature):
+   * Add kernel size to user parameter list for conv2D rewrites
+   * Add support for rewrite-specific parameters
+   * Add support for unstructured polynomial decay pruning rewrites
+   * Allow the user to specify an activation function for conv2d rewrites
+   * CLI and API changes for the new conv2d rewrite targets
+   * Enable clustering and fully connected rewrites for conv2D layers
+   * Enable Depthwise Separable conv2d rewrites
+   * Enable random data usage if no dataset is provided
+   * Enable user to specify augmentations via the --optimization-profile
+   * Implement a clustering rewrite for fully connected layers for int8 models
+   * Implement int8/fp32 sparsity 2:4 rewrite
+
+### Bug fix
+
+* Improve testing coverage
+* Fix lint issues, issues found by new tests and more
+* Remove activation layer for conv rewrites when none is specified
+* Fixe MAE discrepancies of rewrites
+
+### Internal changes
+
+* Project has moved from mlplatforms to github
+* Update python dependencies
+* Add backend dependencies handling.
+* Dependencies updated (Tensorflow 2.15,)
 
 ### Deprecations
 
