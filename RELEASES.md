@@ -57,6 +57,11 @@ scheme.
   in the next major release. This backend relies on an unmaintained project and is
   no longer actively supported. Deprecation warnings will be displayed when using this backend.
 
+* **TOSA Checker backend deprecation**: The TOSA Checker
+  Backend (`tosa-checker`) is now deprecated.
+  This backend relies on an unmaintained project and is
+  no longer actively supported. Deprecation warnings will be displayed when using this backend.
+
 ## 0.8.0 (2024-02-09)
 
 ### Bug fix

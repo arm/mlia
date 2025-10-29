@@ -447,6 +447,9 @@ Please, find more details in the section for the
 
 ## TOSA
 
+> **DEPRECATION WARNING**
+> The *tosa* target profile uses the deprecated TOSA Checker backend.
+
 The target profile *tosa* can be used for TOSA compatibility checks of your
 model. It requires the [TOSA Checker](#tosa-checker) backend. Please note that
 TOSA is currently only available for x86 architecture.
@@ -571,6 +574,11 @@ on [Arm® Cortex™-M85 processor](https://www.arm.com/products/silicon-ip-cpu/c
   <https://github.com/ARM-software/open-iot-sdk>
 
 ### TOSA Checker
+
+> **DEPRECATION WARNING**
+> This backend is **deprecated**.
+> The TOSA Checker backend relies on an unmaintained project
+> and is no longer actively supported.
 
 The TOSA Checker backend provides operator compatibility checks against the
 TOSA specification. Please note that TOSA is currently only available for x86 architecture.
