@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Module for installation process."""
 from __future__ import annotations
@@ -77,7 +77,7 @@ class InstallationManager(ABC):
 
     @abstractmethod
     def download_and_install(
-        self, backend_name: str, eula_agreement: bool, force: bool
+        self, backend_names: list[str], eula_agreement: bool, force: bool
     ) -> None:
         """Download and install backends."""
 
@@ -90,7 +90,7 @@ class InstallationManager(ABC):
         """Return true if requested backend installed."""
 
     @abstractmethod
-    def uninstall(self, backend_name: str) -> None:
+    def uninstall(self, backend_names: list[str]) -> None:
         """Delete the existing installation."""
 
 
@@ -133,123 +133,177 @@ class DefaultInstallationManager(InstallationManager, InstallationFiltersMixin):
         self.installations = installations
         self.noninteractive = noninteractive
 
-    def _install(
-        self,
-        backend_name: str,
-        install_type: InstallationType,
-        prompt: Callable[[Installation], str],
-        force: bool,
-    ) -> None:
-        """Check metadata and install backend."""
-        installs = self.find_by_name(backend_name)
-
-        if not installs:
-            logger.info("Unknown backend '%s'.", backend_name)
+    def _resolve_backend(self, name: str, err_msg_prefix: str = "") -> Installation:
+        candidate_installs = self.find_by_name(name)
+        if not candidate_installs:
+            logger.info("Unknown backend '%s'.", name)
             logger.info(
                 "Please run command 'mlia-backend list' to get list of "
                 "supported backend names."
             )
+            raise ValueError(f"{err_msg_prefix}: Could not resolve {name} backend.")
 
-            return
+        if len(candidate_installs) > 1:
+            raise InternalError(
+                f"{err_msg_prefix}: More than one backend with name " f"{name} found."
+            )
 
-        if len(installs) > 1:
-            raise InternalError(f"More than one backend with name {backend_name} found")
+        return candidate_installs[0]
 
-        installation = installs[0]
-        if not installation.supports(install_type):
-            if isinstance(install_type, InstallFromPath):
-                logger.info(
-                    "Backend '%s' could not be installed using path '%s'.",
-                    installation.name,
-                    install_type.backend_path,
-                )
-                logger.info(
-                    "Please check that '%s' is a valid path to the installed backend.",
-                    install_type.backend_path,
-                )
-            else:
-                logger.info(
-                    "Backend '%s' could not be downloaded and installed",
-                    installation.name,
-                )
-                logger.info(
-                    "Please refer to the project's documentation for more details."
-                )
-
-            return
+    def _get_installable_installation(
+        self, name: str, install_type: InstallationType, force: bool
+    ) -> Installation | None:
+        installation = self._resolve_backend(name)
 
         if installation.already_installed and not force:
             logger.info("Backend '%s' is already installed.", installation.name)
             logger.info("Please, consider using --force option.")
-            return
+            return None
 
-        proceed = self.noninteractive or yes(prompt(installation))
-        if not proceed:
-            logger.info("%s installation canceled.", installation.name)
-            return
-
-        for dependency in installation.dependencies:
-            deps = self.find_by_name(dependency)
-            if not deps:
-                raise ValueError(
-                    f"Backend {installation.name} depends on "
-                    f"unknown backend '{dependency}'."
-                )
-            missing_deps = [dep for dep in deps if not dep.already_installed]
-            if missing_deps:
-                proceed = self.noninteractive or yes(
-                    "The following dependencies are not installed: "
-                    f"{[dep.name for dep in missing_deps]}. "
-                    "Continue installation anyway?"
-                )
-                logger.warning(
-                    "Installing backend %s with the following dependencies "
-                    "missing: %s",
-                    installation.name,
-                    missing_deps,
-                )
-                if not proceed:
-                    logger.info(
-                        "%s installation canceled due to missing dependencies.",
-                        installation.name,
-                    )
-                    return
-
-        if installation.already_installed and force:
+        if not installation.supports(install_type):
             logger.info(
-                "Force installing %s, so delete the existing "
-                "installed backend first.",
-                installation.name,
+                "Installation method %s not supported for %s backend.",
+                install_type,
+                name,
             )
-            installation.uninstall()
+            return None
 
-        installation.install(install_type)
-        logger.info("%s successfully installed.", installation.name)
+        return installation
+
+    def _get_dependency_installations(
+        self, root_installations: list[Installation]
+    ) -> list[Installation]:
+        """
+        DFS-traverse the dependency graph and list all dependencies.
+
+        ValueError will be raised if a dependency cannot be resolved.
+        InternalError will be raise if:
+            - a dependency does not support DownloadAndInstall,
+            - a circular dependency is detected.
+        """
+        visits: dict[str, int] = {}  # 0=unvisited, 1=visiting, 2=visited
+        dep_installations: list[Installation] = []
+        root_names = {root.name for root in root_installations}
+
+        # DFS traversal that enlists all encountered nodes.
+        # Root installation nodes will be treated like dependencies with
+        # 2 exceptions:
+        #   - DownloadAndInstall support will not be checked,
+        #   - Root nodes will not be added to dep_installations.
+        for root in root_installations:
+            if visits.get(root.name, 0) == 2:
+                # already fully processed
+                continue
+
+            stack: list[tuple[Installation, int]] = [
+                (root, 0)
+            ]  # (node, next_dep_index)
+            while stack:
+                inst, i = stack[-1]
+                name = inst.name
+                visited = visits.get(name, 0)
+                if visited == 0:
+                    visits[name] = 1  # entering
+                deps = inst.dependencies
+
+                if i < len(deps):
+                    dep_name = deps[i]
+                    stack[-1] = (inst, i + 1)
+                    dep = self._resolve_backend(
+                        dep_name, f"Failed to resolve dependencies for {root.name}:"
+                    )
+                    if (
+                        dep.name not in root_names
+                        and not dep.already_installed
+                        and not dep.supports(DownloadAndInstall())
+                    ):  # Only dependencies need to support DownloadAndInstall.
+                        raise InternalError(
+                            f"{dep.name} dependency found, but cannot be downloaded. "
+                            "Try manual installation."
+                        )
+                    dep_visits = visits.get(dep.name, 0)
+                    if dep_visits == 0:
+                        stack.append((dep, 0))
+                        # Exclude root packages from the dependencies list
+                        if dep.name not in root_names:
+                            dep_installations.append(
+                                dep
+                            )  # preorder: append on discovery
+                    elif dep_visits == 1:
+                        raise InternalError(
+                            f"Dependency cycle detected involving {dep.name}"
+                        )
+                else:
+                    # all deps done; exit node
+                    stack.pop()
+                    visits[name] = 2
+
+        return dep_installations
+
+    def _install(
+        self,
+        backend_names: list[str],
+        install_types: list[InstallationType],
+        force: bool,
+    ) -> None:
+        """Check metadata and install backend."""
+        installations = [
+            inst
+            for name, type in zip(backend_names, install_types)
+            if (inst := self._get_installable_installation(name, type, force))
+            is not None
+        ]
+        if not installations:
+            return
+
+        dep_installations = self._get_dependency_installations(installations)
+
+        deps_to_be_installed = []
+        for inst in dep_installations:
+            if inst.already_installed:
+                logger.debug("%s dependency already installed.", inst.name)
+                continue
+            deps_to_be_installed.append(inst)
+
+        logger.info("Installing the following backends:")
+        for inst in installations:
+            logger.info("* %s", inst.name)
+        if deps_to_be_installed:
+            logger.info("Dependencies will be installed automatically:")
+            for inst in deps_to_be_installed:
+                logger.info("* %s", inst.name)
+
+        if not self.noninteractive and not yes("Would you like to proceed?"):
+            return
+
+        for inst in deps_to_be_installed:
+            logger.info("Installing %s", inst.name)
+            inst.install(DownloadAndInstall())
+
+        for inst, inst_type in zip(installations, install_types):
+            if inst.already_installed and force:
+                logger.info(
+                    "Force installing %s, so delete the existing "
+                    "installed backend first.",
+                    inst.name,
+                )
+                inst.uninstall()
+            inst.install(inst_type)
 
     def install_from(
         self, backend_path: Path, backend_name: str, force: bool = False
     ) -> None:
         """Install from the provided directory."""
-
-        def prompt(install: Installation) -> str:
-            return (
-                f"{install.name} was found in {backend_path}. "
-                "Would you like to install it?"
-            )
-
-        install_type = InstallFromPath(backend_path)
-        self._install(backend_name, install_type, prompt, force)
+        self._install([backend_name], [InstallFromPath(backend_path)], force)
 
     def download_and_install(
-        self, backend_name: str, eula_agreement: bool = True, force: bool = False
+        self, backend_names: list[str], eula_agreement: bool = True, force: bool = False
     ) -> None:
         """Download and install available backends."""
-
-        def prompt(install: Installation) -> str:
-            return f"Would you like to download and install {install.name}?"
-
-        install_type = DownloadAndInstall(eula_agreement=eula_agreement)
-        self._install(backend_name, install_type, prompt, force)
+        install_types = [DownloadAndInstall(eula_agreement=eula_agreement)] * len(
+            backend_names
+        )
+        self._install(backend_names, install_types, force)  # type: ignore[arg-type]
 
     def show_env_details(self) -> None:
         """Print current state of the execution environment."""
@@ -276,43 +330,44 @@ class DefaultInstallationManager(InstallationManager, InstallationFiltersMixin):
         for installation in installations:
             logger.info("  - %s", installation.name)
 
-    def uninstall(self, backend_name: str) -> None:
+    def uninstall(self, backend_names: list[str]) -> None:
         """Uninstall the backend with name backend_name."""
-        installations = self.already_installed(backend_name)
+        for backend_name in backend_names:
+            installations = self.already_installed(backend_name)
 
-        if not installations:
-            raise ConfigurationError(f"Backend '{backend_name}' is not installed.")
+            if not installations:
+                raise ConfigurationError(f"Backend '{backend_name}' is not installed.")
 
-        if len(installations) != 1:
-            raise InternalError(
-                f"More than one installed backend with name {backend_name} found."
-            )
-
-        installation = installations[0]
-
-        dependent_backends = [
-            dep.name
-            for dep in self.installations
-            if dep.name in installation.dependencies
-        ]
-        if dependent_backends:
-            msg = (
-                f"The following backends depend on '{installation.name}' which "
-                f"you are about to uninstall: {dependent_backends}",
-            )
-            proceed = self.noninteractive or yes(
-                f"{msg}. Continue uninstalling anyway?"
-            )
-            logger.warning(msg)
-            if not proceed:
-                logger.info(
-                    "Uninstalling %s canceled due to dependencies.",
-                    installation.name,
+            if len(installations) != 1:
+                raise InternalError(
+                    f"More than one installed backend with name {backend_name} found."
                 )
-                return
 
-        installation.uninstall()
-        logger.info("%s successfully uninstalled.", installation.name)
+            installation = installations[0]
+
+            dependent_backends = [
+                dep.name
+                for dep in self.installations
+                if installation.name in dep.dependencies and dep.already_installed
+            ]
+            if dependent_backends:
+                msg = (
+                    f"The following backends depend on '{installation.name}' which "
+                    f"you are about to uninstall: {dependent_backends}",
+                )
+                proceed = self.noninteractive or yes(
+                    f"{msg}. Continue uninstalling anyway?"
+                )
+                logger.warning(msg)
+                if not proceed:
+                    logger.info(
+                        "Uninstalling %s canceled due to dependencies.",
+                        installation.name,
+                    )
+                    return
+
+            installation.uninstall()
+            logger.info("%s successfully uninstalled.", installation.name)
 
     def backend_installed(self, backend_name: str) -> bool:
         """Return true if requested backend installed."""

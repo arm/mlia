@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Module for the CLI options."""
 from __future__ import annotations
@@ -196,7 +196,9 @@ def add_backend_install_options(parser: argparse.ArgumentParser) -> None:
         return dir_path
 
     parser.add_argument(
-        "--path", type=valid_directory, help="Path to the installed backend"
+        "--path",
+        type=valid_directory,
+        help="Path to the installed backend",
     )
     parser.add_argument(
         "--i-agree-to-the-contained-eula",
@@ -217,15 +219,17 @@ def add_backend_install_options(parser: argparse.ArgumentParser) -> None:
         help="Non interactive mode with automatic confirmation of every action",
     )
     parser.add_argument(
-        "name",
-        help="Name of the backend to install",
+        "names",
+        nargs="+",
+        help="Names of the backends to install",
     )
 
 
 def add_backend_uninstall_options(parser: argparse.ArgumentParser) -> None:
     """Add options for the backends configuration."""
     parser.add_argument(
-        "name",
+        "names",
+        nargs="+",
         help="Name of the installed backend",
     )
 
