@@ -424,7 +424,7 @@ def test_backend_command_action_uninstall(
     backend_name: str,
 ) -> None:
     """Test mlia-backend command uninstall."""
-    backend_uninstall(backend_name)
+    backend_uninstall([backend_name])
 
     installation_manager_mock.uninstall.assert_called_once()
 
@@ -432,9 +432,9 @@ def test_backend_command_action_uninstall(
 @pytest.mark.parametrize(
     "i_agree_to_the_contained_eula, force, backend_name, expected_calls",
     [
-        [False, False, "backend_name", [call("backend_name", True, False)]],
-        [True, False, "backend_name", [call("backend_name", False, False)]],
-        [True, True, "BACKEND_NAME", [call("BACKEND_NAME", False, True)]],
+        [False, False, "backend_name", [call(["backend_name"], True, False)]],
+        [True, False, "backend_name", [call(["backend_name"], False, False)]],
+        [True, True, "BACKEND_NAME", [call(["BACKEND_NAME"], False, True)]],
     ],
 )
 def test_backend_command_action_add_download(
@@ -446,7 +446,7 @@ def test_backend_command_action_add_download(
 ) -> None:
     """Test mlia-backend command "install" with download option."""
     backend_install(
-        name=backend_name,
+        names=[backend_name],
         i_agree_to_the_contained_eula=i_agree_to_the_contained_eula,
         force=force,
     )
@@ -469,5 +469,15 @@ def test_backend_command_action_install_from_path(
     force: bool,
 ) -> None:
     """Test mlia-backend command "install" with backend path."""
-    backend_install(path=tmp_path, name=backend_name, force=force)
+    backend_install(path=tmp_path, names=[backend_name], force=force)
     installation_manager_mock.install_from.assert_called_once()
+
+
+def test_backend_command_action_add_download_invalid_names(
+    installation_manager_mock: MagicMock,
+    tmp_path: Path,
+) -> None:
+    """Test mlia-backend command "install" with invalid backend names."""
+    with pytest.raises(ValueError):
+        backend_install(path=tmp_path, names=[])
+    installation_manager_mock.install_from.assert_not_called()

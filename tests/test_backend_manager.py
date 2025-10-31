@@ -1,8 +1,9 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, 2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for installation manager."""
 from __future__ import annotations
 
+from contextlib import ExitStack as does_not_raise
 from functools import partial
 from pathlib import Path
 from typing import Any
@@ -84,6 +85,12 @@ _already_installed_mock = partial(
     supported_install_type=(DownloadAndInstall, InstallFromPath),
 )
 
+_already_installed_mock_named = partial(
+    get_installation_mock,
+    already_installed=True,
+    supported_install_type=(DownloadAndInstall, InstallFromPath),
+)
+
 
 _ready_for_installation_mock = partial(
     get_installation_mock,
@@ -101,10 +108,24 @@ _could_be_downloaded_and_installed_mock = partial(
     supported_install_type=DownloadAndInstall,
 )
 
+_could_be_downloaded_and_installed_mock_named = partial(
+    get_installation_mock,
+    already_installed=False,
+    could_be_installed=True,
+    supported_install_type=DownloadAndInstall,
+)
+
 
 _could_be_installed_from_mock = partial(
     get_installation_mock,
     name="could_be_installed_from",
+    already_installed=False,
+    could_be_installed=True,
+    supported_install_type=InstallFromPath,
+)
+
+_could_be_installed_from_mock_named = partial(
+    get_installation_mock,
     already_installed=False,
     could_be_installed=True,
     supported_install_type=InstallFromPath,
@@ -165,7 +186,7 @@ def test_installation_manager_filtering() -> None:
 
 @pytest.mark.parametrize("noninteractive", [True, False])
 @pytest.mark.parametrize(
-    "install_mock, eula_agreement, backend_name, force, expected_call",
+    "install_mock, eula_agreement, backend_name, force, expected_call, expected_err",
     [
         [
             _could_be_downloaded_and_installed_mock(),
@@ -173,6 +194,7 @@ def test_installation_manager_filtering() -> None:
             "could_be_downloaded_and_installed",
             False,
             [call(DownloadAndInstall(eula_agreement=True))],
+            does_not_raise(),
         ],
         [
             _could_be_downloaded_and_installed_mock(),
@@ -180,6 +202,7 @@ def test_installation_manager_filtering() -> None:
             "could_be_downloaded_and_installed",
             True,
             [call(DownloadAndInstall(eula_agreement=False))],
+            does_not_raise(),
         ],
         [
             _already_installed_mock(),
@@ -187,6 +210,7 @@ def test_installation_manager_filtering() -> None:
             "already_installed",
             True,
             [call(DownloadAndInstall(eula_agreement=False))],
+            does_not_raise(),
         ],
         [
             _could_be_downloaded_and_installed_mock(),
@@ -194,6 +218,7 @@ def test_installation_manager_filtering() -> None:
             "unknown",
             True,
             [],
+            pytest.raises(ValueError, match="Could not resolve"),
         ],
     ],
 )
@@ -204,6 +229,7 @@ def test_installation_manager_download_and_install(
     backend_name: str,
     force: bool,
     expected_call: Any,
+    expected_err: Any,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Test installation process."""
@@ -211,9 +237,10 @@ def test_installation_manager_download_and_install(
 
     manager = get_installation_manager(noninteractive, [install_mock], monkeypatch)
 
-    manager.download_and_install(
-        backend_name, eula_agreement=eula_agreement, force=force
-    )
+    with expected_err:
+        manager.download_and_install(
+            [backend_name], eula_agreement=eula_agreement, force=force
+        )
 
     assert install_mock.install.mock_calls == expected_call
     if force and install_mock.already_installed:
@@ -224,37 +251,36 @@ def test_installation_manager_download_and_install(
 
 @pytest.mark.parametrize("noninteractive", [True, False])
 @pytest.mark.parametrize(
-    "install_mock, backend_name, force, expected_call",
+    "install_mock, backend_name, force, expected_call, expected_err",
     [
         [
             _could_be_installed_from_mock(),
             "could_be_installed_from",
             False,
             [call(InstallFromPath(Path("some_path")))],
+            does_not_raise(),
         ],
         [
             _could_be_installed_from_mock(),
             "unknown",
             False,
             [],
+            pytest.raises(ValueError),
         ],
         [
             _could_be_installed_from_mock(),
             "unknown",
             True,
             [],
+            pytest.raises(ValueError),
         ],
-        [
-            _already_installed_mock(),
-            "already_installed",
-            False,
-            [],
-        ],
+        [_already_installed_mock(), "already_installed", False, [], does_not_raise()],
         [
             _already_installed_mock(),
             "already_installed",
             True,
             [call(InstallFromPath(Path("some_path")))],
+            does_not_raise(),
         ],
     ],
 )
@@ -264,13 +290,16 @@ def test_installation_manager_install_from(
     backend_name: str,
     force: bool,
     expected_call: Any,
+    expected_err: Any,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Test installation process."""
     install_mock.reset_mock()
 
     manager = get_installation_manager(noninteractive, [install_mock], monkeypatch)
-    manager.install_from(Path("some_path"), backend_name, force=force)
+
+    with expected_err:
+        manager.install_from(Path("some_path"), backend_name, force=force)
 
     assert install_mock.install.mock_calls == expected_call
     if force and install_mock.already_installed:
@@ -291,7 +320,7 @@ def test_installation_manager_unsupported_install_type(
     manager = get_installation_manager(False, install_mocks, monkeypatch)
     manager.install_from(tmp_path, "could_be_downloaded_and_installed")
 
-    manager.download_and_install("could_be_installed_from")
+    manager.download_and_install(["could_be_installed_from"])
 
     for mock in install_mocks:
         mock.install.assert_not_called()
@@ -320,7 +349,7 @@ def test_installation_manager_uninstall(
     install_mock.reset_mock()
 
     manager = get_installation_manager(noninteractive, [install_mock], monkeypatch)
-    manager.uninstall(backend_name)
+    manager.uninstall([backend_name])
 
     assert install_mock.uninstall.mock_calls == expected_call
 
@@ -334,7 +363,7 @@ def test_installation_internal_error(monkeypatch: pytest.MonkeyPatch) -> None:
         InternalError,
         match="More than one installed backend with name already_installed found",
     ):
-        manager.uninstall("already_installed")
+        manager.uninstall(["already_installed"])
 
 
 def test_uninstall_unknown_backend(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -345,7 +374,7 @@ def test_uninstall_unknown_backend(monkeypatch: pytest.MonkeyPatch) -> None:
     with pytest.raises(
         ConfigurationError, match="Backend 'some_backend' is not installed"
     ):
-        manager.uninstall("some_backend")
+        manager.uninstall(["some_backend"])
 
 
 def test_show_env_details(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -364,7 +393,7 @@ def test_show_env_details(monkeypatch: pytest.MonkeyPatch) -> None:
 @pytest.mark.parametrize(
     "dependency",
     (
-        _ready_for_installation_mock(),
+        _could_be_downloaded_and_installed_mock(),
         _already_installed_mock(),
     ),
 )
@@ -376,6 +405,7 @@ def test_could_be_installed_with_dep(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Test installation with a dependency."""
+    dependency.reset_mock()
     install_mock = _could_be_installed_from_mock(dependencies=[dependency.name])
 
     yes_mock = MagicMock(return_value=yes_response)
@@ -390,8 +420,299 @@ def test_could_be_installed_with_dep(
         install_mock.install.assert_not_called()
     install_mock.uninstall.assert_not_called()
 
-    dependency.install.assert_not_called()
+    if not yes_response or dependency.already_installed:
+        dependency.install.assert_not_called()
+    else:
+        dependency.install.assert_called_once()
     dependency.uninstall.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "install_mocks, backend_names",
+    [
+        (
+            [
+                _could_be_downloaded_and_installed_mock_named(
+                    name="backend", dependencies=["dep0"]
+                ),
+                _could_be_downloaded_and_installed_mock_named(
+                    name="dep0", dependencies=["dep1"]
+                ),
+                _could_be_downloaded_and_installed_mock_named(name="dep1"),
+            ],
+            ["backend"],
+        ),
+        (
+            [
+                _could_be_downloaded_and_installed_mock_named(
+                    name="backend", dependencies=["dep0", "dep1"]
+                ),
+                _could_be_downloaded_and_installed_mock_named(
+                    name="dep0", dependencies=["dep2"]
+                ),
+                _could_be_downloaded_and_installed_mock_named(
+                    name="dep1", dependencies=["dep2"]
+                ),
+                _could_be_downloaded_and_installed_mock_named(name="dep2"),
+            ],
+            ["backend"],
+        ),
+        (
+            [
+                _could_be_downloaded_and_installed_mock_named(
+                    name="backend_0", dependencies=["dep0"]
+                ),
+                _could_be_downloaded_and_installed_mock_named(
+                    name="backend_1", dependencies=["dep1"]
+                ),
+                _could_be_downloaded_and_installed_mock_named(
+                    name="dep0", dependencies=["dep2"]
+                ),
+                _could_be_downloaded_and_installed_mock_named(
+                    name="dep1", dependencies=["dep2"]
+                ),
+                _could_be_downloaded_and_installed_mock_named(name="dep2"),
+            ],
+            ["backend_0", "backend_1"],
+        ),
+        (
+            [  # If a requested backend is another backends dependency,
+                # install should only be called once.
+                _could_be_downloaded_and_installed_mock_named(
+                    name="backend_0", dependencies=["backend_1"]
+                ),
+                _could_be_downloaded_and_installed_mock_named(
+                    name="backend_1", dependencies=["dep0", "dep1"]
+                ),
+                _could_be_downloaded_and_installed_mock_named(
+                    name="dep0", dependencies=["dep2"]
+                ),
+                _could_be_downloaded_and_installed_mock_named(
+                    name="dep1", dependencies=["dep2"]
+                ),
+                _could_be_downloaded_and_installed_mock_named(name="dep2"),
+            ],
+            ["backend_0", "backend_1"],
+        ),
+        (
+            [
+                _could_be_downloaded_and_installed_mock_named(
+                    name="backend", dependencies=["dep0"]
+                ),
+                # Does not support download, but it's already installed.
+                _already_installed_mock_named(name="dep0", dependencies=["dep1"]),
+                _could_be_downloaded_and_installed_mock_named(name="dep1"),
+            ],
+            ["backend"],
+        ),
+    ],
+)
+def test_installation_manager_many_deps(
+    install_mocks: list[MagicMock],
+    backend_names: list[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test a complex dependency graph."""
+    for inst in install_mocks:
+        inst.reset_mock()
+    manager = get_installation_manager(True, install_mocks, monkeypatch)
+
+    manager.download_and_install(backend_names)
+
+    for inst in install_mocks:
+        if not inst.already_installed:
+            inst.install.assert_called_once()
+        else:
+            inst.install.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "install_mocks, backend_names",
+    [
+        (
+            [
+                _could_be_downloaded_and_installed_mock_named(
+                    name="backend", dependencies=["dep0"]
+                ),
+                _could_be_downloaded_and_installed_mock_named(
+                    name="dep0", dependencies=["dep1"]
+                ),
+                _could_be_downloaded_and_installed_mock_named(name="dep1"),
+            ],
+            ["backend"],
+        ),
+    ],
+)
+@pytest.mark.parametrize("yes_response", (True, False))
+def test_installation_manager_many_deps_interactive(
+    install_mocks: list[MagicMock],
+    backend_names: list[str],
+    yes_response: bool,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test a complex dependency graph in an interactive mode."""
+    for inst in install_mocks:
+        inst.reset_mock()
+    yes_mock = MagicMock(return_value=yes_response)
+    manager = get_interactive_installation_manager(install_mocks, monkeypatch, yes_mock)
+    manager.download_and_install(backend_names, True)
+    for inst in install_mocks:
+        if yes_response and not inst.already_installed:
+            inst.install.assert_called_once()
+        else:
+            inst.install.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "install_mocks, backend_name",
+    [
+        (
+            [
+                _could_be_installed_from_mock_named(
+                    name="backend", dependencies=["dep0"]
+                ),
+                _could_be_downloaded_and_installed_mock_named(
+                    name="dep0", dependencies=["dep1"]
+                ),
+                _could_be_downloaded_and_installed_mock_named(name="dep1"),
+            ],
+            "backend",
+        ),
+    ],
+)
+def test_installation_manager_many_deps_from_path(
+    install_mocks: list[MagicMock],
+    backend_name: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test a complex dependency graph for InstallFromPath installation."""
+    manager = get_installation_manager(True, install_mocks, monkeypatch)
+    manager.install_from(Path("some_path"), backend_name)
+
+    for inst in install_mocks:
+        if not inst.already_installed:
+            inst.install.assert_called_once()
+
+
+@pytest.mark.parametrize(
+    "install_mocks, backend_names, expected_err",
+    [
+        (
+            [
+                _could_be_downloaded_and_installed_mock_named(
+                    name="backend", dependencies=["dep0"]
+                ),
+                _could_be_installed_from_mock_named(name="dep0", dependencies=["dep1"]),
+                _could_be_downloaded_and_installed_mock_named(name="dep1"),
+            ],
+            ["backend"],
+            pytest.raises(
+                InternalError, match="dependency found, but cannot be downloaded."
+            ),
+        ),
+        (
+            [  # Circular dependency
+                _could_be_downloaded_and_installed_mock_named(
+                    name="backend", dependencies=["dep0"]
+                ),
+                _could_be_downloaded_and_installed_mock_named(
+                    name="dep0", dependencies=["dep1"]
+                ),
+                _could_be_downloaded_and_installed_mock_named(
+                    name="dep1", dependencies=["dep2"]
+                ),
+                _could_be_downloaded_and_installed_mock_named(
+                    name="dep2", dependencies=["dep0"]
+                ),
+            ],
+            ["backend"],
+            pytest.raises(InternalError, match="Dependency cycle detected involving"),
+        ),
+        (
+            [  # Self-circular dependency
+                _could_be_downloaded_and_installed_mock_named(
+                    name="backend", dependencies=["dep0"]
+                ),
+                _could_be_downloaded_and_installed_mock_named(
+                    name="dep0", dependencies=["dep0"]
+                ),
+            ],
+            ["backend"],
+            pytest.raises(InternalError, match="Dependency cycle detected involving"),
+        ),
+        (
+            [  # Circular dependency
+                _could_be_downloaded_and_installed_mock_named(
+                    name="backend", dependencies=["dep0"]
+                ),
+                _could_be_downloaded_and_installed_mock_named(
+                    name="dep0", dependencies=["dep1"]
+                ),
+                _could_be_downloaded_and_installed_mock_named(
+                    name="dep1", dependencies=["backend"]
+                ),
+            ],
+            ["backend"],
+            pytest.raises(InternalError, match="Dependency cycle detected involving"),
+        ),
+        (
+            [  # Circular dependency
+                _could_be_downloaded_and_installed_mock_named(
+                    name="backend0", dependencies=["dep0"]
+                ),
+                _could_be_downloaded_and_installed_mock_named(
+                    name="dep0", dependencies=["backend1"]
+                ),
+                _could_be_downloaded_and_installed_mock_named(
+                    name="backend1", dependencies=["dep1"]
+                ),
+                _could_be_downloaded_and_installed_mock_named(
+                    name="dep1", dependencies=["backend0"]
+                ),
+            ],
+            ["backend0", "backend1"],
+            pytest.raises(InternalError, match="Dependency cycle detected involving"),
+        ),
+        (
+            [  # Circular dependency between installed backends
+                _could_be_downloaded_and_installed_mock_named(
+                    name="backend0", dependencies=["backend1"]
+                ),
+                _could_be_downloaded_and_installed_mock_named(
+                    name="backend1", dependencies=["backend0"]
+                ),
+            ],
+            ["backend0", "backend1"],
+            pytest.raises(InternalError, match="Dependency cycle detected involving"),
+        ),
+        (
+            [
+                _could_be_downloaded_and_installed_mock_named(
+                    name="backend", dependencies=["dep0"]
+                ),
+                _could_be_downloaded_and_installed_mock_named(
+                    name="dep0", dependencies=["dep2"]
+                ),
+                _could_be_downloaded_and_installed_mock_named(name="dep1"),
+            ],
+            ["backend"],
+            pytest.raises(ValueError, match="Failed to resolve dependencies for"),
+        ),
+    ],
+)
+def test_installation_manager_many_deps_fail(
+    install_mocks: list[MagicMock],
+    backend_names: list[str],
+    monkeypatch: pytest.MonkeyPatch,
+    expected_err: Any,
+) -> None:
+    """Test dependency resolution failure scenarios."""
+    for inst in install_mocks:
+        inst.reset_mock()
+    manager = get_installation_manager(True, install_mocks, monkeypatch)
+
+    with expected_err:
+        manager.download_and_install(backend_names)
 
 
 def test_install_with_unknown_dep(
@@ -413,20 +734,20 @@ def test_install_with_unknown_dep(
 def test_uninstall_with_dep(
     yes_response: bool, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Test uninstalling a backend with a dependency."""
+    """Test uninstalling dependency to a backend"""
     dependency = _already_installed_dep_mock()
     install_mock = _already_installed_mock(dependencies=[dependency.name])
     yes_mock = MagicMock(return_value=yes_response)
     manager = get_interactive_installation_manager(
         [install_mock, dependency], monkeypatch, yes_mock
     )
-    manager.uninstall(install_mock.name)
+    manager.uninstall([dependency.name])
 
     install_mock.install.assert_not_called()
     if yes_response:
-        install_mock.uninstall.assert_called_once()
+        dependency.uninstall.assert_called_once()
     else:
-        install_mock.uninstall.assert_not_called()
+        dependency.uninstall.assert_not_called()
 
     dependency.install.assert_not_called()
-    dependency.uninstall.assert_not_called()
+    install_mock.uninstall.assert_not_called()
