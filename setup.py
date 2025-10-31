@@ -23,11 +23,17 @@ def replace_markdown_relative_paths(
     content = path.joinpath(file_name).read_text()
     # Find all md links with these formats: [title](url) or ![title](url)
     for match, link in re.findall(md_link_pattern, content):
-        if path.joinpath(link).exists():
-            # Choose appropriate url template depending on wheteher the
-            # original link points to a file or an image.
-            template = img_url if match[0] == "!" else md_url
-            new_url = template.substitute(tag=revision_tag, link=link)
+        # Handle internal links (starting with #) or relative file paths
+        if link.startswith("#") or path.joinpath(link).exists():
+            # For internal links, use the md_url template with the current file
+            if link.startswith("#"):
+                # Internal link - point to the same file with the anchor
+                new_url = md_url.substitute(tag=revision_tag, link=file_name + link)
+            else:
+                # Choose appropriate url template depending on whether the
+                # original link points to a file or an image.
+                template = img_url if match[0] == "!" else md_url
+                new_url = template.substitute(tag=revision_tag, link=link)
             md_link = match.replace(link, new_url)
             # Replace existing links with new ones
             content = content.replace(match, md_link)
