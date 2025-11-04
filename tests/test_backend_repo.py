@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2023, 2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for backend repository."""
 from __future__ import annotations
@@ -96,6 +96,24 @@ def test_adding_backend(tmp_path: Path) -> None:
     assert not repo.is_backend_installed("sample_backend")
 
 
+def test_bad_settings(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test if RuntimeError is raised for bad settings."""
+
+    backend_path = tmp_path.joinpath("backend")
+    backend_path.mkdir()
+    settings = {"bad_key": "bad_value"}
+
+    repo_path = tmp_path / "repo"
+    repo = get_backend_repository(repo_path)
+    repo.add_backend("sample_backend", backend_path, settings)
+    monkeypatch.setattr(
+        repo.config_file, "get_backend_settings", lambda _: {"bad_key": "bad_val"}
+    )
+
+    with pytest.raises(RuntimeError, match="Unable to resolve path of the backend"):
+        repo.get_backend_settings("sample_backend")
+
+
 def test_copy_backend(tmp_path: Path) -> None:
     """Test copying backend to the repository."""
     repo_path = tmp_path / "repo"
@@ -138,3 +156,21 @@ def test_copy_backend(tmp_path: Path) -> None:
 
     repo.remove_backend("sample_backend")
     assert not repo_backend_path.exists()
+
+
+def test_copy_backend_dst_exists(tmp_path: Path) -> None:
+    """Test if RuntimeError is raised if the target directory exists."""
+    repo_path = tmp_path / "repo"
+    repo = get_backend_repository(repo_path)
+
+    backend_path = tmp_path.joinpath("backend")
+    backend_path.mkdir()
+
+    backend_path.joinpath("sample.txt").touch()
+
+    settings = {"param": "value"}
+    repo.repository.joinpath("backends", "sample_backend_dir").mkdir()
+    with pytest.raises(RuntimeError, match="Unable to copy backend files for"):
+        repo.copy_backend(
+            "sample_backend", backend_path, "sample_backend_dir", settings
+        )
