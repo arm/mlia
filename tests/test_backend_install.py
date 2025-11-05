@@ -31,6 +31,7 @@ from mlia.utils.download import DownloadConfig
 def mock_backend_repo(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
     """Mock backend repository."""
     mock = MagicMock(spec=BackendRepository)
+    mock.repository = MagicMock()
     monkeypatch.setattr("mlia.backend.install.get_backend_repository", lambda: mock)
 
     return mock

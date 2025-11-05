@@ -12,7 +12,9 @@ from mlia.backend.repo import BackendRepository
 from mlia.backend.repo import get_backend_repository
 
 
-def test_get_backend_repository(tmp_path: Path) -> None:
+def test_get_backend_repository(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Test function get_backend_repository."""
     repo_path = tmp_path / "repo"
     repo = get_backend_repository(repo_path)
@@ -26,6 +28,10 @@ def test_get_backend_repository(tmp_path: Path) -> None:
     config_file = repo_path / "mlia_config.json"
     assert config_file.is_file()
     assert json.loads(config_file.read_text()) == {"backends": []}
+
+    monkeypatch.setenv("VIRTUAL_ENV", "")
+    repo = get_backend_repository()
+    assert repo.repository == Path.home() / ".mlia"
 
 
 def test_backend_repository_wrong_directory(tmp_path: Path) -> None:
