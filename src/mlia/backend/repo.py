@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2023, 2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Module for backend repository.
 
@@ -18,6 +18,7 @@ from configuration file along with backend files if needed.
 from __future__ import annotations
 
 import json
+import os
 import shutil
 from pathlib import Path
 
@@ -184,7 +185,14 @@ class BackendRepository:
 
 
 def get_backend_repository(
-    repository: Path = Path.home() / ".mlia",
+    repository: Path | None = None,
 ) -> BackendRepository:
     """Return backend repository."""
-    return BackendRepository(repository)
+    repo_path = repository
+    if repo_path is None:
+        venv_path = os.environ.get("VIRTUAL_ENV")
+        if venv_path:
+            repo_path = Path(venv_path).resolve().joinpath(".mlia")
+        else:
+            repo_path = Path.home() / ".mlia"
+    return BackendRepository(repo_path)

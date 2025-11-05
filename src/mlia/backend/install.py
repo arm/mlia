@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Module for installation process."""
 from __future__ import annotations
@@ -161,6 +161,9 @@ class BackendInstallation(Installation):
     def _install_from(self, backend_info: BackendInfo) -> None:
         """Install backend from the directory."""
         backend_repo = get_backend_repository()
+        logger.debug(
+            "Installing %s in %s", backend_info.backend_path, backend_repo.repository
+        )
 
         if backend_info.copy_source:
             backend_repo.copy_backend(
