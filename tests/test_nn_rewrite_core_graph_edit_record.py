@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2023, 2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for module mlia.nn.rewrite.graph_edit.record."""
 from pathlib import Path
@@ -41,6 +41,7 @@ def check_record_model(
     test_tfrecord: Path,
     batch_size: int,
     dequantize_output: bool,
+    quantize_input: bool,
 ) -> None:
     """Test the function record_model()."""
     output_file = ExtractPaths.tfrec.output(tmp_path)
@@ -50,6 +51,7 @@ def check_record_model(
         output_filename=str(output_file),
         batch_size=batch_size,
         dequantize_output=dequantize_output,
+        quantize_input=quantize_input,
     )
     output_file = ExtractPaths.tfrec.output(tmp_path, dequantize_output)
     assert output_file.is_file()
@@ -75,5 +77,25 @@ def test_record_model(
 ) -> None:
     """Test the function record_model()."""
     check_record_model(
-        test_tflite_model, tmp_path, test_tfrecord, batch_size, dequantize_output
+        test_tflite_model, tmp_path, test_tfrecord, batch_size, dequantize_output, False
+    )
+
+
+@pytest.mark.parametrize("batch_size", (None, 1, 2))
+@pytest.mark.parametrize("dequantize_output", (True, False))
+def test_record_model_quantize(
+    test_tflite_model: Path,
+    tmp_path: Path,
+    test_tfrecord_fp32: Path,
+    batch_size: int,
+    dequantize_output: bool,
+) -> None:
+    """Test the function record_model()."""
+    check_record_model(
+        test_tflite_model,
+        tmp_path,
+        test_tfrecord_fp32,
+        batch_size,
+        dequantize_output,
+        True,
     )

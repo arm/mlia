@@ -14,6 +14,9 @@ import pytest
 import tensorflow as tf
 from keras.api._v2 import keras  # Temporary workaround for now: MLIA-1107
 
+from mlia.nn.rewrite.core.rewrite import GenericRewrite
+from mlia.nn.rewrite.core.rewrite import SparsityRewrite
+from mlia.nn.rewrite.core.train import augment_fn
 from mlia.nn.rewrite.core.train import augment_fn_twins
 from mlia.nn.rewrite.core.train import AUGMENTATION_PRESETS
 from mlia.nn.rewrite.core.train import detect_activation_from_rewrite_function
@@ -21,12 +24,13 @@ from mlia.nn.rewrite.core.train import LearningRateSchedule
 from mlia.nn.rewrite.core.train import mixup
 from mlia.nn.rewrite.core.train import train
 from mlia.nn.rewrite.core.train import TrainingParameters
-from tests.test_nn_rewrite_core_rewrite import GenericRewrite
 from tests.utils.rewrite import MockTrainingParameters
 
 
 def replace_fully_connected_with_conv(
-    input_shape: Any, output_shape: Any
+    input_shape: Any,
+    output_shape: Any,
+    **kwargs: Any,
 ) -> keras.Model:
     """Get a replacement model for the fully connected layer."""
     for name, shape in {
@@ -39,7 +43,14 @@ def replace_fully_connected_with_conv(
     model = keras.Sequential(name="RewriteModel")
     model.add(keras.Input(input_shape))
     model.add(keras.layers.Reshape((1, 1, input_shape[0])))
-    model.add(keras.layers.Conv2D(filters=output_shape[0], kernel_size=(1, 1)))
+    if act := kwargs.get("activation"):
+        model.add(
+            keras.layers.Conv2D(
+                filters=output_shape[0], kernel_size=(1, 1), activation=act
+            )
+        )
+    else:
+        model.add(keras.layers.Conv2D(filters=output_shape[0], kernel_size=(1, 1)))
     model.add(keras.layers.Reshape(output_shape))
 
     return model
@@ -49,24 +60,32 @@ def check_train(
     tflite_model: Path,
     tfrecord: Path | None,
     train_params: TrainingParameters = MockTrainingParameters(),
+    is_qat: bool = False,
     use_unmodified_model: bool = False,
     quantized: bool = False,
+    rewrite_specific_params: dict | None = None,
+    detect_activation_function: bool = False,
 ) -> None:
     """Test the train() function."""
     with TemporaryDirectory() as tmp_dir:
         output_file = Path(tmp_dir, "out.tflite")
-        mock_rewrite = GenericRewrite("replace", replace_fully_connected_with_conv)
+        mock_rewrite = (
+            SparsityRewrite("replace", replace_fully_connected_with_conv)
+            if is_qat
+            else GenericRewrite("replace", replace_fully_connected_with_conv)
+        )
         result = train(
             source_model=str(tflite_model),
             unmodified_model=str(tflite_model) if use_unmodified_model else None,
             output_model=str(output_file),
             input_tfrec=str(tfrecord) if tfrecord else None,
             rewrite=mock_rewrite,
-            is_qat=False,
+            is_qat=is_qat,
             input_tensors=["sequential/flatten/Reshape"],
             output_tensors=["StatefulPartitionedCall:0"],
             train_params=train_params,
-            rewrite_specific_params={},
+            rewrite_specific_params=rewrite_specific_params,
+            detect_activation_function=detect_activation_function,
         )
 
         assert len(result[0][0]) == 2
@@ -96,11 +115,13 @@ def check_train(
         "lr_schedule",
         "use_unmodified_model",
         "num_procs",
+        "rewrite_specific_params",
+        "detect_activation_function",
     ),
     (
-        (1, False, AUGMENTATION_PRESETS["none"], "cosine", False, 2),
-        (32, True, AUGMENTATION_PRESETS["gaussian"], "late", True, 1),
-        (2, False, AUGMENTATION_PRESETS["mixup"], "constant", True, 0),
+        (1, False, AUGMENTATION_PRESETS["none"], "cosine", False, 2, {}, False),
+        (32, True, AUGMENTATION_PRESETS["gaussian"], "late", True, 1, {}, True),
+        (2, False, AUGMENTATION_PRESETS["mixup"], "constant", True, 0, {}, False),
         (
             1,
             False,
@@ -108,6 +129,8 @@ def check_train(
             "cosine",
             False,
             2,
+            {"some_param": "some_value"},
+            True,
         ),
     ),
 )
@@ -120,6 +143,8 @@ def test_train_fp32(
     lr_schedule: LearningRateSchedule,
     use_unmodified_model: bool,
     num_procs: int,
+    rewrite_specific_params: dict,
+    detect_activation_function: bool,
 ) -> None:
     """Test the train() function with valid parameters."""
     check_train(
@@ -132,7 +157,10 @@ def test_train_fp32(
             learning_rate_schedule=lr_schedule,
             num_procs=num_procs,
         ),
+        is_qat=False,
         use_unmodified_model=use_unmodified_model,
+        rewrite_specific_params=rewrite_specific_params,
+        detect_activation_function=detect_activation_function,
     )
 
 
@@ -180,7 +208,10 @@ def test_train_int8(
             augmentations=augmentation_preset,
             learning_rate_schedule=lr_schedule,
             num_procs=num_procs,
+            steps=64,
+            checkpoint_at=[32],
         ),
+        is_qat=True,
         use_unmodified_model=use_unmodified_model,
         quantized=True,
     )
@@ -234,11 +265,31 @@ def test_mixup() -> None:
     ],
 )
 def test_augment_fn_twins(augmentations: Any, expected_error: Any) -> None:
-    """Test function augment_fn()."""
+    """Test function augment_fn_twins()."""
     dataset = tf.data.Dataset.from_tensor_slices({"a": [1, 2, 3], "b": [4, 5, 6]})
     with expected_error:
         fn_twins = augment_fn_twins(dataset, augmentations)
         assert len(fn_twins) == 2
+
+
+@pytest.mark.parametrize(
+    "augmentations",
+    (
+        AUGMENTATION_PRESETS["none"],
+        AUGMENTATION_PRESETS["gaussian"],
+        AUGMENTATION_PRESETS["mix_gaussian_large"],
+    ),
+)
+def test_augment_fn(augmentations: Any) -> None:
+    """Test function augment_fn()."""
+    seed = np.random.randint(2**32 - 1)
+    rng = np.random.default_rng(seed)
+    dataset = tf.data.Dataset.from_tensor_slices({"a": [1, 2, 3], "b": [4, 5, 6]})
+    augment_function = augment_fn(dataset, augmentations, rng)
+    assert (
+        augment_function({"a": tf.constant([1, 2, 3]), "b": tf.constant([4, 5, 6])})
+        is not None
+    )
 
 
 @pytest.mark.slow
