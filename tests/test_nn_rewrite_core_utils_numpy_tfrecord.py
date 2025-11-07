@@ -1,9 +1,10 @@
-# SPDX-FileCopyrightText: Copyright 2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2023, 2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for module mlia.nn.rewrite.core.utils.numpy_tfrecord."""
 from __future__ import annotations
 
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
 import tensorflow as tf
@@ -40,4 +41,20 @@ def test_make_decode_fn(test_tfrecord: Path) -> None:
 
 def test_numpytf_count(test_tfrecord: Path) -> None:
     """Test function numpytf_count()."""
+    assert numpytf_count(test_tfrecord) == 3
+    numpytf_count.cache_clear()
+    assert numpytf_count(test_tfrecord) == 3
+
+
+def test_numpytf_count_no_metadata(
+    test_tfrecord: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Test function numpytf_count() with no .meta file."""
+    numpytf_count.cache_clear()
+
+    monkeypatch.setattr(
+        "mlia.nn.rewrite.core.utils.numpy_tfrecord.open",
+        MagicMock(side_effect=FileNotFoundError),
+        raising=False,
+    )
     assert numpytf_count(test_tfrecord) == 3

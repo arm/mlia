@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2023, 2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for module mlia.nn.rewrite.graph_edit.join."""
 from pathlib import Path
@@ -43,3 +43,9 @@ def test_diff_stats(test_tfrecord_fp32: Path) -> None:
     res1, res2 = diff_stats(test_tfrecord_fp32, test_tfrecord_fp32)
     assert res1 == 0.0
     assert res2 == 0.0
+
+    res1, res2 = diff_stats(test_tfrecord_fp32, test_tfrecord_fp32, True)
+    assert res1["serving_default_input:0"].shape == (1, 28, 28, 1)
+    assert res2["serving_default_input:0"].shape == (1, 28, 28, 1)
+    np.all(np.isclose(res1["serving_default_input:0"], np.zeros((1, 28, 28, 1))))
+    np.all(np.isclose(res2["serving_default_input:0"], np.zeros((1, 28, 28, 1))))
