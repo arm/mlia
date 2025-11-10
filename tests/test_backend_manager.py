@@ -164,7 +164,7 @@ def get_interactive_installation_manager(
     return DefaultInstallationManager(installations, noninteractive=False)
 
 
-def test_installation_manager_filtering() -> None:
+def test_installation_manager_filtering(tmp_path: Path) -> None:
     """Test default installation manager."""
     already_installed = _already_installed_mock()
     ready_for_installation = _ready_for_installation_mock()
@@ -181,6 +181,9 @@ def test_installation_manager_filtering() -> None:
     assert manager.ready_for_installation() == [
         ready_for_installation,
         could_be_downloaded_and_installed,
+    ]
+    assert manager.supports_installation_type(InstallFromPath(tmp_path)) == [
+        already_installed
     ]
 
 
@@ -354,7 +357,7 @@ def test_installation_manager_uninstall(
     assert install_mock.uninstall.mock_calls == expected_call
 
 
-def test_installation_internal_error(
+def test_installation_manager_duplicated_backends(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Test that manager should be able to detect wrong state."""
@@ -374,7 +377,7 @@ def test_installation_internal_error(
 
 
 def test_uninstall_unknown_backend(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Test that uninstall should fail for uknown backend."""
+    """Test that uninstall should fail for unknown backend."""
     install_mock = _ready_for_uninstall_mock()
     manager = get_installation_manager(False, [install_mock, install_mock], monkeypatch)
 
@@ -388,13 +391,28 @@ def test_show_env_details(monkeypatch: pytest.MonkeyPatch) -> None:
     """Test method show_env_details."""
     ready_to_install_mock = _ready_for_installation_mock()
     could_be_installed_mock = _could_be_installed_from_mock()
+    logger_info_mock = MagicMock()
+
+    monkeypatch.setattr("mlia.backend.manager.logger.info", logger_info_mock)
 
     manager = get_installation_manager(
-        False,
-        [ready_to_install_mock, could_be_installed_mock],
-        monkeypatch,
+        False, [ready_to_install_mock, could_be_installed_mock], monkeypatch
     )
     manager.show_env_details()
+    logger_info_mock.assert_has_calls(
+        [
+            call("  - %s", "ready_for_installation"),
+            call("  - %s", "could_be_installed_from"),
+        ]
+    )
+
+    manager = get_installation_manager(False, [_already_installed_mock()], monkeypatch)
+    manager.show_env_details()
+    logger_info_mock.assert_has_calls([call("  - %s", "already_installed")])
+
+    manager = get_installation_manager(False, [], monkeypatch)
+    manager.show_env_details()
+    logger_info_mock.assert_has_calls([call("No backends installed")])
 
 
 @pytest.mark.parametrize(

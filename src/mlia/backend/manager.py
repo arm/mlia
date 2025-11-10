@@ -122,6 +122,12 @@ class InstallationFiltersMixin:
         """Return list of the backends that could be installed."""
         return self.filter_by(ReadyForInstallationFilter())
 
+    def supports_installation_type(
+        self, installation_type: InstallationType
+    ) -> list[Installation]:
+        """Return list of the backends that support the installation type."""
+        return self.filter_by(SupportsInstallTypeFilter(installation_type))
+
 
 class DefaultInstallationManager(InstallationManager, InstallationFiltersMixin):
     """Interactive installation manager."""
