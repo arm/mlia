@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """CLI commands module.
 
@@ -26,6 +26,7 @@ from mlia.api import get_advice
 from mlia.backend.manager import get_installation_manager
 from mlia.cli.command_validators import validate_backend
 from mlia.cli.command_validators import validate_check_target_profile
+from mlia.cli.command_validators import validate_optimize_target_profile
 from mlia.cli.options import parse_optimization_parameters
 from mlia.utils.console import create_section_header
 
@@ -160,6 +161,7 @@ def optimize(  # pylint: disable=too-many-locals,too-many-arguments
         )
     )
 
+    validate_optimize_target_profile(target_profile)
     validated_backend = validate_backend(target_profile, backend)
 
     get_advice(

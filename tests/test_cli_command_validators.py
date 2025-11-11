@@ -11,6 +11,7 @@ import pytest
 
 from mlia.cli.command_validators import validate_backend
 from mlia.cli.command_validators import validate_check_target_profile
+from mlia.cli.command_validators import validate_optimize_target_profile
 
 
 @pytest.mark.parametrize(
@@ -192,3 +193,21 @@ def test_validate_backend_default_unavailable(monkeypatch: pytest.MonkeyPatch) -
     )
     with pytest.raises(argparse.ArgumentError):
         validate_backend("cortex-a", None)
+
+
+@pytest.mark.parametrize(
+    "target_profile, sys_exit",
+    [("ethos-u55-128", False), ("tosa", True), ("cortex-a", True)],
+)
+def test_validate_optimize_target_profile(
+    target_profile: str,
+    sys_exit: bool,
+) -> None:
+    """Tests if an incompatible target is passed for optimization."""
+    if sys_exit:
+        with pytest.raises(SystemExit) as sys_ex:
+            validate_optimize_target_profile(target_profile)
+        assert sys_ex.value.code == 1
+        return
+
+    validate_optimize_target_profile(target_profile)

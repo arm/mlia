@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2023, 2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """CLI command validators module."""
 from __future__ import annotations
@@ -100,6 +100,20 @@ def validate_check_target_profile(target_profile: str, category: set[str]) -> No
     warning_message += " No operation was performed."
     logger.warning(warning_message)
     sys.exit(0)
+
+
+def validate_optimize_target_profile(target_profile: str) -> None:
+    """Validate whether the provided target profile is compatible with 'mlia optimize'.
+
+    This function exits with code 1 if the provided target profile is
+    not supported.
+    """
+    incompatible_targets_optimize: list[str] = ["tosa", "cortex-a"]
+    if target_profile in incompatible_targets_optimize:
+        logger.error(
+            "Optimization cannot be performed with target profile %s.", target_profile
+        )
+        sys.exit(1)
 
 
 def normalize_string(value: str) -> str:
