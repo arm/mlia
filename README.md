@@ -15,6 +15,36 @@ optimization (e.g. pruning and clustering). With the ML Inference Advisor,
 we aim to make the Arm ML IP accessible to developers at all levels of abstraction,
 with differing knowledge on hardware optimization and machine learning.
 
+## Table of Contents
+
+- [General usage](#general-usage)
+   - [Prerequisites and dependencies](#prerequisites-and-dependencies)
+   - [Installation](#installation)
+   - [First steps](#first-steps)
+- [Sub-commands](#sub-commands)
+   - [check](#check)
+      - [compatibility](#compatibility)
+      - [performance](#performance)
+   - [optimize](#optimize)
+   - [rewrite](#rewrite)
+      - [Random Dataset](#random-dataset)
+      - [Conv2d Rewrites](#conv2d-rewrites)
+      - [Optimization Profiles](#optimization-profiles)
+      - [Custom optimization Profiles](#custom-optimization-profiles)
+- [Target profiles](#target-profiles)
+   - [Ethos-U](#ethos-u)
+   - [Cortex-A](#cortex-a)
+   - [TOSA](#tosa)
+   - [Custom target profiles](#custom-target-profiles)
+- [Backend installation](#backend-installation)
+   - [Available backends](#available-backends)
+      - [Arm NN TensorFlow Lite Delegate](#arm-nn-tensorflow-lite-delegate)
+      - [Corstone-300](#corstone-300)
+      - [Corstone-310](#corstone-310)
+      - [Corstone-320](#corstone-320)
+      - [TOSA Checker](#tosa-checker)
+      - [Vela](#vela)
+
 ## Inclusive language commitment
 
 This product conforms to Arm's inclusive language policy and, to the best of
@@ -49,16 +79,15 @@ permissive licenses, see [LICENSES](LICENSES/).
 
 ## Trademarks and copyrights
 
-* Arm®, Arm® Ethos™-U, Arm® Cortex®-A, Arm® Cortex®-M, Arm® Corstone™ are
+- Arm®, Arm® Ethos™-U, Arm® Cortex®-A, Arm® Cortex®-M, Arm® Corstone™ are
   registered trademarks or trademarks of Arm® Limited (or its subsidiaries) in
   the U.S. and/or elsewhere.
-* TensorFlow™ is a trademark of Google® LLC.
-* Keras™ is a trademark by François Chollet.
-* Linux® is the registered trademark of Linus Torvalds in the U.S. and
-  elsewhere.
-* Python® is a registered trademark of the PSF.
-* Ubuntu® is a registered trademark of Canonical.
-* Microsoft and Windows are trademarks of the Microsoft group of companies.
+- TensorFlow™ is a trademark of Google® LLC.
+- Keras™ is a trademark by François Chollet.
+- Linux® is the registered trademark of Linus Torvalds in the U.S. and elsewhere.
+- Python® is a registered trademark of the PSF.
+- Ubuntu® is a registered trademark of Canonical.
+- Microsoft and Windows are trademarks of the Microsoft group of companies.
 
 # General usage
 
@@ -67,10 +96,10 @@ permissive licenses, see [LICENSES](LICENSES/).
 It is recommended to use a virtual environment for MLIA installation, and a
 typical setup requires:
 
-* Ubuntu® 22.04.5 LTS (other OSs may work, the ML Inference Advisor has been
+- Ubuntu® 22.04.5 LTS (other OSs may work, the ML Inference Advisor has been
   tested on this one specifically)
-* Python® >= 3.10
-* libpython3.10-dev (part of python3.10-dev)
+- Python® >= 3.10
+- libpython3.10-dev (part of python3.10-dev)
 
 ## Installation
 
@@ -81,6 +110,8 @@ pip install mlia
 ```
 
 It is highly recommended to create a new virtual environment for the installation.
+
+For details on installing and managing backends required for specific hardware targets, see the [Backend installation](#backend-installation) section below.
 
 ## First steps
 
@@ -101,8 +132,8 @@ mlia [sub-command] [arguments]
 
 Where the following sub-commands are available:
 
-* ["check"](#check): perform compatibility or performance checks on the model
-* ["optimize"](#optimize): apply specified optimizations
+- ["check"](#check): perform compatibility or performance checks on the model
+- ["optimize"](#optimize): apply specified optimizations
 
 Detailed help about the different sub-commands can be shown like this:
 
@@ -169,10 +200,10 @@ the original unoptimized model.
 
 There are currently three optimization techniques available to apply:
 
-* **pruning**: Sets insignificant model weights to zero until the specified
-    sparsity is reached.
-* **clustering**: Groups the weights into the specified number of clusters and
-    then replaces the weight values with the cluster centroids.
+- **pruning**: Sets insignificant model weights to zero until the specified
+  sparsity is reached.
+- **clustering**: Groups the weights into the specified number of clusters and
+  then replaces the weight values with the cluster centroids.
 
 More information about these techniques can be found online in the TensorFlow
 documentation, e.g. in the
@@ -202,18 +233,26 @@ Replaces certain subgraph/layer of the pre-trained model with candidates from th
 
 The following rewrites are supported:
 
-* fully-connected - replaces a subgraph with a fully connected layer
-* fully-connected-sparsity - replaces a subgraph with a pruned M:N sparse fully connected layer
-* fully-connected-unstructured-sparsity - replaces a subgraph with an unstructured pruned fully connected layer
-* fully-connected-clustering - replaces a subgraph with a clustered fully connected layer
-* conv2d - replaces a subgraph with a conv2d layer
-* conv2d-sparsity - replaces a subgraph with a pruned M:N sparse conv2d layer
-* conv2d-unstructured-sparsity - replaces a subgraph with an unstructured pruned conv2d layer
-* conv2d-clustering  - replaces a subgraph with a clustered conv2d layer
-* depthwise-separable-conv2d - replaces a subgraph with a depthwise separable conv2d layer
-* depthwise-separable-conv2d-sparsity - replaces a subgraph with a pruned M:N sparse depthwise separable conv2d layer
-* depthwise-separable-conv2d-unstructured-sparsity - replaces a subgraph with an unstructured pruned depthwise separable conv2d layer
-* depthwise-separable-conv2d-clustering - replaces a subgraph with a clustered depthwise separable conv2d layer
+- fully-connected - replaces a subgraph with a fully connected layer
+- fully-connected-sparsity - replaces a subgraph with a pruned M:N sparse
+  fully connected layer
+- fully-connected-unstructured-sparsity - replaces a subgraph with an
+  unstructured pruned fully connected layer
+- fully-connected-clustering - replaces a subgraph with a clustered fully
+  connected layer
+- conv2d - replaces a subgraph with a conv2d layer
+- conv2d-sparsity - replaces a subgraph with a pruned M:N sparse conv2d layer
+- conv2d-unstructured-sparsity - replaces a subgraph with an unstructured
+  pruned conv2d layer
+- conv2d-clustering  - replaces a subgraph with a clustered conv2d layer
+- depthwise-separable-conv2d - replaces a subgraph with a depthwise separable
+  conv2d layer
+- depthwise-separable-conv2d-sparsity - replaces a subgraph with a pruned M:N
+  sparse depthwise separable conv2d layer
+- depthwise-separable-conv2d-unstructured-sparsity - replaces a subgraph with
+  an unstructured pruned depthwise separable conv2d layer
+- depthwise-separable-conv2d-clustering - replaces a subgraph with a clustered
+  depthwise separable conv2d layer
 
 **Note:** A ***TensorFlow Lite model*** is required as input
 to perform a rewrite.
@@ -274,54 +313,39 @@ Training parameters for rewrites can be specified.
 
 There are a number of predefined profiles for rewrites. Some examples of these are shown below:
 
-|    Name      | Batch Size |  LR  | Show Progress | Steps | LR Schedule | Num Procs | Num Threads | Checkpoints |
-| ------------ | ---------- | ---- | ------------- | ----- | ----------- | --------- | ----------- | ----------- |
-| optimization |     32     | 1e-3 |      True     | 48000 |   "cosine"  |     1     |      0      |     None    |
+| Name                                         | Batch Size |  LR   | Show Progress | Steps | LR Schedule | Num Procs | Num Threads | Checkpoints | Num Clusters | Cluster Centroids Init             | Sparsity M | Sparsity N | Initial Sparsity | End Sparsity | End Step | Activation | Kernel Size |
+|----------------------------------------------|------------|-------|---------------|-------|-------------|-----------|-------------|-------------|--------------|------------------------------------|------------|------------|------------------|--------------|----------|------------|------------|
+| optimization                                |     32     | 1e-3  |     True      | 48000 |   "cosine"  |     1     |      0      |    None     |      -       |                -                   |     -      |     -      |        -         |      -       |    -     |     -      |     -      |
+| optimization-fully-connected-clustering      |     32     | 1e-3  |     True      | 48000 |   "cosine"  |     1     |      0      |    None     |     16       | "CentroidInitialization.LINEAR"    |     -      |     -      |        -         |      -       |    -     |     -      |     -      |
+| optimization-fully-connected-pruning         |     32     | 1e-3  |     True      | 48000 |   "cosine"  |     1     |      0      |    None     |      -       |                -                   |     2      |     4      |        -         |      -       |    -     |     -      |     -      |
+| optimization-fully-connected-unstructured-pruning |  32     | 1e-3  |     True      | 48000 |   "cosine"  |     1     |      0      |    None     |      -       |                -                   |     -      |     -      |      0.25        |     0.5      |  48000   |     -      |     -      |
+| optimization-conv2d-clustering               |     32     | 1e-3  |     True      | 48000 |   "cosine"  |     1     |      0      |    None     |     16       | "CentroidInitialization.LINEAR"    |     -      |     -      |        -         |      -       |    -     |  "relu"    |   3x3      |
+| optimization-conv2d-pruning                  |     32     | 1e-3  |     True      | 48000 |   "cosine"  |     1     |      0      |    None     |      -       |                -                   |     2      |     4      |        -         |      -       |    -     |  "relu"    |   3x3      |
+| optimization-conv2d-unstructured-pruning     |     32     | 1e-3  |     True      | 48000 |   "cosine"  |     1     |      0      |    None     |      -       |                -                   |     -      |     -      |      0.25        |     0.5      |  48000   |  "relu"    |   3x3      |
 
-|    Name                                 | Batch Size |  LR  | Show Progress | Steps | LR Schedule | Num Procs | Num Threads | Checkpoints | Num Clusters | Cluster Centroids Init             |
-| --------------------------------------- | ---------- | ---- | ------------- | ----- | ----------- | --------- | ----------- | ----------- | ------------ | ---------------------------------- |
-| optimization-fully-connected-clustering |     32     | 1e-3 |      True     | 48000 |   "cosine"  |     1     |      0      |     None    |      16      |    "CentroidInitialization.LINEAR" |
+The complete list of built in optimization profiles is shown below. Each
+profile provides training parameters and parameters specific to the rewrite.
 
-|    Name                               | Batch Size |  LR  | Show Progress | Steps | LR Schedule | Num Procs | Num Threads | Checkpoints | Sparsity M | Sparsity N |
-| ------------------------------------- | ---------- | ---- | ------------- | ----- | ----------- | --------- | ----------- | ----------- | ---------- | ---------- |
-| optimization-fully-connected-pruning  |     32     | 1e-3 |      True     | 48000 |   "cosine"  |     1     |      0      |     None    |     2      |      4     |
+- optimization
+- optimization-fully-connected-clustering
+- optimization-fully-connected-pruning
+- optimization-fully-connected-unstructured-pruning
+- optimization-conv2d
+- optimization-conv2d-clustering
+- optimization-conv2d-pruning
+- optimization-conv2d-unstructured-pruning
+- optimization-depthwise-separable-conv2d
+- optimization-depthwise-separable-conv2d-clustering
+- optimization-depthwise-separable-conv2d-pruning
+- optimization-conv2d-depthwise-separable-unstructured-pruning
 
-|    Name                                           | Batch Size |  LR  | Show Progress | Steps | LR Schedule | Num Procs | Num Threads | Checkpoints | Initial Sparsity | End Sparsity | End Step   |
-| ------------------------------------------------- | ---------- | ---- | ------------- | ----- | ----------- | --------- | ----------- | ----------- | ---------------- | ------------ | ---------- |
-| optimization-fully-connected-unstructured-pruning |     32     | 1e-3 |      True     | 48000 |   "cosine"  |     1     |      0      |     None    |     0.25         |      0.5     | 48000      |
+**Note:** For convolutional rewrites (e.g. optimization-conv2d-pruning). The
+activation function for the rewrite can be selected in the optimization profile
+from the following list:
 
-|    Name                        | Batch Size |  LR  | Show Progress | Steps | LR Schedule | Num Procs | Num Threads | Checkpoints | Num Clusters | Cluster Centroids Init             | Activation | Kernel Size |
-| ------------------------------ | ---------- | ---- | ------------- | ----- | ----------- | --------- | ----------- | ----------- | ------------ | ---------------------------------- | ---------- | ----------- |
-| optimization-conv2d-clustering |     32     | 1e-3 |      True     | 48000 |   "cosine"  |     1     |      0      |     None    |      16      |    "CentroidInitialization.LINEAR" | "relu"     | 3x3         |
-
-|    Name                     | Batch Size |  LR  | Show Progress | Steps | LR Schedule | Num Procs | Num Threads | Checkpoints | Sparsity M | Sparsity N | Activation | Kernel Size |
-| --------------------------- | ---------- | ---- | ------------- | ----- | ----------- | --------- | ----------- | ----------- | ---------- | ---------- | ---------- | ----------- |
-| optimization-conv2d-pruning |     32     | 1e-3 |      True     | 48000 |   "cosine"  |     1     |      0      |     None    |     2      |      4     | "relu"     | 3x3         |
-
-|    Name                                  | Batch Size |  LR  | Show Progress | Steps | LR Schedule | Num Procs | Num Threads | Checkpoints | Initial Sparsity | End Sparsity | End Step   | Activation | Kernel Size |
-| ---------------------------------------- | ---------- | ---- | ------------- | ----- | ----------- | --------- | ----------- | ----------- | ---------------- | ------------ | ---------- | ---------- | ----------- |
-| optimization-conv2d-unstructured-pruning |     32     | 1e-3 |      True     | 48000 |   "cosine"  |     1     |      0      |     None    |     0.25         |      0.5     |     48000  |    "relu"  |         3x3 |
-
-The complete list of built in optimization profiles is shown below. Each profile provides training parameters and parameters specific to the rewrite.
-
-* optimization
-* optimization-fully-connected-clustering
-* optimization-fully-connected-pruning
-* optimization-fully-connected-unstructured-pruning
-* optimization-conv2d
-* optimization-conv2d-clustering
-* optimization-conv2d-pruning
-* optimization-conv2d-unstructured-pruning
-* optimization-depthwise-separable-conv2d
-* optimization-depthwise-separable-conv2d-clustering
-* optimization-depthwise-separable-conv2d-pruning
-* optimization-conv2d-depthwise-separable-unstructured-pruning
-
-**Note:** For convolutional rewrites (e.g. optimization-conv2d-pruning). The activation function for the rewrite can be selected in the optimization profile from the following list:
-
-* "relu" - Standard ReLU activation function
-* "relu6" - ReLU6 activation function i.e. ReLU activation function capped at 6
-* "none" - No activation function
+- "relu" - Standard ReLU activation function
+- "relu6" - ReLU6 activation function i.e. ReLU activation function capped at 6
+- "none" - No activation function
 
 The user can also specify custom augmentations as part of the training parameters. An example of this can be found in the following optimization profile:
 
@@ -419,20 +443,21 @@ mlia check ~/model.tflite --target-profile ethos-u65-512 --performance
 
 Ethos-U is supported by these backends:
 
-* [Corstone-300](#corstone-300)
-* [Corstone-310](#corstone-310)
-* [Corstone-320](#corstone-320)
-* [Vela](#vela)
+- [Corstone-300](#corstone-300)
+- [Corstone-310](#corstone-310)
+- [Corstone-320](#corstone-320)
+- [Vela](#vela)
 
-As described in section [Custom target profiles](#custom-target-profiles), you can customize
-the target using the following parameters in the .toml files:
+As described in section [Custom target profiles](#custom-target-profiles), you
+can customize the target using the following parameters in the .toml files:
 
-* mac: number of MACs [256, 512]
-* memory_mode: [SRAM Only, Shared SRAM, Dedicated SRAM]
-* system_config: name of the system configuration. For Vela backend, it's defined in `vela.ini`.
-* config: for the Vela backend - the path to Vela configuration file,
-          passed in the `--config` argument.
-          If not given, uses the builtin path: `mlia/resources/vela/vela.ini`
+- mac: number of MACs [256, 512]
+- memory_mode: [SRAM Only, Shared SRAM, Dedicated SRAM]
+- system_config: name of the system configuration. For Vela backend, it's
+  defined in `vela.ini`.
+- config: for the Vela backend - the path to Vela configuration file,
+  passed in the `--config` argument.
+  If not given, uses the builtin path: `mlia/resources/vela/vela.ini`
 
 ## Cortex-A
 
@@ -456,8 +481,8 @@ TOSA is currently only available for x86 architecture.
 
 For more information, see TOSA Checker's:
 
-* [repository](https://review.mlplatform.org/plugins/gitiles/tosa/tosa_checker/+/refs/heads/main)
-* [pypi.org page](https://pypi.org/project/tosa-checker/)
+- [repository](https://gitlab.arm.com/tosa/tosa-checker)
+- [pypi.org page](https://pypi.org/project/tosa-checker/)
 
 ## Custom target profiles
 
@@ -482,9 +507,9 @@ metrics for different target hardware. Some backends come pre-installed,
 but others can be added and managed using the command `mlia-backend`, that
 provides the following functionality:
 
-* **install**
-* **uninstall**
-* **list**
+- **install**
+- **uninstall**
+- **list**
 
  *Examples:*
 
@@ -533,7 +558,7 @@ For version 23.05 the classic delegate is used.
 
 For more information see:
 
-* [Arm NN TensorFlow Lite Delegate documentation](https://arm-software.github.io/armnn/latest/md_delegate__delegate_quick_start_guide.html)
+- [Arm NN TensorFlow Lite Delegate documentation](https://arm-software.github.io/armnn/latest/md_delegate__delegate_quick_start_guide.html)
 
 ### Corstone-300
 
@@ -558,9 +583,9 @@ Corstone-310 is a backend that provides performance metrics for systems based
 on [Arm® Cortex™-M85 processor](https://www.arm.com/products/silicon-ip-cpu/cortex-m/cortex-m85) and Ethos-U ([Arm® Ethos™-U55 NPU](https://www.arm.com/products/silicon-ip-cpu/ethos/ethos-u55)
 or [Arm® Ethos™-U65 NPU](https://www.arm.com/products/silicon-ip-cpu/ethos/ethos-u65)).
 
-* For access to AVH for Corstone-310 please refer to:
+- For access to AVH for Corstone-310 please refer to:
   <https://developer.arm.com/Processors/Corstone-310>
-* Please use the examples of MLIA using Corstone-310 here to get started:
+- Please use the examples of MLIA using Corstone-310 here to get started:
   <https://github.com/ARM-software/open-iot-sdk>
 
 ### Corstone-320
@@ -568,9 +593,9 @@ or [Arm® Ethos™-U65 NPU](https://www.arm.com/products/silicon-ip-cpu/ethos/et
 Corstone-320 is a backend that provides performance metrics for systems based
 on [Arm® Cortex™-M85 processor](https://www.arm.com/products/silicon-ip-cpu/cortex-m/cortex-m85) and [Arm® Ethos™-U85 NPU](https://www.arm.com/products/silicon-ip-cpu/ethos/ethos-u85).
 
-* For access to AVH for Corstone-310 please refer to:
+- For access to AVH for Corstone-310 please refer to:
   <https://developer.arm.com/Processors/Corstone-320>
-* Please use the examples of MLIA using Corstone-320 here to get started:
+- Please use the examples of MLIA using Corstone-320 here to get started:
   <https://github.com/ARM-software/open-iot-sdk>
 
 ### TOSA Checker
@@ -591,8 +616,8 @@ mlia-backend install tosa-checker
 
 Additional resources:
 
-* Source code: <https://gitlab.arm.com/tosa/tosa-checker>
-* PyPi package <https://pypi.org/project/tosa-checker/>
+- Source code: <https://gitlab.arm.com/tosa/tosa-checker>
+- PyPi package <https://pypi.org/project/tosa-checker/>
 
 ### Vela
 
@@ -605,4 +630,4 @@ mlia-backend install vela
 
 Additional resources:
 
-* <https://pypi.org/project/ethos-u-vela/>
+- <https://pypi.org/project/ethos-u-vela/>
