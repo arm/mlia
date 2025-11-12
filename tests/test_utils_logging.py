@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, 2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for the logging utility functions."""
 from __future__ import annotations
@@ -15,6 +15,7 @@ import pytest
 
 from mlia.utils.logging import capture_raw_output
 from mlia.utils.logging import create_log_handler
+from mlia.utils.logging import LogFilter
 from mlia.utils.logging import redirect_output
 from mlia.utils.logging import redirect_raw_output
 
@@ -45,6 +46,14 @@ from mlia.utils.logging import redirect_raw_output
             None,
             pytest.raises(Exception, match="Unable to create logging handler"),
             None,
+        ),
+        (
+            None,
+            sys.stdout,
+            LogFilter(lambda log_record: True),
+            None,
+            does_not_raise(),
+            logging.StreamHandler,
         ),
     ],
 )
@@ -97,3 +106,37 @@ def test_output_and_error_capture() -> None:
 
     assert std_output == ["hello from stdout\n"]
     assert stderr_output == ["hello from stderr\n"]
+
+
+def test_log_filtration_by_equal(capfd: pytest.CaptureFixture) -> None:
+    """Test LogFilter that filters non INFO and DEBUG logs."""
+    handler = create_log_handler(
+        stream=sys.stdout, log_level=0, log_filter=LogFilter.equals(logging.INFO)
+    )
+
+    test_logger = logging.getLogger("test")
+    test_logger.addHandler(handler)
+
+    test_logger.debug("Debug message")
+    test_logger.info("Info message")
+    test_logger.error("Error message")
+
+    stdout, _ = capfd.readouterr()
+    assert stdout == ""
+
+
+def test_log_filtration_by_skip(capfd: pytest.CaptureFixture) -> None:
+    """Test LogFilter that skips INFO and DEBUG logs."""
+    handler = create_log_handler(
+        stream=sys.stdout, log_filter=LogFilter.skip(logging.INFO | logging.DEBUG)
+    )
+
+    test_logger = logging.getLogger("test")
+    test_logger.addHandler(handler)
+
+    test_logger.debug("Debug message")
+    test_logger.info("Info message")
+    test_logger.error("Error message")
+
+    stdout, _ = capfd.readouterr()
+    assert stdout == "Error message\n"

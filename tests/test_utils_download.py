@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2023, 2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for download functionality."""
 from __future__ import annotations
@@ -122,11 +122,11 @@ def test_download_artifact_download_to(
 
     with expected_error:
         cfg = DownloadConfig(
-            "some_url",
+            "some.com/made/up/url/artifact_filename",
             sha256_hash,
         )
 
-        dest = tmp_path / "artifact_filename"
+        dest = tmp_path / cfg.filename
         download(dest, cfg)
         assert isinstance(dest, Path)
         assert dest.name == "artifact_filename"
