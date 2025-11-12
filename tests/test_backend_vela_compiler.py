@@ -3,6 +3,7 @@
 """Tests for module vela/compiler."""
 from __future__ import annotations
 
+import tempfile
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock
@@ -11,6 +12,8 @@ import pytest
 
 try:
     import ethosu.vela  # noqa: F401
+
+    from ethosu.vela.vela import main
 except ImportError:
     pytest.skip(
         "All tests require ethosu.vela package to be installed", allow_module_level=True
@@ -29,10 +32,9 @@ from mlia.backend.vela.compiler import VelaInitData  # noqa: E402
 from mlia.backend.vela.compiler import VelaInitMemoryData  # noqa: E402
 from mlia.backend.vela.compiler import VelaSummary  # noqa: E402
 from mlia.target.ethos_u.config import EthosUConfiguration  # noqa: E402
-from mlia.utils.filesystem import recreate_directory  # noqa: E402
 
 
-def test_default_vela_compiler() -> None:
+def test_default_vela_compiler(test_tflite_model: Path) -> None:
     """Test default Vela compiler instance."""
     default_compiler_options = VelaCompilerOptions(accelerator_config="ethos-u55-256")
     default_compiler = VelaCompiler(default_compiler_options)
@@ -47,6 +49,10 @@ def test_default_vela_compiler() -> None:
     assert default_compiler.cpu_tensor_alignment == 16
     assert default_compiler.optimization_strategy == "Performance"
     assert default_compiler.output_dir == Path("output")
+    assert not default_compiler.read_model(test_tflite_model).optimized
+
+    with pytest.raises(RuntimeError, match="Unable to read model"):
+        _ = default_compiler.read_model("bad_model.tflite")
 
     with pytest.raises(
         ValueError, match="System Config: internal-default not present in vela.ini file"
@@ -213,6 +219,74 @@ def test_compile_model(test_tflite_model: Path) -> None:
     assert isinstance(vela_summary_data, VelaSummary)
     assert isinstance(optimized_model_path, Path)
     assert expected_model_path == optimized_model_path
+
+
+@pytest.mark.parametrize(
+    "output_message, expected_err",
+    [
+        (
+            "",
+            pytest.raises(
+                RuntimeError, match="Model could not be optimized with Vela compiler."
+            ),
+        ),
+        (
+            "Error: Invalid tflite file.",
+            pytest.raises(RuntimeError, match="Unable to read model"),
+        ),
+    ],
+)
+def test_compile_model_system_exit(
+    output_message: str,
+    expected_err: Any,
+    test_tflite_model: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test if compiler_model() raises RuntimeError if vela compiler fails."""
+    monkeypatch.setattr(
+        "mlia.backend.vela.compiler.main", MagicMock(side_effect=SystemExit)
+    )
+    target_config = EthosUConfiguration.load_profile("ethos-u55-256")
+    assert (
+        target_config.compiler_options is not None
+    ), "Vela should be available in tests"
+    compiler = VelaCompiler(target_config.compiler_options)
+
+    # Create a fake StringIO object
+    mock_io_instance = MagicMock()
+    mock_io_instance.getvalue.return_value = output_message
+
+    # Mock the class so every StringIO() returns this instance
+    mock_stringio = MagicMock(return_value=mock_io_instance)
+
+    monkeypatch.setattr("mlia.backend.vela.compiler.StringIO", mock_stringio)
+
+    with expected_err:
+        _, _ = compiler.compile_model(test_tflite_model)
+
+
+def test_backend_compiler_model_already_compiled(
+    test_tflite_model: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Test that if we try compile a model twice,
+    the correct flag is passed and that main is called only once.
+    """
+    target_config = EthosUConfiguration.load_profile("ethos-u55-256")
+    assert (
+        target_config.compiler_options is not None
+    ), "Vela should be available in tests"
+
+    vela_main_mock = MagicMock(wraps=main)
+
+    monkeypatch.setattr("mlia.backend.vela.compiler.main", vela_main_mock)
+
+    # By default, vela will save results in output/ folder,
+    # which may impact subsequent runs. tmp_dir will always be removed.
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        target_config.compiler_options.output_dir = Path(tmp_dir)
+        compile_model(test_tflite_model, target_config.compiler_options)
+        compile_model(test_tflite_model, target_config.compiler_options)
+        vela_main_mock.assert_called_once()
 
 
 def test_csv_file_created(test_tflite_model: Path) -> None:
@@ -651,44 +725,3 @@ def test_backend_compiler_parsing_vela_ini_file_missing_header(
         parse_vela_initialisation_file(
             vela_ini_file, "Ethos_U55_High_End_Embedded", "Shared_Sram"
         )
-
-
-@pytest.mark.skip(reason="Requires ethosu.vela package to be installed")
-def test_backend_compiler_model_already_compiled(
-    test_tflite_model: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """Test that if we try compile a model twice,
-    the correct flag is passed and that main is called only once.
-    """
-    target_config = EthosUConfiguration.load_profile("ethos-u55-256")
-    assert (
-        target_config.compiler_options is not None
-    ), "Vela should be available in tests"
-    recreate_directory(Path(target_config.compiler_options.output_dir))
-
-    def simple_main(*_args: Any) -> None:
-        pass
-
-    main_mock = MagicMock(side_effect=simple_main)
-    monkeypatch.setattr("mlia.backend.vela.compiler.main", main_mock)
-    compile_model(test_tflite_model, target_config.compiler_options)
-
-    def vela_compiler_compile_model_mock(
-        model_path: Path, *_: Any
-    ) -> tuple[None, Path]:
-        assert target_config.compiler_options is not None
-        return None, Path(
-            Path(target_config.compiler_options.output_dir).as_posix()
-            + "/"
-            + model_path.stem
-            + "_vela"
-            + model_path.suffix
-        )
-
-    compiler_mock = MagicMock(side_effect=vela_compiler_compile_model_mock)
-    monkeypatch.setattr(
-        "mlia.backend.vela.compiler.VelaCompiler.compile_model", compiler_mock
-    )
-    compile_model(test_tflite_model, target_config.compiler_options)
-    main_mock.assert_called_once()
-    compiler_mock.assert_called_once_with(test_tflite_model, True)
