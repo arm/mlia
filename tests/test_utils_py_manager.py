@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022, 2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for python package manager."""
 import subprocess  # nosec
@@ -7,6 +7,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from mlia.core.errors import InternalError
 from mlia.utils.py_manager import get_package_manager
 from mlia.utils.py_manager import PyPackageManager
 
@@ -79,3 +80,21 @@ def test_py_package_manager_uninstall(mock_check_output: MagicMock) -> None:
         stderr=subprocess.STDOUT,
         text=True,
     )
+
+
+def test_py_package_manager_called_process_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test PyPackageManager handling CalledProcessError."""
+    monkeypatch.setattr(
+        "subprocess.check_output",
+        MagicMock(
+            side_effect=subprocess.CalledProcessError(
+                cmd="", output="Test output\nTest output 2\n", returncode=10
+            )
+        ),
+    )
+
+    manager = PyPackageManager()
+    with pytest.raises(InternalError, match=r"^Unable to install python package"):
+        manager.install(["mlia", "pytest"])
