@@ -125,7 +125,7 @@ def supported_operators(model_path: Path, compiler_options: Any) -> Operators:
 
     return Operators(
         [
-            Operator(op.name, optype_to_builtintype(op.type), run_on_npu(op))
+            Operator(op.name, optype_to_builtintype(op.type), _run_on_npu(op))
             for sg in initial_model.nng.subgraphs
             for op in sg.get_all_ops()
             if op.type not in vela_internal_ops
@@ -133,7 +133,7 @@ def supported_operators(model_path: Path, compiler_options: Any) -> Operators:
     )
 
 
-def run_on_npu(operator) -> NpuSupported:  # type: ignore
+def _run_on_npu(operator) -> NpuSupported:  # type: ignore
     """Return information if operator can run on NPU.
 
     Vela does a number of checks that can help establish whether

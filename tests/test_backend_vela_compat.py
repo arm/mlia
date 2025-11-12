@@ -31,6 +31,76 @@ def replace_get_vela_with_mock(
 
 
 @pytest.mark.parametrize(
+    "name, op_type, npu_supported",
+    [
+        (
+            "sequential/conv1/Relu;sequential/conv1/BiasAdd;",
+            "CONV_2D",
+            NpuSupported(False, [("CPU only operator", "")]),
+        ),
+        (
+            "sequential/conv1/Relu;sequential/conv1/BiasAdd;",
+            "CONV_2D",
+            NpuSupported(True, []),
+        ),
+        (
+            "sequential/conv1/Relu;sequential/conv1/BiasAdd;",
+            "CONV_2D",
+            NpuSupported(False, [("Other reason", "")]),
+        ),
+    ],
+)
+def test_operator(name: str, op_type: str, npu_supported: NpuSupported) -> None:
+    """Test Operator class."""
+    operator = Operator(name, op_type, npu_supported)
+    cpu_only = not npu_supported.supported and npu_supported.reasons == [
+        ("CPU only operator", "")
+    ]
+    assert operator.cpu_only == cpu_only
+
+
+@pytest.mark.parametrize(
+    "ops",
+    [
+        [
+            Operator(
+                name="sequential/conv1/Relu;sequential/conv1/BiasAdd;"
+                "sequential/conv2/Conv2D;sequential/conv1/Conv2D",
+                op_type="CONV_2D",
+                run_on_npu=NpuSupported(supported=True, reasons=[]),
+            ),
+            Operator(
+                name="sequential/conv2/Relu;sequential/conv2/BiasAdd;"
+                "sequential/conv2/Conv2D",
+                op_type="CONV_2D",
+                run_on_npu=NpuSupported(supported=True, reasons=[]),
+            ),
+            Operator(
+                name="sequential/max_pooling2d/MaxPool",
+                op_type="MAX_POOL_2D",
+                run_on_npu=NpuSupported(supported=False, reasons=[]),
+            ),
+        ],
+        [],
+    ],
+)
+def test_operators(ops: list[Operator]) -> None:
+    """Test operators function."""
+    operators = Operators(ops)
+
+    total_ops = len(ops)
+    npu_supported_ops = sum(op.run_on_npu.supported for op in ops)
+
+    assert operators.total_number == total_ops
+    assert operators.npu_supported_number == npu_supported_ops
+
+    if total_ops > 0:
+        assert operators.npu_supported_ratio == npu_supported_ops / total_ops
+
+    assert operators.npu_unsupported_ratio == 1 - operators.npu_supported_ratio
+
+
+@pytest.mark.parametrize(
     "model, expected_ops",
     [
         (
@@ -69,7 +139,9 @@ def replace_get_vela_with_mock(
         )
     ],
 )
-def test_operators(test_models_path: Path, model: str, expected_ops: Operators) -> None:
+def test_supported_operators(
+    test_models_path: Path, model: str, expected_ops: Operators
+) -> None:
     """Test operators function."""
     target_config = EthosUConfiguration.load_profile("ethos-u55-256")
 
