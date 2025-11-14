@@ -3,11 +3,16 @@
 """Tests for the target registry module."""
 from __future__ import annotations
 
+from unittest.mock import MagicMock
+
 import pytest
 
+import mlia.target.registry
+from mlia.backend.manager import DefaultInstallationManager
 from mlia.core.common import AdviceCategory
 from mlia.target.config import get_builtin_optimization_profile_path
 from mlia.target.config import get_builtin_target_profile_path
+from mlia.target.config import TargetInfo
 from mlia.target.registry import all_supported_backends
 from mlia.target.registry import default_backends
 from mlia.target.registry import get_optimization_profile
@@ -17,6 +22,8 @@ from mlia.target.registry import registry
 from mlia.target.registry import supported_advice
 from mlia.target.registry import supported_backends
 from mlia.target.registry import supported_targets
+from mlia.target.registry import table
+from mlia.utils.registry import Registry
 
 
 @pytest.mark.parametrize(
@@ -76,6 +83,8 @@ def test_supported_advice(
         ("corstone-320", "ethos-u55", False),
         ("corstone-320", "ethos-u85", True),
         ("corstone-320", "cortex-a", False),
+        ("unknown_backend", None, False),
+        ("unknown_backend", "cortex-a", False),
     ),
 )
 def test_is_supported(backend: str, target: str | None, expected_result: bool) -> None:
@@ -173,12 +182,66 @@ def test_optimization_profile(optimization_profile: str) -> None:
     get_optimization_profile(profile_file)
 
 
-@pytest.mark.parametrize("optimization_profile", ["non_valid_file"])
-def test_optimization_profile_non_valid_file(optimization_profile: str) -> None:
+@pytest.mark.parametrize(
+    "optimization_profile, match_str",
+    [
+        [
+            "non_valid_file",
+            "optimization Profile '{}' is neither "
+            "a valid built-in optimization profile name or a valid file path.",
+        ],
+        [None, "No valid optimization profile was provided."],
+    ],
+)
+def test_optimization_profile_non_valid_file(
+    optimization_profile: str, match_str: str
+) -> None:
     """Test function optimization_profile()."""
-    with pytest.raises(
-        ValueError,
-        match=f"optimization Profile '{optimization_profile}' is neither "
-        "a valid built-in optimization profile name or a valid file path.",
-    ):
+    with pytest.raises(ValueError, match=match_str.format(optimization_profile)):
         get_optimization_profile(optimization_profile)
+
+
+@pytest.mark.parametrize(
+    "names, pretty_names, target_infos, expected_result",
+    [
+        (
+            ["cortex-a"],
+            ["Cortex-A"],
+            [
+                TargetInfo(
+                    supported_backends=["vela", "corstone-300"],
+                    default_backends=["vela"],
+                    advisor_factory_func=None,
+                    target_profile_cls=None,
+                )
+            ],
+            [
+                (
+                    "Cortex-A\n<cortex-a>",
+                    "Vela\n<vela>\nCorstone-300\n<corstone-300>",
+                    "NOT INSTALLED\n\nNOT INSTALLED",
+                    "YES/YES/YES",
+                )
+            ],
+        )
+    ],
+)
+def test_table_generator(
+    monkeypatch: pytest.MonkeyPatch,
+    names: list[str],
+    pretty_names: list[str],
+    target_infos: list[TargetInfo],
+    expected_result: list[tuple[str, str, str, str]],
+) -> None:
+    """Test the generation of the table."""
+    test_registry: Registry = Registry()
+    for name, pretty_name, info in zip(names, pretty_names, target_infos):
+        test_registry.register(name, info, pretty_name)
+
+    monkeypatch.setattr(
+        "mlia.backend.manager.get_installation_manager",
+        MagicMock(return_value=DefaultInstallationManager([])),
+    )
+    monkeypatch.setattr(mlia.target.registry, "registry", test_registry)
+
+    assert table().rows == expected_result
