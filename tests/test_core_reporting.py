@@ -1,10 +1,11 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, 2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for reporting module."""
 from __future__ import annotations
 
 import json
 from enum import Enum
+from typing import Any
 from unittest.mock import ANY
 from unittest.mock import call
 from unittest.mock import MagicMock
@@ -50,6 +51,63 @@ from mlia.utils.console import remove_ascii_codes
 def test_predefined_cell_types(cell: Cell, expected_repr: str) -> None:
     """Test predefined cell types."""
     assert str(cell) == expected_repr
+
+
+@pytest.mark.parametrize(
+    "value, nested_items, expected_compound, expected_raw_value",
+    [
+        (
+            "value",
+            [],
+            False,
+            "value",
+        ),
+        (
+            Cell("value"),
+            [],
+            False,
+            "value",
+        ),
+        (
+            Cell("value"),
+            [ReportItem("value")],
+            True,
+            "value",
+        ),
+    ],
+)
+def test_report_item(
+    value: str | int | float | Cell | None,
+    nested_items: list[ReportItem] | None,
+    expected_compound: bool,
+    expected_raw_value: Any,
+) -> None:
+    """Test ReportItem class."""
+    report_item = ReportItem(
+        "test_report_item", "report_item_alias", value, nested_items
+    )
+    assert report_item.compound == expected_compound
+    assert report_item.raw_value == expected_raw_value
+
+
+@pytest.mark.parametrize(
+    "value, fmt, expected_str, expected_json",
+    [
+        (
+            "value",
+            None,
+            "value",
+            "value",
+        ),
+        (2.0, None, "2.0", 2.0),
+        (2.111, Format(2, ".2f", "my_style"), "[my_style]2.11", 2.111),
+    ],
+)
+def test_cell(value: Any, fmt: Format, expected_str: str, expected_json: Any) -> None:
+    """Test Cell class."""
+    cell = Cell(value, fmt)
+    assert str(cell) == expected_str
+    assert cell.to_json() == expected_json
 
 
 @pytest.mark.parametrize(
@@ -140,6 +198,28 @@ Sample report:
                 "Sample report",
                 "sample_report",
                 [
+                    ReportItem("Item", "item", None),
+                ],
+            ),
+            """
+Sample report:
+  Item:
+""".strip(),
+            {
+                "sample_report": {"item": None},
+            },
+        ),
+        (
+            NestedReport(
+                "Sample report",
+                "sample_report",
+                [
+                    ReportItem(
+                        "Item",
+                        "item",
+                        "item_value",
+                        [ReportItem("Nested item", "nested_item", "nested_item_value")],
+                    ),
                     ReportItem(
                         "Item",
                         "item",
@@ -150,6 +230,9 @@ Sample report:
             ),
             """
 Sample report:
+  Item                                                      item_value
+    Nested item                                      nested_item_value
+
   Item                                                      item_value
     Nested item                                      nested_item_value
 """.strip(),
@@ -360,12 +443,7 @@ def test_custom_json_serialization() -> None:
 
     table = Table(
         [Column("Column1", alias="column1")],
-        rows=[
-            [TestEnum.VALUE1],
-            [np.float64(10)],
-            [np.int64(10)],
-            [10],
-        ],
+        rows=[[TestEnum.VALUE1], [np.float32(10.0)], [np.int64(10)]],
         name="sample_table",
         alias="sample_table",
     )
@@ -376,7 +454,6 @@ def test_custom_json_serialization() -> None:
         "sample_table": [
             {"column1": "value1"},
             {"column1": 10.0},
-            {"column1": 10},
             {"column1": 10},
         ]
     }
@@ -457,6 +534,16 @@ class TestJSONReporter:
         ) as mock_produce_report:
             reporter.generate_report()
             mock_produce_report.assert_called()
+
+    def test_generate_empty_report(self) -> None:
+        """Test JSONReporter generate_report on empty data."""
+        format_resolver = MagicMock()
+        reporter = JSONReporter(format_resolver)
+        with patch(
+            "mlia.core.reporting.JSONReporter.produce_report"
+        ) as mock_produce_report:
+            reporter.generate_report()
+            mock_produce_report.assert_not_called()
 
     @patch("builtins.print")
     def test_produce_report(self, mock_print: Mock) -> None:

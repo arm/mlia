@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for the module context."""
 from __future__ import annotations
@@ -9,6 +9,7 @@ import pytest
 
 from mlia.core.common import AdviceCategory
 from mlia.core.context import ExecutionContext
+from mlia.core.errors import ConfigurationError
 from mlia.core.events import DefaultEventPublisher
 from mlia.utils.filesystem import USER_ONLY_PERM_MASK
 from mlia.utils.filesystem import working_directory
@@ -61,6 +62,18 @@ def test_execution_context(tmp_path: Path) -> None:
         logs_dir="logs_directory",
         output_format="json",
     )
+
+    with pytest.raises(ConfigurationError, match="Unable to create output directory:"):
+        ExecutionContext(
+            advice_category=category,
+            config_parameters={"param": "value"},
+            output_dir=tmp_path / "cannot" / "create" / "dir",
+            event_handlers=[],
+            event_publisher=publisher,
+            verbose=True,
+            logs_dir="logs_directory",
+            output_format="json",
+        )
 
     output_dir = context.output_dir
     assert output_dir == tmp_path.joinpath("output", "mlia-output")
