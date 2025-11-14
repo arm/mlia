@@ -354,7 +354,9 @@ def test_installation_manager_uninstall(
     assert install_mock.uninstall.mock_calls == expected_call
 
 
-def test_installation_internal_error(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_installation_internal_error(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Test that manager should be able to detect wrong state."""
     install_mock = _ready_for_uninstall_mock()
     manager = get_installation_manager(False, [install_mock, install_mock], monkeypatch)
@@ -364,6 +366,11 @@ def test_installation_internal_error(monkeypatch: pytest.MonkeyPatch) -> None:
         match="More than one installed backend with name already_installed found",
     ):
         manager.uninstall(["already_installed"])
+
+    with pytest.raises(
+        InternalError, match=": More than one backend with name already_installed found"
+    ):
+        manager.install_from(tmp_path, "already_installed")
 
 
 def test_uninstall_unknown_backend(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -607,7 +614,8 @@ def test_installation_manager_many_deps_from_path(
             ],
             ["backend"],
             pytest.raises(
-                InternalError, match="dependency found, but cannot be downloaded."
+                InternalError,
+                match="dep0 found, but can only be installed from a file.",
             ),
         ),
         (
