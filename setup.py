@@ -47,5 +47,11 @@ if __name__ == "__main__":
     from setuptools_scm import get_version  # pylint: disable=import-error
 
     tag = get_version()
+
     long_description = replace_markdown_relative_paths(Path.cwd(), "README.md", tag)
-    setup(long_description=long_description)
+
+    # Add custom suffix to version if specified
+    custom_tag_suffix = os.getenv("MLIA_CUSTOM_TAG_SUFFIX")
+    if custom_tag_suffix:
+        tag = f"{tag}.{custom_tag_suffix}"
+    setup(long_description=long_description, version=tag)
