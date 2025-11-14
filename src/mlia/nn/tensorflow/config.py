@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Model configuration."""
 from __future__ import annotations
@@ -319,7 +319,7 @@ def get_model(model: str | Path) -> ModelConfiguration:
 
 def get_tflite_model(model: str | Path, ctx: Context) -> TFLiteModel:
     """Convert input model to TensorFlow Lite and returns TFLiteModel object."""
-    dst_model_path = ctx.get_model_path("converted_model.tflite")
+    dst_model_path = ctx.get_model_path(f"{Path(model).stem}_converted_model.tflite")
     src_model = get_model(model)
 
     return src_model.convert_to_tflite(dst_model_path, quantized=True)
@@ -327,7 +327,7 @@ def get_tflite_model(model: str | Path, ctx: Context) -> TFLiteModel:
 
 def get_keras_model(model: str | Path, ctx: Context) -> KerasModel:
     """Convert input model to Keras and returns KerasModel object."""
-    keras_model_path = ctx.get_model_path("converted_model.h5")
+    keras_model_path = ctx.get_model_path(f"{Path(model).stem}_converted_model.h5")
     converted_model = get_model(model)
 
     return converted_model.convert_to_keras(keras_model_path)

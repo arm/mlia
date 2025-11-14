@@ -5,12 +5,17 @@ from contextlib import ExitStack as does_not_raise
 from pathlib import Path
 from typing import Any
 from typing import Generator
+from typing import Union
+from unittest.mock import Mock
 
 import numpy as np
 import pytest
 
+import mlia.nn.tensorflow.config
 from mlia.nn.rewrite.core.utils.numpy_tfrecord import numpytf_read
+from mlia.nn.tensorflow.config import get_keras_model
 from mlia.nn.tensorflow.config import get_model
+from mlia.nn.tensorflow.config import get_tflite_model
 from mlia.nn.tensorflow.config import KerasModel
 from mlia.nn.tensorflow.config import ModelConfiguration
 from mlia.nn.tensorflow.config import TFLiteModel
@@ -139,3 +144,85 @@ def test_tflite_model_is_tensor_quantized(test_tflite_model: Path) -> None:
         assert model.is_tensor_quantized()
     with pytest.raises(NameError):
         assert model.is_tensor_quantized(name="NAME_DOES_NOT_EXIST")
+
+
+def test_get_tflite_model_naming(tmp_path: Path, test_keras_model: Path) -> None:
+    """Test that get_tflite_model uses model stem in output filename."""
+    # Create a mock context that tracks the requested path
+    requested_paths = []
+
+    def track_and_return_path(model_filename: str) -> Path:
+        requested_paths.append(model_filename)
+        return tmp_path / model_filename
+
+    mock_ctx = Mock()
+    mock_ctx.get_model_path.side_effect = track_and_return_path
+
+    # Test with a model that has a specific name
+    model_path = test_keras_model
+    model_stem = Path(model_path).stem
+
+    result = get_tflite_model(model_path, mock_ctx)
+
+    # Verify the output filename includes the model stem
+    assert len(requested_paths) == 1
+    assert requested_paths[0] == f"{model_stem}_converted_model.tflite"
+    assert isinstance(result, TFLiteModel)
+
+
+def test_get_keras_model_naming(tmp_path: Path, test_keras_model: Path) -> None:
+    """Test that get_keras_model uses model stem in output filename."""
+    # Create a mock context that tracks the requested path
+    requested_paths = []
+
+    def track_and_return_path(model_filename: str) -> Path:
+        requested_paths.append(model_filename)
+        return tmp_path / model_filename
+
+    mock_ctx = Mock()
+    mock_ctx.get_model_path.side_effect = track_and_return_path
+
+    # Test with a Keras model (which can be converted to Keras - itself)
+    model_path = test_keras_model
+    model_stem = Path(model_path).stem
+
+    result = get_keras_model(model_path, mock_ctx)
+
+    # Verify the output filename includes the model stem
+    assert len(requested_paths) == 1
+    assert requested_paths[0] == f"{model_stem}_converted_model.h5"
+    assert isinstance(result, KerasModel)
+
+
+def test_get_tflite_model_unique_names(tmp_path: Path, monkeypatch: Any) -> None:
+    """Test that different input models produce different output filenames."""
+    requested_paths = []
+
+    def track_and_return_path(model_filename: str) -> Path:
+        requested_paths.append(model_filename)
+        return tmp_path / model_filename
+
+    mock_ctx = Mock()
+    mock_ctx.get_model_path.side_effect = track_and_return_path
+
+    # Simulate two different model files
+    model1 = Path("/path/to/model_a.h5")
+    model2 = Path("/path/to/model_b.h5")
+
+    # Mock the get_model function to avoid actual model loading
+    def mock_get_model(_path: Union[str, Path]) -> Any:
+        mock = Mock()
+        mock.convert_to_tflite = Mock(return_value=TFLiteModel.__new__(TFLiteModel))
+        return mock
+
+    monkeypatch.setattr(mlia.nn.tensorflow.config, "get_model", mock_get_model)
+
+    # Get converted models
+    get_tflite_model(model1, mock_ctx)
+    get_tflite_model(model2, mock_ctx)
+
+    # Verify that the two models produce different output filenames
+    assert len(requested_paths) == 2
+    assert requested_paths[0] == "model_a_converted_model.tflite"
+    assert requested_paths[1] == "model_b_converted_model.tflite"
+    assert requested_paths[0] != requested_paths[1]
