@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Vela performance module."""
 from __future__ import annotations
@@ -57,30 +57,12 @@ class LayerPerfInfo:  # pylint: disable=too-many-instance-attributes
     mac_count: int
     util_mac_percentage: float
 
-    def __repr__(self) -> str:
-        """Return String Representation of LayerPerfInfo object."""
-        header_values = {key: value for key, value, _ in layer_metrics}
-        string_to_check = ""
-        for field in fields(self):
-            string_to_check += (
-                f"{header_values[field.name]}: {getattr(self, field.name)}, "
-            )
-        return string_to_check
-
 
 @dataclass
 class LayerwisePerfInfo:
     """Contains all the per-layer metrics from the per-layer csv file from Vela."""
 
     layerwise_info: list[LayerPerfInfo]
-
-    def __repr__(self) -> str:
-        """Return String Representation of LayerwisePerfInfo object."""
-        strings_to_check_layerwise_object = ""
-        for layer in self.layerwise_info:
-            string_to_check = repr(layer)
-            strings_to_check_layerwise_object += string_to_check
-        return strings_to_check_layerwise_object
 
 
 complete_layer_metrics = [
@@ -112,6 +94,7 @@ layer_metrics = [
     for layer_metric in complete_layer_metrics
     if layer_metric[0] in OUTPUT_METRICS
 ]
+
 layer_metrics.sort(key=lambda e: OUTPUT_METRICS.index(e[0]))
 
 
