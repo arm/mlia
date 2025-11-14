@@ -185,11 +185,8 @@ class DefaultInstallationManager(InstallationManager, InstallationFiltersMixin):
         dep_installations: list[Installation] = []
         root_names = {root.name for root in root_installations}
 
-        # DFS traversal that enlists all encountered nodes.
-        # Root installation nodes will be treated like dependencies with
-        # 2 exceptions:
-        #   - DownloadAndInstall support will not be checked,
-        #   - Root nodes will not be added to dep_installations.
+        # DFS traversal that enlists all encountered nodes, but does not
+        # enlist root nodes as dependencies.
         for root in root_installations:
             if visits.get(root.name, 0) == 2:
                 # already fully processed
@@ -212,15 +209,6 @@ class DefaultInstallationManager(InstallationManager, InstallationFiltersMixin):
                     dep = self._resolve_backend(
                         dep_name, f"Failed to resolve dependencies for {root.name}:"
                     )
-                    if (
-                        dep.name not in root_names
-                        and not dep.already_installed
-                        and not dep.supports(DownloadAndInstall())
-                    ):  # Only dependencies need to support DownloadAndInstall.
-                        raise InternalError(
-                            f"{dep.name} dependency found, but cannot be downloaded. "
-                            "Try manual installation."
-                        )
                     dep_visits = visits.get(dep.name, 0)
                     if dep_visits == 0:
                         stack.append((dep, 0))
@@ -258,28 +246,44 @@ class DefaultInstallationManager(InstallationManager, InstallationFiltersMixin):
 
         dep_installations = self._get_dependency_installations(installations)
 
-        deps_to_be_installed = []
+        # Filter out installed dependencies and collect their
+        # install types
+        dep_installations_to_be_installed = []
+        dep_install_types_to_be_installed = []
         for inst in dep_installations:
             if inst.already_installed:
                 logger.debug("%s dependency already installed.", inst.name)
                 continue
-            deps_to_be_installed.append(inst)
+            dep_installations_to_be_installed.append(inst)
 
+            inst_type = self._get_default_insallation_type(inst)
+            if inst_type is None:
+                raise InternalError(
+                    f"{inst.name} found, but can only be installed from a file."
+                )
+            dep_install_types_to_be_installed.append(inst_type)
+
+        # Show all backends to be installed
         logger.info("Installing the following backends:")
         for inst in installations:
             logger.info("* %s", inst.name)
-        if deps_to_be_installed:
+        if dep_installations_to_be_installed:
             logger.info("Dependencies will be installed automatically:")
-            for inst in deps_to_be_installed:
+            for inst in dep_installations_to_be_installed:
                 logger.info("* %s", inst.name)
 
         if not self.noninteractive and not yes("Would you like to proceed?"):
             return
 
-        for inst in deps_to_be_installed:
+        # Install dependencies
+        for inst, inst_type in zip(
+            dep_installations_to_be_installed, dep_install_types_to_be_installed
+        ):
             logger.info("Installing %s", inst.name)
-            inst.install(DownloadAndInstall())
+            inst.install(inst_type)
+            logger.info("%s successfully installed", inst.name)
 
+        # Install backends
         for inst, inst_type in zip(installations, install_types):
             if inst.already_installed and force:
                 logger.info(
@@ -288,7 +292,16 @@ class DefaultInstallationManager(InstallationManager, InstallationFiltersMixin):
                     inst.name,
                 )
                 inst.uninstall()
+            logger.info("Installing %s", inst.name)
             inst.install(inst_type)
+            logger.info("%s successfully installed", inst.name)
+
+    def _get_default_insallation_type(
+        self, installation: Installation
+    ) -> InstallationType | None:
+        if installation.supports(DownloadAndInstall()):
+            return DownloadAndInstall()
+        return None
 
     def install_from(
         self, backend_path: Path, backend_name: str, force: bool = False
