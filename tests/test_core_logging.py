@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, 2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for the module cli.logging."""
 from __future__ import annotations
@@ -9,6 +9,7 @@ from pathlib import Path
 import pytest
 
 from mlia.core.logging import setup_logging
+from mlia.core.typing import OutputFormat
 from tests.utils.logging import clear_loggers
 
 
@@ -22,33 +23,54 @@ def teardown_function() -> None:
 
 
 @pytest.mark.parametrize(
-    "logs_dir, verbose, expected_output, expected_log_file_content",
+    "logs_dir,"
+    "verbose,"
+    "output_format,"
+    "expected_output,"
+    "expected_log_file_content",
     [
         (
             None,
-            None,
-            "cli info\n",
+            False,
+            "plain_text",
+            """cli info
+cli error
+""",
             None,
         ),
         (
             None,
             True,
+            "plain_text",
             """mlia.backend.manager - DEBUG - backends debug
 mlia.cli - INFO - cli info
 mlia.cli - DEBUG - cli debug
+mlia.cli - ERROR - cli error
 """,
             None,
         ),
         (
             "logs",
             True,
+            "plain_text",
             """mlia.backend.manager - DEBUG - backends debug
 mlia.cli - INFO - cli info
 mlia.cli - DEBUG - cli debug
+mlia.cli - ERROR - cli error
 """,
             """mlia.backend.manager - DEBUG - backends debug
 mlia.cli - INFO - cli info
 mlia.cli - DEBUG - cli debug
+mlia.cli - ERROR - cli error
+""",
+        ),
+        (
+            "logs",
+            False,
+            "json",
+            "",
+            """mlia.cli - INFO - cli info
+mlia.cli - ERROR - cli error
 """,
         ),
     ],
@@ -56,15 +78,16 @@ mlia.cli - DEBUG - cli debug
 def test_setup_logging(
     tmp_path: Path,
     capfd: pytest.CaptureFixture,
-    logs_dir: str,
+    logs_dir: str | None,
     verbose: bool,
+    output_format: OutputFormat,
     expected_output: str,
     expected_log_file_content: str,
 ) -> None:
     """Test function setup_logging."""
     logs_dir_path = tmp_path / logs_dir if logs_dir else None
 
-    setup_logging(logs_dir_path, verbose)
+    setup_logging(logs_dir_path, verbose, output_format)
 
     backend_logger = logging.getLogger("mlia.backend.manager")
     backend_logger.debug("backends debug")
@@ -72,6 +95,7 @@ def test_setup_logging(
     cli_logger = logging.getLogger("mlia.cli")
     cli_logger.info("cli info")
     cli_logger.debug("cli debug")
+    cli_logger.error("cli error")
 
     stdout, _ = capfd.readouterr()
     assert stdout == expected_output

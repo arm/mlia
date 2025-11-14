@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022, 2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for the module events."""
 from dataclasses import dataclass
@@ -31,10 +31,14 @@ class SampleEvent(Event):
 def test_event_publisher() -> None:
     """Test event publishing."""
     publisher = DefaultEventPublisher()
+    publisher.register_event_handlers([])
+    assert not publisher.handlers
+
     handler_mock1 = MagicMock(spec=EventHandler)
     handler_mock2 = MagicMock(spec=EventHandler)
 
     publisher.register_event_handlers([handler_mock1, handler_mock2])
+    assert publisher.handlers == [handler_mock1, handler_mock2]
 
     event = SampleEvent("hello, event!")
     publisher.publish_event(event)
@@ -150,4 +154,4 @@ def test_compare_without_id() -> None:
     assert event1 != event2
     assert event1.compare_without_id(event2)
 
-    assert not event1.compare_without_id("message")  # type: ignore
+    assert not event1.compare_without_id("message")  # type: ignore[arg-type]
