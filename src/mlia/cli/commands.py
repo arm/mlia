@@ -176,7 +176,7 @@ def optimize(  # pylint: disable=too-many-locals,too-many-arguments
 
 
 def backend_install(
-    name: str,
+    names: list[str],
     path: Path | None = None,
     i_agree_to_the_contained_eula: bool = False,
     noninteractive: bool = False,
@@ -188,18 +188,20 @@ def backend_install(
     manager = get_installation_manager(noninteractive)
 
     if path is not None:
-        manager.install_from(path, name, force)
+        if len(names) != 1:
+            raise ValueError("Exactly one backend name is required.")
+        manager.install_from(path, names[0], force)
     else:
         eula_agreement = not i_agree_to_the_contained_eula
-        manager.download_and_install(name, eula_agreement, force)
+        manager.download_and_install(names, eula_agreement, force)
 
 
-def backend_uninstall(name: str) -> None:
+def backend_uninstall(names: list[str]) -> None:
     """Uninstall backend."""
     logger.info(CONFIG)
 
     manager = get_installation_manager(noninteractive=True)
-    manager.uninstall(name)
+    manager.uninstall(names)
 
 
 def backend_list() -> None:
