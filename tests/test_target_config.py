@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import warnings
+from typing import Callable
 
 import pytest
 
@@ -69,24 +70,51 @@ def test_load_profile() -> None:
         load_profile("unknown")
 
 
-def test_target_profile() -> None:
+class MyTargetProfile(TargetProfile):
+    """Test class deriving from TargetProfile."""
+
+    def verify(self) -> None:
+        """Verify the target profile."""
+        super().verify()
+        assert self.target
+
+
+@pytest.mark.parametrize(
+    "profile_class, fn_init, target, super_target, target_override",
+    [
+        (
+            MyTargetProfile,
+            MyTargetProfile,
+            "AnyTarget",
+            "MySuperTarget",
+            "",
+        ),
+        (
+            TOSAConfiguration,
+            TOSAConfiguration,
+            "tosa",
+            "tosa",
+            "AnyTarget",
+        ),
+    ],
+)
+def test_target_profile(
+    profile_class: MyTargetProfile | TOSAConfiguration,
+    fn_init: Callable,
+    target: str,
+    super_target: str,
+    target_override: str,
+) -> None:
     """Test the class 'TargetProfile'."""
 
-    class MyTargetProfile(TargetProfile):
-        """Test class deriving from TargetProfile."""
+    profile = fn_init(target=target)
+    assert profile.target == target
 
-        def verify(self) -> None:
-            """Verify the target profile."""
-            super().verify()
-            assert self.target
+    profile = profile_class.load_json_data({"target": super_target})
+    assert profile.target == super_target
 
-    profile = MyTargetProfile("AnyTarget")
-    assert profile.target == "AnyTarget"
-
-    profile = MyTargetProfile.load_json_data({"target": "MySuperTarget"})
-    assert profile.target == "MySuperTarget"
-
-    profile = MyTargetProfile("")
+    profile = fn_init(target="")
+    profile.target = target_override
     with pytest.raises(ValueError):
         profile.verify()
 

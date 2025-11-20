@@ -213,7 +213,7 @@ def test_optimization_profile_non_valid_file(
                     default_backends=["vela"],
                     advisor_factory_func=None,
                     target_profile_cls=None,
-                )
+                ),
             ],
             [
                 (
