@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Reporting module."""
 from __future__ import annotations
@@ -484,15 +484,23 @@ class CustomJSONEncoder(json.JSONEncoder):
 
     def default(self, o: Any) -> Any:
         """Support custom types."""
+        # Convert numpy integer types to Python int
         if isinstance(o, np.integer):
             return int(o)
 
+        # Convert numpy floating point types to Python float
         if isinstance(o, np.floating):
             return float(o)
 
+        # Convert string-valued enums to their string representation
         if isinstance(o, Enum) and isinstance(o.value, str):
             return o.value
 
+        # Support dataclasses with to_dict() method (e.g., StandardizedOutput)
+        if hasattr(o, "to_dict") and callable(o.to_dict):
+            return o.to_dict()
+
+        # Delegate to default encoder for unsupported types
         return json.JSONEncoder.default(self, o)
 
 

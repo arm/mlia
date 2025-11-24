@@ -15,6 +15,15 @@ from unittest.mock import patch
 import numpy as np
 import pytest
 
+from mlia.core.output_schema import Backend
+from mlia.core.output_schema import Component
+from mlia.core.output_schema import ComponentType
+from mlia.core.output_schema import Context
+from mlia.core.output_schema import Model
+from mlia.core.output_schema import SCHEMA_VERSION
+from mlia.core.output_schema import StandardizedOutput
+from mlia.core.output_schema import Target
+from mlia.core.output_schema import Tool
 from mlia.core.reporting import BytesCell
 from mlia.core.reporting import Cell
 from mlia.core.reporting import ClockCell
@@ -457,6 +466,34 @@ def test_custom_json_serialization() -> None:
             {"column1": 10},
         ]
     }
+
+
+def test_custom_json_encoder_with_dataclasses() -> None:
+    """Test CustomJSONEncoder with dataclasses that have to_dict method."""
+    output = StandardizedOutput(
+        schema_version=SCHEMA_VERSION,
+        run_id=StandardizedOutput.create_run_id(),
+        timestamp=StandardizedOutput.create_timestamp(),
+        tool=Tool(name="mlia", version="1.0.0"),
+        target=Target(
+            profile_name="test",
+            target_type="ethos-u55",
+            components=[Component(type=ComponentType.NPU, family="ethos-u")],
+            configuration={},
+        ),
+        model=Model(name="test.tflite", format="tflite", hash="a" * 64),
+        context=Context(),
+        backends=[Backend(id="test", name="Test", version="1.0.0", configuration={})],
+        results=[],
+    )
+
+    # Test that CustomJSONEncoder can serialize the StandardizedOutput
+    serialized = json.dumps(output, cls=CustomJSONEncoder, indent=2)
+    deserialized = json.loads(serialized)
+
+    assert deserialized["schema_version"] == SCHEMA_VERSION
+    assert deserialized["tool"]["name"] == "mlia"
+    assert deserialized["model"]["format"] == "tflite"
 
 
 class TestTextReporter:
