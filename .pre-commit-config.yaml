@@ -132,3 +132,4 @@ repos:
       entry: python pre_commit_hooks/check_copyright_header.py
       language: python
       verbose: true
+      exclude: '\.license$'
