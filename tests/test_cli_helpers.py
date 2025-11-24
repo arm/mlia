@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for the helper classes."""
 from __future__ import annotations
@@ -76,6 +76,30 @@ class TestCliActionResolver:
         """Test action resolving for applying optimizations."""
         resolver = CLIActionResolver(args)
         assert resolver.apply_optimizations(**params) == expected_result
+
+    @staticmethod
+    def test_apply_optimizations_multiple_settings() -> None:
+        """Test apply_optimizations with multiple optimization settings."""
+        args = {"model": "model.h5", "target_profile": "ethos-u55-256"}
+        opt_settings = [
+            OptimizationSettings("pruning", 0.6, None),
+            OptimizationSettings("clustering", 32, None),
+        ]
+
+        resolver = CLIActionResolver(args)
+        result = resolver.apply_optimizations(opt_settings=opt_settings)
+
+        assert len(result) == 2
+        assert result[0] == "For more info: mlia optimize --help"
+        # Check that all optimization types are included
+        assert "--pruning" in result[1]
+        assert "--clustering" in result[1]
+        # Check that all targets are included
+        assert "--pruning-target 0.6" in result[1]
+        assert "--clustering-target 32" in result[1]
+        # Check model and target profile
+        assert "model.h5" in result[1]
+        assert "--target-profile ethos-u55-256" in result[1]
 
     @staticmethod
     def test_operator_compatibility_details() -> None:
@@ -180,3 +204,47 @@ def test_copy_optimization_file_to_output_dir_error(tmp_path: Path) -> None:
         copy_profile_file_to_output_dir(
             test_target_profile_name, tmp_path, profile_to_copy="optimization_profile"
         )
+
+
+def test_copy_custom_profile_file_to_output_dir(tmp_path: Path) -> None:
+    """Test copying a user-provided target profile file to output directory."""
+    # Create a custom profile file
+    custom_profile_dir = tmp_path / "custom_profiles"
+    custom_profile_dir.mkdir()
+    custom_profile_file = custom_profile_dir / "my_custom_profile.toml"
+    custom_profile_file.write_text("[target]\nname = 'custom'\n")
+
+    # Copy it to output directory
+    output_dir = tmp_path / "output"
+    output_dir.mkdir()
+
+    copy_profile_file_to_output_dir(
+        custom_profile_file, output_dir, profile_to_copy="target_profile"
+    )
+
+    # Verify the file was copied
+    output_file = output_dir / "my_custom_profile.toml"
+    assert output_file.is_file()
+    assert output_file.read_text() == "[target]\nname = 'custom'\n"
+
+
+def test_copy_custom_optimization_profile_to_output_dir(tmp_path: Path) -> None:
+    """Test copying a user-provided optimization profile file to output directory."""
+    # Create a custom optimization profile file
+    custom_profile_dir = tmp_path / "custom_profiles"
+    custom_profile_dir.mkdir()
+    custom_profile_file = custom_profile_dir / "my_optimization.toml"
+    custom_profile_file.write_text("[optimization]\ntype = 'custom'\n")
+
+    # Copy it to output directory
+    output_dir = tmp_path / "output"
+    output_dir.mkdir()
+
+    copy_profile_file_to_output_dir(
+        custom_profile_file, output_dir, profile_to_copy="optimization_profile"
+    )
+
+    # Verify the file was copied
+    output_file = output_dir / "my_optimization.toml"
+    assert output_file.is_file()
+    assert output_file.read_text() == "[optimization]\ntype = 'custom'\n"

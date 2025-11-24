@@ -85,7 +85,7 @@ def validate_check_target_profile(target_profile: str, category: set[str]) -> No
         )
 
     # Case: compatibility operation to be skipped
-    if try_compatibility and not do_compatibility:
+    if try_compatibility and not do_compatibility:  # pragma: no cover, defensive code
         warning_message += (
             "Compatibility checks skipped as they cannot be "
             f"performed with target profile {target_profile}."

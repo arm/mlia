@@ -473,11 +473,65 @@ def test_backend_command_action_install_from_path(
     installation_manager_mock.install_from.assert_called_once()
 
 
-def test_backend_command_action_add_download_invalid_names(
+def test_backend_command_action_install_no_names_with_path(
     installation_manager_mock: MagicMock,
     tmp_path: Path,
 ) -> None:
-    """Test mlia-backend command "install" with invalid backend names."""
-    with pytest.raises(ValueError):
+    """Test backend_install raises ValueError with no names & path."""
+    with pytest.raises(ValueError, match="backend name"):
         backend_install(path=tmp_path, names=[])
     installation_manager_mock.install_from.assert_not_called()
+
+
+def test_backend_command_action_install_multiple_names_with_path(
+    installation_manager_mock: MagicMock,
+    tmp_path: Path,
+) -> None:
+    """Test backend_install raises ValueError when multiple names & path."""
+    with pytest.raises(ValueError, match="backend name"):
+        backend_install(path=tmp_path, names=["backend1", "backend2"])
+    installation_manager_mock.install_from.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "compatibility, performance, expected_category",
+    [
+        [True, True, {"compatibility", "performance"}],
+        [True, False, {"compatibility"}],
+        [False, True, {"performance"}],
+        [False, False, {"compatibility"}],
+    ],
+)
+def test_check_category_combinations(
+    sample_context: ExecutionContext,
+    test_tflite_model: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    compatibility: bool,
+    performance: bool,
+    expected_category: set[str],
+) -> None:
+    """Test check() with different category combinations."""
+    mock_performance_estimation(monkeypatch)
+
+    # Mock get_advice to capture what category is passed
+    get_advice_mock = MagicMock()
+    monkeypatch.setattr("mlia.cli.commands.get_advice", get_advice_mock)
+
+    # Mock validators
+    monkeypatch.setattr("mlia.cli.commands.validate_check_target_profile", MagicMock())
+    monkeypatch.setattr(
+        "mlia.cli.commands.validate_backend", MagicMock(return_value=None)
+    )
+
+    check(
+        sample_context,
+        target_profile="ethos-u55-256",
+        model=str(test_tflite_model),
+        compatibility=compatibility,
+        performance=performance,
+    )
+
+    # Verify get_advice was called with the expected category
+    get_advice_mock.assert_called_once()
+    call_args = get_advice_mock.call_args
+    assert call_args[0][2] == expected_category

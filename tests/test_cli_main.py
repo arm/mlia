@@ -14,13 +14,15 @@ from unittest.mock import MagicMock
 
 import pytest
 
-import mlia
+import mlia.cli.main as mlia_cli_main
 from mlia.backend.errors import BackendUnavailableError
 from mlia.cli.main import backend_main
 from mlia.cli.main import CommandInfo
+from mlia.cli.main import get_possible_command_names
 from mlia.cli.main import main
 from mlia.cli.options import add_output_directory
 from mlia.core.context import ExecutionContext
+from mlia.core.errors import ConfigurationError
 from mlia.core.errors import InternalError
 from tests.utils.logging import clear_loggers
 
@@ -57,6 +59,36 @@ def test_command_info() -> None:
     assert command_info.command_name == "test_command"
     assert command_info.command_name_and_aliases == ["test_command", "test"]
     assert command_info.command_help == "Test command"
+
+
+def test_get_possible_command_names() -> None:
+    """Test get_possible_command_names returns all command names and aliases."""
+
+    def command_one() -> None:
+        """First command."""
+
+    def command_two() -> None:
+        """Second command."""
+
+    def third_cmd() -> None:
+        """Third command."""
+
+    commands = [
+        CommandInfo(command_one, ["c1", "cmd1"], []),
+        CommandInfo(command_two, [], []),
+        CommandInfo(third_cmd, ["t3"], []),
+    ]
+
+    result = get_possible_command_names(commands)
+
+    assert result == [
+        "command_one",
+        "c1",
+        "cmd1",
+        "command_two",
+        "third_cmd",
+        "t3",
+    ]
 
 
 def wrap_mock_command(mock: MagicMock, command: Callable) -> Callable:
@@ -292,7 +324,7 @@ def test_commands_execution(
     for command in ["check", "optimize"]:
         monkeypatch.setattr(
             f"mlia.cli.main.{command}",
-            wrap_mock_command(mock, getattr(mlia.cli.main, command)),
+            wrap_mock_command(mock, getattr(mlia_cli_main, command)),
         )
 
     main(params)
@@ -319,7 +351,7 @@ def test_passing_output_directory_parameter(
     output_dir = tmp_path / "output"
     main(["sample_command", "--output-dir", output_dir.as_posix()])
 
-    assert passed_context is not None
+    assert isinstance(passed_context, ExecutionContext)
     assert passed_context.output_dir == output_dir / "mlia-output"
 
 
@@ -342,7 +374,7 @@ def test_commands_execution_backend_main(
 
     monkeypatch.setattr(
         "mlia.cli.main.backend_list",
-        wrap_mock_command(mock, getattr(mlia.cli.main, "backend_list")),
+        wrap_mock_command(mock, getattr(mlia_cli_main, "backend_list")),
     )
 
     backend_main(params)
@@ -457,3 +489,68 @@ def test_debug_output(
     stdout, _ = capsys.readouterr()
     for expected_message in expected_output:
         assert expected_message in stdout
+
+
+@pytest.mark.parametrize(
+    "exception",
+    [
+        RuntimeError("Init failed"),
+        ConfigurationError("Config broken"),
+    ],
+    ids=["runtime_error", "configuration_error"],
+)
+def test_setup_context_exception_handling(
+    exception: Exception,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture,
+) -> None:
+    """Test that exceptions during ExecutionContext init are caught and reported.
+
+    The broad except in setup_context should print the error to stderr and
+    exit with code 1 when ExecutionContext raises an exception.
+    """
+
+    # Provide a minimal command definition so parsing succeeds
+    def sample_command(_ctx: ExecutionContext) -> None:
+        """Sample command (unused because context creation fails)."""
+
+    monkeypatch.setattr(
+        mlia_cli_main, "get_commands", lambda: [CommandInfo(sample_command, [], [])]
+    )
+
+    # Force ExecutionContext to raise RuntimeError during setup_context
+    monkeypatch.setattr(
+        mlia_cli_main,
+        "ExecutionContext",
+        MagicMock(side_effect=exception),
+    )
+
+    with pytest.raises(SystemExit) as ex:
+        main(["sample_command"])
+
+    assert ex.value.code == 1
+    stdout, stderr = capsys.readouterr()
+    assert stdout == ""
+    assert str(exception) in stderr
+
+
+def test_run_command_configuration_error(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture
+) -> None:
+    """
+    Test that ConfigurationError during command execution is caught in run_command.
+    """
+
+    def sample_command(ctx: ExecutionContext) -> None:
+        """Sample command that raises ConfigurationError."""
+        raise ConfigurationError("Configuration is invalid")
+
+    monkeypatch.setattr(
+        mlia_cli_main, "get_commands", lambda: [CommandInfo(sample_command, [], [])]
+    )
+
+    exit_code = main(["sample_command"])
+
+    assert exit_code == 1
+    stdout, _ = capsys.readouterr()
+    assert "Configuration is invalid" in stdout
