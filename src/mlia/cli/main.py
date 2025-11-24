@@ -308,5 +308,5 @@ def backend_main(argv: list[str] | None = None) -> int:
     return init_and_run(commands, argv)
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     sys.exit(main())

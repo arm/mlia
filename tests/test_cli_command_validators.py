@@ -9,6 +9,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from mlia.cli.command_validators import normalize_string
 from mlia.cli.command_validators import validate_backend
 from mlia.cli.command_validators import validate_check_target_profile
 from mlia.cli.command_validators import validate_optimize_target_profile
@@ -185,7 +186,9 @@ def test_validate_backend_default_available() -> None:
     assert backends == ["armnn-tflite-delegate"]
 
 
-def test_validate_backend_default_unavailable(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_validate_backend_default_unavailable(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """Test default backend validation with unavailable backend."""
     monkeypatch.setattr(
         "mlia.cli.command_validators.default_backends",
@@ -211,3 +214,81 @@ def test_validate_optimize_target_profile(
         return
 
     validate_optimize_target_profile(target_profile)
+
+
+@pytest.mark.parametrize(
+    "input_string, expected_output",
+    [
+        ["", ""],
+        ["lowercase", "lowercase"],
+        ["UPPERCASE", "uppercase"],
+        ["VELA", "vela"],
+        ["check-no-hyphens", "checknohyphens"],
+        ["MixedCase-With-Hyphens", "mixedcasewithhyphens"],
+        ["ToSa-cHecker", "tosachecker"],
+        ["corstone-310", "corstone310"],
+        ["armnn-tflite-delegate", "armnntflitedelegate"],
+        ["---multiple---hyphens---", "multiplehyphens"],
+    ],
+)
+def test_normalize_string(input_string: str, expected_output: str) -> None:
+    """Test normalize_string function with various inputs."""
+    assert normalize_string(input_string) == expected_output
+
+
+@pytest.mark.parametrize(
+    "supported_backends, target, target_profile, backends, expected",
+    [
+        (
+            ["armnn-tflite-delegate"],
+            "cortex-a",
+            "cortex-a",
+            ["armnn-tflite-delegate"],
+            ["armnn-tflite-delegate"],
+        ),
+        (
+            ["Vela", "Corstone-310"],
+            "ethos-u55",
+            "ethos-u55-256",
+            ["VELA", "corstone-310"],
+            ["VELA", "corstone-310"],
+        ),
+    ],
+    ids=["hyphen_normalization", "case_insensitive"],
+)
+def test_validate_backend_normalization(
+    supported_backends: list[str],
+    target: str,
+    target_profile: str,
+    backends: list[str],
+    expected: list[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test backend validation with hyphen and case normalization."""
+    monkeypatch.setattr(
+        "mlia.cli.command_validators.supported_backends",
+        MagicMock(return_value=supported_backends),
+    )
+    monkeypatch.setattr(
+        "mlia.cli.command_validators.get_target",
+        MagicMock(return_value=target),
+    )
+
+    result = validate_backend(target_profile, backends)
+    assert result == expected
+
+
+def test_validate_backend_multiple_incompatible(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test validate_backend with multiple incompatible backends."""
+    monkeypatch.setattr(
+        "mlia.cli.command_validators.supported_backends",
+        MagicMock(return_value=["vela"]),
+    )
+    monkeypatch.setattr(
+        "mlia.cli.command_validators.get_target",
+        MagicMock(return_value="ethos-u55"),
+    )
+    with pytest.raises(argparse.ArgumentError, match="not supported"):
+        validate_backend("ethos-u55-256", ["tosa-checker", "corstone-320"])
