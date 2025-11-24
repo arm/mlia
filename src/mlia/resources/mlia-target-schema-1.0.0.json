@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.arm.com/mlia/target-1.0.0.json",
+  "title": "MLIA Target Schema (v1.0.0)",
+  "type": "object",
+  "required": ["profile_name", "target_type", "components", "configuration"],
+  "properties": {
+    "profile_name": {
+      "type": "string",
+      "description": "Name of the target profile"
+    },
+    "target_type": {
+      "type": "string",
+      "description": "Type of target as in current TOML",
+      "examples": ["ethos-u55", "ethos-u65", "cortex-a", "tosa"]
+    },
+    "description": {
+      "type": "string",
+      "description": "Free text description of this particular profile/target"
+    },
+    "components": {
+      "type": "array",
+      "description": "Array of IP components in this target",
+      "items": { "$ref": "#/$defs/component" },
+      "minItems": 1
+    },
+    "configuration": {
+      "type": "object",
+      "description": "Target-specific configuration parameters",
+      "additionalProperties": true
+    },
+    "host_platform": {
+      "type": "string",
+      "description": "Host platform information"
+    }
+  },
+  "additionalProperties": false,
+
+  "$defs": {
+    "component": {
+      "type": "object",
+      "required": ["type", "family"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["cpu", "npu", "gpu", "dsp", "specification", "soc"],
+          "description": "Component type"
+        },
+        "family": {
+          "type": "string",
+          "description": "Component family name",
+          "examples": ["ethos-u", "cortex-a", "cortex-m", "mali", "tosa"]
+        },
+        "model": {
+          "type": "string",
+          "description": "Specific model within family",
+          "examples": ["u55", "u65", "u85", "a78", "m85", "g720", "nx"]
+        },
+        "variant": {
+          "type": "string",
+          "description": "Configuration variant (MACs, cores, frequency, etc.)",
+          "examples": ["256", "512", "1024", "8NX-600MHz"]
+        },
+        "name": {
+          "type": "string",
+          "description": "Component or SoC name (for SoC components)",
+          "examples": ["corstone-300", "corstone-310", "corstone-320"]
+        },
+        "components": {
+          "type": "array",
+          "description": "Nested components array (can be empty for simple IPs)",
+          "items": { "$ref": "#/$defs/component" },
+          "default": []
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}
