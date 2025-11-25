@@ -1,8 +1,10 @@
-# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Test for module utils/test_utils."""
 import re
 from pathlib import Path
+from typing import Dict
+from unittest.mock import MagicMock
 
 import numpy as np
 import pytest
@@ -70,9 +72,26 @@ def test_is_keras_model(model_path: Path, expected_result: bool) -> None:
     assert result == expected_result
 
 
-def test_get_tf_tensor_shape(test_tf_model: Path) -> None:
+def test_get_tf_tensor_shape(
+    test_tf_model: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Test get_tf_tensor_shape with test model."""
     assert get_tf_tensor_shape(str(test_tf_model)) == [1, 28, 28, 1]
+
+    # pylint: disable=too-few-public-methods
+    class LoadedModel:
+        """Test Model class."""
+
+        def __init__(self) -> None:
+            self.signatures: Dict[str, str] = {}
+
+    # pylint: enable=too-few-public-methods
+
+    monkeypatch.setattr(
+        "tensorflow.saved_model.load", MagicMock(return_value=LoadedModel())
+    )
+    with pytest.raises(KeyError, match="Signature '.*' not found"):
+        get_tf_tensor_shape(str(test_tf_model))
 
 
 def test_tflite_model_type_map(

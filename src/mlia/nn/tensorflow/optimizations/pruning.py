@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """
 Contains class Pruner to prune a model to a specified sparsity.
@@ -77,9 +77,9 @@ class PrunableLayerPolicy(tfmot.sparsity.keras.PruningPolicy):
         # Check whether the model is a Keras model.
         if not isinstance(model, keras.Model):
             raise ValueError(
-                "Models that are not part of the \
-                            keras.Model base class \
-                            are not supported currently."
+                "Models that are not part of the "
+                + "keras.Model base class "
+                + "are not supported currently."
             )
 
         if not model.built:

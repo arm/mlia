@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 from typing import Generator
 from typing import Union
+from unittest.mock import MagicMock
 from unittest.mock import Mock
 
 import numpy as np
@@ -69,6 +70,22 @@ def test_invalid_tflite_model(tmp_path: Path) -> None:
 
     with pytest.raises(RuntimeError):
         TFLiteModel(model_path=model_path)
+
+
+def test_tflite_model_runtime_error(
+    test_tflite_model: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """
+    Test the throwing of a runtime error during the
+    self.interpreter.allocate_tensors call in TFLiteModel.__init__
+    """
+    monkeypatch.setattr(
+        "tensorflow.lite.Interpreter.allocate_tensors",
+        MagicMock(side_effect=RuntimeError),
+    )
+
+    with pytest.raises(RuntimeError):
+        TFLiteModel(model_path=test_tflite_model)
 
 
 @pytest.mark.parametrize(

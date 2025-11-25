@@ -9,6 +9,7 @@ import pytest
 from keras.api._v2 import keras  # Temporary workaround for now: MLIA-1107
 from numpy.core.numeric import isclose
 
+from mlia.nn.tensorflow.optimizations.pruning import PrunableLayerPolicy
 from mlia.nn.tensorflow.optimizations.pruning import Pruner
 from mlia.nn.tensorflow.optimizations.pruning import PruningConfiguration
 from mlia.nn.tensorflow.tflite_convert import convert_to_tflite
@@ -115,3 +116,29 @@ def test_prune_simple_model_fully(
     )
 
     _test_sparsity(pruned_tflite_metrics, target_sparsity, layers_to_prune)
+
+
+def test_pruneable_layer_policy_failures() -> None:
+    """Test for failure conditions in the PrunableLayerPolicy class."""
+    plp = PrunableLayerPolicy()
+
+    # pylint: disable=too-few-public-methods
+    class Layer:
+        """Test layer class"""
+
+        def __init__(self) -> None:
+            self.name = "Layer"
+
+    # pylint: enable=too-few-public-methods
+
+    assert plp.allow_pruning(Layer()) is False
+
+    with pytest.raises(
+        ValueError,
+        match="Models that are not part of the keras.Model "
+        + "base class are not supported currently.",
+    ):
+        plp.ensure_model_supports_pruning(20)
+
+    with pytest.raises(ValueError, match="Unbuilt models are not supported currently."):
+        plp.ensure_model_supports_pruning(keras.Model())
