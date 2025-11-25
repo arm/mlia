@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Test for module utils/tflite_metrics."""
 from __future__ import annotations
@@ -8,12 +8,14 @@ import tempfile
 from math import isclose
 from pathlib import Path
 from typing import Generator
+from unittest.mock import MagicMock
 
 import numpy as np
 import pytest
 import tensorflow as tf
 from keras.api._v2 import keras  # Temporary workaround for now: MLIA-1107
 
+from mlia.nn.tensorflow.tflite_metrics import calculate_num_unique_weights_per_axis
 from mlia.nn.tensorflow.tflite_metrics import ReportClusterMode
 from mlia.nn.tensorflow.tflite_metrics import TFLiteMetrics
 
@@ -66,7 +68,23 @@ def fixture_tflite_file() -> Generator:
 @pytest.fixture(scope="function", name="metrics")
 def fixture_metrics(tflite_file: str) -> TFLiteMetrics:
     """Generate metrics file for a given TensorFlow Lite model."""
-    return TFLiteMetrics(tflite_file)
+    metrics = TFLiteMetrics(tflite_file)
+    metrics.filtered_details["Example"] = {
+        "dtype": np.float32,
+        "name": "model/Example",
+        "quantization": (0.0, 0),
+        "quantization_parameters": {
+            "quantized_dimension": 0,
+            "scales": np.array([]),
+            "zero_points": np.array([0, 1]),
+        },
+        "shape": np.array([12]),
+        "shape_signature": np.array([]),
+        "sparsity_parameters": {},
+        "index": 3,
+    }
+    # breakpoint()
+    return metrics
 
 
 class TestTFLiteMetrics:
@@ -120,16 +138,47 @@ class TestTFLiteMetrics:
     @pytest.mark.parametrize("verbose", (False, True))
     def test_summary(
         tflite_file: str,
+        metrics: TFLiteMetrics,
         report_sparsity: bool,
         report_cluster_mode: ReportClusterMode,
         max_num_clusters: int,
         verbose: bool,
     ) -> None:
         """Test the summary function."""
-        for metrics in [TFLiteMetrics(tflite_file), TFLiteMetrics(tflite_file, [])]:
-            metrics.summary(
+        for metrics_ in [
+            metrics,
+            TFLiteMetrics(tflite_file),
+            TFLiteMetrics(tflite_file, []),
+        ]:
+            metrics_.summary(
                 report_sparsity=report_sparsity,
                 report_cluster_mode=report_cluster_mode,
                 max_num_clusters=max_num_clusters,
                 verbose=verbose,
             )
+
+
+def test_tflite_metrics_ignore(
+    tflite_file: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Test that tensors with an empty name are being properly filtered."""
+    monkeypatch.setattr(
+        "tensorflow.lite.Interpreter.get_tensor_details",
+        MagicMock(return_value=[{"name": ""}, {"name": "Conv2D"}]),
+    )
+
+    assert list(TFLiteMetrics(tflite_file).filtered_details.keys()) == ["Conv2D"]
+
+
+@pytest.mark.parametrize(
+    "weights, axis, expected_result",
+    [
+        (np.array([1, 2, 3, 4, 1]), 0, [1, 1, 1, 1, 1]),
+        (np.array([[1, 2, 3, 4], [1, 2, 1, 2]]), 1, [1, 1, 2, 2]),
+    ],
+)
+def test_calculate_num_unique_weights_per_axis(
+    weights: np.ndarray, axis: int, expected_result: list[int]
+) -> None:
+    """Test for the calculate_num_unique_weights_per_axis function."""
+    assert calculate_num_unique_weights_per_axis(weights, axis) == expected_result
