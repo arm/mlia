@@ -32,6 +32,7 @@ with differing knowledge on hardware optimization and machine learning.
       - [Optimization Profiles](#optimization-profiles)
       - [Custom optimization Profiles](#custom-optimization-profiles)
 - [Target profiles](#target-profiles)
+   - [Listing target profiles](#listing-target-profiles)
    - [Ethos-U](#ethos-u)
    - [Cortex-A](#cortex-a)
    - [TOSA](#tosa)
@@ -432,22 +433,21 @@ The support of the above sub-commands for different targets is provided via
 backends that need to be installed separately, see
 [Backend installation](#backend-installation) section.
 
+## Listing target profiles
+
+To see all available built-in target profiles with their descriptions, use:
+
+```bash
+mlia-target list
+```
+
+This will display profiles grouped by target type with detailed descriptions
+of each profile's configuration.
+
 ## Ethos-U
 
-There are a number of predefined profiles for Ethos-U with the following
-attributes:
-
-| Profile name   | MAC  | System config                | Memory mode    |
-|----------------|------|------------------------------|----------------|
-| ethos-u55-256  | 256  | Ethos_U55_High_End_Embedded  | Shared_Sram    |
-| ethos-u55-128  | 128  | Ethos_U55_High_End_Embedded  | Shared_Sram    |
-| ethos-u65-512  | 512  | Ethos_U65_High_End           | Dedicated_Sram |
-| ethos-u65-256  | 256  | Ethos_U65_High_End           | Dedicated_Sram |
-| ethos-u85-2048 | 2048 | Ethos_U85_SYS_DRAM_High_2048 | Dedicated_Sram |
-| ethos-u85-1024 | 1024 | Ethos_U85_SYS_DRAM_Mid_1024  | Dedicated_Sram |
-| ethos-u85-512  | 512  | Ethos_U85_SYS_DRAM_Mid_512   | Dedicated_Sram |
-| ethos-u85-256  | 256  | Ethos_U85_SYS_DRAM_Low       | Dedicated_Sram |
-| ethos-u85-128  | 128  | Ethos_U85_SYS_DRAM_Low       | Dedicated_Sram |
+MLIA provides predefined profiles for Ethos-U NPUs. For the complete list of
+available Ethos-U profiles and their configurations, use `mlia-target list`.
 
 Example:
 

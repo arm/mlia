@@ -14,12 +14,14 @@ from unittest.mock import MagicMock
 
 import pytest
 
+import mlia.cli.commands
 import mlia.cli.main as mlia_cli_main
 from mlia.backend.errors import BackendUnavailableError
 from mlia.cli.main import backend_main
 from mlia.cli.main import CommandInfo
 from mlia.cli.main import get_possible_command_names
 from mlia.cli.main import main
+from mlia.cli.main import target_main
 from mlia.cli.options import add_output_directory
 from mlia.core.context import ExecutionContext
 from mlia.core.errors import ConfigurationError
@@ -382,6 +384,31 @@ def test_commands_execution_backend_main(
     mock.assert_called_once_with(*expected_call.args, **expected_call.kwargs)
 
 
+@pytest.mark.parametrize(
+    "params, expected_call",
+    [
+        (["list"], call()),
+    ],
+)
+def test_commands_execution_target_main(
+    monkeypatch: pytest.MonkeyPatch,
+    params: list[str],
+    expected_call: Any,
+) -> None:
+    """Test calling commands from the target_main function."""
+    mock = MagicMock()
+
+    monkeypatch.setattr(
+        "mlia.cli.main.target_list",
+        wrap_mock_command(mock, getattr(mlia.cli.commands, "target_list")),
+    )
+
+    target_main(params)
+
+    mock.assert_called_once_with(*expected_call.args, **expected_call.kwargs)
+
+
+# mypy: disable-error-code=misc
 @pytest.mark.parametrize(
     "debug, exc_mock, expected_output",
     [

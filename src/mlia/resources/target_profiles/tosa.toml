@@ -1,4 +1,12 @@
-# SPDX-FileCopyrightText: Copyright 2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2023, 2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 
-target = "tosa"
+profile_name = "tosa"
+target_type = "tosa"
+description = "TOSA (Tensor Operator Set Architecture) specification profile"
+
+[[components]]
+type = "specification"
+family = "tosa"
+
+[config]

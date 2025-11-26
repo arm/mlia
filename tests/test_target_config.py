@@ -60,12 +60,12 @@ def test_builtin_profile_files() -> None:
 def test_load_profile() -> None:
     """Test getting profile data."""
     profile_file = get_builtin_target_profile_path("ethos-u55-256")
-    assert load_profile(profile_file) == {
-        "target": "ethos-u55",
-        "mac": 256,
-        "memory_mode": "Shared_Sram",
-        "system_config": "Ethos_U55_High_End_Embedded",
-    }
+    result = load_profile(profile_file)
+    assert result["profile_name"] == "ethos-u55-256"
+    assert result["target_type"] == "ethos-u55"
+    assert result["config"]["mac"] == 256
+    assert result["config"]["memory_mode"] == "Shared_Sram"
+    assert result["config"]["system_config"] == "Ethos_U55_High_End_Embedded"
 
     with pytest.raises(Exception, match=r"No such file or directory: 'unknown'"):
         load_profile("unknown")

@@ -72,11 +72,9 @@ def add_target_options(
         "--target-profile",
         required=required,
         help="Built-in target profile or path to the custom target profile. "
-        f"Built-in target profiles are {', '.join(target_profiles)}. "
         "Target profile that will set the target options "
         "such as target, mac value, memory mode, etc. "
-        "For the values associated with each target profile "
-        "please refer to the documentation. ",
+        "To see all available target profiles, use 'mlia-target list'.",
     )
 
 

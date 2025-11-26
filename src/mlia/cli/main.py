@@ -16,6 +16,7 @@ from mlia.cli.commands import backend_list
 from mlia.cli.commands import backend_uninstall
 from mlia.cli.commands import check
 from mlia.cli.commands import optimize
+from mlia.cli.commands import target_list
 from mlia.cli.common import CommandInfo
 from mlia.cli.helpers import CLIActionResolver
 from mlia.cli.helpers import copy_profile_file_to_output_dir
@@ -119,6 +120,20 @@ def get_backend_commands() -> list[CommandInfo]:
         ),
         CommandInfo(
             backend_list,
+            [],
+            [
+                add_debug_options,
+            ],
+            name="list",
+        ),
+    ]
+
+
+def get_target_commands() -> list[CommandInfo]:
+    """Return target commands configuration."""
+    return [
+        CommandInfo(
+            target_list,
             [],
             [
                 add_debug_options,
@@ -305,6 +320,12 @@ def main(argv: list[str] | None = None) -> int:
 def backend_main(argv: list[str] | None = None) -> int:
     """Entry point of the backend application."""
     commands = get_backend_commands()
+    return init_and_run(commands, argv)
+
+
+def target_main(argv: list[str] | None = None) -> int:
+    """Entry point of the target application."""
+    commands = get_target_commands()
     return init_and_run(commands, argv)
 
 
