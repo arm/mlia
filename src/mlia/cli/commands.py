@@ -28,6 +28,12 @@ from mlia.cli.command_validators import validate_backend
 from mlia.cli.command_validators import validate_check_target_profile
 from mlia.cli.command_validators import validate_optimize_target_profile
 from mlia.cli.options import parse_optimization_parameters
+from mlia.core.reporting import Column
+from mlia.core.reporting import Format
+from mlia.core.reporting import Table
+from mlia.target.config import get_builtin_target_profile_path
+from mlia.target.config import load_profile
+from mlia.target.registry import profiles_by_target
 from mlia.utils.console import create_section_header
 
 logger = logging.getLogger(__name__)
@@ -210,3 +216,38 @@ def backend_list() -> None:
 
     manager = get_installation_manager(noninteractive=True)
     manager.show_env_details()
+
+
+def target_list() -> None:
+    """List available target profiles."""
+    logger.info(CONFIG)
+
+    grouped_profiles = profiles_by_target()
+
+    logger.info("Available Target Profiles\n")
+
+    for target_type, profile_names in grouped_profiles.items():
+        rows = []
+
+        for profile_name in profile_names:
+            try:
+                profile_path = get_builtin_target_profile_path(profile_name)
+                profile_data = load_profile(profile_path)
+
+                description = profile_data.get("description", "")
+
+                rows.append((profile_name, description if description else "-"))
+
+            except Exception:  # pylint: disable=broad-except
+                rows.append((profile_name, "-"))
+
+        table = Table(
+            columns=[
+                Column("Profile"),
+                Column("Description", fmt=Format(wrap_width=60)),
+            ],
+            rows=rows,
+            name=f"{target_type.upper()}:",
+        )
+
+        logger.info("%s\n", table.to_plain_text())
