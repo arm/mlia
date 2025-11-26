@@ -1,7 +1,15 @@
-# SPDX-FileCopyrightText: Copyright 2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2023, 2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 
-target = "cortex-a"
+profile_name = "cortex-a"
+target_type = "cortex-a"
+description = "Arm Cortex-A CPU profile"
 
-[backend.armnn-tflite-delegate]
+[[components]]
+type = "cpu"
+family = "cortex-a"
+
+[config]
+
+[config.backend.armnn-tflite-delegate]
 version = "23.05"
