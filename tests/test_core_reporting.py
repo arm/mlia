@@ -15,15 +15,7 @@ from unittest.mock import patch
 import numpy as np
 import pytest
 
-from mlia.core.output_schema import Backend
-from mlia.core.output_schema import Component
-from mlia.core.output_schema import ComponentType
-from mlia.core.output_schema import Context
-from mlia.core.output_schema import Model
-from mlia.core.output_schema import SCHEMA_VERSION
-from mlia.core.output_schema import StandardizedOutput
-from mlia.core.output_schema import Target
-from mlia.core.output_schema import Tool
+import mlia.core.output_schema as schema
 from mlia.core.reporting import BytesCell
 from mlia.core.reporting import Cell
 from mlia.core.reporting import ClockCell
@@ -470,28 +462,32 @@ def test_custom_json_serialization() -> None:
 
 def test_custom_json_encoder_with_dataclasses() -> None:
     """Test CustomJSONEncoder with dataclasses that have to_dict method."""
-    output = StandardizedOutput(
-        schema_version=SCHEMA_VERSION,
-        run_id=StandardizedOutput.create_run_id(),
-        timestamp=StandardizedOutput.create_timestamp(),
-        tool=Tool(name="mlia", version="1.0.0"),
-        target=Target(
+    output = schema.StandardizedOutput(
+        schema_version=schema.SCHEMA_VERSION,
+        run_id=schema.StandardizedOutput.create_run_id(),
+        timestamp=schema.StandardizedOutput.create_timestamp(),
+        tool=schema.Tool(name="mlia", version="1.0.0"),
+        target=schema.Target(
             profile_name="test",
             target_type="ethos-u55",
-            components=[Component(type=ComponentType.NPU, family="ethos-u")],
+            components=[
+                schema.Component(type=schema.ComponentType.NPU, family="ethos-u")
+            ],
             configuration={},
         ),
-        model=Model(name="test.tflite", format="tflite", hash="a" * 64),
-        context=Context(),
-        backends=[Backend(id="test", name="Test", version="1.0.0", configuration={})],
+        model=schema.Model(name="test.tflite", format="tflite", hash="a" * 64),
+        context=schema.Context(),
+        backends=[
+            schema.Backend(id="test", name="Test", version="1.0.0", configuration={})
+        ],
         results=[],
     )
 
-    # Test that CustomJSONEncoder can serialize the StandardizedOutput
+    # Test that CustomJSONEncoder can serialize the schema.StandardizedOutput
     serialized = json.dumps(output, cls=CustomJSONEncoder, indent=2)
     deserialized = json.loads(serialized)
 
-    assert deserialized["schema_version"] == SCHEMA_VERSION
+    assert deserialized["schema_version"] == schema.SCHEMA_VERSION
     assert deserialized["tool"]["name"] == "mlia"
     assert deserialized["model"]["format"] == "tflite"
 

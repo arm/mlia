@@ -6,28 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from mlia.core.output_schema import Backend
-from mlia.core.output_schema import Component
-from mlia.core.output_schema import ComponentType
-from mlia.core.output_schema import Context
-from mlia.core.output_schema import Metric
-from mlia.core.output_schema import Model
-from mlia.core.output_schema import Result
-from mlia.core.output_schema import ResultKind
-from mlia.core.output_schema import ResultStatus
-from mlia.core.output_schema import SCHEMA_VERSION
-from mlia.core.output_schema import StandardizedOutput
-from mlia.core.output_schema import Target
-from mlia.core.output_schema import TARGET_SCHEMA_VERSION
-from mlia.core.output_schema import Tool
-from mlia.core.output_validation import load_schema
-from mlia.core.output_validation import SchemaValidationError
-from mlia.core.output_validation import validate_basic_structure
-from mlia.core.output_validation import validate_sha256_format
-from mlia.core.output_validation import validate_standardized_output
-from mlia.core.output_validation import validate_timestamp_format
-from mlia.core.output_validation import validate_uuid_format
-from mlia.core.output_validation import validate_version_format
+import mlia.core.output_schema as schema
+from mlia.core import output_validation
 
 
 class TestTool:
@@ -35,13 +15,13 @@ class TestTool:
 
     def test_to_dict(self) -> None:
         """Test conversion to dictionary."""
-        tool = Tool(name="mlia", version="1.0.0")
+        tool = schema.Tool(name="mlia", version="1.0.0")
         assert tool.to_dict() == {"name": "mlia", "version": "1.0.0"}
 
     def test_from_dict(self) -> None:
         """Test creation from dictionary."""
         data = {"name": "mlia", "version": "1.0.0"}
-        tool = Tool.from_dict(data)
+        tool = schema.Tool.from_dict(data)
         assert tool.name == "mlia"
         assert tool.version == "1.0.0"
 
@@ -51,7 +31,7 @@ class TestBackend:
 
     def test_to_dict(self) -> None:
         """Test conversion to dictionary."""
-        backend = Backend(
+        backend = schema.Backend(
             id="vela",
             name="Vela Compiler",
             version="3.10.0",
@@ -71,7 +51,7 @@ class TestBackend:
             "version": "3.10.0",
             "configuration": {"option": "value"},
         }
-        backend = Backend.from_dict(data)
+        backend = schema.Backend.from_dict(data)
         assert backend.id == "vela"
         assert backend.name == "Vela Compiler"
 
@@ -81,8 +61,8 @@ class TestComponent:
 
     def test_to_dict(self) -> None:
         """Test conversion to dictionary."""
-        component = Component(
-            type=ComponentType.NPU,
+        component = schema.Component(
+            type=schema.ComponentType.NPU,
             family="ethos-u",
             model="u55",
             variant="256",
@@ -101,8 +81,8 @@ class TestComponent:
             "model": "u55",
             "variant": "256",
         }
-        component = Component.from_dict(data)
-        assert component.type == ComponentType.NPU
+        component = schema.Component.from_dict(data)
+        assert component.type == schema.ComponentType.NPU
         assert component.family == "ethos-u"
 
 
@@ -111,12 +91,15 @@ class TestTarget:
 
     def test_to_dict(self) -> None:
         """Test conversion to dictionary."""
-        target = Target(
+        target = schema.Target(
             profile_name="ethos-u55-256",
             target_type="ethos-u55",
             components=[
-                Component(
-                    type=ComponentType.NPU, family="ethos-u", model="u55", variant="256"
+                schema.Component(
+                    type=schema.ComponentType.NPU,
+                    family="ethos-u",
+                    model="u55",
+                    variant="256",
                 )
             ],
             configuration={"param": "value"},
@@ -135,7 +118,7 @@ class TestTarget:
             ],
             "configuration": {},
         }
-        target = Target.from_dict(data)
+        target = schema.Target.from_dict(data)
         assert target.profile_name == "ethos-u55-256"
 
 
@@ -144,7 +127,7 @@ class TestModel:
 
     def test_to_dict(self) -> None:
         """Test conversion to dictionary."""
-        model = Model(
+        model = schema.Model(
             name="mobilenet.tflite",
             format="tflite",
             hash="a" * 64,
@@ -159,7 +142,7 @@ class TestModel:
     def test_from_dict(self) -> None:
         """Test creation from dictionary."""
         data = {"name": "mobilenet.tflite", "format": "tflite", "hash": "a" * 64}
-        model = Model.from_dict(data)
+        model = schema.Model.from_dict(data)
         assert model.name == "mobilenet.tflite"
 
 
@@ -168,7 +151,7 @@ class TestMetric:
 
     def test_to_dict(self) -> None:
         """Test conversion to dictionary."""
-        metric = Metric(name="inference_time", value=10.5, unit="ms")
+        metric = schema.Metric(name="inference_time", value=10.5, unit="ms")
         assert metric.to_dict() == {
             "name": "inference_time",
             "value": 10.5,
@@ -178,7 +161,7 @@ class TestMetric:
     def test_from_dict(self) -> None:
         """Test creation from dictionary."""
         data = {"name": "inference_time", "value": 10.5, "unit": "ms"}
-        metric = Metric.from_dict(data)
+        metric = schema.Metric.from_dict(data)
         assert metric.name == "inference_time"
         assert metric.value == 10.5
 
@@ -188,11 +171,11 @@ class TestResult:
 
     def test_to_dict(self) -> None:
         """Test conversion to dictionary."""
-        result = Result(
-            kind=ResultKind.PERFORMANCE,
-            status=ResultStatus.OK,
+        result = schema.Result(
+            kind=schema.ResultKind.PERFORMANCE,
+            status=schema.ResultStatus.OK,
             producer="vela",
-            metrics=[Metric(name="cycles", value=1000, unit="cycles")],
+            metrics=[schema.Metric(name="cycles", value=1000, unit="cycles")],
         )
         result_dict = result.to_dict()
         assert result_dict["kind"] == "performance"
@@ -208,9 +191,9 @@ class TestResult:
             "producer": "vela",
             "metrics": [{"name": "cycles", "value": 1000, "unit": "cycles"}],
         }
-        result = Result.from_dict(data)
-        assert result.kind == ResultKind.PERFORMANCE
-        assert result.status == ResultStatus.OK
+        result = schema.Result.from_dict(data)
+        assert result.kind == schema.ResultKind.PERFORMANCE
+        assert result.status == schema.ResultStatus.OK
 
 
 class TestStandardizedOutput:
@@ -218,27 +201,27 @@ class TestStandardizedOutput:
 
     def test_create_timestamp(self) -> None:
         """Test timestamp creation."""
-        timestamp = StandardizedOutput.create_timestamp()
-        assert validate_timestamp_format(timestamp)
+        timestamp = schema.StandardizedOutput.create_timestamp()
+        assert output_validation.validate_timestamp_format(timestamp)
 
     def test_create_run_id(self) -> None:
         """Test run_id creation."""
-        run_id = StandardizedOutput.create_run_id()
-        assert validate_uuid_format(run_id)
+        run_id = schema.StandardizedOutput.create_run_id()
+        assert output_validation.validate_uuid_format(run_id)
 
     def test_to_dict(self) -> None:
         """Test conversion to dictionary."""
-        output = StandardizedOutput(
-            schema_version=SCHEMA_VERSION,
-            run_id=StandardizedOutput.create_run_id(),
-            timestamp=StandardizedOutput.create_timestamp(),
-            tool=Tool(name="mlia", version="1.0.0"),
-            target=Target(
+        output = schema.StandardizedOutput(
+            schema_version=schema.SCHEMA_VERSION,
+            run_id=schema.StandardizedOutput.create_run_id(),
+            timestamp=schema.StandardizedOutput.create_timestamp(),
+            tool=schema.Tool(name="mlia", version="1.0.0"),
+            target=schema.Target(
                 profile_name="ethos-u55-256",
                 target_type="ethos-u55",
                 components=[
-                    Component(
-                        type=ComponentType.NPU,
+                    schema.Component(
+                        type=schema.ComponentType.NPU,
                         family="ethos-u",
                         model="u55",
                         variant="256",
@@ -246,37 +229,39 @@ class TestStandardizedOutput:
                 ],
                 configuration={},
             ),
-            model=Model(name="model.tflite", format="tflite", hash="a" * 64),
-            context=Context(),
+            model=schema.Model(name="model.tflite", format="tflite", hash="a" * 64),
+            context=schema.Context(),
             backends=[
-                Backend(id="vela", name="Vela", version="3.10.0", configuration={})
+                schema.Backend(
+                    id="vela", name="Vela", version="3.10.0", configuration={}
+                )
             ],
             results=[
-                Result(
-                    kind=ResultKind.PERFORMANCE,
-                    status=ResultStatus.OK,
+                schema.Result(
+                    kind=schema.ResultKind.PERFORMANCE,
+                    status=schema.ResultStatus.OK,
                     producer="vela",
                 )
             ],
         )
         result_dict = output.to_dict()
-        assert result_dict["schema_version"] == SCHEMA_VERSION
+        assert result_dict["schema_version"] == schema.SCHEMA_VERSION
         assert "run_id" in result_dict
         assert "timestamp" in result_dict
 
     def test_serialization_roundtrip(self) -> None:
         """Test serialization and deserialization."""
-        output = StandardizedOutput(
-            schema_version=SCHEMA_VERSION,
-            run_id=StandardizedOutput.create_run_id(),
-            timestamp=StandardizedOutput.create_timestamp(),
-            tool=Tool(name="mlia", version="1.0.0"),
-            target=Target(
+        output = schema.StandardizedOutput(
+            schema_version=schema.SCHEMA_VERSION,
+            run_id=schema.StandardizedOutput.create_run_id(),
+            timestamp=schema.StandardizedOutput.create_timestamp(),
+            tool=schema.Tool(name="mlia", version="1.0.0"),
+            target=schema.Target(
                 profile_name="ethos-u55-256",
                 target_type="ethos-u55",
                 components=[
-                    Component(
-                        type=ComponentType.NPU,
+                    schema.Component(
+                        type=schema.ComponentType.NPU,
                         family="ethos-u",
                         model="u55",
                         variant="256",
@@ -284,31 +269,33 @@ class TestStandardizedOutput:
                 ],
                 configuration={},
             ),
-            model=Model(name="model.tflite", format="tflite", hash="a" * 64),
-            context=Context(),
+            model=schema.Model(name="model.tflite", format="tflite", hash="a" * 64),
+            context=schema.Context(),
             backends=[
-                Backend(id="vela", name="Vela", version="3.10.0", configuration={})
+                schema.Backend(
+                    id="vela", name="Vela", version="3.10.0", configuration={}
+                )
             ],
             results=[],
         )
         json_str = output.to_json()
-        loaded = StandardizedOutput.from_json(json_str)
+        loaded = schema.StandardizedOutput.from_json(json_str)
         assert loaded.schema_version == output.schema_version
         assert loaded.run_id == output.run_id
 
     def test_save_and_load(self) -> None:
         """Test saving and loading from file."""
-        output = StandardizedOutput(
-            schema_version=SCHEMA_VERSION,
-            run_id=StandardizedOutput.create_run_id(),
-            timestamp=StandardizedOutput.create_timestamp(),
-            tool=Tool(name="mlia", version="1.0.0"),
-            target=Target(
+        output = schema.StandardizedOutput(
+            schema_version=schema.SCHEMA_VERSION,
+            run_id=schema.StandardizedOutput.create_run_id(),
+            timestamp=schema.StandardizedOutput.create_timestamp(),
+            tool=schema.Tool(name="mlia", version="1.0.0"),
+            target=schema.Target(
                 profile_name="ethos-u55-256",
                 target_type="ethos-u55",
                 components=[
-                    Component(
-                        type=ComponentType.NPU,
+                    schema.Component(
+                        type=schema.ComponentType.NPU,
                         family="ethos-u",
                         model="u55",
                         variant="256",
@@ -316,10 +303,12 @@ class TestStandardizedOutput:
                 ],
                 configuration={},
             ),
-            model=Model(name="model.tflite", format="tflite", hash="a" * 64),
-            context=Context(),
+            model=schema.Model(name="model.tflite", format="tflite", hash="a" * 64),
+            context=schema.Context(),
             backends=[
-                Backend(id="vela", name="Vela", version="3.10.0", configuration={})
+                schema.Backend(
+                    id="vela", name="Vela", version="3.10.0", configuration={}
+                )
             ],
             results=[],
         )
@@ -331,7 +320,7 @@ class TestStandardizedOutput:
 
         try:
             output.save(filepath)
-            loaded = StandardizedOutput.load(filepath)
+            loaded = schema.StandardizedOutput.load(filepath)
             assert loaded.schema_version == output.schema_version
             assert loaded.tool.name == output.tool.name
         finally:
@@ -343,23 +332,27 @@ class TestValidation:
 
     def test_validate_version_format(self) -> None:
         """Test version format validation."""
-        assert validate_version_format("1.0.0")
-        assert validate_version_format("10.20.30")
-        assert not validate_version_format("1.0")
-        assert not validate_version_format("v1.0.0")
+        assert output_validation.validate_version_format("1.0.0")
+        assert output_validation.validate_version_format("10.20.30")
+        assert not output_validation.validate_version_format("1.0")
+        assert not output_validation.validate_version_format("v1.0.0")
 
     def test_validate_uuid_format(self) -> None:
         """Test UUID format validation."""
-        assert validate_uuid_format("550e8400-e29b-41d4-a716-446655440000")
-        assert not validate_uuid_format("invalid-uuid")
-        assert not validate_uuid_format("550e8400e29b41d4a716446655440000")
+        assert output_validation.validate_uuid_format(
+            "550e8400-e29b-41d4-a716-446655440000"
+        )
+        assert not output_validation.validate_uuid_format("invalid-uuid")
+        assert not output_validation.validate_uuid_format(
+            "550e8400e29b41d4a716446655440000"
+        )
 
     def test_validate_sha256_format(self) -> None:
         """Test SHA-256 format validation."""
-        assert validate_sha256_format("a" * 64)
-        assert validate_sha256_format("A" * 64)
-        assert not validate_sha256_format("a" * 63)
-        assert not validate_sha256_format("g" * 64)
+        assert output_validation.validate_sha256_format("a" * 64)
+        assert output_validation.validate_sha256_format("A" * 64)
+        assert not output_validation.validate_sha256_format("a" * 63)
+        assert not output_validation.validate_sha256_format("g" * 64)
 
     def test_validate_basic_structure(self) -> None:
         """Test basic structure validation."""
@@ -381,30 +374,30 @@ class TestValidation:
             ],
             "results": [],
         }
-        errors = validate_basic_structure(valid_data)
+        errors = output_validation.validate_basic_structure(valid_data)
         assert len(errors) == 0
 
     def test_validate_invalid_output(self) -> None:
         """Test validation of invalid output."""
         data = {"schema_version": "invalid"}
-        with pytest.raises(SchemaValidationError):
-            validate_standardized_output(data, use_jsonschema=False)
+        with pytest.raises(output_validation.SchemaValidationError):
+            output_validation.validate_standardized_output(data, use_jsonschema=False)
 
     def test_load_schema(self) -> None:
         """Test loading the JSON schema file."""
-        schema = load_schema()
-        assert schema is not None
-        assert "$schema" in schema
-        assert "$id" in schema
-        assert (
-            schema["$id"]
-            == f"https://schemas.arm.com/mlia/output-schema-{SCHEMA_VERSION}.json"
+        output_schema = output_validation.load_schema()
+        assert output_schema is not None
+        assert "$schema" in output_schema
+        assert "$id" in output_schema
+        expected_id = (
+            f"https://schemas.arm.com/mlia/output-schema-{schema.SCHEMA_VERSION}.json"
         )
-        assert "properties" in schema
-        assert "target" in schema["properties"]
+        assert output_schema["$id"] == expected_id
+        assert "properties" in output_schema
+        assert "target" in output_schema["properties"]
         # Verify target references the child schema
-        assert "$ref" in schema["properties"]["target"]
-        assert (
-            schema["properties"]["target"]["$ref"]
-            == f"https://schemas.arm.com/mlia/target-{TARGET_SCHEMA_VERSION}.json"
+        assert "$ref" in output_schema["properties"]["target"]
+        expected_ref = (
+            f"https://schemas.arm.com/mlia/target-{schema.TARGET_SCHEMA_VERSION}.json"
         )
+        assert output_schema["properties"]["target"]["$ref"] == expected_ref

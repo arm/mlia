@@ -8,7 +8,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-from mlia.core.output_schema import SCHEMA_VERSION
+import mlia.core.output_schema as schema
 
 try:
     import jsonschema
@@ -27,7 +27,7 @@ def load_schema() -> dict[str, Any]:
     schema_path = (
         Path(__file__).parent.parent
         / "resources"
-        / f"mlia-output-schema-{SCHEMA_VERSION}.json"
+        / f"mlia-output-schema-{schema.SCHEMA_VERSION}.json"
     )
     if not schema_path.exists():
         raise FileNotFoundError(f"Schema file not found: {schema_path}")
@@ -36,12 +36,14 @@ def load_schema() -> dict[str, Any]:
         return json.load(schema_file)  # type: ignore[no-any-return]
 
 
-def validate_with_jsonschema(data: dict[str, Any], schema: dict[str, Any]) -> None:
+def validate_with_jsonschema(
+    data: dict[str, Any], output_schema: dict[str, Any]
+) -> None:
     """Validate data against schema using jsonschema library.
 
     Args:
         data: Data to validate
-        schema: JSON schema
+        output_schema: JSON schema
 
     Raises:
         SchemaValidationError: If validation fails
@@ -54,7 +56,7 @@ def validate_with_jsonschema(data: dict[str, Any], schema: dict[str, Any]) -> No
         )
 
     try:
-        jsonschema.validate(instance=data, schema=schema)
+        jsonschema.validate(instance=data, schema=output_schema)
     except jsonschema.exceptions.ValidationError as err:
         raise SchemaValidationError(f"Schema validation failed: {err.message}") from err
 
@@ -274,8 +276,8 @@ def validate_standardized_output(
                 UserWarning,
             )
         else:
-            schema = load_schema()
-            validate_with_jsonschema(data, schema)
+            output_schema = load_schema()
+            validate_with_jsonschema(data, output_schema)
 
 
 def validate_output_file(filepath: Path | str, use_jsonschema: bool = True) -> None:

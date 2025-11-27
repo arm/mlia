@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, 2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """TOSA advisor."""
 from __future__ import annotations
@@ -91,7 +91,9 @@ def configure_and_get_tosa_advisor(
 ) -> InferenceAdvisor:
     """Create and configure TOSA advisor."""
     if context.event_handlers is None:
-        context.event_handlers = [TOSAEventHandler()]
+        # Pass output_dir to event handler for saving standardized output
+        output_dir = getattr(context, "output_dir", None)
+        context.event_handlers = [TOSAEventHandler(output_dir=output_dir)]
 
     if context.config_parameters is None:
         context.config_parameters = _get_config_parameters(
