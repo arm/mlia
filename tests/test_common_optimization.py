@@ -1,110 +1,244 @@
-# SPDX-FileCopyrightText: Copyright 2024, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2024-2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for the common optimization module."""
 from __future__ import annotations
 
-from contextlib import ExitStack as does_not_raises
+from contextlib import ExitStack as does_not_raise
 from pathlib import Path
 from typing import Any
+from typing import Callable
 from unittest.mock import MagicMock
 
 import pytest
 
+from mlia.core.context import Context
 from mlia.core.context import ExecutionContext
+from mlia.core.errors import FunctionalityNotSupportedError
+from mlia.core.performance import P
+from mlia.core.performance import PerformanceEstimator
 from mlia.nn.common import Optimizer
 from mlia.nn.select import OptimizationSettings
+from mlia.nn.tensorflow.config import get_keras_model
+from mlia.nn.tensorflow.config import KerasModel
 from mlia.nn.tensorflow.config import TFLiteModel
 from mlia.target.common.optimization import _DEFAULT_OPTIMIZATION_TARGETS
 from mlia.target.common.optimization import add_common_optimization_params
 from mlia.target.common.optimization import OptimizingDataCollector
+from mlia.target.common.optimization import OptimizingPerformaceDataCollector
 from mlia.target.common.optimization import parse_augmentations
 from mlia.target.config import load_profile
 from mlia.target.config import TargetProfile
 
 
-class FakeOptimizer(Optimizer):
-    """Optimizer for testing purposes."""
+def _get_mock_optimizer(returned_model: KerasModel | TFLiteModel | Path) -> Optimizer:
+    mock_optimizer = MagicMock()
+    mock_optimizer.apply_optimization = MagicMock()
+    mock_optimizer.get_model = MagicMock(return_value=returned_model)
 
-    def __init__(self, optimized_model_path: Path) -> None:
-        """Initialize."""
-        super().__init__()
-        self.optimized_model_path = optimized_model_path
-        self.invocation_count = 0
-
-    def apply_optimization(self) -> None:
-        """Count the invocations."""
-        self.invocation_count += 1
-
-    def get_model(self) -> TFLiteModel:
-        """Return optimized model."""
-        return TFLiteModel(self.optimized_model_path)
-
-    def optimization_config(self) -> str:
-        """Return something: doesn't matter, not used."""
-        return ""
+    return mock_optimizer
 
 
-def test_optimizing_data_collector(
-    test_keras_model: Path,
-    test_tflite_model: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Test OptimizingDataCollector, base support for various targets."""
-    optimizations = [
-        [
-            {"optimization_type": "fake", "optimization_target": 42},
-        ]
-    ]
-    training_parameters = {"batch_size": 32, "show_progress": False}
-    context = ExecutionContext(
+def _get_execution_context(
+    optimizations_list: list[list[dict]], rewrite_parameters: dict[str, Any]
+) -> ExecutionContext:
+    return ExecutionContext(
         config_parameters={
             "common_optimizations": {
-                "optimizations": optimizations,
-                "rewrite_parameters": {
-                    "train_params": training_parameters,
-                    "rewrite_specific_params": None,
-                },
+                "optimizations": optimizations_list,
+                "rewrite_parameters": rewrite_parameters,
             }
         }
     )
 
-    target_profile = MagicMock(spec=TargetProfile)
 
-    fake_optimizer = FakeOptimizer(test_tflite_model)
-
-    monkeypatch.setattr(
-        "mlia.target.common.optimization.get_optimizer",
-        MagicMock(return_value=fake_optimizer),
-    )
-
-    collector = OptimizingDataCollector(test_keras_model, target_profile)
-
-    optimize_model_mock = MagicMock(side_effect=collector.optimize_model)
-    monkeypatch.setattr(
-        "mlia.target.common.optimization.OptimizingDataCollector.optimize_model",
-        optimize_model_mock,
-    )
-    opt_settings = [
+def _get_opt_settings(
+    optimizations_list: list[list[dict]],
+) -> list[list[OptimizationSettings]]:
+    return [
         [
             OptimizationSettings(
                 item.get("optimization_type"),  # type: ignore
                 item.get("optimization_target"),  # type: ignore
-                item.get("layers_to_optimize"),  # type: ignore
-                item.get("dataset"),  # type: ignore
+                item.get("layers_to_optimize"),
+                item.get("dataset"),
             )
             for item in opt_configuration
         ]
-        for opt_configuration in optimizations
+        for opt_configuration in optimizations_list
     ]
 
-    collector.set_context(context)
-    collector.collect_data()
-    assert optimize_model_mock.call_args.args[0] == opt_settings[0]
-    assert optimize_model_mock.call_args.args[1] == {
-        "train_params": training_parameters,
+
+def _get_optimizing_data_collector(
+    model: Path,
+    optimizations: list[list[dict]],
+    rewrite_parameters: dict[str, Any],
+) -> OptimizingDataCollector:
+    target_profile = MagicMock(spec=TargetProfile)
+    collector = OptimizingDataCollector(model, target_profile)
+    collector.set_context(_get_execution_context(optimizations, rewrite_parameters))
+    return collector
+
+
+@pytest.mark.parametrize(
+    "get_model",
+    [  # Given model paths and context, return model to be returned by
+        # optimizer.get_model()
+        lambda _keras_path, tflite_path, _ctx: tflite_path,
+        lambda _keras_path, tflite_path, _ctx: TFLiteModel(tflite_path),
+        lambda keras_path, _tflite_path, ctx: get_keras_model(
+            keras_path, ctx
+        ).get_keras_model(),
+    ],
+)
+def test_optimizing_data_collector_optimize_model(
+    get_model: Callable[[Path, Path, Context], Any],
+    test_keras_model: Path,
+    test_tflite_model: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test OptimizingDataCollector's optimize_model method."""
+    rewrite_parameters = {
+        "train_params": {"batch_size": 32, "show_progress": False},
         "rewrite_specific_params": None,
     }
-    assert fake_optimizer.invocation_count == 1
+    optimizations = [{"optimization_type": "fake", "optimization_target": 42}]
+    collector = _get_optimizing_data_collector(
+        test_keras_model, [optimizations], rewrite_parameters
+    )
+
+    mock_optimizer = _get_mock_optimizer(
+        get_model(test_keras_model, test_tflite_model, collector.context)
+    )
+
+    monkeypatch.setattr(
+        "mlia.target.common.optimization.get_optimizer",
+        MagicMock(return_value=mock_optimizer),
+    )
+
+    opt_settings = _get_opt_settings([optimizations])[0]
+    collector.optimize_model(opt_settings, rewrite_parameters, test_keras_model)
+
+    mock_optimizer.apply_optimization.assert_called_once()  # type: ignore[attr-defined]
+    mock_optimizer.get_model.assert_called_once()  # type: ignore[attr-defined]
+
+
+@pytest.mark.parametrize(
+    "optimizations, expected_err",
+    [
+        (
+            [
+                {"optimization_type": "fake", "optimization_target": 42},
+            ],
+            does_not_raise(),
+        ),
+        (
+            [
+                {"optimization_type": "rewrite", "optimization_target": 42},
+            ],
+            does_not_raise(),
+        ),
+        (
+            [],
+            pytest.raises(
+                FunctionalityNotSupportedError,
+                match="No optimization targets provided",
+            ),
+        ),
+        (
+            {"bad": "optimization_params"},
+            pytest.raises(
+                TypeError,
+                match="Optimization parameters expected to be a list.",
+            ),
+        ),
+    ],
+)
+def test_optimizing_data_collector_collect_data(
+    optimizations: list[dict],
+    expected_err: Any,
+    test_keras_model: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test OptimizingDataCollector's collect_data method."""
+    rewrite_parameters = {
+        "train_params": {"batch_size": 32, "show_progress": False},
+        "rewrite_specific_params": None,
+    }
+    collector = _get_optimizing_data_collector(
+        test_keras_model, [optimizations], rewrite_parameters
+    )
+
+    mock_optimize_models = MagicMock()
+    monkeypatch.setattr(
+        "mlia.target.common.optimization.OptimizingDataCollector.optimize_model",
+        mock_optimize_models,
+    )
+
+    with expected_err:
+        collector.collect_data()
+        mock_optimize_models.assert_called_once()
+
+
+def test_optimizing_data_collector_collect_data_keras_conversion_failed(
+    test_keras_model: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test if FunctionalityNotSupportedError is raised if model
+    cannot be converted to keras."""
+    rewrite_parameters = {
+        "train_params": {"batch_size": 32, "show_progress": False},
+        "rewrite_specific_params": None,
+    }
+    target_profile = MagicMock(spec=TargetProfile)
+    optimizations = [{"optimization_type": "fake", "optimization_target": 42}]
+    collector = OptimizingDataCollector(test_keras_model, target_profile)
+    collector.set_context(_get_execution_context([optimizations], rewrite_parameters))
+    monkeypatch.setattr(
+        "mlia.target.common.optimization.get_keras_model",
+        MagicMock(side_effect=NotImplementedError),
+    )
+    with pytest.raises(FunctionalityNotSupportedError, match="is not a Keras model"):
+        collector.collect_data()
+
+
+def test_optimizing_performance_data_collector(
+    test_keras_model: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Test OptimizingPerformaceDataCollector class."""
+    optimized_metrics = {"optimized_metric": 1.0}
+
+    class MyOptimizingPerformaceDataCollector(  # pylint: disable=too-many-ancestors
+        OptimizingPerformaceDataCollector
+    ):
+        """Test child class."""
+
+        def create_estimator(self) -> PerformanceEstimator:
+            """Create a PerformanceEstimator."""
+            return MagicMock(spec=PerformanceEstimator)
+
+        def create_optimization_performance_metrics(
+            self, _original_metrics: P, _optimizations_perf_metrics: list[P]
+        ) -> Any:
+            """Create an optimization metrics object."""
+            return optimized_metrics
+
+    monkeypatch.setattr(
+        "mlia.target.common.optimization.estimate_performance",
+        MagicMock(return_value=[{"metric": 0.5}, {"metric": 1.0}]),
+    )
+
+    collector = MyOptimizingPerformaceDataCollector(
+        test_keras_model, MagicMock(spec=TargetProfile)
+    )
+    perf_metrics = collector.optimize_and_estimate_performance(
+        test_keras_model,
+        [MagicMock(spec=Optimizer)],
+        [[MagicMock(spec=OptimizationSettings)]],
+    )
+
+    # Test if optimize_and_estimate_performance returns
+    # create_optimization_performance_metrics result
+    assert perf_metrics == optimized_metrics
 
 
 @pytest.mark.parametrize(
@@ -120,7 +254,7 @@ def test_optimizing_data_collector(
                     }
                 ],
             },
-            does_not_raises(),
+            does_not_raise(),
             type(None),
         ),
         (
@@ -136,7 +270,7 @@ def test_optimizing_data_collector(
                     "optimization-fully-connected-clustering.toml"
                 ),
             },
-            does_not_raises(),
+            does_not_raise(),
             dict,
         ),
         (
@@ -152,7 +286,7 @@ def test_optimizing_data_collector(
                     "optimization-fully-connected-pruning.toml"
                 ),
             },
-            does_not_raises(),
+            does_not_raise(),
             dict,
         ),
         (
