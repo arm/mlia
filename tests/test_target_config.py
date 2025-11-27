@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import warnings
 from typing import Callable
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -68,6 +69,35 @@ def test_load_profile() -> None:
 
     with pytest.raises(Exception, match=r"No such file or directory: 'unknown'"):
         load_profile("unknown")
+
+
+def test_target_profile_load_profile_raises() -> None:
+    """
+    Test that a Exception is raised when loading a profile from an invalid directory.
+    """
+    with pytest.raises(Exception, match=r"No such file or directory: 'unknown'"):
+        TOSAConfiguration.load_profile("unknown")
+
+
+def test_target_profile_load_raises_key_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test that a KeyError is raised when loading a improperly defined profile."""
+    monkeypatch.setattr(
+        "mlia.target.config.load_profile", MagicMock(return_value={"backends": []})
+    )
+
+    path = "example"
+    with pytest.raises(KeyError, match=f"Missing key in file {path}."):
+        TOSAConfiguration.load(path)
+
+
+def test_target_profile_save_error() -> None:
+    """Test the attempting to save a profile raises an error."""
+    with pytest.raises(
+        NotImplementedError,
+        match="Saving target profiles is currently not supported.",
+    ):
+        tosa = TOSAConfiguration(target="tosa")
+        tosa.save("any/path")
 
 
 class MyTargetProfile(TargetProfile):
