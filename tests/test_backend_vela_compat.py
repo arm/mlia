@@ -8,6 +8,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
+import mlia.core.output_schema as schema
 from mlia.backend.errors import BackendUnavailableError
 from mlia.backend.vela.compat import generate_supported_operators_report
 from mlia.backend.vela.compat import get_vela
@@ -210,3 +211,119 @@ def test_get_vela_returns_availability_status() -> None:
     result = get_vela()
     # The result should be a boolean indicating vela availability
     assert isinstance(result, bool)
+
+
+def test_operators_to_standardized_output(tmp_path: Path) -> None:
+    """Test conversion of Operators to standardized output."""
+    # Create a model file for hash computation
+    model_file = tmp_path / "model.tflite"
+    model_file.write_bytes(b"test model content")
+
+    ops = [
+        Operator(
+            name="conv1",
+            op_type="CONV_2D",
+            run_on_npu=NpuSupported(supported=True, reasons=[]),
+        ),
+        Operator(
+            name="conv2",
+            op_type="CONV_2D",
+            run_on_npu=NpuSupported(
+                supported=False, reasons=[("CPU only operator", "")]
+            ),
+        ),
+        Operator(
+            name="pool1",
+            op_type="MAX_POOL_2D",
+            run_on_npu=NpuSupported(
+                supported=False,
+                reasons=[("Constraint failed", "Invalid tensor shape")],
+            ),
+        ),
+    ]
+
+    operators = Operators(ops)
+    output: dict = operators.to_standardized_output(
+        model_path=model_file,
+        target_config={"target": "ethos-u55", "mac": 256},
+    )
+
+    # Verify structure
+    assert "schema_version" in output  # pylint: disable=unsupported-membership-test
+    assert output["schema_version"] == schema.SCHEMA_VERSION
+    assert "backends" in output  # pylint: disable=unsupported-membership-test
+    assert "target" in output  # pylint: disable=unsupported-membership-test
+    assert "model" in output  # pylint: disable=unsupported-membership-test
+    assert "context" in output  # pylint: disable=unsupported-membership-test
+    assert "results" in output  # pylint: disable=unsupported-membership-test
+
+    # Verify backend
+    backends = output["backends"]  # pylint: disable=unsupported-membership-test
+    assert len(backends) == 1
+    backend = backends[0]
+    assert backend["name"] == "Vela Compiler"
+    assert "version" in backend
+
+    # Verify result
+    results = output["results"]  # pylint: disable=unsupported-membership-test
+    assert len(results) == 1
+    result = results[0]
+    assert result["kind"] == "compatibility"
+    assert result["status"] == "partial"  # Some supported, some not
+
+    # Verify checks and entities
+    assert "checks" in result
+    assert "entities" in result
+    checks = result["checks"]
+    entities = result["entities"]
+
+    assert len(checks) == 3  # One check per operator
+    assert len(entities) == 3  # One entity per operator
+
+    # Verify first operator (supported)
+    assert entities[0]["name"] == "conv1"
+    assert entities[0]["scope"] == "operator"
+    assert entities[0]["placement"] == "npu"
+    assert checks[0]["status"] == "pass"
+
+    # Verify second operator (CPU only)
+    assert entities[1]["name"] == "conv2"
+    assert entities[1]["placement"] == "cpu"
+    assert checks[1]["status"] == "fail"
+    assert "reasons" in checks[1]["details"]
+
+    # Verify third operator (constraint failed)
+    assert entities[2]["name"] == "pool1"
+    assert entities[2]["placement"] == "cpu"
+    assert checks[2]["status"] == "fail"
+    assert "reasons" in checks[2]["details"]
+
+
+def test_operators_to_standardized_output_all_supported(tmp_path: Path) -> None:
+    """Test conversion when all operators are supported."""
+    # Create a model file for hash computation
+    model_file = tmp_path / "model.tflite"
+    model_file.write_bytes(b"test model content")
+
+    ops = [
+        Operator(
+            name="conv1",
+            op_type="CONV_2D",
+            run_on_npu=NpuSupported(supported=True, reasons=[]),
+        ),
+        Operator(
+            name="conv2",
+            op_type="CONV_2D",
+            run_on_npu=NpuSupported(supported=True, reasons=[]),
+        ),
+    ]
+
+    operators = Operators(ops)
+    output: dict = operators.to_standardized_output(
+        model_path=model_file,
+    )
+
+    results = output["results"]  # pylint: disable=unsupported-membership-test
+    assert len(results) == 1
+    result = results[0]
+    assert result["status"] == "ok"  # All supported

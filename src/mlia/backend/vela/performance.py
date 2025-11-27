@@ -10,12 +10,38 @@ from collections import Counter
 from dataclasses import dataclass
 from dataclasses import fields
 from pathlib import Path
+from typing import Any
+from typing import TYPE_CHECKING
 
 import numpy as np
 
+from mlia.backend.errors import BackendUnavailableError
+
+try:
+    from ethosu.vela import __version__ as ethosu_vela_version
+
+    _VELA_AVAILABLE = True
+except ImportError:
+    if TYPE_CHECKING:
+        from ethosu.vela import __version__ as ethosu_vela_version
+    else:
+
+        def __getattr__(name: str) -> Any:
+            """Raise BackendUnavailableError for Vela-related attributes."""
+            if name in {
+                "ethosu_vela_version",
+            }:
+                raise BackendUnavailableError("Backend vela is not available", "vela")
+            raise AttributeError(name)
+
+    _VELA_AVAILABLE = False
+
+import mlia
+import mlia.core.output_schema as schema
 from mlia.backend.vela.compiler import VelaCompiler
 from mlia.backend.vela.compiler import VelaCompilerOptions
 from mlia.backend.vela.compiler import VelaSummary
+from mlia.utils.filesystem import sha256
 
 
 logger = logging.getLogger(__name__)
@@ -39,6 +65,161 @@ class PerformanceMetrics:  # pylint: disable=too-many-instance-attributes
     on_chip_flash_memory_area_size: float
     off_chip_flash_memory_area_size: float
     layerwise_performance_info: LayerwisePerfInfo
+
+    def to_standardized_output(  # pylint: disable=too-many-locals
+        self,
+        model_path: Path,
+        target_config: dict[str, Any] | None = None,
+        backend_config: dict[str, Any] | None = None,
+        run_id: str | None = None,
+        timestamp: str | None = None,
+        cli_arguments: list[str] | None = None,
+    ) -> dict[str, Any]:
+        """Convert to standardized output format.
+
+        Args:
+            model_path: Path to the model file
+            target_config: Target configuration dict (target, mac, etc.)
+            backend_config: Backend configuration
+            run_id: Optional run ID (generated if not provided)
+            timestamp: Optional timestamp (generated if not provided)
+            cli_arguments: Optional CLI arguments used for the run
+
+        Returns:
+            Standardized output dictionary
+        """
+        # pylint: disable=duplicate-code
+        # Generate run_id and timestamp if not provided
+        if run_id is None:
+            run_id = schema.StandardizedOutput.create_run_id()
+        if timestamp is None:
+            timestamp = schema.StandardizedOutput.create_timestamp()
+
+        # Create tool info
+        tool = schema.Tool(name="mlia", version=mlia.__version__)
+
+        # Create backend with version
+        try:
+            backend_version = ethosu_vela_version
+        except Exception as exc:  # pylint: disable=broad-exception-caught
+            logger.warning("Failed to get vela version: %s", exc)
+            backend_version = "unknown"
+
+        backend = schema.Backend(
+            id="vela",
+            name="Vela Compiler",
+            version=backend_version,
+            configuration=backend_config or {},
+        )
+
+        # Create target with NPU component
+        target_type = (target_config or {}).get("target", "ethos-u")
+        mac = (target_config or {}).get("mac", "unknown")
+
+        npu_component = schema.Component(
+            type=schema.ComponentType.NPU,
+            family=target_type,
+            model=None,
+            variant=mac if mac != "unknown" else None,
+        )
+
+        target = schema.Target(
+            profile_name=target_type,
+            target_type="npu",
+            components=[npu_component],
+            configuration=target_config or {},
+        )
+
+        # Create model
+        model_hash = sha256(model_path)
+        model_format = model_path.suffix.lstrip(".") if model_path.suffix else "unknown"
+        model = schema.Model(
+            name=model_path.name,
+            format=model_format,
+            hash=model_hash,
+        )
+
+        # Create context
+        context = schema.Context(cli_arguments=cli_arguments or [])
+
+        # Create performance metrics
+        metrics = [
+            schema.Metric(name="npu_cycles", value=self.npu_cycles, unit="cycles"),
+            schema.Metric(
+                name="sram_access_cycles", value=self.sram_access_cycles, unit="cycles"
+            ),
+            schema.Metric(
+                name="dram_access_cycles", value=self.dram_access_cycles, unit="cycles"
+            ),
+            schema.Metric(
+                name="on_chip_flash_access_cycles",
+                value=self.on_chip_flash_access_cycles,
+                unit="cycles",
+            ),
+            schema.Metric(
+                name="off_chip_flash_access_cycles",
+                value=self.off_chip_flash_access_cycles,
+                unit="cycles",
+            ),
+            schema.Metric(name="total_cycles", value=self.total_cycles, unit="cycles"),
+            schema.Metric(
+                name="batch_inference_time",
+                value=self.batch_inference_time,
+                unit="seconds",
+            ),
+            schema.Metric(
+                name="inferences_per_second",
+                value=self.inferences_per_second,
+                unit="inferences/s",
+            ),
+            schema.Metric(name="batch_size", value=self.batch_size, unit="count"),
+            schema.Metric(
+                name="model_size", value=model_path.stat().st_size, unit="bytes"
+            ),
+            schema.Metric(
+                name="sram_memory_area_size",
+                value=self.sram_memory_area_size,
+                unit="bytes",
+            ),
+            schema.Metric(
+                name="dram_memory_area_size",
+                value=self.dram_memory_area_size,
+                unit="bytes",
+            ),
+            schema.Metric(
+                name="on_chip_flash_memory_area_size",
+                value=self.on_chip_flash_memory_area_size,
+                unit="bytes",
+            ),
+            schema.Metric(
+                name="off_chip_flash_memory_area_size",
+                value=self.off_chip_flash_memory_area_size,
+                unit="bytes",
+            ),
+        ]
+
+        # Create result
+        result = schema.Result(
+            kind=schema.ResultKind.PERFORMANCE,
+            status=schema.ResultStatus.OK,
+            producer="vela",
+            metrics=metrics,
+        )
+
+        # Build StandardizedOutput
+        output = schema.StandardizedOutput(
+            schema_version=schema.SCHEMA_VERSION,
+            run_id=run_id,
+            timestamp=timestamp,
+            tool=tool,
+            target=target,
+            model=model,
+            context=context,
+            backends=[backend],
+            results=[result],
+        )
+
+        return output.to_dict()
 
 
 @dataclass
