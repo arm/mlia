@@ -8,11 +8,16 @@ import logging
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+from typing import TYPE_CHECKING
 
+import mlia
+import mlia.core.output_schema as schema
 from mlia.backend.errors import BackendUnavailableError
+from mlia.utils.filesystem import sha256
 from mlia.utils.logging import redirect_output
 
 try:
+    from ethosu.vela import __version__ as ethosu_vela_version
     from ethosu.vela.operation import Op
     from ethosu.vela.tflite_mapping import optype_to_builtintype
     from ethosu.vela.tflite_model_semantic import TFLiteSemantic
@@ -24,9 +29,8 @@ try:
     _VELA_INSTALLED = True
 
 except ImportError:
-    from typing import TYPE_CHECKING
-
     if TYPE_CHECKING:
+        from ethosu.vela import __version__ as ethosu_vela_version
         from ethosu.vela.operation import Op
         from ethosu.vela.tflite_mapping import optype_to_builtintype
         from ethosu.vela.tflite_model_semantic import TFLiteSemantic
@@ -44,6 +48,7 @@ except ImportError:
                 "TFLiteSupportedOperators",
                 "generate_supported_ops",
                 "VelaCompiler",
+                "ethosu_vela_version",
             }:
                 raise BackendUnavailableError("Backend vela is not available", "vela")
             raise AttributeError(name)
@@ -110,6 +115,165 @@ class Operators:
     def npu_supported_number(self) -> int:
         """Return number of npu supported operators."""
         return sum(op.run_on_npu.supported for op in self.ops)
+
+    def to_standardized_output(  # pylint: disable=too-many-locals
+        self,
+        model_path: Path,
+        run_id: str | None = None,
+        timestamp: str | None = None,
+        cli_arguments: list[str] | None = None,
+        target_config: dict[str, Any] | None = None,
+        backend_config: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Convert to standardized output format.
+
+        Args:
+            model_path: Path to the model file
+            run_id: Optional run ID (will be generated if not provided)
+            timestamp: Optional ISO 8601 timestamp (will be generated if not provided)
+            cli_arguments: Optional CLI arguments used for the run
+            target_config: Optional target configuration parameters
+            backend_config: Optional backend configuration parameters
+
+        Returns:
+            Standardized output dictionary
+        """
+        # pylint: disable=duplicate-code
+        # Generate run_id and timestamp if not provided
+        if run_id is None:
+            run_id = schema.StandardizedOutput.create_run_id()
+        if timestamp is None:
+            timestamp = schema.StandardizedOutput.create_timestamp()
+
+        # Create tool info
+        tool = schema.Tool(name="mlia", version=mlia.__version__)
+
+        # Create backend with version
+        try:
+            backend_version = ethosu_vela_version
+        except Exception as exc:  # pylint: disable=broad-exception-caught
+            logger.warning("Failed to get vela version: %s", exc)
+            backend_version = "unknown"
+
+        backend = schema.Backend(
+            id="vela",
+            name="Vela Compiler",
+            version=backend_version,
+            configuration=backend_config or {},
+        )
+
+        # Create target with NPU component
+        target_type = (target_config or {}).get("target", "ethos-u")
+        mac = (target_config or {}).get("mac", "unknown")
+
+        npu_component = schema.Component(
+            type=schema.ComponentType.NPU,
+            family=target_type,
+            model=None,
+            variant=mac if mac != "unknown" else None,
+        )
+
+        target = schema.Target(
+            profile_name=target_type,
+            target_type="npu",
+            components=[npu_component],
+            configuration=target_config or {},
+        )
+
+        # Create model
+        model_hash = sha256(model_path)
+        model_format = model_path.suffix.lstrip(".") if model_path.suffix else "unknown"
+        model = schema.Model(
+            name=model_path.name,
+            format=model_format,
+            hash=model_hash,
+        )
+
+        # Create context
+        context = schema.Context(
+            cli_arguments=cli_arguments or [],
+        )
+
+        # Create checks for each operator
+        checks: list[schema.Check] = []
+        entities: list[schema.Entity] = []
+
+        for idx, operator in enumerate(self.ops):
+            entity_id = f"op_{idx}"
+
+            # Create entity for this operator
+            entity = schema.Entity(
+                scope=schema.OperatorScope.OPERATOR,
+                name=operator.name,
+                location=f"operator/{idx}",
+                placement="npu" if operator.run_on_npu.supported else "cpu",
+                id=entity_id,
+                attributes={
+                    "op_type": operator.op_type,
+                    "index": idx,
+                },
+            )
+            entities.append(entity)
+
+            # Create check for NPU placement
+            if operator.run_on_npu.supported:
+                status = schema.CheckStatus.PASS
+                details = {}
+            else:
+                status = schema.CheckStatus.FAIL
+                details = {
+                    "reasons": [
+                        {"description": desc, "detail": detail}
+                        for desc, detail in operator.run_on_npu.reasons
+                    ]
+                }
+
+            check = schema.Check(
+                id=f"npu_support_{entity_id}",
+                status=status,
+                details=details,
+            )
+            checks.append(check)
+
+        # Determine overall result status
+        if all(operator.run_on_npu.supported for operator in self.ops):
+            result_status = schema.ResultStatus.OK
+        elif any(operator.run_on_npu.supported for operator in self.ops):
+            result_status = schema.ResultStatus.PARTIAL
+        else:
+            result_status = schema.ResultStatus.INCOMPATIBLE
+
+        # Create result
+        result = schema.Result(
+            kind=schema.ResultKind.COMPATIBILITY,
+            status=result_status,
+            producer=backend.id,
+            warnings=[],
+            errors=[],
+            checks=checks,
+            entities=entities,
+        )
+
+        return schema.StandardizedOutput(
+            schema_version=schema.SCHEMA_VERSION,
+            run_id=run_id,
+            timestamp=timestamp,
+            tool=tool,
+            target=target,
+            model=model,
+            context=context,
+            backends=[backend],
+            results=[result],
+            extensions={},
+        ).to_dict()
+
+
+@dataclass
+class VelaCompatibilityResult:
+    """Wrapper for Vela compatibility with both legacy and standardized output."""
+
+    legacy_info: Operators
+    standardized_output: dict[str, Any] | None = None
 
 
 def supported_operators(model_path: Path, compiler_options: Any) -> Operators:
