@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 from typing import cast
 
+from mlia.backend.corstone import is_corstone_backend
 from mlia.backend.vela.compat import supported_operators
 from mlia.backend.vela.compat import VelaCompatibilityResult
 from mlia.core.data_collection import ContextAwareDataCollector
@@ -20,7 +21,10 @@ from mlia.nn.tensorflow.tflite_compat import TFLiteCompatibilityInfo
 from mlia.nn.tensorflow.utils import is_tflite_model
 from mlia.target.common.optimization import OptimizingPerformaceDataCollector
 from mlia.target.ethos_u.config import EthosUConfiguration
+from mlia.target.ethos_u.performance import CombinedPerformanceResult
+from mlia.target.ethos_u.performance import CorstonePerformanceResult
 from mlia.target.ethos_u.performance import EthosUPerformanceEstimator
+from mlia.target.ethos_u.performance import merge_performance_outputs
 from mlia.target.ethos_u.performance import OptimizationPerformanceMetrics
 from mlia.target.ethos_u.performance import PerformanceMetrics
 from mlia.target.ethos_u.performance import VelaPerformanceResult
@@ -115,7 +119,14 @@ class EthosUPerformance(ContextAwareDataCollector):
         self.target_config = target_config
         self.backends = backends
 
-    def collect_data(self) -> PerformanceMetrics | VelaPerformanceResult:
+    def collect_data(
+        self,
+    ) -> (
+        PerformanceMetrics
+        | VelaPerformanceResult
+        | CorstonePerformanceResult
+        | CombinedPerformanceResult
+    ):
         """Collect model performance metrics."""
         tflite_model = get_tflite_model(self.model, self.context)
         estimator = EthosUPerformanceEstimator(
@@ -125,6 +136,9 @@ class EthosUPerformance(ContextAwareDataCollector):
         )
 
         perf = estimator.estimate(tflite_model)
+
+        vela_output = None
+        corstone_output = None
 
         # Wrap with standardized output if Vela backend was used
         if self.backends and "vela" in self.backends:
@@ -149,21 +163,69 @@ class EthosUPerformance(ContextAwareDataCollector):
                     cli_args = (
                         [Path(sys.argv[0]).name] + sys.argv[1:] if sys.argv else []
                     )
-                    standardized = estimator.vela_perf_metrics.to_standardized_output(
+                    vela_output = estimator.vela_perf_metrics.to_standardized_output(
                         model_path=self.model,
                         target_config=target_config,
                         backend_config=backend_config,
                         cli_arguments=cli_args,
-                    )
-                    return VelaPerformanceResult(
-                        legacy_info=perf,
-                        standardized_output=standardized,
                     )
             except Exception as exc:  # pylint: disable=broad-exception-caught
                 logger.warning(
                     "Failed to generate standardized output for Vela performance: %s",
                     exc,
                 )
+
+        # If corstone backend produced raw metrics, build standardized output
+        try:
+            if getattr(perf, "corstone_metrics", None) is not None:
+                # backend name is taken from first backend in the set if available
+                backend_name = None
+                if self.backends:
+                    # prefer a corstone backend name if present
+                    for backend in self.backends:
+                        if is_corstone_backend(backend):
+                            backend_name = backend
+                            break
+                # Clean CLI arguments to use basename for executable
+                cli_args = [Path(sys.argv[0]).name] + sys.argv[1:] if sys.argv else []
+                # Get backend configuration
+                backend_config = self._get_corstone_backend_config(
+                    backend_name=backend_name or "corstone-300",
+                    target=self.target_config.target,
+                    mac=self.target_config.mac,
+                )
+                # Build standardized output using PerformanceMetrics helper
+                corstone_output = perf.to_standardized_output(
+                    model_path=self.model,
+                    backend_name=backend_name,
+                    cli_arguments=cli_args,
+                    backend_config=backend_config,
+                )
+        except Exception:  # pylint: disable=broad-exception-caught
+            # Be resilient and fall back to legacy metrics on any error
+            logger.exception(
+                "Failed to build standardized output from corstone metrics"
+            )
+
+        # If both backends produced results, merge them into a single output
+        if vela_output and corstone_output:
+            merged_output = merge_performance_outputs(vela_output, corstone_output)
+            return CombinedPerformanceResult(
+                legacy_info=perf,
+                standardized_output=merged_output,
+            )
+
+        # Return individual results if only one backend was used
+        if vela_output:
+            return VelaPerformanceResult(
+                legacy_info=perf,
+                standardized_output=vela_output,
+            )
+        if corstone_output:
+            return CorstonePerformanceResult(
+                legacy_info=perf,
+                standardized_output=corstone_output,
+            )
 
         return perf
 
@@ -179,6 +241,18 @@ class EthosUPerformance(ContextAwareDataCollector):
             "max_block_dependency": compiler_options.max_block_dependency,
             "tensor_allocator": compiler_options.tensor_allocator,
             "optimization_strategy": compiler_options.optimization_strategy,
+        }
+
+    @staticmethod
+    def _get_corstone_backend_config(
+        backend_name: str, target: str, mac: int
+    ) -> dict[str, Any]:
+        """Extract Corstone backend configuration."""
+        return {
+            "fvp": backend_name,
+            "target": target,
+            "mac": mac,
+            "profile": "default",
         }
 
     @classmethod
