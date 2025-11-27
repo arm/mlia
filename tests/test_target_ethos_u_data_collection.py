@@ -6,10 +6,12 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from mlia.backend.corstone.performance import PerformanceMetrics as CorstonePerf
 from mlia.backend.errors import BackendUnavailableError
 from mlia.backend.vela.compat import Operators
 from mlia.backend.vela.compat import VelaCompatibilityResult
 from mlia.backend.vela.performance import LayerwisePerfInfo
+from mlia.backend.vela.performance import PerformanceMetrics as VelaPerf
 from mlia.core.context import Context
 from mlia.core.context import ExecutionContext
 from mlia.core.data_collection import DataCollector
@@ -20,10 +22,13 @@ from mlia.target.ethos_u.config import EthosUConfiguration
 from mlia.target.ethos_u.data_collection import EthosUOperatorCompatibility
 from mlia.target.ethos_u.data_collection import EthosUOptimizationPerformance
 from mlia.target.ethos_u.data_collection import EthosUPerformance
+from mlia.target.ethos_u.performance import CombinedPerformanceResult
+from mlia.target.ethos_u.performance import CorstonePerformanceResult
 from mlia.target.ethos_u.performance import MemoryUsage
 from mlia.target.ethos_u.performance import NPUCycles
 from mlia.target.ethos_u.performance import OptimizationPerformanceMetrics
 from mlia.target.ethos_u.performance import PerformanceMetrics
+from mlia.target.ethos_u.performance import VelaPerformanceResult
 
 
 @pytest.mark.parametrize(
@@ -98,8 +103,68 @@ def test_performance_collector(
     collector.set_context(sample_context)
 
     result = collector.collect_data()
-    # Without corstone backends specified, collector returns PerformanceMetrics
+    # Without backends specified, collector returns PerformanceMetrics
     assert isinstance(result, PerformanceMetrics)
+
+
+def test_performance_collector_with_vela(
+    monkeypatch: pytest.MonkeyPatch, sample_context: Context, test_tflite_model: Path
+) -> None:
+    """Test performance data collector with Vela backend."""
+    target = EthosUConfiguration.load_profile("ethos-u55-256")
+
+    mock_performance_estimation_with_vela(monkeypatch, target)
+
+    collector = EthosUPerformance(test_tflite_model, target, backends=["vela"])
+    collector.set_context(sample_context)
+
+    result = collector.collect_data()
+    # With only Vela backend, collector returns VelaPerformanceResult
+    assert isinstance(result, VelaPerformanceResult)
+    assert result.standardized_output is not None
+    assert isinstance(result.standardized_output, dict)
+
+
+def test_performance_collector_with_corstone(
+    monkeypatch: pytest.MonkeyPatch, sample_context: Context, test_tflite_model: Path
+) -> None:
+    """Test performance data collector with Corstone backend."""
+    target = EthosUConfiguration.load_profile("ethos-u55-256")
+
+    mock_performance_estimation_with_corstone(monkeypatch, target)
+
+    collector = EthosUPerformance(test_tflite_model, target, backends=["corstone-310"])
+    collector.set_context(sample_context)
+
+    result = collector.collect_data()
+    # With only Corstone backend, collector returns CorstonePerformanceResult
+    assert isinstance(result, CorstonePerformanceResult)
+    assert result.standardized_output is not None
+    assert isinstance(result.standardized_output, dict)
+
+
+def test_performance_collector_with_both_backends(
+    monkeypatch: pytest.MonkeyPatch, sample_context: Context, test_tflite_model: Path
+) -> None:
+    """Test performance data collector with both Vela and Corstone backends."""
+    target = EthosUConfiguration.load_profile("ethos-u55-256")
+
+    mock_performance_estimation_with_both(monkeypatch, target)
+
+    collector = EthosUPerformance(
+        test_tflite_model, target, backends=["vela", "corstone-310"]
+    )
+    collector.set_context(sample_context)
+
+    result = collector.collect_data()
+    # With both backends, collector returns CombinedPerformanceResult
+    assert isinstance(result, CombinedPerformanceResult)
+    assert result.standardized_output is not None
+    assert isinstance(result.standardized_output, dict)
+    # Check that both backends are present
+    assert len(result.standardized_output["backends"]) == 2
+    # Check that both results are present
+    assert len(result.standardized_output["results"]) == 2
 
 
 def test_optimization_performance_collector(
@@ -179,4 +244,91 @@ def mock_performance_estimation(
     monkeypatch.setattr(
         "mlia.target.ethos_u.data_collection.EthosUPerformanceEstimator.estimate",
         MagicMock(return_value=metrics),
+    )
+
+
+def mock_performance_estimation_with_vela(
+    monkeypatch: pytest.MonkeyPatch, target: EthosUConfiguration
+) -> None:
+    """Mock performance estimation with Vela metrics."""
+    metrics = PerformanceMetrics(
+        target,
+        NPUCycles(1, 2, 3, 4, 5, 6),
+        MemoryUsage(1, 2, 3, 4),
+        LayerwisePerfInfo(layerwise_info=[]),
+    )
+
+    mock_estimator = MagicMock()
+    mock_estimator.estimate.return_value = metrics
+    mock_estimator.vela_perf_metrics = MagicMock(spec=VelaPerf)
+    mock_estimator.vela_perf_metrics.to_standardized_output.return_value = {
+        "schema_version": "1.0.0",
+        "backends": [{"id": "vela"}],
+        "results": [{"kind": "performance"}],
+    }
+    mock_estimator.vela_compiler_options = None
+
+    monkeypatch.setattr(
+        "mlia.target.ethos_u.data_collection.EthosUPerformanceEstimator",
+        MagicMock(return_value=mock_estimator),
+    )
+
+
+def mock_performance_estimation_with_corstone(
+    monkeypatch: pytest.MonkeyPatch, target: EthosUConfiguration
+) -> None:
+    """Mock performance estimation with Corstone metrics."""
+    metrics = PerformanceMetrics(
+        target,
+        NPUCycles(1, 2, 3, 4, 5, 6),
+        MemoryUsage(1, 2, 3, 4),
+        LayerwisePerfInfo(layerwise_info=[]),
+    )
+    metrics.corstone_metrics = MagicMock(spec=CorstonePerf)
+    metrics.to_standardized_output = MagicMock(  # type: ignore[method-assign]
+        return_value={
+            "schema_version": "1.0.0",
+            "backends": [{"id": "corstone-310"}],
+            "results": [{"kind": "performance"}],
+        }
+    )
+
+    monkeypatch.setattr(
+        "mlia.target.ethos_u.data_collection.EthosUPerformanceEstimator.estimate",
+        MagicMock(return_value=metrics),
+    )
+
+
+def mock_performance_estimation_with_both(
+    monkeypatch: pytest.MonkeyPatch, target: EthosUConfiguration
+) -> None:
+    """Mock performance estimation with both Vela and Corstone metrics."""
+    metrics = PerformanceMetrics(
+        target,
+        NPUCycles(1, 2, 3, 4, 5, 6),
+        MemoryUsage(1, 2, 3, 4),
+        LayerwisePerfInfo(layerwise_info=[]),
+    )
+    metrics.corstone_metrics = MagicMock(spec=CorstonePerf)
+    metrics.to_standardized_output = MagicMock(  # type: ignore[method-assign]
+        return_value={
+            "schema_version": "1.0.0",
+            "backends": [{"id": "corstone-310"}],
+            "results": [{"kind": "performance", "producer": "corstone-310"}],
+        }
+    )
+
+    mock_estimator = MagicMock()
+    mock_estimator.estimate.return_value = metrics
+    mock_estimator.vela_perf_metrics = MagicMock(spec=VelaPerf)
+    mock_estimator.vela_perf_metrics.to_standardized_output.return_value = {
+        "schema_version": "1.0.0",
+        "backends": [{"id": "vela"}],
+        "results": [{"kind": "performance", "producer": "vela"}],
+    }
+    mock_estimator.vela_compiler_options = None
+
+    monkeypatch.setattr(
+        "mlia.target.ethos_u.data_collection.EthosUPerformanceEstimator",
+        MagicMock(return_value=mock_estimator),
     )

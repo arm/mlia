@@ -20,7 +20,6 @@ from mlia.backend.corstone.performance import (
 from mlia.backend.errors import BackendUnavailableError
 from mlia.backend.vela.performance import LayerwisePerfInfo
 from mlia.core.context import Context
-from mlia.core.output_schema import StandardizedOutput
 from mlia.core.performance import PerformanceEstimator
 from mlia.nn.select import OptimizationSettings
 from mlia.nn.tensorflow.config import get_tflite_model
@@ -85,13 +84,19 @@ class PerformanceMetrics:
     corstone_metrics: Any = None  # Backend PerformanceMetrics for standardized output
 
     def to_standardized_output(
-        self, model_path: Path, backend_name: str | None = None
+        self,
+        model_path: Path,
+        backend_name: str | None = None,
+        cli_arguments: list[str] | None = None,
+        backend_config: dict[str, Any] | None = None,
     ) -> Any:  # Returns StandardizedOutput but avoid circular import
         """Convert to standardized output format.
 
         Args:
             model_path: Path to the model file
             backend_name: Name of the backend used (e.g., 'corstone-300')
+            cli_arguments: Optional CLI arguments used for the run
+            backend_config: Optional backend configuration parameters
 
         Returns:
             StandardizedOutput object or None if no corstone metrics available
@@ -113,8 +118,10 @@ class PerformanceMetrics:
             model_path=model_path,
             backend_name=backend_name,
             target_config=target_config,
+            cli_arguments=cli_arguments,
+            backend_config=backend_config,
         )
-        return StandardizedOutput.from_dict(result_dict)
+        return result_dict
 
 
 @dataclass
@@ -131,6 +138,53 @@ class VelaPerformanceResult:
 
     legacy_info: PerformanceMetrics
     standardized_output: dict[str, Any] | None = None
+
+
+@dataclass
+class CombinedPerformanceResult:
+    """Wrapper for combined multi-backend performance metrics."""
+
+    legacy_info: PerformanceMetrics
+    standardized_output: dict[str, Any] | None = None
+
+
+def merge_performance_outputs(
+    vela_output: dict[str, Any] | None,
+    corstone_output: dict[str, Any] | None,
+) -> dict[str, Any]:
+    """Merge Vela and Corstone standardized outputs into a single output.
+
+    Args:
+        vela_output: Vela standardized output dict
+        corstone_output: Corstone standardized output dict
+
+    Returns:
+        Combined standardized output with both backends and results
+    """
+    if not vela_output and not corstone_output:
+        raise ValueError("At least one output must be provided")
+
+    # Use the first available output as base
+    base = vela_output or corstone_output
+    if not base:
+        raise ValueError("No valid output provided")
+
+    # Start with base output
+    merged = base.copy()
+
+    # If we have both outputs, merge backends and results
+    if vela_output and corstone_output:
+        # Combine backends from both
+        vela_backends = vela_output.get("backends", [])
+        corstone_backends = corstone_output.get("backends", [])
+        merged["backends"] = vela_backends + corstone_backends
+
+        # Combine results from both
+        vela_results = vela_output.get("results", [])
+        corstone_results = corstone_output.get("results", [])
+        merged["results"] = vela_results + corstone_results
+
+    return merged
 
 
 @dataclass

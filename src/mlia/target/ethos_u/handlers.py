@@ -14,6 +14,7 @@ from mlia.core.handlers import WorkflowEventsHandler
 from mlia.nn.tensorflow.tflite_compat import TFLiteCompatibilityInfo
 from mlia.target.ethos_u.events import EthosUAdvisorEventHandler
 from mlia.target.ethos_u.events import EthosUAdvisorStartedEvent
+from mlia.target.ethos_u.performance import CombinedPerformanceResult
 from mlia.target.ethos_u.performance import CorstonePerformanceResult
 from mlia.target.ethos_u.performance import OptimizationPerformanceMetrics
 from mlia.target.ethos_u.performance import PerformanceMetrics
@@ -31,8 +32,9 @@ class EthosUEventHandler(WorkflowEventsHandler, EthosUAdvisorEventHandler):
         super().__init__(ethos_u_formatters)
         self.output_dir = output_dir
 
-    # pylint: disable=too-many-branches
-    def on_collected_data(self, event: CollectedDataEvent) -> None:
+    def on_collected_data(  # pylint: disable=too-many-branches,too-many-statements  # noqa: C901
+        self, event: CollectedDataEvent
+    ) -> None:
         """Handle CollectedDataEvent event."""
         data_item = event.data_item
 
@@ -54,7 +56,23 @@ class EthosUEventHandler(WorkflowEventsHandler, EthosUAdvisorEventHandler):
         elif isinstance(data_item, Operators):
             self.reporter.submit([data_item.ops, data_item], delay_print=True)
 
-        if isinstance(data_item, VelaPerformanceResult):
+        if isinstance(data_item, CombinedPerformanceResult):
+            # Save combined standardized output JSON if available
+            if data_item.standardized_output and self.output_dir:
+                try:
+                    output_path = self.output_dir / "performance.json"
+                    with open(output_path, "w", encoding="utf-8") as file_handle:
+                        json.dump(data_item.standardized_output, file_handle, indent=2)
+                    logger.info("Saved combined performance output to %s", output_path)
+                except Exception as exc:  # pylint: disable=broad-exception-caught
+                    logger.warning(
+                        "Failed to save combined performance output: %s", exc
+                    )
+
+            # Extract legacy metrics for display
+            self.reporter.submit(data_item.legacy_info, delay_print=True, space=True)
+
+        elif isinstance(data_item, VelaPerformanceResult):
             # Save standardized output JSON if available
             if data_item.standardized_output and self.output_dir:
                 try:
