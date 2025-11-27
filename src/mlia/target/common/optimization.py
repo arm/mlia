@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Data collector support for performance optimizations."""
 from __future__ import annotations
@@ -88,7 +88,7 @@ class OptimizingDataCollector(ContextAwareDataCollector):
         self,
         opt_settings: list[OptimizationSettings],
         rewrite_parameters: dict,
-        model: KerasModel | TFLiteModel,
+        model: KerasModel | TFLiteModel | Path,
     ) -> Any:
         """Run optimization."""
         optimizer = get_optimizer(
