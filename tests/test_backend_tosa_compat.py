@@ -131,3 +131,78 @@ def test_backend_module_deprecation_warning() -> None:
         warning_message = str(deprecation_warnings[0].message)
         assert "TOSA Checker backend is deprecated" in warning_message
         assert "unmaintained project" in warning_message
+
+
+def test_tosa_compatibility_info_to_standardized_output(tmp_path: Path) -> None:
+    """Test converting TOSACompatibilityInfo to standardized output."""
+    # Create a test model file
+    model_path = tmp_path / "test_model.tflite"
+    model_path.write_bytes(b"test_model_content")
+
+    # Create compatibility info
+    operators = [
+        Operator("loc1", "Conv2D", True),
+        Operator("loc2", "Add", False),
+    ]
+    compat_info = TOSACompatibilityInfo(
+        tosa_compatible=False,
+        operators=operators,
+        exception=None,
+        errors=["Warning: Add not compatible"],
+        std_out=None,
+    )
+
+    # Convert to standardized output
+    output = compat_info.to_standardized_output(
+        model_path=model_path,
+        run_id="test-run-id",
+        timestamp="2025-01-01T00:00:00Z",
+        cli_arguments=["--model", "test.tflite"],
+    )
+
+    # Validate structure
+    assert output.schema_version == "1.0.0"
+    assert output.run_id == "test-run-id"
+    assert output.timestamp == "2025-01-01T00:00:00Z"
+    assert output.tool.name == "mlia"
+    assert output.model.name == "test_model.tflite"
+    assert output.model.format == "tflite"
+    assert len(output.backends) == 1
+    assert output.backends[0].id == "tosa-checker"
+    assert output.target.profile_name == "tosa"
+    assert len(output.results) == 1
+
+    # Check result details
+    result = output.results[0]
+    assert result.kind.value == "compatibility"
+    assert result.status.value == "incompatible"
+    assert len(result.checks) == 2
+    assert result.checks[0].status.value == "pass"
+    assert result.checks[1].status.value == "fail"
+    assert len(result.entities) == 2
+    assert result.entities[0].name == "Conv2D"
+    assert result.entities[1].name == "Add"
+    assert "Warning: Add not compatible" in result.errors
+
+
+def test_tosa_compatibility_info_to_standardized_output_with_exception(
+    tmp_path: Path,
+) -> None:
+    """Test converting TOSACompatibilityInfo with exception to standardized output."""
+    model_path = tmp_path / "test.tflite"
+    model_path.write_bytes(b"test")
+
+    compat_info = TOSACompatibilityInfo(
+        tosa_compatible=False,
+        operators=[],
+        exception=ValueError("Test error"),
+        errors=None,
+        std_out=None,
+    )
+
+    output = compat_info.to_standardized_output(model_path=model_path)
+
+    result = output.results[0]
+    assert result.status.value == "failed"
+    assert len(result.errors) == 1
+    assert "Test error" in result.errors[0]
