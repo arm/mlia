@@ -7,15 +7,20 @@ import logging
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
+from typing import Any
 from typing import Union
 
 import mlia.backend.vela.compiler as vela_comp
 import mlia.backend.vela.performance as vela_perf
 from mlia.backend.corstone import is_corstone_backend
 from mlia.backend.corstone.performance import estimate_performance
+from mlia.backend.corstone.performance import (
+    PerformanceMetrics as CorstonePerformanceMetrics,
+)
 from mlia.backend.errors import BackendUnavailableError
 from mlia.backend.vela.performance import LayerwisePerfInfo
 from mlia.core.context import Context
+from mlia.core.output_schema import StandardizedOutput
 from mlia.core.performance import PerformanceEstimator
 from mlia.nn.select import OptimizationSettings
 from mlia.nn.tensorflow.config import get_tflite_model
@@ -77,6 +82,55 @@ class PerformanceMetrics:
     npu_cycles: NPUCycles | None
     memory_usage: MemoryUsage | None
     layerwise_perf_info: LayerwisePerfInfo | None
+    corstone_metrics: Any = None  # Backend PerformanceMetrics for standardized output
+
+    def to_standardized_output(
+        self, model_path: Path, backend_name: str | None = None
+    ) -> Any:  # Returns StandardizedOutput but avoid circular import
+        """Convert to standardized output format.
+
+        Args:
+            model_path: Path to the model file
+            backend_name: Name of the backend used (e.g., 'corstone-300')
+
+        Returns:
+            StandardizedOutput object or None if no corstone metrics available
+        """
+        if self.corstone_metrics is None:
+            return None
+
+        # Build target config dict from EthosUConfiguration
+        target_config: dict[str, Any] = {
+            "target": self.target_config.target,
+            "mac": self.target_config.mac,
+        }
+
+        # Use backend_name from stored metrics or parameter
+        if backend_name is None:
+            backend_name = "corstone-300"  # Default
+
+        result_dict = self.corstone_metrics.to_standardized_output(
+            model_path=model_path,
+            backend_name=backend_name,
+            target_config=target_config,
+        )
+        return StandardizedOutput.from_dict(result_dict)
+
+
+@dataclass
+class CorstonePerformanceResult:
+    """Wrapper for performance metrics with both legacy and standardized output."""
+
+    legacy_info: PerformanceMetrics
+    standardized_output: dict[str, Any] | None = None
+
+
+@dataclass
+class VelaPerformanceResult:
+    """Wrapper for Vela performance metrics with both legacy and standardized output."""
+
+    legacy_info: PerformanceMetrics
+    standardized_output: dict[str, Any] | None = None
 
 
 @dataclass
@@ -101,7 +155,7 @@ class VelaPerformanceEstimator(
         self.context = context
         self.target = target_config
 
-    def estimate(
+    def estimate(  # pylint: disable=attribute-defined-outside-init
         self, model: Path | ModelConfiguration
     ) -> tuple[MemoryUsage, LayerwisePerfInfo]:
         """Estimate performance."""
@@ -118,6 +172,14 @@ class VelaPerformanceEstimator(
             vela_perf_metrics = vela_perf.estimate_performance(
                 model_path, self.target.compiler_options
             )
+
+            # Store the raw backend metrics and compiler options for standardized output
+            self.vela_perf_metrics = (
+                vela_perf_metrics  # pylint: disable=attribute-defined-outside-init
+            )
+            self.vela_compiler_options = (
+                self.target.compiler_options
+            )  # pylint: disable=attribute-defined-outside-init
 
             return (
                 MemoryUsage(
@@ -142,6 +204,7 @@ class CorstonePerformanceEstimator(
         self.context = context
         self.target_config = target_config
         self.backend = backend
+        self.backend_metrics: CorstonePerformanceMetrics | None = None
 
     def estimate(self, model: Path | ModelConfiguration) -> NPUCycles:
         """Estimate performance."""
@@ -170,6 +233,9 @@ class CorstonePerformanceEstimator(
                 optimized_model_path,
                 self.backend,
             )
+
+            # Store the raw backend metrics for standardized output generation
+            self.backend_metrics = corstone_perf_metrics
 
             return NPUCycles(
                 corstone_perf_metrics.npu_active_cycles,
@@ -208,7 +274,9 @@ class EthosUPerformanceEstimator(
                 )
         self.backends = set(backends)
 
-    def estimate(self, model: Path | ModelConfiguration) -> PerformanceMetrics:
+    def estimate(  # pylint: disable=attribute-defined-outside-init
+        self, model: Path | ModelConfiguration
+    ) -> PerformanceMetrics:
         """Estimate performance."""
         model_path = (
             Path(model.model_path) if isinstance(model, ModelConfiguration) else model
@@ -219,6 +287,8 @@ class EthosUPerformanceEstimator(
         memory_usage = None
         npu_cycles = None
         layerwise_perf_info = None
+        corstone_metrics = None
+        vela_perf_metrics = None
         for backend in self.backends:
             if backend == "vela":
                 vela_estimator = VelaPerformanceEstimator(
@@ -227,18 +297,43 @@ class EthosUPerformanceEstimator(
                 memory_usage, layerwise_perf_info = vela_estimator.estimate(
                     tflite_model
                 )
+                # Store the raw vela metrics for standardized output
+                # VelaPerformanceEstimator.estimate() stores vela_perf_metrics on self
+                if hasattr(vela_estimator, "vela_perf_metrics"):
+                    vela_perf_metrics = vela_estimator.vela_perf_metrics
+                    # Also copy compiler options for backend configuration
+                    if hasattr(vela_estimator, "vela_compiler_options"):
+                        self.vela_compiler_options = (
+                            vela_estimator.vela_compiler_options
+                        )  # pylint: disable=attribute-defined-outside-init
             elif is_corstone_backend(backend):
                 corstone_estimator = CorstonePerformanceEstimator(
                     self.context, self.target_config, backend
                 )
+                # Get NPUCycles for legacy display and save the raw backend metrics
                 npu_cycles = corstone_estimator.estimate(tflite_model)
+                # Store the original corstone backend metrics for standardized output
+                corstone_metrics = corstone_estimator.backend_metrics
             else:
                 logger.warning(
                     "Backend '%s' is not supported for Ethos-U performance "
                     "estimation.",
                     backend,
                 )
-
-        return PerformanceMetrics(
+        perf = PerformanceMetrics(
             self.target_config, npu_cycles, memory_usage, layerwise_perf_info
         )
+
+        # Attach vela raw metrics object so callers can build standardized output
+        # if available. We set attribute only when vela metrics were produced.
+        if vela_perf_metrics is not None:
+            self.vela_perf_metrics = (
+                vela_perf_metrics  # pylint: disable=attribute-defined-outside-init
+            )
+
+        # Attach corstone raw metrics object so callers can build standardized output
+        # if available. We set attribute only when corstone metrics were produced.
+        if corstone_metrics is not None:
+            perf.corstone_metrics = corstone_metrics
+
+        return perf

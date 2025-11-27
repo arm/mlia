@@ -8,6 +8,7 @@ import pytest
 
 from mlia.backend.errors import BackendUnavailableError
 from mlia.backend.vela.compat import Operators
+from mlia.backend.vela.compat import VelaCompatibilityResult
 from mlia.backend.vela.performance import LayerwisePerfInfo
 from mlia.core.context import Context
 from mlia.core.context import ExecutionContext
@@ -75,7 +76,11 @@ def test_operator_compatibility_collector(
 
     try:
         result = collector.collect_data()
-        assert isinstance(result, Operators)
+        # Should return VelaCompatibilityResult wrapper with standardized output
+        assert isinstance(result, VelaCompatibilityResult)
+        assert result.legacy_info is not None
+        assert isinstance(result.legacy_info, Operators)
+        assert result.standardized_output is not None
     except BackendUnavailableError:
         # If Vela is not available, the test should pass (expected behavior)
         pytest.skip("Vela backend not available, skipping operator compatibility test")
@@ -93,6 +98,7 @@ def test_performance_collector(
     collector.set_context(sample_context)
 
     result = collector.collect_data()
+    # Without corstone backends specified, collector returns PerformanceMetrics
     assert isinstance(result, PerformanceMetrics)
 
 

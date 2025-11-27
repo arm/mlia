@@ -1,8 +1,9 @@
-# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Ethos-U MLIA module."""
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from typing import Any
 from typing import cast
@@ -30,6 +31,8 @@ from mlia.target.ethos_u.events import EthosUAdvisorStartedEvent
 from mlia.target.ethos_u.handlers import EthosUEventHandler
 from mlia.target.registry import profile
 from mlia.utils.types import is_list_of
+
+logger = logging.getLogger(__name__)
 
 
 class EthosUInferenceAdvisor(DefaultInferenceAdvisor):
@@ -142,7 +145,7 @@ def configure_and_get_ethosu_advisor(
 ) -> InferenceAdvisor:
     """Create and configure Ethos-U advisor."""
     if context.event_handlers is None:
-        context.event_handlers = [EthosUEventHandler()]
+        context.event_handlers = [EthosUEventHandler(output_dir=context.output_dir)]
 
     if context.config_parameters is None:
         context.config_parameters = _get_config_parameters(

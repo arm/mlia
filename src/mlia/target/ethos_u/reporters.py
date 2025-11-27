@@ -11,6 +11,7 @@ from typing import Callable
 
 from mlia.backend.vela.compat import Operator
 from mlia.backend.vela.compat import Operators
+from mlia.backend.vela.compat import VelaCompatibilityResult
 from mlia.backend.vela.performance import layer_metrics
 from mlia.core.advice_generation import Advice
 from mlia.core.reporters import report_advice
@@ -440,6 +441,10 @@ def report_perf_metrics(
 def ethos_u_formatters(data: Any) -> Callable[[Any], Report]:
     """Find appropriate formatter for the provided data."""
     report: Callable[[Any], Report] | None = None
+
+    if isinstance(data, VelaCompatibilityResult):
+        # Extract legacy info and use existing formatter
+        return lambda d: report_operators_stat(d.legacy_info)
 
     if isinstance(data, PerformanceMetrics) or is_list_of(data, PerformanceMetrics, 2):
         report = report_perf_metrics
