@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, 2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Reports module."""
 from __future__ import annotations
@@ -20,6 +20,7 @@ from mlia.nn.tensorflow.tflite_compat import TFLiteCompatibilityInfo
 from mlia.target.common.reporters import report_tflite_compatiblity
 from mlia.target.cortex_a.config import CortexAConfiguration
 from mlia.target.cortex_a.operators import CortexACompatibilityInfo
+from mlia.target.cortex_a.operators import CortexACompatibilityResult
 from mlia.utils.console import style_improvement
 from mlia.utils.types import is_list_of
 
@@ -75,6 +76,10 @@ def report_cortex_a_operators(op_compat: CortexACompatibilityInfo) -> Report:
 
 def cortex_a_formatters(data: Any) -> Callable[[Any], Report]:
     """Find appropriate formatter for the provided data."""
+    if isinstance(data, CortexACompatibilityResult):
+        # Extract legacy info and use existing formatter
+        return lambda d: report_cortex_a_operators(d.legacy_info)
+
     if is_list_of(data, Advice):
         return report_advice
 

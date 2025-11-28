@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, 2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Cortex-A data analysis module."""
 from __future__ import annotations
@@ -14,6 +14,7 @@ from mlia.core.data_analysis import FactExtractor
 from mlia.nn.tensorflow.tflite_compat import TFLiteCompatibilityInfo
 from mlia.target.common.reporters import analyze_tflite_compatibility_common
 from mlia.target.cortex_a.operators import CortexACompatibilityInfo
+from mlia.target.cortex_a.operators import CortexACompatibilityResult
 
 
 class CortexADataAnalyzer(FactExtractor):
@@ -22,6 +23,13 @@ class CortexADataAnalyzer(FactExtractor):
     @singledispatchmethod
     def analyze_data(self, data_item: DataItem) -> None:  # type: ignore
         """Analyse the data."""
+
+    @analyze_data.register
+    def analyze_cortex_a_compatibility_result(
+        self, data_item: CortexACompatibilityResult
+    ) -> None:
+        """Analyse Cortex-A compatibility result - extract legacy info."""
+        self.analyze_operator_compatibility(data_item.legacy_info)
 
     @analyze_data.register
     def analyze_operator_compatibility(
