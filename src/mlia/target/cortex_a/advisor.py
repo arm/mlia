@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, 2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Cortex-A MLIA module."""
 from __future__ import annotations
@@ -86,7 +86,9 @@ def configure_and_get_cortexa_advisor(
 ) -> InferenceAdvisor:
     """Create and configure Cortex-A advisor."""
     if context.event_handlers is None:
-        context.event_handlers = [CortexAEventHandler()]
+        # Pass output_dir to event handler for saving standardized output
+        output_dir = getattr(context, "output_dir", None)
+        context.event_handlers = [CortexAEventHandler(output_dir=output_dir)]
 
     if context.config_parameters is None:
         context.config_parameters = _get_config_parameters(
