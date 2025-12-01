@@ -1,11 +1,11 @@
-# SPDX-FileCopyrightText: Copyright 2024, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2024-2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Helper functions for the rewrite library."""
 import math
 from typing import Any
 
 import numpy as np
-from keras.api._v2 import keras  # Temporary workaround for now: MLIA-1107
+import tf_keras as keras
 
 ACTIVATION_FUNCTION_PRESETS = {
     "relu": {"layer_func": keras.layers.ReLU, "extra_args": {}},

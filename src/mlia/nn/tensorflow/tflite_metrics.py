@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022,2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """
 Contains class TFLiteMetrics to calculate metrics from a TensorFlow Lite file.
@@ -112,7 +112,11 @@ class TFLiteMetrics:
     * File compression via gzip
     """
 
-    def __init__(self, tflite_file: str, ignore_list: list[str] | None = None) -> None:
+    def __init__(
+        self,
+        tflite_file: str,
+        ignore_list: list[str] | None = None,
+    ) -> None:
         """Load the TensorFlow Lite file and filter layers."""
         self.tflite_file = tflite_file
         if ignore_list is None:

@@ -10,7 +10,7 @@ from typing import cast
 
 import pytest
 import tensorflow_model_optimization as tfmot
-from keras.api._v2 import keras  # Temporary workaround for now: MLIA-1107
+import tf_keras as keras
 
 from mlia.core.errors import ConfigurationError
 from mlia.nn.rewrite.core.rewrite import RewriteConfiguration

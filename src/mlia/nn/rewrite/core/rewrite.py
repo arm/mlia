@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2023-2024, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2023-2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Contains class RewritingOptimizer to replace a subgraph/layer of a model."""
 from __future__ import annotations
@@ -18,7 +18,7 @@ from typing import Generator
 import numpy as np
 import tensorflow as tf
 import tensorflow_model_optimization as tfmot
-from keras.api._v2 import keras  # Temporary workaround for now: MLIA-1107
+import tf_keras as keras
 from tensorflow_model_optimization.python.core.sparsity.keras.pruning_utils import (  # pylint: disable=no-name-in-module
     is_pruned_m_by_n,
 )

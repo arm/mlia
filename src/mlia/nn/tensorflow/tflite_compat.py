@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023,2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Functions for checking TensorFlow Lite compatibility."""
 from __future__ import annotations
@@ -17,13 +17,16 @@ from tensorflow.lite.python import convert
 from mlia.nn.tensorflow.tflite_convert import convert_to_tflite
 from mlia.utils.logging import redirect_raw_output
 
+
 TF_VERSION_MAJOR, TF_VERSION_MINOR, _ = (int(s) for s in tf.version.VERSION.split("."))
-# pylint: disable=import-error,ungrouped-imports
-if (TF_VERSION_MAJOR == 2 and TF_VERSION_MINOR > 7) or TF_VERSION_MAJOR > 2:
+# pylint: disable=import-error,ungrouped-imports,no-name-in-module
+if TF_VERSION_MAJOR == 2 and TF_VERSION_MINOR > 15:
+    from tensorflow.compiler.mlir.lite.metrics import converter_error_data_pb2
+elif (TF_VERSION_MAJOR == 2 and TF_VERSION_MINOR > 7) or TF_VERSION_MAJOR > 2:
     from tensorflow.lite.python.metrics import converter_error_data_pb2
 else:
     from tensorflow.lite.python.metrics_wrapper import converter_error_data_pb2
-# pylint: enable=import-error,ungrouped-imports
+# pylint: enable=import-error,ungrouped-imports,no-name-in-module
 
 
 logger = logging.getLogger(__name__)
@@ -199,19 +202,16 @@ class TFLiteChecker:
     @staticmethod
     def _convert_error_code(code: int) -> TFLiteConversionErrorCode:
         """Convert internal error codes."""
-        # pylint: disable=no-member
+        # pylint: disable=no-member,line-too-long
         error_data = converter_error_data_pb2.ConverterErrorData
-        if code == error_data.ERROR_NEEDS_FLEX_OPS:
-            return TFLiteConversionErrorCode.NEEDS_FLEX_OPS
 
-        if code == error_data.ERROR_NEEDS_CUSTOM_OPS:
-            return TFLiteConversionErrorCode.NEEDS_CUSTOM_OPS
+        # Create mapping for error codes to avoid multiple return statements
+        error_mapping = {
+            error_data.ERROR_NEEDS_FLEX_OPS: TFLiteConversionErrorCode.NEEDS_FLEX_OPS,
+            error_data.ERROR_NEEDS_CUSTOM_OPS: TFLiteConversionErrorCode.NEEDS_CUSTOM_OPS,
+            error_data.ERROR_UNSUPPORTED_CONTROL_FLOW_V1: TFLiteConversionErrorCode.UNSUPPORTED_CONTROL_FLOW_V1,
+            error_data.ERROR_GPU_NOT_COMPATIBLE: TFLiteConversionErrorCode.GPU_NOT_COMPATIBLE,
+        }
 
-        if code == error_data.ERROR_UNSUPPORTED_CONTROL_FLOW_V1:
-            return TFLiteConversionErrorCode.UNSUPPORTED_CONTROL_FLOW_V1
-
-        if code == converter_error_data_pb2.ConverterErrorData.ERROR_GPU_NOT_COMPATIBLE:
-            return TFLiteConversionErrorCode.GPU_NOT_COMPATIBLE
-        # pylint: enable=no-member
-
-        return TFLiteConversionErrorCode.UNKNOWN
+        return error_mapping.get(code, TFLiteConversionErrorCode.UNKNOWN)
+        # pylint: enable=no-member,line-too-long

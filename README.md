@@ -69,8 +69,8 @@ typical setup requires:
 
 * Ubuntu® 22.04.5 LTS (other OSs may work, the ML Inference Advisor has been
   tested on this one specifically)
-* Python® >= 3.9
-* libpython3.9-dev (part of python3.9-dev)
+* Python® >= 3.10
+* libpython3.10-dev (part of python3.10-dev)
 
 ## Installation
 
@@ -516,7 +516,7 @@ the following table shows some compatibility information:
 | Corstone-300                      | x86_64 and  AArch64    | Not compatible | Python>=3.8      |
 | Corstone-310                      | x86_64 and  AArch64    | Not compatible | Python>=3.8      |
 | Corstone-320                      | x86_64 and  AArch64    | Not compatible | Python>=3.8      |
-| TOSA checker                      | x86_64 (manylinux2014) | Not compatible | 3.7<=Python<=3.9 |
+| TOSA checker                      | x86_64 (manylinux2014) | Not compatible | Python>=3.8      |
 | Vela                              | x86_64 and  AArch64    | Windows 10     | Python~=3.7      |
 
 ### Arm NN TensorFlow Lite Delegate

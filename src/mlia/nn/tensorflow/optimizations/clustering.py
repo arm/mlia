@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """
 Contains class Clusterer that clusters unique weights per layer to a specified number.
@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from typing import Any
 
 import tensorflow_model_optimization as tfmot
-from keras.api._v2 import keras  # Temporary workaround for now: MLIA-1107
+import tf_keras as keras
 from tensorflow_model_optimization.python.core.clustering.keras.experimental import (  # pylint: disable=no-name-in-module
     cluster as experimental_cluster,
 )
@@ -61,10 +61,10 @@ class Clusterer(Optimizer):
         return str(self.optimizer_configuration)
 
     def _setup_clustering_params(self) -> dict[str, Any]:
-        CentroidInitialization = tfmot.clustering.keras.CentroidInitialization
+        centroid_initialization = tfmot.clustering.keras.CentroidInitialization
         return {
             "number_of_clusters": self.optimizer_configuration.optimization_target,
-            "cluster_centroids_init": CentroidInitialization.LINEAR,
+            "cluster_centroids_init": centroid_initialization.LINEAR,
             "preserve_sparsity": True,
         }
 

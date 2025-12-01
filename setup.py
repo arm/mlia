@@ -54,4 +54,8 @@ if __name__ == "__main__":
     custom_tag_suffix = os.getenv("MLIA_CUSTOM_TAG_SUFFIX")
     if custom_tag_suffix:
         tag = f"{tag}.{custom_tag_suffix}"
-    setup(long_description=long_description, version=tag)
+
+    setup(
+        long_description=long_description,
+        version=tag,
+    )

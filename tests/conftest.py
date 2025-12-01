@@ -1,23 +1,23 @@
 # SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Pytest conf module."""
+# mypy: disable-error-code=misc
 import shutil
 from pathlib import Path
 from typing import Callable
 from typing import Generator
 from unittest.mock import MagicMock
 
-import _pytest
 import numpy as np
 import pytest
 import tensorflow as tf
-from keras.api._v2 import keras  # Temporary workaround for now: MLIA-1107
+import tf_keras as keras
 
-from mlia.core.context import ExecutionContext
-from mlia.nn.rewrite.core.utils.numpy_tfrecord import NumpyTFWriter
-from mlia.nn.tensorflow.tflite_convert import convert_to_tflite
-from mlia.nn.tensorflow.utils import save_keras_model
-from tests.utils.rewrite import MockTrainingParameters
+from mlia.core.context import ExecutionContext  # noqa: E402
+from mlia.nn.rewrite.core.utils.numpy_tfrecord import NumpyTFWriter  # noqa: E402
+from mlia.nn.tensorflow.tflite_convert import convert_to_tflite  # noqa: E402
+from mlia.nn.tensorflow.utils import save_keras_model  # noqa: E402
+from tests.utils.rewrite import MockTrainingParameters  # noqa: E402
 
 
 @pytest.fixture(scope="session", name="test_resources_path")
@@ -285,7 +285,7 @@ def fixture_test_tfrecord_fp32(
 
 @pytest.fixture(scope="function", autouse=True)
 def set_training_steps(
-    request: _pytest.fixtures.SubRequest,
+    request: pytest.FixtureRequest,
 ) -> Generator[None, None, None]:
     """Speed up tests by using MockTrainingParameters."""
     if "skip_set_training_steps" not in request.keywords:

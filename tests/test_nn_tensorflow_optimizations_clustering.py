@@ -7,8 +7,8 @@ import math
 from pathlib import Path
 
 import pytest
+import tf_keras as keras
 from flaky import flaky
-from keras.api._v2 import keras  # Temporary workaround for now: MLIA-1107
 
 from mlia.nn.tensorflow.optimizations.clustering import Clusterer
 from mlia.nn.tensorflow.optimizations.clustering import ClusteringConfiguration
@@ -48,7 +48,7 @@ def _prune_model(
 def _test_num_unique_weights(
     metrics: TFLiteMetrics,
     target_num_clusters: int,
-    layers_to_cluster: list[str] | None,
+    expected_num_clustered_layers: int = 0,
 ) -> None:
     clustered_uniqueness = metrics.num_unique_weights(
         ReportClusterMode.NUM_CLUSTERS_PER_AXIS
@@ -59,14 +59,13 @@ def _test_num_unique_weights(
         if layer_num_clusters[0] <= target_num_clusters:
             num_clustered_layers += 1
 
-    expected_num_clustered_layers = len(layers_to_cluster or clustered_uniqueness)
     assert num_clustered_layers == expected_num_clustered_layers
 
 
 def _test_sparsity(
     metrics: TFLiteMetrics,
     target_sparsity: float,
-    layers_to_cluster: list[str] | None,
+    expected_num_sparse_layers: int = 0,
 ) -> None:
     error_margin = 0.03
     pruned_sparsity = metrics.sparsity_per_layer()
@@ -77,7 +76,6 @@ def _test_sparsity(
             num_sparse_layers += 1
 
     # make sure we are having exactly as many sparse layers as we wanted
-    expected_num_sparse_layers = len(layers_to_cluster or pruned_sparsity)
     assert num_sparse_layers == expected_num_sparse_layers
 
 
@@ -88,13 +86,30 @@ def _test_sparsity(
 # warning from mypy.
 @flaky(max_runs=4, min_passes=1)  # type: ignore
 @pytest.mark.slow
-@pytest.mark.parametrize("target_num_clusters", (32, 4))
-@pytest.mark.parametrize("sparsity_aware", (False, True))
-@pytest.mark.parametrize("layers_to_cluster", (["conv1"], ["conv1", "conv2"], None))
+@pytest.mark.parametrize(
+    "target_num_clusters,sparsity_aware,layers_to_cluster,"
+    "expected_num_clustered_layers,expected_num_sparse_layers",
+    [
+        (32, False, ["conv1"], 4, 0),
+        (32, False, ["conv1", "conv2"], 5, 0),
+        (32, False, None, 6, 0),
+        (32, True, ["conv1"], 4, 1),
+        (32, True, ["conv1", "conv2"], 5, 2),
+        (32, True, None, 6, 3),
+        (4, False, ["conv1"], 2, 0),
+        (4, False, ["conv1", "conv2"], 3, 0),
+        (4, False, None, 4, 0),
+        (4, True, ["conv1"], 2, 1),
+        (4, True, ["conv1", "conv2"], 3, 2),
+        (4, True, None, 4, 3),
+    ],
+)
 def test_cluster_simple_model_fully(
     target_num_clusters: int,
     sparsity_aware: bool,
     layers_to_cluster: list[str] | None,
+    expected_num_clustered_layers: int,
+    expected_num_sparse_layers: int,
     tmp_path: Path,
     test_keras_model: Path,
 ) -> None:
@@ -122,8 +137,10 @@ def test_cluster_simple_model_fully(
     clustered_tflite_metrics = TFLiteMetrics(str(temp_file))
 
     _test_num_unique_weights(
-        clustered_tflite_metrics, target_num_clusters, layers_to_cluster
+        clustered_tflite_metrics, target_num_clusters, expected_num_clustered_layers
     )
 
     if sparsity_aware:
-        _test_sparsity(clustered_tflite_metrics, target_sparsity, layers_to_cluster)
+        _test_sparsity(
+            clustered_tflite_metrics, target_sparsity, expected_num_sparse_layers
+        )

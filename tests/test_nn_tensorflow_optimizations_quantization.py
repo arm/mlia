@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2023, 2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for module optimizations/quantization."""
 from __future__ import annotations
@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Generator
 
 import numpy as np
-from numpy.core.numeric import isclose
+from numpy import isclose
 
 from mlia.nn.tensorflow.config import TFLiteModel
 from mlia.nn.tensorflow.optimizations.quantization import dequantize

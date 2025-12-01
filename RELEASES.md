@@ -16,6 +16,13 @@ scheme.
   of Arm® Limited (or its subsidiaries) in the U.S. and/or elsewhere.
 * TensorFlow™ is a trademark of Google® LLC.
 
+## Next
+
+### Internal changes
+
+* Minimum required Python version bumped to 3.10
+* Minimum required TensorFlow version bumped to 2.20
+
 ## 0.9.2 (2025-10-31)
 
 ### Feature changes

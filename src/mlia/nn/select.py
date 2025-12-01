@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Module for optimization selection."""
 from __future__ import annotations
@@ -10,7 +10,7 @@ from typing import cast
 from typing import List
 from typing import NamedTuple
 
-from keras.api._v2 import keras  # Temporary workaround for now: MLIA-1107
+import tf_keras as keras
 
 from mlia.core.errors import ConfigurationError
 from mlia.nn.common import Optimizer

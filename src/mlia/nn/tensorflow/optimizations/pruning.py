@@ -16,7 +16,7 @@ from typing import Any
 
 import numpy as np
 import tensorflow_model_optimization as tfmot
-from keras.api._v2 import keras  # Temporary workaround for now: MLIA-1107
+import tf_keras as keras
 from tensorflow_model_optimization.python.core.sparsity.keras import (  # pylint: disable=no-name-in-module
     prune_registry,
 )
