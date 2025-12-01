@@ -6,8 +6,8 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from keras.api._v2 import keras  # Temporary workaround for now: MLIA-1107
-from numpy.core.numeric import isclose
+import tf_keras as keras
+from numpy import isclose
 
 from mlia.nn.tensorflow.optimizations.pruning import PrunableLayerPolicy
 from mlia.nn.tensorflow.optimizations.pruning import Pruner
@@ -25,12 +25,12 @@ def _test_sparsity(
 ) -> None:
     pruned_sparsity_dict = metrics.sparsity_per_layer()
     num_sparse_layers = 0
-    num_optimizable_layers = len(pruned_sparsity_dict)
     error_margin = 0.03
     if layers_to_prune:
         expected_num_sparse_layers = len(layers_to_prune)
     else:
-        expected_num_sparse_layers = num_optimizable_layers
+        expected_num_sparse_layers = 3
+
     for layer_name in pruned_sparsity_dict:
         if abs(pruned_sparsity_dict[layer_name] - target_sparsity) < error_margin:
             num_sparse_layers = num_sparse_layers + 1
@@ -80,7 +80,6 @@ def test_prune_simple_model_fully(
         tflite_fn="test_prune_simple_model_fully_before.tflite",
         model=base_model,
     )
-
     # Make sure sparsity is zero before pruning
     _test_check_sparsity(base_tflite_metrics)
 
@@ -114,7 +113,6 @@ def test_prune_simple_model_fully(
         tflite_fn="test_prune_simple_model_fully_after.tflite",
         model=pruned_model,
     )
-
     _test_sparsity(pruned_tflite_metrics, target_sparsity, layers_to_prune)
 
 

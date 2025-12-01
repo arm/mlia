@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
 # SPDX-FileCopyrightText: Copyright The TensorFlow Authors. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0
 """Collection of useful functions for optimizations."""
@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 
 import tensorflow as tf
-from keras.api._v2 import keras  # Temporary workaround for now: MLIA-1107
+import tf_keras as keras
 
 
 def get_tf_tensor_shape(model: str) -> list:

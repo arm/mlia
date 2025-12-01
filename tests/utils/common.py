@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Common test utils module."""
 from __future__ import annotations
@@ -6,7 +6,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import numpy as np
-from keras.api._v2 import keras  # Temporary workaround for now: MLIA-1107
+import tf_keras as keras
 
 
 def get_dataset() -> tuple[np.ndarray, np.ndarray]:
@@ -17,7 +17,7 @@ def get_dataset() -> tuple[np.ndarray, np.ndarray]:
 
     # Use subset of 60000 examples to keep unit test speed fast.
     x_train = x_train[0:1]
-    y_train = y_train[0:1]
+    y_train = y_train[0:1]  # pylint: disable=unsubscriptable-object
 
     return x_train, y_train
 

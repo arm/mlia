@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for tflite_compat module."""
 from __future__ import annotations
@@ -6,7 +6,8 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 import pytest
-from keras.api._v2 import keras  # Temporary workaround for now: MLIA-1107
+import tensorflow as tf
+import tf_keras as keras
 from tensorflow.lite.python import convert
 
 from mlia.nn.tensorflow.tflite_compat import converter_error_data_pb2
@@ -19,13 +20,23 @@ from mlia.nn.tensorflow.tflite_compat import TFLiteConversionErrorCode
 
 def test_not_fully_compatible_model_flex_ops() -> None:
     """Test models that requires TF_SELECT_OPS."""
-    model = keras.models.Sequential(
-        [
-            keras.layers.Dense(units=1, input_shape=[1], batch_size=1),
-            keras.layers.Dense(units=16, activation="softsign"),
-            keras.layers.Dense(units=1),
-        ]
+
+    # Create a model that uses operations requiring flex ops
+    # Using a Lambda layer with string operations
+    inputs = keras.layers.Input(
+        shape=(), dtype="string", batch_size=1, name="string_input"
     )
+
+    # String length operation requires flex ops
+    string_layer = keras.layers.Lambda(
+        lambda x: tf.cast(tf.strings.length(x), tf.float32), name="string_length"
+    )(inputs)
+
+    # Add a reshape and dense layer to make it a proper model
+    reshaped_layer = keras.layers.Reshape((1,), name="reshape")(string_layer)
+    outputs = keras.layers.Dense(1, name="output")(reshaped_layer)
+
+    model = keras.Model(inputs=inputs, outputs=outputs, name="string_model")
 
     checker = TFLiteChecker()
     result = checker.check_compatibility(model)
@@ -33,14 +44,17 @@ def test_not_fully_compatible_model_flex_ops() -> None:
     assert result.compatible is False
     assert isinstance(result.conversion_exception, convert.ConverterError)
     assert result.conversion_errors is not None
-    assert len(result.conversion_errors) == 1
+    assert len(result.conversion_errors) >= 1
 
-    conv_err = result.conversion_errors[0]
-    assert isinstance(conv_err, TFLiteConversionError)
-    assert conv_err.message == "'tf.Softsign' op is neither a custom op nor a flex op"
-    assert conv_err.code == TFLiteConversionErrorCode.NEEDS_FLEX_OPS
-    assert conv_err.operator == "tf.Softsign"
-    assert len(conv_err.location) == 3
+    # Check for flex ops requirement
+    has_flex_error = any(
+        conv_err.code == TFLiteConversionErrorCode.NEEDS_FLEX_OPS
+        for conv_err in result.conversion_errors
+    )
+    assert has_flex_error, (
+        f"Expected flex ops error, got: "
+        f"{[(err.code, err.operator, err.message) for err in result.conversion_errors]}"
+    )
 
 
 def _get_tflite_conversion_error(

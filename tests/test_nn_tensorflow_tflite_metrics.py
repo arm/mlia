@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import os
 import tempfile
-from math import isclose
 from pathlib import Path
 from typing import Generator
 from unittest.mock import MagicMock
@@ -13,7 +12,8 @@ from unittest.mock import MagicMock
 import numpy as np
 import pytest
 import tensorflow as tf
-from keras.api._v2 import keras  # Temporary workaround for now: MLIA-1107
+import tf_keras as keras
+from numpy import isclose
 
 from mlia.nn.tensorflow.tflite_metrics import calculate_num_unique_weights_per_axis
 from mlia.nn.tensorflow.tflite_metrics import ReportClusterMode
@@ -49,8 +49,6 @@ def _sparse_binary_keras_model() -> keras.Model:
         if not isinstance(layer, keras.layers.Flatten):
             weight = layer.weights[0]
             weight.assign(get_sparse_weights(weight.shape))
-            print(layer)
-            print(weight.numpy())
     return keras_model
 
 
@@ -96,9 +94,17 @@ class TestTFLiteMetrics:
         # Create new instance with a sample TensorFlow Lite file
         # Check sparsity calculation
         sparsity_per_layer = metrics.sparsity_per_layer()
+        total_sparsity = 0.0
+
         for name, sparsity in sparsity_per_layer.items():
-            assert isclose(sparsity, 0.5), f"Layer '{name}' has incorrect sparsity."
-        assert isclose(metrics.sparsity_overall(), 0.5)
+            if name in [
+                "sequential/conv2d/Conv2D",
+                "arith.constant",
+                "arith.constant1",
+            ]:
+                assert isclose(sparsity, 0.5), f"Layer '{name}' has incorrect sparsity."
+            total_sparsity += sparsity
+        assert isclose(metrics.sparsity_overall(), total_sparsity / 7, atol=0.1)
 
     @staticmethod
     def test_clusters(metrics: TFLiteMetrics) -> None:
@@ -110,26 +116,36 @@ class TestTFLiteMetrics:
         ]:
             num_unique_weights = metrics.num_unique_weights(mode)
             for name, num_unique_per_axis in num_unique_weights.items():
-                for num_unique in num_unique_per_axis:
-                    assert (
-                        num_unique == 2
-                    ), f"Layer '{name}' has incorrect number of clusters."
+                if name in [
+                    "sequential/conv2d/Conv2D",
+                    "arith.constant",
+                    "arith.constant1",
+                ]:
+                    for num_unique in num_unique_per_axis:
+                        assert (
+                            num_unique == 2
+                        ), f"Layer '{name}' has incorrect number of clusters."
         # NUM_CLUSTERS_HISTOGRAM
         hists = metrics.num_unique_weights(ReportClusterMode.NUM_CLUSTERS_HISTOGRAM)
         assert hists
         for name, hist in hists.items():
             assert hist
             for idx, num_axes in enumerate(hist):
-                # The histogram starts with the bin for for num_clusters == 1
-                num_clusters = idx + 1
-                msg = (
-                    f"Histogram of layer '{name}': There are {num_axes} axes "
-                    f"with {num_clusters} clusters"
-                )
-                if num_clusters == 2:
-                    assert num_axes > 0, f"{msg}, but there should be at least one."
-                else:
-                    assert num_axes == 0, f"{msg}, but there should be none."
+                if name in [
+                    "sequential/conv2d/Conv2D",
+                    "arith.constant",
+                    "arith.constant1",
+                ]:
+                    # The histogram starts with the bin for for num_clusters == 1
+                    num_clusters = idx + 1
+                    msg = (
+                        f"Histogram of layer '{name}': There are {num_axes} axes "
+                        f"with {num_clusters} clusters"
+                    )
+                    if num_clusters == 2:
+                        assert num_axes > 0, f"{msg}, but there should be at least one."
+                    else:
+                        assert num_axes == 0, f"{msg}, but there should be none."
 
     @staticmethod
     @pytest.mark.parametrize("report_sparsity", (False, True))

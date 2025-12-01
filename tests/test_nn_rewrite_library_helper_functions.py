@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2024, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2024-2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for module mlia.nn.rewrite.library.helper_functions."""
 from __future__ import annotations
@@ -8,7 +8,7 @@ from typing import Any
 
 import numpy as np
 import pytest
-from keras.api._v2 import keras  # Temporary workaround for now: MLIA-1107
+import tf_keras as keras
 
 from mlia.nn.rewrite.library.helper_functions import ACTIVATION_FUNCTION_LIST
 from mlia.nn.rewrite.library.helper_functions import compute_conv2d_parameters

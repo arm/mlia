@@ -9,7 +9,7 @@ from unittest.mock import MagicMock
 import numpy as np
 import pytest
 import tensorflow as tf
-from keras.api._v2 import keras  # Temporary workaround for now: MLIA-1107
+import tf_keras as keras
 
 from mlia.nn.tensorflow.tflite_convert import convert_to_tflite
 from mlia.nn.tensorflow.utils import check_tflite_datatypes

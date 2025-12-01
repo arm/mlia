@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2023-2024, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2023-2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Sequential trainer."""
 # pylint: disable=too-many-arguments
@@ -23,7 +23,7 @@ from typing import Literal
 
 import numpy as np
 import tensorflow as tf
-from keras.api._v2 import keras  # Temporary workaround for now: MLIA-1107
+import tf_keras as keras
 from numpy.random import Generator
 
 from mlia.nn.rewrite.core.extract import extract

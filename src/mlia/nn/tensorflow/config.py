@@ -15,7 +15,7 @@ from typing import List
 
 import numpy as np
 import tensorflow as tf
-from keras.api._v2 import keras  # Temporary workaround for now: MLIA-1107
+import tf_keras as keras
 
 from mlia.core.context import Context
 from mlia.nn.tensorflow.optimizations.quantization import dequantize

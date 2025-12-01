@@ -12,7 +12,7 @@ from typing import Any
 import numpy as np
 import pytest
 import tensorflow as tf
-from keras.api._v2 import keras  # Temporary workaround for now: MLIA-1107
+import tf_keras as keras
 
 from mlia.nn.rewrite.core.rewrite import GenericRewrite
 from mlia.nn.rewrite.core.rewrite import SparsityRewrite

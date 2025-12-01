@@ -1,10 +1,10 @@
-# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for Cortex-A operator compatibility."""
 from pathlib import Path
 
 import pytest
-from keras.api._v2 import keras  # Temporary workaround for now: MLIA-1107
+import tf_keras as keras
 
 from mlia.nn.tensorflow.tflite_convert import convert_to_tflite_bytes
 from mlia.target.cortex_a.config import CortexAConfiguration
