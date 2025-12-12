@@ -444,6 +444,7 @@ def ethos_u_formatters(data: Any) -> Callable[[Any], Report]:
     # Duck-type check for compatibility results (avoid importing Vela types
     # at module import time to keep imports lightweight in environments
     # where Vela or related packages may not be available).
+    # These objects have both legacy_info for display and standardized_output for JSON.
     if hasattr(data, "legacy_info") and hasattr(data, "standardized_output"):
         if hasattr(data.legacy_info, "ops"):
             return lambda d: report_operators_stat(d.legacy_info)

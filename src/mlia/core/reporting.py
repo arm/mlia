@@ -20,6 +20,7 @@ from typing import Iterable
 
 import numpy as np
 
+from mlia.core.advice_generation import Advice
 from mlia.core.typing import OutputFormat
 from mlia.utils.console import apply_style
 from mlia.utils.console import produce_table
@@ -579,7 +580,11 @@ class TextReporter(Reporter):
 
 
 class JSONReporter(Reporter):
-    """Reporter class."""
+    """Reporter class that outputs JSON format.
+
+    When data items have a standardized_output attribute, this reporter
+    will prefer that over the legacy formatting for unified schema output.
+    """
 
     def __init__(
         self,
@@ -588,29 +593,120 @@ class JSONReporter(Reporter):
         """Init reporter instance."""
         super().__init__(formatter_resolver)
         self.output_format: OutputFormat = "json"
+        self.standardized_outputs: list[Any] = []
+        self.advice_data: list[tuple[Any, Callable[[Any], Report]]] = []
 
     def submit(self, data_item: Any, **kwargs: Any) -> None:
-        """Submit data for the report."""
-        formatter = _apply_format_parameters(
-            self.formatter_resolver(data_item), self.output_format, **kwargs
-        )
-        self.data.append((data_item, formatter))
+        """Submit data for the report.
+
+        Collects standardized outputs when available, otherwise falls back
+        to legacy formatting.
+        """
+        # Check if data_item has standardized_output attribute
+        if hasattr(data_item, "standardized_output") and data_item.standardized_output:
+            self.standardized_outputs.append(data_item.standardized_output)
+
+        # Check if this is advice data (list of Advice objects)
+        if is_list_of(data_item, Advice):
+            formatter = _apply_format_parameters(
+                self.formatter_resolver(data_item), self.output_format, **kwargs
+            )
+            self.advice_data.append((data_item, formatter))
+            # Also add to regular data for fallback
+            self.data.append((data_item, formatter))
+        else:
+            formatter = _apply_format_parameters(
+                self.formatter_resolver(data_item), self.output_format, **kwargs
+            )
+            self.data.append((data_item, formatter))
 
     def generate_report(self) -> None:
-        """Generate report."""
+        """Generate report.
+
+        Outputs standardized format if available, otherwise legacy formatting.
+        """
         if not self.data:
             return
 
-        data, formatters = zip(*self.data)
-        self.produce_report(
-            data,
-            formatter=CompoundFormatter(formatters),
-        )
+        # If we have standardized outputs, use those for the unified schema format
+        if self.standardized_outputs:
+            self._produce_standardized_report()
+        else:
+            # Fall back to legacy format
+            data, formatters = zip(*self.data)
+            self.produce_report(
+                data,
+                formatter=CompoundFormatter(list(formatters)),
+            )
+
+    def _produce_standardized_report(self) -> None:
+        """Produce report using standardized output format."""
+        # Combine all standardized outputs into a single report
+        if len(self.standardized_outputs) == 1:
+            output = self.standardized_outputs[0]
+        else:
+            # Merge multiple standardized outputs
+            output = self._merge_standardized_outputs(self.standardized_outputs)
+
+        # Add advice as an extension if available
+        if self.advice_data:
+            if isinstance(output, dict):
+                if "extensions" not in output:
+                    output["extensions"] = {}
+                advice_ext = self._format_advice_for_extension()
+                output["extensions"]["advice"] = advice_ext
+
+        print(json.dumps(output, indent=4, cls=CustomJSONEncoder))
+
+    def _format_advice_for_extension(self) -> list[dict[str, Any]]:
+        """Format advice for inclusion in standardized output extensions."""
+        advice_list = []
+        for advice_items, _ in self.advice_data:
+            for advice in advice_items:
+                advice_list.append(advice.to_extension_dict())
+        return advice_list
+
+    def _merge_standardized_outputs(self, outputs: list[Any]) -> dict[str, Any]:
+        """Merge multiple standardized outputs into a single unified report."""
+        # Simplified merge logic
+        merged: dict[str, Any] = {
+            "backend": {},
+            "results": [],
+            "model": {},
+            "target": {},
+            "context": {},
+        }
+
+        for output in outputs:
+            if isinstance(output, dict):
+                # Merge results arrays
+                if "results" in output:
+                    merged["results"].extend(output.get("results", []))
+                # Merge backends arrays
+                if "backends" in output:
+                    if "backends" not in merged:
+                        merged["backends"] = []
+                    merged["backends"].extend(output.get("backends", []))
+                # Take first non-empty model, target, context
+                keys = [
+                    "model",
+                    "target",
+                    "context",
+                    "schema_version",
+                    "run_id",
+                    "timestamp",
+                    "tool",
+                ]
+                for key in keys:
+                    if output.get(key) and not merged.get(key):
+                        merged[key] = output[key]
+
+        return merged
 
     def produce_report(
         self, data: Any, formatter: Callable[[Any], Report], **kwargs: Any
     ) -> None:
-        """Produce report based on provided data."""
+        """Produce report based on provided data using legacy formatting."""
         formatted_data = formatter(data)
         print(
             json.dumps(
