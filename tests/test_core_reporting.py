@@ -16,6 +16,7 @@ import numpy as np
 import pytest
 
 import mlia.core.output_schema as schema
+from mlia.core.advice_generation import Advice
 from mlia.core.reporting import BytesCell
 from mlia.core.reporting import Cell
 from mlia.core.reporting import ClockCell
@@ -545,6 +546,8 @@ class TestJSONReporter:
         format_resolver = MagicMock()
         reporter = JSONReporter(format_resolver)
         assert reporter.output_format == "json"
+        assert not reporter.standardized_outputs
+        assert not reporter.advice_data
 
     def test_submit(self) -> None:
         """Test JSONReporter submit."""
@@ -552,12 +555,28 @@ class TestJSONReporter:
         reporter = JSONReporter(format_resolver)
         reporter.submit("test")
         assert reporter.data == [("test", ANY)]
+        assert not reporter.standardized_outputs
 
         reporter.submit("test2")
         assert reporter.data == [("test", ANY), ("test2", ANY)]
+        assert not reporter.standardized_outputs
+
+    def test_submit_with_standardized_output(self) -> None:
+        """Test JSONReporter submit with standardized_output attribute."""
+        format_resolver = MagicMock()
+        reporter = JSONReporter(format_resolver)
+
+        # Create mock object with standardized_output
+        mock_data = MagicMock()
+        mock_data.standardized_output = {"schema_version": "1.0.0"}
+
+        reporter.submit(mock_data)
+        assert len(reporter.data) == 1
+        assert len(reporter.standardized_outputs) == 1
+        assert reporter.standardized_outputs[0] == {"schema_version": "1.0.0"}
 
     def test_generate_report(self) -> None:
-        """Test JSONReporter generate_report."""
+        """Test JSONReporter generate_report with legacy data."""
         format_resolver = MagicMock()
         reporter = JSONReporter(format_resolver)
         reporter.submit("test")
@@ -567,6 +586,22 @@ class TestJSONReporter:
         ) as mock_produce_report:
             reporter.generate_report()
             mock_produce_report.assert_called()
+
+    def test_generate_report_with_standardized_output(self) -> None:
+        """Test JSONReporter generate_report with standardized output."""
+        format_resolver = MagicMock()
+        reporter = JSONReporter(format_resolver)
+
+        # Submit data with standardized_output
+        mock_data = MagicMock()
+        mock_data.standardized_output = {"schema_version": "1.0.0", "results": []}
+        reporter.submit(mock_data)
+
+        with patch(
+            "mlia.core.reporting.JSONReporter._produce_standardized_report"
+        ) as mock_standardized:
+            reporter.generate_report()
+            mock_standardized.assert_called_once()
 
     def test_generate_empty_report(self) -> None:
         """Test JSONReporter generate_report on empty data."""
@@ -590,3 +625,80 @@ class TestJSONReporter:
             mock_formatter.assert_has_calls([call("test"), call().to_json()])
             mock_dumps.assert_called()
             mock_print.assert_called()
+
+    @patch("builtins.print")
+    @patch("json.dumps")
+    def test_produce_standardized_report(
+        self, mock_dumps: Mock, _mock_print: Mock
+    ) -> None:
+        """Test JSONReporter _produce_standardized_report."""
+        format_resolver = MagicMock()
+        reporter = JSONReporter(format_resolver)
+
+        # Add standardized output
+        reporter.standardized_outputs = [{"schema_version": "1.0.0", "results": []}]
+
+        reporter._produce_standardized_report()  # pylint: disable=protected-access
+
+        mock_dumps.assert_called_once()
+        # Verify it outputs the standardized format
+        call_args = mock_dumps.call_args[0][0]
+        assert call_args == {"schema_version": "1.0.0", "results": []}
+
+    @patch("builtins.print")
+    @patch("json.dumps")
+    def test_produce_standardized_report_with_advice(
+        self, mock_dumps: Mock, _mock_print: Mock
+    ) -> None:
+        """Test JSONReporter adds advice as extension."""
+        format_resolver = MagicMock()
+        reporter = JSONReporter(format_resolver)
+
+        # Add standardized output
+        reporter.standardized_outputs = [{"schema_version": "1.0.0", "results": []}]
+
+        # Add advice with metadata
+        advice = Advice(messages=["message1", "message2"], metadata=[{"key": "value"}])
+        reporter.advice_data = [([advice], MagicMock())]
+
+        reporter._produce_standardized_report()  # pylint: disable=protected-access
+
+        # Verify advice was added to extensions with correct format
+        call_args = mock_dumps.call_args[0][0]
+        assert "extensions" in call_args
+        assert "advice" in call_args["extensions"]
+        advice_list = call_args["extensions"]["advice"]
+        assert len(advice_list) == 1
+        assert "id" in advice_list[0]
+        assert advice_list[0]["message"] == "message1 message2"
+        assert advice_list[0]["metadata"] == [{"key": "value"}]
+
+    def test_merge_standardized_outputs(self) -> None:
+        """Test merging multiple standardized outputs."""
+        format_resolver = MagicMock()
+        reporter = JSONReporter(format_resolver)
+
+        outputs = [
+            {
+                "schema_version": "1.0.0",
+                "run_id": "abc123",
+                "results": [{"kind": "performance"}],
+                "model": {"path": "model.tflite"},
+            },
+            {
+                "results": [{"kind": "compatibility"}],
+                "target": {"name": "ethos-u55"},
+            },
+        ]
+
+        merged = (
+            reporter._merge_standardized_outputs(  # pylint: disable=protected-access
+                outputs
+            )
+        )
+
+        assert merged["schema_version"] == "1.0.0"
+        assert merged["run_id"] == "abc123"
+        assert len(merged["results"]) == 2
+        assert merged["model"] == {"path": "model.tflite"}
+        assert merged["target"] == {"name": "ethos-u55"}

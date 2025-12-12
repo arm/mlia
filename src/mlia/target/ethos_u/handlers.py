@@ -49,9 +49,8 @@ class EthosUEventHandler(WorkflowEventsHandler, EthosUAdvisorEventHandler):
                 except Exception as exc:  # pylint: disable=broad-exception-caught
                     logger.warning("Failed to save Vela compatibility output: %s", exc)
 
-            # Extract legacy operators for display
-            operators = data_item.legacy_info
-            self.reporter.submit([operators.ops, operators], delay_print=True)
+            # Submit wrapper object so JSONReporter can access standardized_output
+            self.reporter.submit(data_item, delay_print=True)
 
         elif isinstance(data_item, Operators):
             self.reporter.submit([data_item.ops, data_item], delay_print=True)
@@ -69,8 +68,8 @@ class EthosUEventHandler(WorkflowEventsHandler, EthosUAdvisorEventHandler):
                         "Failed to save combined performance output: %s", exc
                     )
 
-            # Extract legacy metrics for display
-            self.reporter.submit(data_item.legacy_info, delay_print=True, space=True)
+            # Submit wrapper object so JSONReporter can access standardized_output
+            self.reporter.submit(data_item, delay_print=True, space=True)
 
         elif isinstance(data_item, VelaPerformanceResult):
             # Save standardized output JSON if available
@@ -83,8 +82,8 @@ class EthosUEventHandler(WorkflowEventsHandler, EthosUAdvisorEventHandler):
                 except Exception as exc:  # pylint: disable=broad-exception-caught
                     logger.warning("Failed to save Vela performance output: %s", exc)
 
-            # Extract legacy metrics for display
-            self.reporter.submit(data_item.legacy_info, delay_print=True, space=True)
+            # Submit wrapper object so JSONReporter can access standardized_output
+            self.reporter.submit(data_item, delay_print=True, space=True)
 
         elif isinstance(data_item, CorstonePerformanceResult):
             # Save standardized output JSON if available
@@ -97,8 +96,8 @@ class EthosUEventHandler(WorkflowEventsHandler, EthosUAdvisorEventHandler):
                 except Exception as exc:  # pylint: disable=broad-exception-caught
                     logger.warning("Failed to save standardized output: %s", exc)
 
-            # Extract legacy metrics for display
-            self.reporter.submit(data_item.legacy_info, delay_print=True, space=True)
+            # Submit wrapper object so JSONReporter can access standardized_output
+            self.reporter.submit(data_item, delay_print=True, space=True)
 
         elif isinstance(data_item, PerformanceMetrics):
             self.reporter.submit(data_item, delay_print=True, space=True)

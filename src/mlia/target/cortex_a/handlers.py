@@ -54,9 +54,8 @@ class CortexAEventHandler(WorkflowEventsHandler, CortexAAdvisorEventHandler):
                         "Failed to save standardized output: %s", exc, exc_info=True
                     )
 
-            # Extract legacy info for display
-            compat_info = data_item.legacy_info
-            self.reporter.submit(compat_info, delay_print=True)
+            # Submit wrapper object so JSONReporter can access standardized_output
+            self.reporter.submit(data_item, delay_print=True)
 
         elif isinstance(data_item, CortexACompatibilityInfo):
             self.reporter.submit(data_item, delay_print=True)
