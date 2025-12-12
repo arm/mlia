@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022, 2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Module for advice generation."""
 from __future__ import annotations
@@ -21,6 +21,21 @@ class Advice:
     """Base class for the advice."""
 
     messages: list[str]
+    metadata: list[dict[str, Any]] | None = None
+
+    def to_extension_dict(self) -> dict[str, Any]:
+        """Convert advice to extension dictionary format.
+
+        Returns:
+            Dictionary with id, message, and optional metadata
+        """
+        result: dict[str, Any] = {
+            "id": id(self),
+            "message": " ".join(self.messages) if self.messages else "",
+        }
+        if self.metadata:
+            result["metadata"] = self.metadata
+        return result
 
 
 @dataclass

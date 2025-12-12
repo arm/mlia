@@ -61,14 +61,8 @@ class TOSAEventHandler(WorkflowEventsHandler, TOSAAdvisorEventHandler):
                         "Failed to save standardized output: %s", exc, exc_info=True
                     )
 
-            # Submit legacy info for reporting
-            if isinstance(data_item.legacy_info, TOSACompatibilityInfo):
-                self.reporter.submit(data_item.legacy_info, delay_print=True)
-            elif (
-                isinstance(data_item.legacy_info, TFLiteCompatibilityInfo)
-                and not data_item.legacy_info.compatible
-            ):
-                self.reporter.submit(data_item.legacy_info, delay_print=True)
+            # Submit wrapper object so JSONReporter can access standardized_output
+            self.reporter.submit(data_item, delay_print=True)
 
         # Handle legacy format for backward compatibility
         elif isinstance(data_item, TOSACompatibilityInfo):
