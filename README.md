@@ -188,9 +188,23 @@ mlia check ~/models/ds_cnn_large_fully_quantized_int8.tflite \
     --backend "vela" \
     --backend "corstone-300"
 
+# Output results in JSON format
+mlia check ~/models/mobilenet_v1_1.0_224_quant.tflite \
+    --target-profile ethos-u55-256 \
+    --performance \
+    --json
+
 # Get help and further information
 mlia check --help
 ```
+
+**Output Formats**: MLIA generates results in a standardized schema containing
+model metadata, target configuration, performance metrics, compatibility
+results, and actionable advice. Use `--json` to output the schema as JSON,
+otherwise results are displayed in human-readable text format.
+Both formats follow the same underlying data structure with fields like
+`schema_version`, `run_id`, `model`, `target`, `backends`, `results[]`, and
+optional `extensions.advice[]`.
 
 ## **optimize**
 
