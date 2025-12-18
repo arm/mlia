@@ -19,6 +19,7 @@ from mlia.cli.commands import backend_list
 from mlia.cli.commands import backend_uninstall
 from mlia.cli.commands import check
 from mlia.cli.commands import optimize
+from mlia.cli.commands import target_list
 from mlia.core.context import ExecutionContext
 from mlia.target.ethos_u.config import EthosUConfiguration
 from mlia.target.ethos_u.performance import MemoryUsage
@@ -392,6 +393,25 @@ def mock_performance_estimation(monkeypatch: pytest.MonkeyPatch) -> None:
         MagicMock(return_value=["vela"]),
     )
 
+    # Defaults must match the above list so validate_backend() will succeed
+    def _mock_default_backends(target: str) -> list[str]:
+        if target in ("ethos-u55", "ethos-u65"):
+            return ["vela"]
+        raise AssertionError(
+            f"Unexpected target passed to default_backends(): {target!r}"
+        )
+
+    monkeypatch.setattr(
+        "mlia.cli.command_validators.default_backends",
+        MagicMock(side_effect=_mock_default_backends),
+    )
+
+    # Mock resolve_compiler_config to avoid vela.ini file issues
+    monkeypatch.setattr(
+        "mlia.backend.vela.compiler.resolve_compiler_config",
+        MagicMock(return_value=MagicMock()),
+    )
+
 
 @pytest.fixture(name="installation_manager_mock")
 def fixture_mock_installation_manager(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
@@ -409,6 +429,15 @@ def test_backend_command_action_list(installation_manager_mock: MagicMock) -> No
     backend_list()
 
     installation_manager_mock.show_env_details.assert_called_once()
+
+
+def test_target_command_action_list(caplog: pytest.LogCaptureFixture) -> None:
+    """Test mlia-target command list."""
+    caplog.set_level(level=20)
+    target_list()
+
+    # Verify that the target profiles were logged
+    assert "Available Target Profiles" in caplog.text
 
 
 @pytest.mark.parametrize(

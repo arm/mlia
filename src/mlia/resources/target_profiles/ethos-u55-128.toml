@@ -1,10 +1,17 @@
-# SPDX-FileCopyrightText: Copyright 2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2023, 2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 
-target = "ethos-u55"
-# Number of MACs [32, 64, 128, 256]
+profile_name = "ethos-u55-128"
+target_type = "ethos-u55"
+description = "Ethos-U55 with 128 MACs, Shared SRAM, High End Embedded configuration"
+
+[[components]]
+type = "npu"
+family = "ethos-u"
+model = "u55"
+variant = "128"
+
+[config]
 mac = 128
-# Memory mode: [SRAM Only, Shared SRAM, Dedicated SRAM]
 memory_mode = "Shared_Sram"
-# System configuration
 system_config = "Ethos_U55_High_End_Embedded"

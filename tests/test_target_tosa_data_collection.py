@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, 2025 Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, 2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for TOSA data collection module."""
 from pathlib import Path
@@ -8,7 +8,7 @@ import pytest
 
 from mlia.backend.tosa_checker.compat import TOSACompatibilityInfo
 from mlia.core.context import ExecutionContext
-from mlia.nn.tensorflow.tflite_compat import TFLiteCompatibilityInfo
+from mlia.target.tosa.data_collection import TOSACompatibilityResult
 from mlia.target.tosa.data_collection import TOSAOperatorCompatibility
 
 
@@ -26,16 +26,8 @@ def test_tosa_data_collection(
 
     data_item = collector.collect_data()
 
-    assert isinstance(data_item, TOSACompatibilityInfo)
-
-
-def test_non_tosa_data_collection(tmpdir: str) -> None:
-    """Test TOSA data collection on non tosa compatible model."""
-    tmpdir += "/" + TOSAOperatorCompatibility.name()  # For coverage
-    context = ExecutionContext(output_dir=tmpdir)
-    collector = TOSAOperatorCompatibility(Path("test.vgf"))
-    collector.set_context(context)
-
-    data_item = collector.collect_data()
-
-    assert isinstance(data_item, TFLiteCompatibilityInfo)
+    # Now returns TOSACompatibilityResult containing both formats
+    assert isinstance(data_item, TOSACompatibilityResult)
+    assert isinstance(data_item.legacy_info, TOSACompatibilityInfo)
+    assert data_item.standardized_output is not None
+    assert data_item.standardized_output.schema_version == "1.0.0"

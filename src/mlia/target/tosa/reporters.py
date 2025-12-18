@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, 2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Reports module."""
 from __future__ import annotations
@@ -25,6 +25,7 @@ from mlia.core.reporting import Table
 from mlia.nn.tensorflow.tflite_compat import TFLiteCompatibilityInfo
 from mlia.target.common.reporters import report_tflite_compatiblity
 from mlia.target.tosa.config import TOSAConfiguration
+from mlia.target.tosa.data_collection import TOSACompatibilityResult
 from mlia.target.tosa.metadata import TOSAMetadata
 from mlia.utils.console import style_improvement
 from mlia.utils.types import is_list_of
@@ -148,7 +149,9 @@ def report_tosa_compatibility(compat_info: TOSACompatibilityInfo) -> Report:
     return CompoundReport([report_ops, report_exception, report_errors])
 
 
-def tosa_formatters(data: Any) -> Callable[[Any], Report]:
+def tosa_formatters(  # pylint: disable=too-many-return-statements
+    data: Any,
+) -> Callable[[Any], Report]:
     """Find appropriate formatter for the provided data."""
     if is_list_of(data, Advice):
         return report_advice
@@ -164,6 +167,13 @@ def tosa_formatters(data: Any) -> Callable[[Any], Report]:
 
     if isinstance(data, TOSACompatibilityInfo):
         return report_tosa_compatibility
+
+    if isinstance(data, TOSACompatibilityResult):
+        # For TOSACompatibilityResult, report based on legacy_info
+        if isinstance(data.legacy_info, TOSACompatibilityInfo):
+            return lambda d: report_tosa_compatibility(d.legacy_info)
+        if isinstance(data.legacy_info, TFLiteCompatibilityInfo):
+            return lambda d: report_tflite_compatiblity(d.legacy_info)
 
     if isinstance(data, TFLiteCompatibilityInfo):
         return report_tflite_compatiblity

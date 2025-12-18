@@ -12,6 +12,7 @@ from mlia.nn.tensorflow.tflite_compat import TFLiteCompatibilityStatus
 from mlia.target.cortex_a.config import CortexAConfiguration
 from mlia.target.cortex_a.data_collection import CortexAOperatorCompatibility
 from mlia.target.cortex_a.operators import CortexACompatibilityInfo
+from mlia.target.cortex_a.operators import CortexACompatibilityResult
 
 CORTEX_A_CONFIG = CortexAConfiguration.load_profile("cortex-a")
 VERSION = CORTEX_A_CONFIG.armnn_tflite_delegate_version
@@ -34,7 +35,8 @@ def check_cortex_a_data_collection(
 
     data_item = collector.collect_data()
 
-    assert isinstance(data_item, CortexACompatibilityInfo)
+    assert isinstance(data_item, CortexACompatibilityResult)
+    assert isinstance(data_item.legacy_info, CortexACompatibilityInfo)
 
 
 def test_cortex_a_data_collection_tflite(
