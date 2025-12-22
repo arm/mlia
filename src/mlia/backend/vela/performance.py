@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Vela performance module."""
 from __future__ import annotations
@@ -198,12 +198,71 @@ class PerformanceMetrics:  # pylint: disable=too-many-instance-attributes
             ),
         ]
 
+        breakdowns = []
+        for layer_info in self.layerwise_performance_info.layerwise_info:
+            metrics = [
+                schema.Metric(
+                    name="op_cycles",
+                    value=layer_info.op_cycles,
+                    unit="cycles",
+                ),
+                schema.Metric(
+                    name="npu_cycles",
+                    value=layer_info.npu_cycles,
+                    unit="cycles",
+                ),
+                schema.Metric(
+                    name="sram_access_cycles",
+                    value=layer_info.sram_access_cycles,
+                    unit="cycles",
+                ),
+                schema.Metric(
+                    name="dram_access_cycles",
+                    value=layer_info.dram_access_cycles,
+                    unit="cycles",
+                ),
+                schema.Metric(
+                    name="on_chip_flash_access_cycles",
+                    value=layer_info.on_chip_flash_access_cycles,
+                    unit="cycles",
+                ),
+                schema.Metric(
+                    name="off_chip_flash_access_cycles",
+                    value=layer_info.off_chip_flash_access_cycles,
+                    unit="cycles",
+                ),
+                schema.Metric(
+                    name="sram_usage",
+                    value=layer_info.sram_usage,
+                    unit="bytes",
+                ),
+                schema.Metric(
+                    name="mac_count",
+                    value=layer_info.mac_count,
+                    unit="count",
+                ),
+                schema.Metric(
+                    name="util_mac_percentage",
+                    value=layer_info.util_mac_percentage,
+                    unit="percent",
+                ),
+            ]
+            breakdowns.append(
+                schema.Breakdown(
+                    scope=schema.OperatorScope.OPERATOR,
+                    name=layer_info.tflite_operator,
+                    location=layer_info.name,
+                    metrics=metrics,
+                )
+            )
+
         # Create result
         result = schema.Result(
             kind=schema.ResultKind.PERFORMANCE,
             status=schema.ResultStatus.OK,
             producer="vela",
             metrics=metrics,
+            breakdowns=breakdowns,
         )
 
         # Build StandardizedOutput

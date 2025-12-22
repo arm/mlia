@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2025-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for the various event handlers."""
 from pathlib import Path
@@ -17,15 +17,22 @@ from mlia.target.tosa.events import TOSAAdvisorStartedEvent
 from mlia.target.tosa.handlers import TOSAEventHandler
 
 
-@pytest.mark.parametrize("handler", [(TOSAEventHandler())])
 @pytest.mark.parametrize(
-    "event",
+    "handler,event",
     [
-        CollectedDataEvent(TOSACompatibilityInfo(tosa_compatible=True, operators=[])),
-        CollectedDataEvent(
-            TFLiteCompatibilityInfo(
-                status=TFLiteCompatibilityStatus.TFLITE_CONVERSION_ERROR
-            )
+        (
+            TOSAEventHandler(),
+            CollectedDataEvent(
+                TOSACompatibilityInfo(tosa_compatible=True, operators=[])
+            ),
+        ),
+        (
+            TOSAEventHandler(),
+            CollectedDataEvent(
+                TFLiteCompatibilityInfo(
+                    status=TFLiteCompatibilityStatus.TFLITE_CONVERSION_ERROR
+                )
+            ),
         ),
     ],
 )
