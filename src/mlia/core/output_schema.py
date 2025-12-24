@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2025-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Standardized output schema classes for MLIA."""
 from __future__ import annotations
