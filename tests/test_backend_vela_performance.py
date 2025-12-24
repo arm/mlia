@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for module vela/performance."""
 import tempfile
@@ -282,3 +282,210 @@ def test_compile_invalid_model(
         compile_model(test_tflite_model, target_config.compiler_options)
 
     assert not model_path.exists()
+
+
+def _get_perf_metrics() -> PerformanceMetrics:
+    layer_info = [
+        LayerPerfInfo(
+            name="sequential/conv1/Relu;sequential/conv1/Conv2D",
+            tflite_operator="CONV_2D",
+            sram_usage=11936,
+            op_cycles=7312,
+            npu_cycles=7312,
+            sram_access_cycles=2000,
+            dram_access_cycles=0,
+            on_chip_flash_access_cycles=0,
+            off_chip_flash_access_cycles=0,
+            mac_count=73008,
+            util_mac_percentage=3.9002666849015313,
+        ),
+        LayerPerfInfo(
+            name="sequential/max_pooling2d/MaxPool",
+            tflite_operator="MAX_POOL_2D",
+            sram_usage=10944,
+            op_cycles=2992,
+            npu_cycles=1330,
+            sram_access_cycles=2992,
+            dram_access_cycles=0,
+            on_chip_flash_access_cycles=0,
+            off_chip_flash_access_cycles=0,
+            mac_count=6912,
+            util_mac_percentage=0.9024064171122994,
+        ),
+    ]
+
+    layerwise_perf_info = LayerwisePerfInfo(layerwise_info=layer_info)
+
+    return PerformanceMetrics(
+        npu_cycles=10304,
+        sram_access_cycles=4992,
+        dram_access_cycles=0,
+        on_chip_flash_access_cycles=0,
+        off_chip_flash_access_cycles=0,
+        total_cycles=41416,
+        batch_inference_time=0.207,
+        inferences_per_second=4830.9,
+        batch_size=1,
+        sram_memory_area_size=11936.0,
+        dram_memory_area_size=0.0,
+        on_chip_flash_memory_area_size=0.0,
+        off_chip_flash_memory_area_size=0.0,
+        layerwise_performance_info=layerwise_perf_info,
+    )
+
+
+def test_to_standardized_output(
+    test_tflite_model: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test to_standardized_output."""
+    perf_metrics = _get_perf_metrics()
+
+    monkeypatch.setattr(
+        "mlia.core.output_schema.StandardizedOutput.create_run_id",
+        MagicMock(return_value="fake_id"),
+    )
+    monkeypatch.setattr(
+        "mlia.core.output_schema.StandardizedOutput.create_timestamp",
+        MagicMock(return_value="fake_timestamp"),
+    )
+    monkeypatch.setattr("mlia.core.output_schema.SCHEMA_VERSION", "1.0.0")
+
+    standardized_output = perf_metrics.to_standardized_output(test_tflite_model)
+
+    assert standardized_output["schema_version"] == "1.0.0"
+    assert standardized_output["run_id"] == "fake_id"
+    assert standardized_output["timestamp"] == "fake_timestamp"
+    assert standardized_output["tool"] == {
+        "name": "mlia",
+        "version": standardized_output["tool"]["version"],
+    }
+    assert standardized_output["target"] == {
+        "profile_name": "ethos-u",
+        "target_type": "npu",
+        "components": [{"type": "npu", "family": "ethos-u"}],
+        "configuration": {},
+    }
+    assert standardized_output["model"]["name"] == test_tflite_model.name
+    assert standardized_output["model"]["format"] == "tflite"
+    assert not standardized_output["context"]
+    assert standardized_output["backends"] == [
+        {
+            "id": "vela",
+            "name": "Vela Compiler",
+            "version": standardized_output["backends"][0]["version"],
+            "configuration": {},
+        }
+    ]
+    assert len(standardized_output["results"]) == 1
+    results = standardized_output["results"][0]
+    assert len(results["breakdowns"]) == 2
+    breakdowns = results["breakdowns"]
+
+    expected_breakdowns = [
+        {
+            "scope": "operator",
+            "name": "CONV_2D",
+            "location": "sequential/conv1/Relu;sequential/conv1/Conv2D",
+            "metrics": {
+                "op_cycles": {"name": "op_cycles", "value": 7312, "unit": "cycles"},
+                "npu_cycles": {"name": "npu_cycles", "value": 7312, "unit": "cycles"},
+                "sram_access_cycles": {
+                    "name": "sram_access_cycles",
+                    "value": 2000,
+                    "unit": "cycles",
+                },
+                "dram_access_cycles": {
+                    "name": "dram_access_cycles",
+                    "value": 0,
+                    "unit": "cycles",
+                },
+                "on_chip_flash_access_cycles": {
+                    "name": "on_chip_flash_access_cycles",
+                    "value": 0,
+                    "unit": "cycles",
+                },
+                "off_chip_flash_access_cycles": {
+                    "name": "off_chip_flash_access_cycles",
+                    "value": 0,
+                    "unit": "cycles",
+                },
+                "sram_usage": {"name": "sram_usage", "value": 11936, "unit": "bytes"},
+                "mac_count": {"name": "mac_count", "value": 73008, "unit": "count"},
+                "util_mac_percentage": {
+                    "name": "util_mac_percentage",
+                    "value": 3.9002666849015313,
+                    "unit": "percent",
+                },
+            },
+        },
+        {
+            "scope": "operator",
+            "name": "MAX_POOL_2D",
+            "location": "sequential/max_pooling2d/MaxPool",
+            "metrics": {
+                "op_cycles": {"name": "op_cycles", "value": 2992, "unit": "cycles"},
+                "npu_cycles": {"name": "npu_cycles", "value": 1330, "unit": "cycles"},
+                "sram_access_cycles": {
+                    "name": "sram_access_cycles",
+                    "value": 2992,
+                    "unit": "cycles",
+                },
+                "dram_access_cycles": {
+                    "name": "dram_access_cycles",
+                    "value": 0,
+                    "unit": "cycles",
+                },
+                "on_chip_flash_access_cycles": {
+                    "name": "on_chip_flash_access_cycles",
+                    "value": 0,
+                    "unit": "cycles",
+                },
+                "off_chip_flash_access_cycles": {
+                    "name": "off_chip_flash_access_cycles",
+                    "value": 0,
+                    "unit": "cycles",
+                },
+                "sram_usage": {"name": "sram_usage", "value": 10944, "unit": "bytes"},
+                "mac_count": {"name": "mac_count", "value": 6912, "unit": "count"},
+                "util_mac_percentage": {
+                    "name": "util_mac_percentage",
+                    "value": 0.9024064171122994,
+                    "unit": "percent",
+                },
+            },
+        },
+    ]
+
+    for i, expected in enumerate(expected_breakdowns):
+        assert breakdowns[i]["scope"] == expected["scope"]
+        assert breakdowns[i]["name"] == expected["name"]
+        assert breakdowns[i]["location"] == expected["location"]
+        assert len(breakdowns[i]["metrics"]) == len(expected["metrics"])
+
+        metrics = {m["name"]: m for m in breakdowns[i]["metrics"]}
+        for metric_name, expected_metric in expected[  # type: ignore[attr-defined]
+            "metrics"
+        ].items():
+            assert metrics[metric_name] == expected_metric
+
+
+def test_to_standarized_output_kwargs(test_tflite_model: Path) -> None:
+    """Test optional kwargs to test_tflite_model."""
+    perf_metrics = _get_perf_metrics()
+    standardized_output = perf_metrics.to_standardized_output(
+        test_tflite_model,
+        target_config={"target": "my_target"},
+        backend_config={"backend_key": "backend_val"},
+        run_id="12",
+        timestamp="34",
+        cli_arguments=["--arg1"],
+    )
+
+    assert standardized_output["run_id"] == "12"
+    assert standardized_output["timestamp"] == "34"
+    assert standardized_output["target"]["profile_name"] == "my_target"
+    assert standardized_output["backends"][0]["configuration"] == {
+        "backend_key": "backend_val"
+    }
+    assert standardized_output["context"] == {"cli_arguments": ["--arg1"]}
