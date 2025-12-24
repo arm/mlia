@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for the data collection module for Ethos-U."""
 from pathlib import Path
@@ -6,7 +6,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from mlia.backend.corstone.performance import PerformanceMetrics as CorstonePerf
+from mlia.backend.corstone.performance import CorstonePerformanceMetrics as CorstonePerf
 from mlia.backend.errors import BackendUnavailableError
 from mlia.backend.vela.compat import Operators
 from mlia.backend.vela.compat import VelaCompatibilityResult
