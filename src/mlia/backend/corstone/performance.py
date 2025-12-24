@@ -1,14 +1,16 @@
-# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Module for backend integration."""
 from __future__ import annotations
 
 import base64
+import csv
 import json
 import logging
 import re
 import subprocess  # nosec
 from dataclasses import dataclass
+from dataclasses import field
 from pathlib import Path
 from typing import Any
 
@@ -25,30 +27,56 @@ from mlia.utils.proc import process_command_output
 
 logger = logging.getLogger(__name__)
 
-TARGET_METRIC_MAPS = {
-    "default": [
-        "NPU ACTIVE",
-        "NPU IDLE",
-        "NPU TOTAL",
-        "NPU AXI0_RD_DATA_BEAT_RECEIVED",
-        "NPU AXI0_WR_DATA_BEAT_WRITTEN",
-        "NPU AXI1_RD_DATA_BEAT_RECEIVED",
-    ],
-    "corstone-320": [
-        "NPU ACTIVE",
-        "NPU IDLE",
-        "NPU TOTAL",
-        "NPU ETHOSU_PMU_SRAM_RD_DATA_BEAT_RECEIVED",
-        "NPU ETHOSU_PMU_SRAM_WR_DATA_BEAT_WRITTEN",
-        "NPU ETHOSU_PMU_EXT_RD_DATA_BEAT_RECEIVED",
-        "NPU ETHOSU_PMU_EXT_WR_DATA_BEAT_WRITTEN",
-    ],
+
+# A superset of stats from all corstone versions
+_PER_LAYERS_STAT_UNITS = {
+    "Staging Usage": "bytes",
+    "Peak% (Staging)": "%",
+    "Op Cycles": "cycles",
+    "Network% (cycles)": "%",
+    "NPU": "cycles",
+    "SRAM AC": "accesses",
+    "DRAM AC": "accesses",
+    "OnFlash AC": "accesses",
+    "OffFlash AC": "accesses",
+    "MAC Count": "operations",
+    "Network% (MAC)": "%",
+    "Util% (MAC)": "%",
+    "SRAM Usage": "bytes",
+    "Peak%": "%",
+    "Network%": "%",
+    "Util%": "%",
 }
 
 
+def _sanitize_metric_name(name: str) -> str:
+    name = re.sub(r"[^\w\s]+", "", name).lower()  # Remove non-word-or-space characters
+    return name.replace(" ", "_")
+
+
+def _build_per_layer_metrics(stat: dict) -> list[schema.Metric]:
+    metrics = []
+    for name, val in stat.items():
+        unit = _PER_LAYERS_STAT_UNITS.get(name)
+        if unit is None:
+            continue
+        metrics.append(schema.Metric(_sanitize_metric_name(name), val, unit))
+    return metrics
+
+
+def _parse_per_layer_csv(csv_file: Path) -> list[dict]:
+    layer_stats = []
+    with open(csv_file, encoding="UTF-8") as file:
+        reader = csv.DictReader(file)
+        for row in reader:
+            layer_stats.append(dict(row))
+
+    return layer_stats
+
+
 @dataclass
-class PerformanceMetrics:
-    """Performance metrics parsed from generic inference output."""
+class CorstoneModelPerformanceMetrics:
+    """Model performance metrics."""
 
     npu_active_cycles: int
     npu_idle_cycles: int
@@ -57,6 +85,64 @@ class PerformanceMetrics:
     npu_axi0_wr_data_beat_written: int
     npu_axi1_rd_data_beat_received: int
     npu_axi1_wr_data_beat_written: int | None = None
+
+    @classmethod
+    def from_fvp_metrics(
+        cls,
+        target: str,
+        fvp_metrics: dict[str, Any],
+    ) -> CorstoneModelPerformanceMetrics:
+        """Create CorstoneModelPerformanceMetrics from FVP metrics."""
+        # Mapping from FVP metric names to class members.
+        # Must be in the same order as in the class definition
+        target_metric_maps = {
+            "default": [
+                "NPU ACTIVE",
+                "NPU IDLE",
+                "NPU TOTAL",
+                "NPU AXI0_RD_DATA_BEAT_RECEIVED",
+                "NPU AXI0_WR_DATA_BEAT_WRITTEN",
+                "NPU AXI1_RD_DATA_BEAT_RECEIVED",
+            ],
+            "corstone-320": [
+                "NPU ACTIVE",
+                "NPU IDLE",
+                "NPU TOTAL",
+                "NPU ETHOSU_PMU_SRAM_RD_DATA_BEAT_RECEIVED",
+                "NPU ETHOSU_PMU_SRAM_WR_DATA_BEAT_WRITTEN",
+                "NPU ETHOSU_PMU_EXT_RD_DATA_BEAT_RECEIVED",
+                "NPU ETHOSU_PMU_EXT_WR_DATA_BEAT_WRITTEN",
+            ],
+        }
+        metric_names = target_metric_maps.get(target, target_metric_maps["default"])
+        class_fields = list(
+            cls.__dataclass_fields__.keys()  # pylint: disable=no-member
+        )
+        class_kwargs = {}
+        for idx, metric_name in enumerate(metric_names):
+            if metric_name in fvp_metrics and idx < len(class_fields):
+                class_kwargs[class_fields[idx]] = fvp_metrics[metric_name]
+            else:
+                raise KeyError(f"Metric {metric_name} not found in parsed data.")
+        return cls(**class_kwargs)
+
+
+@dataclass
+class CorstonePerformanceMetrics:
+    """Performance metrics parsed from generic inference output."""
+
+    npu_model_stats: CorstoneModelPerformanceMetrics
+    npu_per_layer_stats: list = field(default_factory=list)
+
+    @classmethod
+    def from_fvp_out(
+        cls, target: str, metrics: dict[str, Any], per_layer_file: Path
+    ) -> CorstonePerformanceMetrics:
+        """Create CorstoneModelPerformanceMetrics from FVP output."""
+        return cls(
+            CorstoneModelPerformanceMetrics.from_fvp_metrics(target, metrics),
+            _parse_per_layer_csv(per_layer_file),
+        )
 
     def to_standardized_output(  # pylint: disable=too-many-locals
         self,
@@ -162,41 +248,52 @@ class PerformanceMetrics:
         metrics = [
             schema.Metric(
                 name="npu_active_cycles",
-                value=float(self.npu_active_cycles),
+                value=float(self.npu_model_stats.npu_active_cycles),
                 unit="cycles",
             ),
             schema.Metric(
                 name="npu_idle_cycles",
-                value=float(self.npu_idle_cycles),
+                value=float(self.npu_model_stats.npu_idle_cycles),
                 unit="cycles",
             ),
             schema.Metric(
                 name="npu_total_cycles",
-                value=float(self.npu_total_cycles),
+                value=float(self.npu_model_stats.npu_total_cycles),
                 unit="cycles",
             ),
             schema.Metric(
                 name="npu_axi0_rd_data_beat_received",
-                value=float(self.npu_axi0_rd_data_beat_received),
+                value=float(self.npu_model_stats.npu_axi0_rd_data_beat_received),
                 unit="beats",
             ),
             schema.Metric(
                 name="npu_axi0_wr_data_beat_written",
-                value=float(self.npu_axi0_wr_data_beat_written),
+                value=float(self.npu_model_stats.npu_axi0_wr_data_beat_written),
                 unit="beats",
             ),
             schema.Metric(
                 name="npu_axi1_rd_data_beat_received",
-                value=float(self.npu_axi1_rd_data_beat_received),
+                value=float(self.npu_model_stats.npu_axi1_rd_data_beat_received),
                 unit="beats",
             ),
         ]
 
-        if self.npu_axi1_wr_data_beat_written is not None:
+        breakdowns = []
+        for stat in self.npu_per_layer_stats:
+            breakdowns.append(
+                schema.Breakdown(
+                    scope=schema.OperatorScope.OPERATOR,
+                    name=stat["NNG Operator"],
+                    location=stat["Name"],
+                    metrics=_build_per_layer_metrics(stat),
+                )
+            )
+
+        if self.npu_model_stats.npu_axi1_wr_data_beat_written is not None:
             metrics.append(
                 schema.Metric(
                     name="npu_axi1_wr_data_beat_written",
-                    value=float(self.npu_axi1_wr_data_beat_written),
+                    value=float(self.npu_model_stats.npu_axi1_wr_data_beat_written),
                     unit="beats",
                 )
             )
@@ -210,6 +307,7 @@ class PerformanceMetrics:
             errors=[],
             metrics=metrics,
             mode=schema.ModeType.SIMULATED,  # Corstone is simulation
+            breakdowns=breakdowns,
         )
 
         return schema.StandardizedOutput(
@@ -240,26 +338,15 @@ class GenericInferenceOutputParser:
         if res_b64 := self.pattern.search(line):
             self.base64_data.append(res_b64.group(1))
 
-    def get_metrics(self, target: str = "default") -> PerformanceMetrics:
+    def get_metrics(
+        self, output_dir: Path, target: str = "default"
+    ) -> CorstonePerformanceMetrics:
         """Parse the collected data and return perf metrics."""
         try:
             parsed_metrics = self._parse_data()
-
-            metric_names = TARGET_METRIC_MAPS.get(target, TARGET_METRIC_MAPS["default"])
-
-            metrics_kwargs = {}
-            field_names = [
-                f.name
-                for f in PerformanceMetrics.__dataclass_fields__.values()  # pylint: disable=no-member
-            ]
-            for idx, metric_name in enumerate(metric_names):
-                # Only add if metric exists in parsed_metrics and field exists
-                if metric_name in parsed_metrics and idx < len(field_names):
-                    metrics_kwargs[field_names[idx]] = parsed_metrics[metric_name]
-                else:
-                    raise KeyError(f"Metric {metric_name} not found in parsed data.")
-
-            return PerformanceMetrics(**metrics_kwargs)
+            return CorstonePerformanceMetrics.from_fvp_out(
+                target, parsed_metrics, list(output_dir.glob("*_per-layer.csv"))[0]
+            )
         except Exception as err:
             raise ValueError("Unable to parse output and get metrics.") from err
 
@@ -336,6 +423,7 @@ def get_fvp_metadata(fvp: str, profile: str, target: str) -> FVPMetadata:
 class CorstoneRunConfig:
     """Configuration for running Corstone FVP generic inference."""
 
+    output_dir: Path
     backend_path: Path
     fvp: str
     target: str
@@ -391,7 +479,7 @@ def build_corstone_command(cfg: CorstoneRunConfig) -> Command:
     return Command(cmd)
 
 
-def get_metrics(cfg: CorstoneRunConfig) -> PerformanceMetrics:
+def get_metrics(cfg: CorstoneRunConfig) -> CorstonePerformanceMetrics:
     """Run generic inference and return perf metrics."""
     try:
         command = build_corstone_command(cfg)
@@ -411,12 +499,12 @@ def get_metrics(cfg: CorstoneRunConfig) -> PerformanceMetrics:
     except subprocess.CalledProcessError as err:
         raise BackendExecutionFailed("Backend execution failed.") from err
 
-    return output_parser.get_metrics(cfg.fvp)
+    return output_parser.get_metrics(cfg.output_dir, cfg.fvp)
 
 
 def estimate_performance(
-    target: str, mac: int, model: Path, backend: str
-) -> PerformanceMetrics:
+    target: str, mac: int, model: Path, backend: str, output_dir: Path
+) -> CorstonePerformanceMetrics:
     """Get performance estimations."""
     backend_repo = get_backend_repository()
     backend_path, settings = backend_repo.get_backend_settings(backend)
@@ -425,6 +513,7 @@ def estimate_performance(
         raise BackendExecutionFailed(f"Unable to configure backend {backend}.")
 
     cfg = CorstoneRunConfig(
+        output_dir=output_dir,
         backend_path=backend_path,
         fvp=backend,
         target=target,

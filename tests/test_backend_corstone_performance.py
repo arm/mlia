@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, 2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, 2025-2026, Arm Limited and/or its affiliates.  # pylint: disable=line-too-long
 # SPDX-License-Identifier: Apache-2.0
 """Tests for module backend/manager."""
 from __future__ import annotations
@@ -15,11 +15,12 @@ import pytest
 
 import mlia.core.output_schema as schema
 from mlia.backend.corstone.performance import build_corstone_command
+from mlia.backend.corstone.performance import CorstoneModelPerformanceMetrics
+from mlia.backend.corstone.performance import CorstonePerformanceMetrics
 from mlia.backend.corstone.performance import CorstoneRunConfig
 from mlia.backend.corstone.performance import estimate_performance
 from mlia.backend.corstone.performance import GenericInferenceOutputParser
 from mlia.backend.corstone.performance import get_metrics
-from mlia.backend.corstone.performance import PerformanceMetrics
 from mlia.backend.errors import BackendExecutionFailed
 from mlia.core.context import ExecutionContext
 from mlia.core.events import CollectedDataEvent
@@ -62,13 +63,46 @@ def valid_fvp_output() -> list[str]:
     ]
 
 
-def test_generic_inference_output_parser_success() -> None:
+def duplicate_key_output() -> list[str]:
+    """Return FVP output with duplicate keys."""
+    json_data = """[
+    {
+        "profiling_group": "Inference",
+        "count": 1,
+        "samples": [
+            {"name": "NPU IDLE", "value": [2]},
+            {"name": "NPU IDLE", "value": [2]},
+            {"name": "NPU AXI0_RD_DATA_BEAT_RECEIVED", "value": [4]},
+            {"name": "NPU AXI0_WR_DATA_BEAT_WRITTEN", "value": [5]},
+            {"name": "NPU AXI1_RD_DATA_BEAT_RECEIVED", "value": [6]}
+        ]
+    }
+]"""
+
+    return [
+        f"<metrics>{encode_b64(json_data)}</metrics>",
+    ]
+
+
+def test_generic_inference_output_parser_success(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """Test successful generic inference output parsing."""
     output_parser = GenericInferenceOutputParser()
+    monkeypatch.setattr(
+        "mlia.backend.corstone.performance._parse_per_layer_csv",
+        MagicMock(return_value=[{"operator": "op", "cycles": 1000}]),
+    )
+    per_layer_file = tmp_path / "model_per-layer.csv"
+    per_layer_file.touch()
     for line in valid_fvp_output():
         output_parser(line)
 
-    assert output_parser.get_metrics() == PerformanceMetrics(1, 2, 3, 4, 5, 6)
+    assert output_parser.get_metrics(tmp_path) == CorstonePerformanceMetrics(
+        CorstoneModelPerformanceMetrics(1, 2, 3, 4, 5, 6),
+        [{"operator": "op", "cycles": 1000}],
+    )
 
 
 @pytest.mark.parametrize(
@@ -79,7 +113,9 @@ def test_generic_inference_output_parser_success() -> None:
         ["<metrics>123</metrics>"],
     ],
 )
-def test_generic_inference_output_parser_failure(wrong_fvp_output: list[str]) -> None:
+def test_generic_inference_output_parser_failure(
+    tmp_path: Path, wrong_fvp_output: list[str]
+) -> None:
     """Test unsuccessful generic inference output parsing."""
     output_parser = GenericInferenceOutputParser()
 
@@ -87,7 +123,7 @@ def test_generic_inference_output_parser_failure(wrong_fvp_output: list[str]) ->
         output_parser(line)
 
     with pytest.raises(ValueError, match="Unable to parse output and get metrics"):
-        output_parser.get_metrics()
+        output_parser.get_metrics(tmp_path)
 
 
 @dataclass(frozen=True)
@@ -171,6 +207,7 @@ class BuildCmdCase:
     ],
 )
 def test_build_corsone_command(
+    tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     case: BuildCmdCase,
 ) -> None:
@@ -181,6 +218,7 @@ def test_build_corsone_command(
 
     command = build_corstone_command(
         CorstoneRunConfig(
+            tmp_path,
             case.backend_path,
             case.fvp,
             case.target,
@@ -192,13 +230,14 @@ def test_build_corsone_command(
     assert command == case.expected_command
 
 
-def test_get_metrics_wrong_fvp() -> None:
+def test_get_metrics_wrong_fvp(tmp_path: Path) -> None:
     """Test that command construction should fail for wrong FVP."""
     with pytest.raises(
         BackendExecutionFailed, match=r"Unable to construct a command line for some_fvp"
     ):
         get_metrics(
             CorstoneRunConfig(
+                tmp_path,
                 Path("backend_path"),
                 "some_fvp",
                 "ethos-u55",
@@ -208,7 +247,170 @@ def test_get_metrics_wrong_fvp() -> None:
         )
 
 
-def test_estimate_performance(monkeypatch: pytest.MonkeyPatch) -> None:
+@pytest.mark.parametrize(
+    "target, per_layer_csv, model_metrics, expected_model_stats, expected_per_layer",
+    [
+        (
+            "default",
+            # pylint: disable=line-too-long
+            """TFLite_operator,NNG Operator,SRAM Usage,Peak%,Op Cycles,Network%,NPU,SRAM AC,DRAM AC,OnFlash AC,OffFlash AC,MAC Count,Network%,Util%,Name
+CONV_2D,Conv2DBias,100,50,200,10,200,50,10,5,0,1000,20,40,loc0
+CONV_2D,Conv2DBias,120,60,250,15,250,60,15,8,0,1200,25,45,loc1""",
+            # pylint: enable=line-too-long
+            {
+                "NPU IDLE": 100,
+                "NPU AXI0_RD_DATA_BEAT_RECEIVED": 200,
+                "NPU AXI0_WR_DATA_BEAT_WRITTEN": 150,
+                "NPU AXI1_RD_DATA_BEAT_RECEIVED": 180,
+                "NPU ACTIVE": 1000,
+                "NPU TOTAL": 1100,
+            },
+            CorstoneModelPerformanceMetrics(
+                npu_active_cycles=1000,
+                npu_idle_cycles=100,
+                npu_total_cycles=1100,
+                npu_axi0_rd_data_beat_received=200,
+                npu_axi0_wr_data_beat_written=150,
+                npu_axi1_rd_data_beat_received=180,
+                npu_axi1_wr_data_beat_written=None,
+            ),
+            [
+                {
+                    "TFLite_operator": "CONV_2D",
+                    "NNG Operator": "Conv2DBias",
+                    "SRAM Usage": "100",
+                    "Peak%": "50",
+                    "Op Cycles": "200",
+                    "Network%": "20",
+                    "NPU": "200",
+                    "SRAM AC": "50",
+                    "DRAM AC": "10",
+                    "OnFlash AC": "5",
+                    "OffFlash AC": "0",
+                    "MAC Count": "1000",
+                    "Util%": "40",
+                    "Name": "loc0",
+                },
+                {
+                    "TFLite_operator": "CONV_2D",
+                    "NNG Operator": "Conv2DBias",
+                    "SRAM Usage": "120",
+                    "Peak%": "60",
+                    "Op Cycles": "250",
+                    "Network%": "25",
+                    "NPU": "250",
+                    "SRAM AC": "60",
+                    "DRAM AC": "15",
+                    "OnFlash AC": "8",
+                    "OffFlash AC": "0",
+                    "MAC Count": "1200",
+                    "Util%": "45",
+                    "Name": "loc1",
+                },
+            ],
+        ),
+        (
+            "corstone-320",
+            # pylint: disable=line-too-long
+            """Original Operator,NNG Operator,Target,Staging Usage,Peak% (Staging),Op Cycles,Network% (cycles),NPU,SRAM AC,DRAM AC,OnFlash AC,OffFlash AC,MAC Count,Network% (MAC),Util% (MAC),Name
+Conv2D,Conv2D,NPU,150,40,300,30,300,70,20,0,0,1500,18,35,loc0
+Conv2D,Relu,NPU,180,50,400,35,400,80,25,0,0,2000,22,42,loc1""",
+            # pylint: enable=line-too-long
+            {
+                "NPU ACTIVE": 2000,
+                "NPU ETHOSU_PMU_SRAM_RD_DATA_BEAT_RECEIVED": 250,
+                "NPU ETHOSU_PMU_SRAM_WR_DATA_BEAT_WRITTEN": 120,
+                "NPU ETHOSU_PMU_EXT_RD_DATA_BEAT_RECEIVED": 300,
+                "NPU ETHOSU_PMU_EXT_WR_DATA_BEAT_WRITTEN": 80,
+                "NPU IDLE": 50,
+                "NPU TOTAL": 2050,
+            },
+            CorstoneModelPerformanceMetrics(
+                npu_active_cycles=2000,
+                npu_idle_cycles=50,
+                npu_total_cycles=2050,
+                npu_axi0_rd_data_beat_received=250,
+                npu_axi0_wr_data_beat_written=120,
+                npu_axi1_rd_data_beat_received=300,
+                npu_axi1_wr_data_beat_written=80,
+            ),
+            [
+                {
+                    "Original Operator": "Conv2D",
+                    "NNG Operator": "Conv2D",
+                    "Target": "NPU",
+                    "Staging Usage": "150",
+                    "Peak% (Staging)": "40",
+                    "Op Cycles": "300",
+                    "Network% (cycles)": "30",
+                    "NPU": "300",
+                    "SRAM AC": "70",
+                    "DRAM AC": "20",
+                    "OnFlash AC": "0",
+                    "OffFlash AC": "0",
+                    "MAC Count": "1500",
+                    "Network% (MAC)": "18",
+                    "Util% (MAC)": "35",
+                    "Name": "loc0",
+                },
+                {
+                    "Original Operator": "Conv2D",
+                    "NNG Operator": "Relu",
+                    "Target": "NPU",
+                    "Staging Usage": "180",
+                    "Peak% (Staging)": "50",
+                    "Op Cycles": "400",
+                    "Network% (cycles)": "35",
+                    "NPU": "400",
+                    "SRAM AC": "80",
+                    "DRAM AC": "25",
+                    "OnFlash AC": "0",
+                    "OffFlash AC": "0",
+                    "MAC Count": "2000",
+                    "Network% (MAC)": "22",
+                    "Util% (MAC)": "42",
+                    "Name": "loc1",
+                },
+            ],
+        ),
+    ],
+)
+def test_build_metrics_from_fvp_output(
+    target: str,
+    per_layer_csv: str,
+    model_metrics: dict[str, int],
+    expected_model_stats: CorstoneModelPerformanceMetrics,
+    expected_per_layer: list[dict[str, str]],
+    tmp_path: Path,
+) -> None:
+    """Test from_fvp_out method."""
+    per_layer_file = tmp_path / "per-layer.csv"
+    with open(per_layer_file, "w", encoding="utf-8") as file:
+        file.write(per_layer_csv)
+
+    perf_metrics = CorstonePerformanceMetrics.from_fvp_out(
+        target, model_metrics, per_layer_file
+    )
+    model_stats = perf_metrics.npu_model_stats
+    per_layer_stats = perf_metrics.npu_per_layer_stats
+
+    # Verify model_stats match expected values
+    assert model_stats == expected_model_stats
+
+    # Verify layer_stats are correctly parsed from CSV
+    assert len(per_layer_stats) == 2
+    assert per_layer_stats == expected_per_layer
+
+
+def test_corstone_model_performance_metrics_missing_metric() -> None:
+    """Test if KeyError is raised if a metric is missing."""
+    fvp_metrics = {"NPU ACTIVE": 1000}
+
+    with pytest.raises(KeyError, match=r"^'Metric .+ not found in parsed data.'$"):
+        CorstoneModelPerformanceMetrics.from_fvp_metrics("default", fvp_metrics)
+
+
+def test_estimate_performance(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Test function estimate_performance."""
     mock_repository = MagicMock()
     mock_repository.get_backend_settings.return_value = Path("backend_path"), {
@@ -220,6 +422,13 @@ def test_estimate_performance(monkeypatch: pytest.MonkeyPatch) -> None:
         lambda: mock_repository,
     )
 
+    monkeypatch.setattr(
+        "mlia.backend.corstone.performance._parse_per_layer_csv",
+        MagicMock(return_value=[{"operator": "op", "cycles": 1000}]),
+    )
+    per_layer_file = tmp_path / "model_per-layer.csv"
+    per_layer_file.touch()
+
     def command_output_mock(_command: Command) -> Generator[str, None, None]:
         """Mock FVP output."""
         yield from valid_fvp_output()
@@ -227,9 +436,12 @@ def test_estimate_performance(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr("mlia.utils.proc.command_output", command_output_mock)
 
     result = estimate_performance(
-        "ethos-u55", 256, Path("model.tflite"), "corstone-300"
+        "ethos-u55", 256, Path("model.tflite"), "corstone-300", tmp_path
     )
-    assert result == PerformanceMetrics(1, 2, 3, 4, 5, 6)
+    assert result == CorstonePerformanceMetrics(
+        CorstoneModelPerformanceMetrics(1, 2, 3, 4, 5, 6),
+        [{"operator": "op", "cycles": 1000}],
+    )
 
     mock_repository.get_backend_settings.assert_called_once()
 
@@ -241,7 +453,9 @@ def test_estimate_performance(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr("mlia.utils.proc.command_output", mock_check_call)
 
     with pytest.raises(BackendExecutionFailed, match="Backend execution failed."):
-        _ = estimate_performance("ethos-u55", 256, Path("model.tflite"), "corstone-300")
+        _ = estimate_performance(
+            "ethos-u55", 256, Path("model.tflite"), "corstone-300", tmp_path
+        )
 
     # Check if BackendExecutionFailed is raised if get_backend_settings
     # returns invalid results
@@ -254,29 +468,47 @@ def test_estimate_performance(monkeypatch: pytest.MonkeyPatch) -> None:
     )
 
     with pytest.raises(BackendExecutionFailed, match="Unable to configure backend"):
-        _ = estimate_performance("ethos-u55", 256, Path("model.tflite"), "corstone-300")
+        _ = estimate_performance(
+            "ethos-u55", 256, Path("model.tflite"), "corstone-300", tmp_path
+        )
 
 
-def test_performance_metrics_to_standardized_output(tmp_path: Path) -> None:
+@pytest.mark.parametrize(
+    "model_file, expected_model_format",
+    [
+        ("model.tflite", "tflite"),
+        ("model.tflite.vela", "vela"),
+        ("model", "unknown"),
+        ("model.pt", "pt"),
+    ],
+)
+def test_performance_metrics_to_standardized_output(
+    model_file: Path, expected_model_format: str, tmp_path: Path
+) -> None:
     """Test conversion of PerformanceMetrics to standardized output."""
-    perf_metrics = PerformanceMetrics(
-        npu_active_cycles=1000,
-        npu_idle_cycles=500,
-        npu_total_cycles=1500,
-        npu_axi0_rd_data_beat_received=200,
-        npu_axi0_wr_data_beat_written=100,
-        npu_axi1_rd_data_beat_received=150,
-        npu_axi1_wr_data_beat_written=75,
+    perf_metrics = CorstonePerformanceMetrics(
+        CorstoneModelPerformanceMetrics(
+            npu_active_cycles=1000,
+            npu_idle_cycles=500,
+            npu_total_cycles=1500,
+            npu_axi0_rd_data_beat_received=200,
+            npu_axi0_wr_data_beat_written=100,
+            npu_axi1_rd_data_beat_received=150,
+            npu_axi1_wr_data_beat_written=75,
+        ),
+        [{"NNG Operator": "op", "Name": "op_name", "NPU": 1000}],
     )
 
     # Create a model file for hash computation
-    model_file = tmp_path / "model.tflite"
-    model_file.write_bytes(b"test model content")
+    model_file = tmp_path / model_file
+    model_file.touch()
     output = perf_metrics.to_standardized_output(
         model_path=model_file,
         backend_name="corstone-300",
         target_config={"mac": 256, "target": "ethos-u55"},
     )
+    assert output["model"]["format"] == expected_model_format
+
     # Structure checks
     for key in ("schema_version", "backends", "target", "model", "context", "results"):
         assert key in output
@@ -300,20 +532,32 @@ def test_performance_metrics_to_standardized_output(tmp_path: Path) -> None:
     assert metrics_dict["npu_idle_cycles"]["value"] == 500
     assert metrics_dict["npu_total_cycles"]["value"] == 1500
     assert metrics_dict["npu_axi0_rd_data_beat_received"]["value"] == 200
+    assert metrics_dict["npu_axi0_wr_data_beat_written"]["value"] == 100
+    assert metrics_dict["npu_axi1_rd_data_beat_received"]["value"] == 150
+    assert metrics_dict["npu_axi1_wr_data_beat_written"]["value"] == 75
+
+    breakdown = result["breakdowns"][0]
+    assert breakdown["scope"] == "operator"
+    assert breakdown["name"] == "op"
+    assert breakdown["location"] == "op_name"
+    assert breakdown["metrics"][0] == {"name": "npu", "value": 1000, "unit": "cycles"}
 
 
 def test_performance_metrics_to_standardized_output_with_null_axi1_wr(
     tmp_path: Path,
 ) -> None:
     """Test conversion when axi1_wr_data_beat_written is None."""
-    perf_metrics = PerformanceMetrics(
-        npu_active_cycles=1000,
-        npu_idle_cycles=500,
-        npu_total_cycles=1500,
-        npu_axi0_rd_data_beat_received=200,
-        npu_axi0_wr_data_beat_written=100,
-        npu_axi1_rd_data_beat_received=150,
-        npu_axi1_wr_data_beat_written=None,
+    perf_metrics = CorstonePerformanceMetrics(
+        CorstoneModelPerformanceMetrics(
+            npu_active_cycles=1000,
+            npu_idle_cycles=500,
+            npu_total_cycles=1500,
+            npu_axi0_rd_data_beat_received=200,
+            npu_axi0_wr_data_beat_written=100,
+            npu_axi1_rd_data_beat_received=150,
+            npu_axi1_wr_data_beat_written=None,
+        ),
+        [],
     )
 
     # Create a model file for hash computation
@@ -349,13 +593,16 @@ def test_ethosu_collector_and_handler_write_json(  # pylint: disable=too-many-lo
     model.write_bytes(b"test")
 
     # Create backend corstone metrics
-    cor_metrics = PerformanceMetrics(
-        npu_active_cycles=10,
-        npu_idle_cycles=2,
-        npu_total_cycles=12,
-        npu_axi0_rd_data_beat_received=1,
-        npu_axi0_wr_data_beat_written=2,
-        npu_axi1_rd_data_beat_received=3,
+    cor_metrics = CorstonePerformanceMetrics(
+        CorstoneModelPerformanceMetrics(
+            npu_active_cycles=10,
+            npu_idle_cycles=2,
+            npu_total_cycles=12,
+            npu_axi0_rd_data_beat_received=1,
+            npu_axi0_wr_data_beat_written=2,
+            npu_axi1_rd_data_beat_received=3,
+        ),
+        [],
     )
 
     # Build an Ethos-U legacy PerformanceMetrics instance
