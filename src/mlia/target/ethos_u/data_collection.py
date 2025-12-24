@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, 2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, 2025-2026, Arm Limited and/or its affiliates.  # pylint: disable=line-too-long
 # SPDX-License-Identifier: Apache-2.0
 """Data collection module for Ethos-U."""
 from __future__ import annotations
@@ -130,7 +130,7 @@ class EthosUPerformance(ContextAwareDataCollector):
         """Collect model performance metrics."""
         tflite_model = get_tflite_model(self.model, self.context)
         estimator = EthosUPerformanceEstimator(
-            self.context,
+            self.context,  # type: ignore[arg-type]
             self.target_config,
             self.backends,
         )
@@ -268,7 +268,7 @@ class EthosUOptimizationPerformance(OptimizingPerformaceDataCollector):
     def create_estimator(self) -> PerformanceEstimator:
         """Create a PerformanceEstimator, to be overridden in subclasses."""
         return EthosUPerformanceEstimator(
-            self.context,
+            self.context,  # type: ignore[arg-type]
             cast(EthosUConfiguration, self.target),
             self.backends,
         )
