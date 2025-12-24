@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2025-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for standardized output schema classes."""
 import tempfile
@@ -36,12 +36,14 @@ class TestBackend:
             name="Vela Compiler",
             version="3.10.0",
             configuration={"option": "value"},
+            impl={"backend": "option"},
         )
         result = backend.to_dict()
         assert result["id"] == "vela"
         assert result["name"] == "Vela Compiler"
         assert result["version"] == "3.10.0"
         assert result["configuration"] == {"option": "value"}
+        assert result["impl"] == {"backend": "option"}
 
     def test_from_dict(self) -> None:
         """Test creation from dictionary."""
@@ -66,12 +68,22 @@ class TestComponent:
             family="ethos-u",
             model="u55",
             variant="256",
+            name="ethos-u55-256",
+            components=[
+                schema.Component(
+                    type=schema.ComponentType.SPECIFICATION, family="some-family"
+                ),
+            ],
         )
         result = component.to_dict()
         assert result["type"] == "npu"
         assert result["family"] == "ethos-u"
         assert result["model"] == "u55"
         assert result["variant"] == "256"
+        assert result["name"] == "ethos-u55-256"
+        assert result["components"] == [
+            {"type": "specification", "family": "some-family"}
+        ]
 
     def test_from_dict(self) -> None:
         """Test creation from dictionary."""
@@ -103,10 +115,12 @@ class TestTarget:
                 )
             ],
             configuration={"param": "value"},
+            host_platform="linux",
         )
         result = target.to_dict()
         assert result["profile_name"] == "ethos-u55-256"
         assert len(result["components"]) == 1
+        assert result["host_platform"] == "linux"
 
     def test_from_dict(self) -> None:
         """Test creation from dictionary."""
@@ -146,16 +160,65 @@ class TestModel:
         assert model.name == "mobilenet.tflite"
 
 
+class TestContext:
+    """Test Context class."""
+
+    def test_to_dict(self) -> None:
+        """Test conversion to dictionary."""
+        context = schema.Context(
+            runtime_configuration={"python_version": "3.10.0", "os": "linux"},
+            git={"commit": "abc123", "branch": "main"},
+            notes="Test run with new model",
+            cli_arguments=["--target", "ethos-u55", "--optimize"],
+        )
+        result = context.to_dict()
+        assert result["runtime_configuration"] == {
+            "python_version": "3.10.0",
+            "os": "linux",
+        }
+        assert result["git"] == {"commit": "abc123", "branch": "main"}
+        assert result["notes"] == "Test run with new model"
+        assert result["cli_arguments"] == ["--target", "ethos-u55", "--optimize"]
+
+    def test_from_dict(self) -> None:
+        """Test creation from dictionary."""
+        data = {
+            "runtime_configuration": {"python_version": "3.10.0", "os": "linux"},
+            "git": {"commit": "abc123", "branch": "main"},
+            "notes": "Test run with new model",
+            "cli_arguments": ["--target", "ethos-u55", "--optimize"],
+        }
+        context = schema.Context.from_dict(data)
+        assert context.runtime_configuration == {
+            "python_version": "3.10.0",
+            "os": "linux",
+        }
+        assert context.git == {"commit": "abc123", "branch": "main"}
+        assert context.notes == "Test run with new model"
+        assert context.cli_arguments == ["--target", "ethos-u55", "--optimize"]
+
+
 class TestMetric:
     """Test Metric class."""
 
     def test_to_dict(self) -> None:
         """Test conversion to dictionary."""
-        metric = schema.Metric(name="inference_time", value=10.5, unit="ms")
+        metric = schema.Metric(
+            name="inference_time",
+            value=10.5,
+            unit="ms",
+            aggregation="sum",
+            samples=5,
+            qualifiers={"key": "value"},
+        )
+
         assert metric.to_dict() == {
             "name": "inference_time",
             "value": 10.5,
             "unit": "ms",
+            "aggregation": "sum",
+            "samples": 5,
+            "qualifiers": {"key": "value"},
         }
 
     def test_from_dict(self) -> None:
@@ -164,6 +227,152 @@ class TestMetric:
         metric = schema.Metric.from_dict(data)
         assert metric.name == "inference_time"
         assert metric.value == 10.5
+
+
+class TestOperatorIdentifier:
+    """Test OperatorIdentifier class."""
+
+    def test_to_dict(self) -> None:
+        """Test conversion to dictionary."""
+        operator_id = schema.OperatorIdentifier(
+            scope=schema.OperatorScope.OPERATOR,
+            name="CONV_2D",
+            location="layer_0",
+            id="op_001",
+        )
+        result = operator_id.to_dict()
+        assert result["scope"] == "operator"
+        assert result["name"] == "CONV_2D"
+        assert result["location"] == "layer_0"
+        assert result["id"] == "op_001"
+
+    def test_from_dict(self) -> None:
+        """Test creation from dictionary."""
+        data = {
+            "scope": "operator",
+            "name": "CONV_2D",
+            "location": "layer_0",
+            "id": "op_001",
+        }
+        operator_id = schema.OperatorIdentifier.from_dict(data)
+        assert operator_id.scope == schema.OperatorScope.OPERATOR
+        assert operator_id.name == "CONV_2D"
+        assert operator_id.location == "layer_0"
+        assert operator_id.id == "op_001"
+
+
+class TestBreakdown:
+    """Test Breakdown class."""
+
+    def test_to_dict(self) -> None:
+        """Test conversion to dictionary."""
+        breakdown = schema.Breakdown(
+            scope=schema.OperatorScope.OPERATOR,
+            name="CONV_2D",
+            location="layer_0",
+            metrics=[
+                schema.Metric(name="cycles", value=1000, unit="cycles"),
+                schema.Metric(name="energy", value=50.5, unit="mJ"),
+            ],
+            id="op_001",
+            qualifiers={"device": "npu", "precision": "int8"},
+        )
+        result = breakdown.to_dict()
+        assert result["scope"] == "operator"
+        assert result["name"] == "CONV_2D"
+        assert result["location"] == "layer_0"
+        assert len(result["metrics"]) == 2
+        assert result["id"] == "op_001"
+        assert result["qualifiers"] == {"device": "npu", "precision": "int8"}
+
+    def test_from_dict(self) -> None:
+        """Test creation from dictionary."""
+        data = {
+            "scope": "operator",
+            "name": "CONV_2D",
+            "location": "layer_0",
+            "metrics": [
+                {"name": "cycles", "value": 1000, "unit": "cycles"},
+                {"name": "energy", "value": 50.5, "unit": "mJ"},
+            ],
+            "id": "op_001",
+            "qualifiers": {"device": "npu", "precision": "int8"},
+        }
+        breakdown = schema.Breakdown.from_dict(data)
+        assert breakdown.scope == schema.OperatorScope.OPERATOR
+        assert breakdown.name == "CONV_2D"
+        assert breakdown.location == "layer_0"
+        assert len(breakdown.metrics) == 2
+        assert breakdown.id == "op_001"
+        assert breakdown.qualifiers == {"device": "npu", "precision": "int8"}
+
+
+class TestCheck:
+    """Test Check class."""
+
+    def test_to_dict(self) -> None:
+        """Test conversion to dictionary."""
+        check = schema.Check(
+            id="compatibility_check",
+            status=schema.CheckStatus.PASS,
+            details={"message": "All operators supported", "count": 42},
+        )
+        result = check.to_dict()
+        assert result["id"] == "compatibility_check"
+        assert result["status"] == "pass"
+        assert result["details"] == {"message": "All operators supported", "count": 42}
+
+    def test_from_dict(self) -> None:
+        """Test creation from dictionary."""
+        data = {
+            "id": "compatibility_check",
+            "status": "pass",
+            "details": {"message": "All operators supported", "count": 42},
+        }
+        check = schema.Check.from_dict(data)
+        assert check.id == "compatibility_check"
+        assert check.status == schema.CheckStatus.PASS
+        assert check.details == {"message": "All operators supported", "count": 42}
+
+
+class TestEntity:
+    """Test Entity class."""
+
+    def test_to_dict(self) -> None:
+        """Test conversion to dictionary."""
+        entity = schema.Entity(
+            scope=schema.OperatorScope.OPERATOR,
+            name="CONV_2D",
+            location="layer_0",
+            placement="npu",
+            id="entity_001",
+            attributes={"dtype": "int8", "kernel_size": [3, 3]},
+        )
+        result = entity.to_dict()
+        assert result["scope"] == "operator"
+        assert result["name"] == "CONV_2D"
+        assert result["location"] == "layer_0"
+        assert result["placement"] == "npu"
+        assert result["id"] == "entity_001"
+        assert result["attributes"] == {"dtype": "int8", "kernel_size": [3, 3]}
+
+    def test_from_dict(self) -> None:
+        """Test creation from dictionary."""
+        data = {
+            "scope": "operator",
+            "name": "CONV_2D",
+            "location": "layer_0",
+            "placement": "npu",
+            "id": "entity_001",
+            "attributes": {"dtype": "int8", "kernel_size": [3, 3]},
+        }
+        entity = schema.Entity.from_dict(data)
+        assert entity.scope == schema.OperatorScope.OPERATOR
+        assert entity.name == "CONV_2D"
+        assert entity.location == "layer_0"
+        assert entity.placement == "npu"
+        assert entity.id == "entity_001"
+        assert entity.attributes == {"dtype": "int8", "kernel_size": [3, 3]}
 
 
 class TestResult:
@@ -176,11 +385,15 @@ class TestResult:
             status=schema.ResultStatus.OK,
             producer="vela",
             metrics=[schema.Metric(name="cycles", value=1000, unit="cycles")],
+            warnings=["warning"],
+            errors=["error"],
         )
         result_dict = result.to_dict()
         assert result_dict["kind"] == "performance"
         assert result_dict["status"] == "ok"
         assert result_dict["producer"] == "vela"
+        assert result_dict["warnings"] == ["warning"]
+        assert result_dict["errors"] == ["error"]
         assert len(result_dict["metrics"]) == 1
 
     def test_from_dict(self) -> None:
@@ -243,11 +456,13 @@ class TestStandardizedOutput:
                     producer="vela",
                 )
             ],
+            extensions={"ext0": "val0"},
         )
         result_dict = output.to_dict()
         assert result_dict["schema_version"] == schema.SCHEMA_VERSION
         assert "run_id" in result_dict
         assert "timestamp" in result_dict
+        assert "extensions" in result_dict
 
     def test_serialization_roundtrip(self) -> None:
         """Test serialization and deserialization."""
