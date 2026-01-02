@@ -1,14 +1,17 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, 2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Cortex-A tools module."""
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 from typing import Any
 from typing import cast
 
+import mlia
+import mlia.core.output_schema as schema
 from mlia.backend.armnn_tflite_delegate.compat import (
     ARMNN_TFLITE_DELEGATE as TFLITE_DELEGATE_COMPAT,
 )
@@ -16,6 +19,9 @@ from mlia.nn.tensorflow.tflite_graph import Op
 from mlia.nn.tensorflow.tflite_graph import parse_subgraphs
 from mlia.nn.tensorflow.tflite_graph import TFL_ACTIVATION_FUNCTION
 from mlia.target.cortex_a.config import CortexAConfiguration
+from mlia.utils.filesystem import sha256
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -121,6 +127,186 @@ class CortexACompatibilityInfo:
                 return CortexACompatibilityInfo.SupportType.ACTIVATION_NOT_SUPPORTED
 
         return CortexACompatibilityInfo.SupportType.COMPATIBLE
+
+    def to_standardized_output(  # pylint: disable=too-many-locals
+        self,
+        model_path: Path,
+        run_id: str | None = None,
+        timestamp: str | None = None,
+        cli_arguments: list[str] | None = None,
+        target_config: dict[str, Any] | None = None,
+        backend_config: dict[str, Any] | None = None,
+    ) -> Any:  # Returns StandardizedOutput but avoid circular import
+        """Convert to standardized output format.
+
+        Args:
+            model_path: Path to the model file
+            run_id: Optional run ID (will be generated if not provided)
+            timestamp: Optional ISO 8601 timestamp (will be generated if not provided)
+            cli_arguments: Optional CLI arguments used for the run
+            target_config: Optional target configuration parameters
+            backend_config: Optional backend configuration parameters
+
+        Returns:
+            StandardizedOutput object
+        """
+        # Generate run_id and timestamp if not provided
+        if run_id is None:
+            run_id = schema.StandardizedOutput.create_run_id()
+        if timestamp is None:
+            timestamp = schema.StandardizedOutput.create_timestamp()
+
+        # Create tool info
+        tool = schema.Tool(name="mlia", version=mlia.__version__)
+
+        # Create backend with version from self.backend_info
+        # Extract version from backend_info string like
+        # "Arm NN TensorFlow Lite Delegate 23.05"
+        backend_parts = self.backend_info.rsplit(" ", 1)
+        backend_version = backend_parts[1] if len(backend_parts) > 1 else "unknown"
+
+        backend = schema.Backend(
+            id="armnn-tflite-delegate",
+            name="Arm NN TensorFlow Lite Delegate",
+            version=backend_version,
+            configuration=backend_config or {},
+        )
+
+        # Create target with CPU component
+        cpu_type = (target_config or {}).get("cpu", "cortex-a")
+
+        cpu_component = schema.Component(
+            type=schema.ComponentType.CPU,
+            family=cpu_type,
+            model=None,
+            variant=None,
+        )
+
+        target = schema.Target(
+            profile_name=cpu_type,
+            target_type="cpu",
+            components=[cpu_component],
+            configuration=target_config or {},
+        )
+
+        # Create model
+        model_hash = sha256(model_path)
+        model = schema.Model(
+            name=str(model_path),
+            format="tflite",
+            hash=model_hash,
+        )
+
+        # Create context
+        context = schema.Context(
+            cli_arguments=cli_arguments or [],
+        )
+
+        # Create checks for each operator
+        checks: list[schema.Check] = []
+        entities: list[schema.Entity] = []
+
+        for idx, operator in enumerate(self.operators):
+            entity_id = f"op_{idx}"
+
+            # Determine support type and placement
+            support_type = self.get_support_type(operator)
+            is_compatible = support_type == self.SupportType.COMPATIBLE
+
+            # Create entity for this operator
+            entity = schema.Entity(
+                scope=schema.OperatorScope.OPERATOR,
+                name=operator.full_name,
+                location=operator.location,
+                placement="cpu" if is_compatible else "unsupported",
+                id=entity_id,
+                attributes={
+                    "operator_name": operator.name,
+                    "is_custom": operator.is_custom,
+                    "activation_function": operator.activation_func.name,
+                    "index": idx,
+                },
+            )
+            entities.append(entity)
+
+            # Create check for compatibility
+            if is_compatible:
+                status = schema.CheckStatus.PASS
+                details = {}
+            else:
+                status = schema.CheckStatus.FAIL
+                reasons = []
+                if support_type == self.SupportType.OP_NOT_SUPPORTED:
+                    reasons.append(
+                        {
+                            "description": "Operator not supported",
+                            "detail": (
+                                f"Operator '{operator.full_name}' is not "
+                                f"supported by Arm NN TFLite Delegate"
+                            ),
+                        }
+                    )
+                elif support_type == self.SupportType.ACTIVATION_NOT_SUPPORTED:
+                    supported_funcs = self.supported_activation_functions(operator)
+                    reasons.append(
+                        {
+                            "description": "Activation function not supported",
+                            "detail": (
+                                f"Activation '{operator.activation_func.name}' "
+                                f"not in supported list: {supported_funcs}"
+                            ),
+                        }
+                    )
+                details = {"reasons": reasons}
+
+            check = schema.Check(
+                id=f"armnn_support_{entity_id}",
+                status=status,
+                details=details,
+            )
+            checks.append(check)
+
+        # Determine overall result status
+        if self.is_cortex_a_compatible:
+            result_status = schema.ResultStatus.OK
+        elif any(self.is_op_compatible(op) for op in self.operators):
+            result_status = schema.ResultStatus.PARTIAL
+        else:
+            result_status = schema.ResultStatus.INCOMPATIBLE
+
+        # Create result
+        result = schema.Result(
+            kind=schema.ResultKind.COMPATIBILITY,
+            status=result_status,
+            producer=backend.id,
+            warnings=[],
+            errors=[],
+            checks=checks,
+            entities=entities,
+        )
+
+        return schema.StandardizedOutput(
+            schema_version="1.0.0",
+            run_id=run_id,
+            timestamp=timestamp,
+            tool=tool,
+            target=target,
+            model=model,
+            context=context,
+            backends=[backend],
+            results=[result],
+            extensions={},
+        )
+
+
+@dataclass
+class CortexACompatibilityResult:
+    """Wrapper for Cortex-A compatibility with both legacy and standardized output."""
+
+    legacy_info: CortexACompatibilityInfo
+    standardized_output: Any | None = (
+        None  # StandardizedOutput object, Any to avoid circular import
+    )
 
 
 def get_cortex_a_compatibility_info(

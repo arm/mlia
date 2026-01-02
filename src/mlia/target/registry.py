@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Target module."""
 from __future__ import annotations
@@ -52,6 +52,27 @@ def builtin_optimization_names() -> list[str]:
     return BUILTIN_SUPPORTED_OPTIMIZATION_NAMES
 
 
+def profiles_by_target() -> dict[str, list[str]]:
+    """Return profiles grouped by target name."""
+    target_profiles: dict[str, list[str]] = {}
+
+    for profile_name in BUILTIN_SUPPORTED_PROFILE_NAMES:
+        try:
+            target_name = get_target(profile_name)
+            if target_name not in target_profiles:
+                target_profiles[target_name] = []
+            target_profiles[target_name].append(profile_name)
+        except Exception:  # nosec B112  # pylint: disable=broad-except
+            # Skip profiles that can't be loaded
+            continue
+
+    # Sort profiles within each target
+    for profiles in target_profiles.values():
+        profiles.sort()
+
+    return dict(sorted(target_profiles.items()))
+
+
 @lru_cache
 def profile(target_profile: str | Path) -> TargetProfile:
     """Get the target profile data (built-in or custom file)."""
@@ -103,7 +124,10 @@ def get_target(target_profile: str | Path) -> str:
 def create_target_profile(path: Path) -> TargetProfile:
     """Create a new instance of a TargetProfile from the file."""
     profile_data = load_profile(path)
-    target = profile_data["target"]
+    # Support both old 'target' field and new 'target_type' field
+    target = profile_data.get("target_type") or profile_data.get("target")
+    if not target:
+        raise ValueError(f"Profile {path} must contain 'target_type' or 'target' field")
     target_info = registry.items[target]
     return target_info.target_profile_cls.load_json_data(profile_data)
 

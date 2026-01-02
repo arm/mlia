@@ -1,0 +1,230 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.arm.com/mlia/output-schema-1.0.0.json",
+  "title": "MLIA Unified Output Schema (v1.0.0)",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "run_id",
+    "timestamp",
+    "tool",
+    "target",
+    "model",
+    "context",
+    "backends",
+    "results"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "run_id": { "type": "string", "format": "uuid" },
+    "timestamp": { "type": "string", "format": "date-time" },
+
+    "tool": {
+      "type": "object",
+      "required": ["name", "version"],
+      "properties": {
+        "name": { "type": "string" },
+        "version": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+
+    "backends": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "version", "configuration"],
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "version": { "type": "string" },
+          "impl": { "type": "object" },
+          "configuration": {
+            "type": "object",
+            "description": "Backend configuration or options."
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+
+    "target": {
+      "$ref": "https://schemas.arm.com/mlia/target-1.0.0.json"
+    },
+
+    "model": {
+      "type": "object",
+      "required": ["name", "format", "hash"],
+      "properties": {
+        "name": { "type": "string" },
+        "format": {
+          "type": "string",
+          "description": "Model file format",
+          "examples": ["tflite", "onnx", "vgf", "tosa"]
+        },
+        "hash": {
+          "type": "string",
+          "pattern": "^[A-Fa-f0-9]{64}$",
+          "description": "SHA-256 hash of the model file."
+        },
+        "size_bytes": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+
+    "context": {
+      "type": "object",
+      "properties": {
+        "runtime_configuration": { "type": "object" },
+        "git": {
+          "type": "object",
+          "properties": { "mlia_commit": { "type": "string" } },
+          "additionalProperties": false
+        },
+        "notes": { "type": "string" },
+        "cli_arguments": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "results": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["kind", "status", "producer"],
+        "properties": {
+          "kind": { "enum": ["compatibility", "performance"] },
+          "producer": { "type": "string" },
+          "status": {
+            "type": "string",
+            "enum": ["ok", "partial", "incompatible", "failed", "skipped"]
+          },
+          "warnings": { "type": "array", "items": { "type": "string" } },
+          "errors": { "type": "array", "items": { "type": "string" } },
+          "metrics": { "type": "array", "items": { "$ref": "#/$defs/metric" } },
+          "breakdowns": { "type": "array", "items": { "$ref": "#/$defs/breakdown" } },
+          "mode": {
+            "type": "string",
+            "enum": ["measured", "simulated", "predicted"]
+          },
+          "checks": { "type": "array", "items": { "$ref": "#/$defs/check" } },
+          "entities": { "type": "array", "items": { "$ref": "#/$defs/entity" } }
+        },
+        "additionalProperties": false
+      }
+    },
+
+    "extensions": { "type": "object", "additionalProperties": true }
+  },
+
+  "$defs": {
+    "operator_identifier": {
+      "type": "object",
+      "required": ["scope", "name", "location"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Stable identifier for this operator instance."
+        },
+        "scope": {
+          "enum": ["operator", "operator_chain"],
+          "description": "Granularity level."
+        },
+        "name": { "type": "string" },
+        "location": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+
+    "qualifiers_common": {
+      "type": "object",
+      "description": "Lightweight context qualifiers; only shared keys constrained.",
+      "properties": {
+        "placement": {
+          "type": "string",
+          "enum": ["NPU", "NX", "CPU", "GPU", "DSP", "Unknown"]
+        },
+        "phase": {
+          "type": "string",
+          "enum": ["before", "after"]
+        }
+      },
+      "patternProperties": {
+        "^[a-zA-Z_][a-zA-Z0-9_\\-]*$": {
+          "type": ["string", "number", "boolean", "array", "object"]
+        }
+      },
+      "additionalProperties": true
+    },
+
+    "metric": {
+      "type": "object",
+      "required": ["name", "value", "unit"],
+      "properties": {
+        "name": { "type": "string" },
+        "value": { "type": "number" },
+        "unit": { "type": "string" },
+        "aggregation": { "type": "string" },
+        "samples": { "type": "integer" },
+        "qualifiers": { "$ref": "#/$defs/qualifiers_common" }
+      },
+      "additionalProperties": false
+    },
+
+    "breakdown": {
+      "allOf": [
+        { "$ref": "#/$defs/operator_identifier" },
+        {
+          "type": "object",
+          "required": ["metrics"],
+          "properties": {
+            "metrics": {
+              "type": "array",
+              "items": { "$ref": "#/$defs/metric" }
+            },
+            "qualifiers": { "$ref": "#/$defs/qualifiers_common" }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+
+    "check": {
+      "type": "object",
+      "required": ["id", "status"],
+      "properties": {
+        "id": { "type": "string" },
+        "status": { "enum": ["pass", "fail", "partial"] },
+        "details": { "type": "object" }
+      },
+      "additionalProperties": false
+    },
+
+    "entity": {
+      "allOf": [
+        { "$ref": "#/$defs/operator_identifier" },
+        {
+          "type": "object",
+          "required": ["placement"],
+          "properties": {
+            "placement": {
+              "type": "string",
+              "description": "Execution placement."
+            },
+            "attributes": { "type": "object" }
+          },
+          "additionalProperties": false
+        }
+      ]
+    }
+  },
+
+  "additionalProperties": false
+}
