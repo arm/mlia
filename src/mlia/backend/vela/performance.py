@@ -13,8 +13,6 @@ from pathlib import Path
 from typing import Any
 from typing import TYPE_CHECKING
 
-import numpy as np
-
 from mlia.backend.errors import BackendUnavailableError
 
 try:
@@ -454,7 +452,7 @@ def _performance_metrics(
     layerwise_performance_info: LayerwisePerfInfo, summary_data: VelaSummary
 ) -> PerformanceMetrics:
     """Return performance metrics for optimized model."""
-    midpoint_fps = np.nan
+    midpoint_fps = 0.0
     midpoint_inference_time = summary_data.cycles_total / summary_data.core_clock
     if midpoint_inference_time > 0:
         midpoint_fps = 1 / midpoint_inference_time
