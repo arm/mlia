@@ -1,4 +1,5 @@
-# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2024, 2026, Arm Limited
+# and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Ethos-U data analysis module."""
 from __future__ import annotations
@@ -10,6 +11,8 @@ from mlia.backend.vela.compat import Operators
 from mlia.core.common import DataItem
 from mlia.core.data_analysis import Fact
 from mlia.core.data_analysis import FactExtractor
+from mlia.core.data_analysis import LayerCompatibilityIssue
+from mlia.core.data_analysis import register_fact_type
 from mlia.nn.select import OptimizationSettings
 from mlia.nn.tensorflow.tflite_compat import TFLiteCompatibilityInfo
 from mlia.target.common.reporters import analyze_tflite_compatibility_common
@@ -33,6 +36,49 @@ class HasUnsupportedOnNPUOperators(Fact):
 @dataclass
 class AllOperatorsSupportedOnNPU(Fact):
     """All model's operators supported on NPU."""
+
+
+@register_fact_type(
+    "ethos_u_layer_compatibility",
+    "layer",
+    "Ethos-U specific layer compatibility information",
+)
+@dataclass
+class EthosULayerCompatibilityIssue(LayerCompatibilityIssue):
+    """Ethos-U specific layer compatibility fact.
+
+    Extends base LayerCompatibilityIssue with NPU placement information.
+    """
+
+    npu_placement: str = "unknown"  # 'npu', 'cpu', or 'unknown'
+
+    def to_dict(self) -> dict:
+        """Convert to dictionary with proper serialization."""
+        result = super().to_dict()
+        result["npu_placement"] = self.npu_placement
+        return result
+
+
+@register_fact_type(
+    "ethos_u_layer_uses_lut",
+    "layer",
+    "Layer uses lookup table (LUT) operation on Ethos-U",
+)
+@dataclass
+class EthosULayerUsesLUT(LayerCompatibilityIssue):
+    """Fact indicating a layer uses LUT operation.
+
+    LUT operations typically run on CPU and may indicate
+    activation functions that could be optimized.
+    """
+
+    activation_type: str = "unknown"
+
+    def to_dict(self) -> dict:
+        """Convert to dictionary with proper serialization."""
+        result = super().to_dict()
+        result["activation_type"] = self.activation_type
+        return result
 
 
 @dataclass
@@ -91,6 +137,44 @@ class EthosUDataAnalyzer(FactExtractor):
     @analyze_data.register
     def analyze_operator_compatibility(self, operators: Operators) -> None:
         """Analyse operator compatibility information."""
+        for idx, op in enumerate(operators.ops):  # pylint: disable=invalid-name
+            # Determine NPU placement
+            if op.cpu_only:
+                npu_placement = "cpu"
+            elif op.run_on_npu.supported:
+                npu_placement = "npu"
+            else:
+                npu_placement = "unknown"
+
+            # Create layer compatibility fact
+            layer_fact = EthosULayerCompatibilityIssue(
+                operator_name=op.name,
+                location=f"operator/{idx}",
+                operator_type=op.op_type,
+                is_supported=op.run_on_npu.supported,
+                reasons=op.run_on_npu.reasons,
+                npu_placement=npu_placement,
+            )
+            self.add_fact(layer_fact)
+
+            # Check for LUT usage (common CPU-only patterns)
+            if not op.run_on_npu.supported:
+                # Check if this is a LUT-based operation
+                for reason_category, reason_detail in op.run_on_npu.reasons:
+                    if "LUT" in reason_category or "lookup" in reason_detail.lower():
+                        # This layer uses LUT
+                        lut_fact = EthosULayerUsesLUT(
+                            operator_name=op.name,
+                            location=f"operator/{idx}",
+                            operator_type=op.op_type,
+                            is_supported=False,
+                            reasons=op.run_on_npu.reasons,
+                            activation_type=op.op_type,
+                        )
+                        self.add_fact(lut_fact)
+                        break
+
+        # Keep network-level facts for backward compatibility
         cpu_only = [op.op_type for op in operators.ops if op.cpu_only]
         if cpu_only:
             self.add_fact(HasCPUOnlyOperators(cpu_only))
