@@ -1,4 +1,5 @@
-# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2024, 2026, Arm Limited
+# and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Module for executors.
 
@@ -21,6 +22,7 @@ from mlia.core.advice_generation import AdviceProducer
 from mlia.core.common import DataItem
 from mlia.core.context import Context
 from mlia.core.data_analysis import DataAnalyzer
+from mlia.core.data_analysis import PatternAnalyzer
 from mlia.core.data_collection import DataCollector
 from mlia.core.errors import FunctionalityNotSupportedError
 from mlia.core.events import AdviceStageFinishedEvent
@@ -32,10 +34,14 @@ from mlia.core.events import DataAnalysisStageStartedEvent
 from mlia.core.events import DataCollectionStageFinishedEvent
 from mlia.core.events import DataCollectionStageStartedEvent
 from mlia.core.events import DataCollectorSkippedEvent
+from mlia.core.events import DetectedPatternEvent
 from mlia.core.events import Event
 from mlia.core.events import ExecutionFailedEvent
 from mlia.core.events import ExecutionFinishedEvent
 from mlia.core.events import ExecutionStartedEvent
+from mlia.core.events import PatternDetectionPassEvent
+from mlia.core.events import PatternDetectionStageFinishedEvent
+from mlia.core.events import PatternDetectionStageStartedEvent
 from mlia.core.events import stage
 from mlia.core.mixins import ContextMixin
 
@@ -53,6 +59,10 @@ STAGE_COLLECTION = (
     DataCollectionStageFinishedEvent(),
 )
 STAGE_ANALYSIS = (DataAnalysisStageStartedEvent(), DataAnalysisStageFinishedEvent())
+STAGE_PATTERN_DETECTION = (
+    PatternDetectionStageStartedEvent(),
+    PatternDetectionStageFinishedEvent(),
+)
 STAGE_ADVICE = (AdviceStageStartedEvent(), AdviceStageFinishedEvent())
 
 
@@ -87,6 +97,8 @@ class DefaultWorkflowExecutor(WorkflowExecutor):
         analyzers: Sequence[DataAnalyzer],
         producers: Sequence[AdviceProducer],
         startup_events: Sequence[Event] | None = None,
+        pattern_analyzers: Sequence[PatternAnalyzer] | None = None,
+        max_pattern_passes: int = 5,
     ):
         """Init default workflow executor.
 
@@ -96,12 +108,16 @@ class DefaultWorkflowExecutor(WorkflowExecutor):
         :param producers: List of the advice producers
         :param startup_events: Optional list of the custom events that
                should be published before start of the worfkow execution.
+        :param pattern_analyzers: Optional list of pattern analyzers
+        :param max_pattern_passes: Maximum number of pattern detection passes
         """
         self.context = context
         self.collectors = collectors
         self.analyzers = analyzers
         self.producers = producers
         self.startup_events = startup_events
+        self.pattern_analyzers = pattern_analyzers or []
+        self.max_pattern_passes = max_pattern_passes
 
     def run(self) -> None:
         """Run the workflow."""
@@ -116,6 +132,10 @@ class DefaultWorkflowExecutor(WorkflowExecutor):
             collected_data = self.collect_data()
 
             analyzed_data = self.analyze_data(collected_data)
+
+            # Run pattern detection if pattern analyzers are configured
+            if self.pattern_analyzers:
+                analyzed_data = self.detect_patterns(analyzed_data)
 
             self.produce_advice(analyzed_data)
         except Exception as err:  # pylint: disable=broad-except
@@ -167,6 +187,55 @@ class DefaultWorkflowExecutor(WorkflowExecutor):
                 self.publish(AnalyzedDataEvent(data_item))
         return analyzed_data
 
+    @on_stage(STAGE_PATTERN_DETECTION)
+    def detect_patterns(self, analyzed_data: list[DataItem]) -> list[DataItem]:
+        """Detect patterns in analyzed facts.
+
+        Run pattern analyzers in multiple passes until convergence or
+        max passes reached. Each analyzer processes all facts and can
+        generate new composite facts.
+
+        :param analyzed_data: list of analyzed data items (facts)
+        :return: extended list including detected pattern facts
+        """
+        all_facts = list(analyzed_data)
+        pass_number = 0
+
+        while pass_number < self.max_pattern_passes:
+            pass_number += 1
+            new_facts_this_pass = 0
+
+            for analyzer in self.pattern_analyzers:
+                # Clear cache at the start of each pass
+                if hasattr(analyzer, "clear_cache"):
+                    analyzer.clear_cache()
+
+                # Let analyzer process all current facts
+                new_patterns = analyzer.analyze_patterns(all_facts)
+
+                # Add newly detected patterns to the fact list
+                for pattern_fact in new_patterns:
+                    all_facts.append(pattern_fact)
+                    new_facts_this_pass += 1
+                    self.publish(DetectedPatternEvent(pattern_fact))
+
+                # Update analyzer's internal state
+                if hasattr(analyzer, "detected_patterns"):
+                    analyzer.detected_patterns = new_patterns
+
+            # Publish pass event
+            self.publish(
+                PatternDetectionPassEvent(
+                    pass_number=pass_number, new_facts_count=new_facts_this_pass
+                )
+            )
+
+            # Converged - no new facts detected
+            if new_facts_this_pass == 0:
+                break
+
+        return all_facts
+
     @on_stage(STAGE_ADVICE)
     def produce_advice(self, analyzed_data: list[DataItem]) -> None:
         """Produce advice.
@@ -198,6 +267,7 @@ class DefaultWorkflowExecutor(WorkflowExecutor):
             for comp in itertools.chain(
                 self.collectors,
                 self.analyzers,
+                self.pattern_analyzers,
                 self.producers,
                 self.context.event_handlers or [],
             )
