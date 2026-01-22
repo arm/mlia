@@ -1,4 +1,5 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, 2026, Arm Limited
+# and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Inference advisor module."""
 from __future__ import annotations
@@ -11,6 +12,7 @@ from mlia.core.advice_generation import AdviceProducer
 from mlia.core.common import NamedEntity
 from mlia.core.context import Context
 from mlia.core.data_analysis import DataAnalyzer
+from mlia.core.data_analysis import PatternAnalyzer
 from mlia.core.data_collection import DataCollector
 from mlia.core.events import Event
 from mlia.core.mixins import ParameterResolverMixin
@@ -42,6 +44,7 @@ class DefaultInferenceAdvisor(InferenceAdvisor, ParameterResolverMixin):
             self.get_analyzers(context),
             self.get_producers(context),
             self.get_events(context),
+            self.get_pattern_analyzers(context),
         )
 
     @abstractmethod
@@ -59,6 +62,14 @@ class DefaultInferenceAdvisor(InferenceAdvisor, ParameterResolverMixin):
     @abstractmethod
     def get_events(self, context: Context) -> list[Event]:
         """Return list of the startup events."""
+
+    @abstractmethod
+    def get_pattern_analyzers(self, context: Context) -> list[PatternAnalyzer]:
+        """Return list of the pattern analyzers.
+
+        Pattern analyzers detect patterns in facts and generate composite facts.
+        Return empty list if pattern detection is not needed.
+        """
 
     def get_string_parameter(self, context: Context, param: str) -> str:
         """Get string parameter value."""
