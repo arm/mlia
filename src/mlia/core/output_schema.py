@@ -82,6 +82,22 @@ class CheckStatus(str, Enum):
     PARTIAL = "partial"
 
 
+class AdviceCategory(str, Enum):
+    """Advice category enumeration."""
+
+    COMPATIBILITY = "compatibility"
+    PERFORMANCE = "performance"
+    OPTIMIZATION = "optimization"
+
+
+class AdviceSeverity(str, Enum):
+    """Advice severity enumeration."""
+
+    INFO = "info"
+    WARNING = "warning"
+    ERROR = "error"
+
+
 @dataclass(frozen=True)
 class Tool:
     """Tool information."""
@@ -438,7 +454,48 @@ class Entity:
 
 
 @dataclass(frozen=True)
-class Result:
+class Advice:
+    """Advice information."""
+
+    id: str  # pylint: disable=invalid-name
+    category: AdviceCategory
+    severity: AdviceSeverity
+    message: str
+    affected_entities: list[OperatorIdentifier] = field(default_factory=list)
+    details: dict[str, Any] = field(default_factory=dict)
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert to dictionary."""
+        result: dict[str, Any] = {
+            "id": self.id,
+            "category": self.category.value,
+            "severity": self.severity.value,
+            "message": self.message,
+        }
+        if self.affected_entities:
+            result["affected_entities"] = [e.to_dict() for e in self.affected_entities]
+        if self.details:
+            result["details"] = self.details
+        return result
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> Advice:
+        """Create from dictionary."""
+        return cls(
+            id=data["id"],
+            category=AdviceCategory(data["category"]),
+            severity=AdviceSeverity(data["severity"]),
+            message=data["message"],
+            affected_entities=[
+                OperatorIdentifier.from_dict(e)
+                for e in data.get("affected_entities", [])
+            ],
+            details=data.get("details", {}),
+        )
+
+
+@dataclass(frozen=True)
+class Result:  # pylint: disable=too-many-instance-attributes
     """Result information."""
 
     kind: ResultKind
@@ -451,6 +508,7 @@ class Result:
     mode: ModeType | None = None
     checks: list[Check] = field(default_factory=list)
     entities: list[Entity] = field(default_factory=list)
+    advices: list[Advice] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
@@ -473,6 +531,8 @@ class Result:
             result["checks"] = [c.to_dict() for c in self.checks]
         if self.entities:
             result["entities"] = [e.to_dict() for e in self.entities]
+        if self.advices:
+            result["advices"] = [a.to_dict() for a in self.advices]
         return result
 
     @classmethod
@@ -489,6 +549,7 @@ class Result:
             mode=ModeType(data["mode"]) if "mode" in data else None,
             checks=[Check.from_dict(c) for c in data.get("checks", [])],
             entities=[Entity.from_dict(e) for e in data.get("entities", [])],
+            advices=[Advice.from_dict(a) for a in data.get("advices", [])],
         )
 
 
