@@ -1,4 +1,5 @@
-# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2024, 2026, Arm Limited
+# and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for Ethos-U data analysis module."""
 from __future__ import annotations
@@ -24,6 +25,7 @@ from mlia.target.common.reporters import TFLiteCompatibilityCheckFailed
 from mlia.target.ethos_u.config import EthosUConfiguration
 from mlia.target.ethos_u.data_analysis import AllOperatorsSupportedOnNPU
 from mlia.target.ethos_u.data_analysis import EthosUDataAnalyzer
+from mlia.target.ethos_u.data_analysis import EthosULayerCompatibilityIssue
 from mlia.target.ethos_u.data_analysis import HasCPUOnlyOperators
 from mlia.target.ethos_u.data_analysis import HasUnsupportedOnNPUOperators
 from mlia.target.ethos_u.data_analysis import OptimizationDiff
@@ -74,6 +76,14 @@ def test_perf_metrics_diff() -> None:
                 ]
             ),
             [
+                EthosULayerCompatibilityIssue(
+                    operator_name="CPU operator",
+                    location="operator/0",
+                    operator_type="CPU operator type",
+                    is_supported=False,
+                    reasons=[("CPU only operator", "")],
+                    npu_placement="cpu",
+                ),
                 HasCPUOnlyOperators(["CPU operator type"]),
                 HasUnsupportedOnNPUOperators(1.0),
             ],
@@ -89,6 +99,14 @@ def test_perf_metrics_diff() -> None:
                 ]
             ),
             [
+                EthosULayerCompatibilityIssue(
+                    operator_name="NPU operator",
+                    location="operator/0",
+                    operator_type="NPU operator type",
+                    is_supported=True,
+                    reasons=[],
+                    npu_placement="npu",
+                ),
                 AllOperatorsSupportedOnNPU(),
             ],
         ],
