@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, 2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022, 2025-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for module advisor."""
 from pathlib import Path
@@ -90,6 +90,10 @@ def test_default_inference_advisor(test_tflite_model: Path) -> None:
         def get_events(self, context: Context) -> list[Event]:
             """Return list of the startup events."""
             return [event_mock]
+
+        def get_pattern_analyzers(self, _context: Context) -> list:
+            """Return list of the pattern analyzers."""
+            return []
 
     advisor = MyDefaultInferenceAdvisor()
     workflow_executor = advisor.configure(context_mock)

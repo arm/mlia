@@ -1,4 +1,5 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, 2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, 2025-2026, Arm Limited
+# and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """TOSA advisor."""
 from __future__ import annotations
@@ -81,6 +82,10 @@ class TOSAInferenceAdvisor(DefaultInferenceAdvisor):
                 MetadataDisplay(model),
             )
         ]
+
+    def get_pattern_analyzers(self, _context: Context) -> list:
+        """Return list of the pattern analyzers."""
+        return []
 
 
 def configure_and_get_tosa_advisor(

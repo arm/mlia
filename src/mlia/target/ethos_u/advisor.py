@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Ethos-U MLIA module."""
 from __future__ import annotations
@@ -108,6 +108,10 @@ class EthosUInferenceAdvisor(DefaultInferenceAdvisor):
         return [
             EthosUAdvisorStartedEvent(target_config=target_config, model=model),
         ]
+
+    def get_pattern_analyzers(self, _context: Context) -> list:
+        """Return list of the pattern analyzers."""
+        return []
 
     def _get_target_config(self, context: Context) -> EthosUConfiguration:
         """Get target configuration."""
