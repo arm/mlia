@@ -22,6 +22,7 @@ from mlia.target.ethos_u.data_analysis import AllOperatorsSupportedOnNPU
 from mlia.target.ethos_u.data_analysis import HasCPUOnlyOperators
 from mlia.target.ethos_u.data_analysis import HasUnsupportedOnNPUOperators
 from mlia.target.ethos_u.data_analysis import OptimizationResults
+from mlia.target.ethos_u.pattern_analysis import IneffectiveActivationPattern
 
 
 class EthosUAdviceProducer(FactBasedAdviceProducer):
@@ -176,6 +177,30 @@ class EthosUAdviceProducer(FactBasedAdviceProducer):
     ) -> None:
         """Advice for the failed TensorFlow Lite compatibility checks."""
         handle_tflite_check_failed_common(self, _data_item)
+
+    @produce_advice.register
+    @advice_category(AdviceCategory.COMPATIBILITY, AdviceCategory.PERFORMANCE)
+    def handle_ineffective_activation_pattern(
+        self, data_item: IneffectiveActivationPattern
+    ) -> None:
+        """Advice for ineffective activation function patterns."""
+        layer_word = "layer" if data_item.layer_count == 1 else "layers"
+        activation_list = ", ".join(data_item.activation_types)
+
+        message = (
+            f"Detected {data_item.layer_count} {layer_word} using "
+            f"LUT-based activation functions ({activation_list}). "
+            f"{data_item.recommendation}"
+        )
+
+        if data_item.affected_layers:
+            message += f" Affected layers: {', '.join(data_item.affected_layers)}"
+
+        self.add_advice(
+            message=message,
+            category=SchemaAdviceCategory.PERFORMANCE,
+            severity=AdviceSeverity.WARNING,
+        )
 
     @staticmethod
     def get_next_optimization_targets(
