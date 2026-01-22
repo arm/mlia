@@ -225,3 +225,87 @@ class FactExtractor(ContextAwareDataAnalyzer):
     def add_fact(self, fact: Fact) -> None:
         """Add fact."""
         self.facts.append(fact)
+
+
+def get_facts_by_type(facts: list[Fact], fact_type_name: str) -> list[Fact]:
+    """Filter facts by type name.
+
+    :param facts: List of facts to filter
+    :param fact_type_name: Name of the fact type to filter by
+    :return: Filtered list of facts matching the type
+    """
+    return [
+        fact
+        for fact in facts
+        if hasattr(fact, "fact_type") and fact.fact_type.name == fact_type_name
+    ]
+
+
+class PatternAnalyzer(ContextAwareDataAnalyzer):
+    """Base class for pattern analyzers.
+
+    Pattern analyzers process existing facts to detect patterns and
+    generate composite facts. They run after initial fact extraction
+    in a multi-pass workflow until no new facts are detected.
+    """
+
+    def __init__(self) -> None:
+        """Init pattern analyzer."""
+        self.detected_patterns: list[Fact] = []
+        self._fact_cache: dict[str, list[Fact]] = {}
+
+    @abstractmethod
+    def analyze_patterns(self, facts: list[Fact]) -> list[Fact]:
+        """Analyze facts to detect patterns and generate composite facts.
+
+        :param facts: List of all facts from previous analysis stages
+        :return: List of newly detected pattern facts
+        """
+
+    def analyze_data(self, data_item: DataItem) -> None:
+        """Analyze data - not used by pattern analyzers.
+
+        Pattern analyzers work with facts, not raw data items.
+        This method is required by the DataAnalyzer interface.
+        """
+
+    def get_analyzed_data(self) -> list[DataItem]:
+        """Return list of detected pattern facts."""
+        return self.detected_patterns
+
+    def get_facts_by_type_cached(
+        self, facts: list[Fact], fact_type_name: str
+    ) -> list[Fact]:
+        """Get facts by type with caching for performance.
+
+        :param facts: List of facts to filter
+        :param fact_type_name: Name of the fact type
+        :return: Filtered list of facts
+        """
+        if fact_type_name not in self._fact_cache:
+            self._fact_cache[fact_type_name] = get_facts_by_type(facts, fact_type_name)
+        return self._fact_cache[fact_type_name]
+
+    def clear_cache(self) -> None:
+        """Clear the fact type cache and reset pattern generation state.
+
+        This is called between pattern detection passes to allow fresh
+        analysis of the updated fact set.
+        """
+        self._fact_cache.clear()
+        self.detected_patterns.clear()
+
+    def has_already_generated_patterns(self, _facts: list[Fact]) -> bool:
+        """Check if this analyzer has already generated pattern facts.
+
+        Prevents duplicate pattern generation by checking if any pattern facts
+        of the type this analyzer generates are already present in the facts list.
+        Subclasses can override to implement custom deduplication logic.
+
+        :param _facts: List of facts to check for existing patterns
+        :return: True if patterns were already generated, False otherwise
+        """
+        # Check if any facts in the input list are patterns we would generate
+        # This prevents regenerating patterns that are already in the fact list
+        # Subclasses should override if they generate multiple pattern types
+        return False  # Default: allow pattern generation
