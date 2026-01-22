@@ -15,6 +15,7 @@ from mlia.core.common import AdviceCategory
 from mlia.core.context import Context
 from mlia.core.context import ExecutionContext
 from mlia.core.data_analysis import DataAnalyzer
+from mlia.core.data_analysis import PatternAnalyzer
 from mlia.core.data_collection import DataCollector
 from mlia.core.events import Event
 from mlia.nn.tensorflow.utils import is_tflite_model
@@ -29,6 +30,7 @@ from mlia.target.ethos_u.data_collection import EthosUOptimizationPerformance
 from mlia.target.ethos_u.data_collection import EthosUPerformance
 from mlia.target.ethos_u.events import EthosUAdvisorStartedEvent
 from mlia.target.ethos_u.handlers import EthosUEventHandler
+from mlia.target.ethos_u.pattern_analysis import ActivationFunctionPatternAnalyzer
 from mlia.target.registry import profile
 from mlia.utils.types import is_list_of
 
@@ -93,6 +95,12 @@ class EthosUInferenceAdvisor(DefaultInferenceAdvisor):
             EthosUDataAnalyzer(),
         ]
 
+    def get_pattern_analyzers(self, context: Context) -> list[PatternAnalyzer]:
+        """Return list of the pattern analyzers."""
+        return [
+            ActivationFunctionPatternAnalyzer(),
+        ]
+
     def get_producers(self, context: Context) -> list[AdviceProducer]:
         """Return list of the advice producers."""
         return [
@@ -108,10 +116,6 @@ class EthosUInferenceAdvisor(DefaultInferenceAdvisor):
         return [
             EthosUAdvisorStartedEvent(target_config=target_config, model=model),
         ]
-
-    def get_pattern_analyzers(self, _context: Context) -> list:
-        """Return list of the pattern analyzers."""
-        return []
 
     def _get_target_config(self, context: Context) -> EthosUConfiguration:
         """Get target configuration."""
