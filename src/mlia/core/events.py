@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, 2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Module for the events and related functionality.
 
@@ -188,6 +188,45 @@ class AdviceStageFinishedEvent(SystemEvent):
 
     This event is published when advice generation stage finished.
     """
+
+
+@dataclass
+class PatternDetectionStageStartedEvent(SystemEvent):
+    """Pattern detection stage started.
+
+    This event is published when pattern detection stage started.
+    """
+
+
+@dataclass
+class PatternDetectionStageFinishedEvent(SystemEvent):
+    """Pattern detection stage finished.
+
+    This event is published when pattern detection stage finished.
+    """
+
+
+@dataclass
+class PatternDetectionPassEvent(SystemEvent):
+    """Pattern detection pass event.
+
+    This event is published at the end of each pattern detection pass.
+    """
+
+    pass_number: int
+    new_facts_count: int
+
+
+@dataclass
+class DetectedPatternEvent(SystemEvent):
+    """Detected pattern event.
+
+    This event is published for each newly detected pattern fact.
+
+    :param pattern_fact: detected pattern fact
+    """
+
+    pattern_fact: DataItem
 
 
 @dataclass
