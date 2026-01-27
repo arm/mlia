@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from functools import singledispatchmethod
 
 from mlia.backend.vela.compat import Operators
+from mlia.backend.vela.compat import VelaCompatibilityResult
 from mlia.core.common import DataItem
 from mlia.core.data_analysis import Fact
 from mlia.core.data_analysis import FactExtractor
@@ -16,7 +17,10 @@ from mlia.core.data_analysis import register_fact_type
 from mlia.nn.select import OptimizationSettings
 from mlia.nn.tensorflow.tflite_compat import TFLiteCompatibilityInfo
 from mlia.target.common.reporters import analyze_tflite_compatibility_common
+from mlia.target.ethos_u.performance import CombinedPerformanceResult
 from mlia.target.ethos_u.performance import OptimizationPerformanceMetrics
+from mlia.target.ethos_u.performance import PerformanceMetrics
+from mlia.target.ethos_u.performance import VelaPerformanceResult
 
 
 @dataclass
@@ -133,6 +137,101 @@ class EthosUDataAnalyzer(FactExtractor):
     @singledispatchmethod
     def analyze_data(self, data_item: DataItem) -> None:  # type: ignore
         """Analyse the data."""
+        print(
+            f"DEBUG: Unhandled data_item type: {type(data_item)} - "
+            f"{data_item.__class__.__module__}.{data_item.__class__.__name__}"
+        )
+
+    @analyze_data.register
+    def analyze_vela_compatibility(self, vela_result: VelaCompatibilityResult) -> None:
+        """Analyse Vela compatibility result and extract operator information."""
+        # Extract the Operators object from VelaCompatibilityResult
+        self.analyze_operator_compatibility(vela_result.legacy_info)
+        # Analyze softmax usage patterns
+        self._analyze_softmax(vela_result.legacy_info)
+
+    @analyze_data.register
+    def analyze_vela_performance(self, perf_result: VelaPerformanceResult) -> None:
+        """Analyse Vela performance result and extract operator information."""
+        self._extract_and_analyze_layerwise_perf(perf_result.legacy_info)
+
+    @analyze_data.register
+    def analyze_combined_performance(
+        self, perf_result: CombinedPerformanceResult
+    ) -> None:
+        """Analyse combined performance result and extract operator information."""
+        self._extract_and_analyze_layerwise_perf(perf_result.legacy_info)
+
+    @analyze_data.register
+    def analyze_performance_metrics(self, perf_metrics: PerformanceMetrics) -> None:
+        """Analyse performance metrics and extract operator information."""
+        self._extract_and_analyze_layerwise_perf(perf_metrics)
+
+    def _extract_and_analyze_layerwise_perf(
+        self, perf_metrics: PerformanceMetrics | None
+    ) -> None:
+        """Extract layerwise performance info and analyze for softmax operators.
+
+        :param perf_metrics: PerformanceMetrics object containing layerwise info
+        """
+        if (
+            perf_metrics
+            and hasattr(perf_metrics, "layerwise_perf_info")
+            and perf_metrics.layerwise_perf_info
+        ):
+            layerwise_info = perf_metrics.layerwise_perf_info.layerwise_info
+            if layerwise_info:
+                self._analyze_softmax(layerwise_info)
+
+    @singledispatchmethod
+    def _analyze_softmax(self, data: object) -> None:
+        """Analyze softmax operators from various data sources."""
+
+    @_analyze_softmax.register
+    def _analyze_softmax_from_operators(self, operators: Operators) -> None:
+        """Analyze and emit facts for softmax operators from compatibility data.
+
+        Softmax operations typically use lookup tables and may benefit
+        from optimization or replacement with NPU-friendly alternatives.
+        """
+        for idx, op in enumerate(operators.ops):  # pylint: disable=invalid-name
+            if "softmax" in op.name.lower() or "softmax" in op.op_type.lower():
+                lut_fact = EthosULayerUsesLUT(
+                    operator_name=op.name,
+                    location=f"operator/{idx}",
+                    operator_type=op.op_type,
+                    is_supported=op.run_on_npu.supported,
+                    reasons=op.run_on_npu.reasons,
+                    activation_type="SOFTMAX",
+                )
+                self.add_fact(lut_fact)
+
+    @_analyze_softmax.register(list)
+    def _analyze_softmax_from_layerwise(self, layerwise_info: list) -> None:
+        """Analyze and emit facts for softmax operators from performance data.
+
+        Extracts operator information from layerwise performance metrics.
+        """
+        for idx, layer_info in enumerate(layerwise_info):
+            # layer_info is LayerPerfInfo with name, tflite_operator, etc.
+            operator_name = layer_info.name
+            tflite_operator = layer_info.tflite_operator
+
+            # Check if this is a softmax operator
+            if (
+                "softmax" in operator_name.lower()
+                or "softmax" in tflite_operator.lower()
+            ):
+                lut_fact = EthosULayerUsesLUT(
+                    operator_name=operator_name,
+                    location=f"operator/{idx}",
+                    operator_type=tflite_operator,
+                    is_supported=True,  # If it's in perf data, it was processed
+                    # Performance data doesn't include compatibility reasons
+                    reasons=[],
+                    activation_type="SOFTMAX",
+                )
+                self.add_fact(lut_fact)
 
     @analyze_data.register
     def analyze_operator_compatibility(self, operators: Operators) -> None:
@@ -156,23 +255,6 @@ class EthosUDataAnalyzer(FactExtractor):
                 npu_placement=npu_placement,
             )
             self.add_fact(layer_fact)
-
-            # Check for LUT usage (common CPU-only patterns)
-            if not op.run_on_npu.supported:
-                # Check if this is a LUT-based operation
-                for reason_category, reason_detail in op.run_on_npu.reasons:
-                    if "LUT" in reason_category or "lookup" in reason_detail.lower():
-                        # This layer uses LUT
-                        lut_fact = EthosULayerUsesLUT(
-                            operator_name=op.name,
-                            location=f"operator/{idx}",
-                            operator_type=op.op_type,
-                            is_supported=False,
-                            reasons=op.run_on_npu.reasons,
-                            activation_type=op.op_type,
-                        )
-                        self.add_fact(lut_fact)
-                        break
 
         # Keep network-level facts for backward compatibility
         cpu_only = [op.op_type for op in operators.ops if op.cpu_only]
