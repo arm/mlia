@@ -1,4 +1,5 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, 2025-2026, Arm Limited and/or its affiliates.  # pylint: disable=line-too-long
+# SPDX-FileCopyrightText: Copyright 2022-2023, 2025-2026, Arm Limited
+# and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for module backend/manager."""
 from __future__ import annotations
@@ -23,6 +24,7 @@ from mlia.backend.corstone.performance import GenericInferenceOutputParser
 from mlia.backend.corstone.performance import get_metrics
 from mlia.backend.errors import BackendExecutionFailed
 from mlia.core.context import ExecutionContext
+from mlia.core.events import AdviceStageFinishedEvent
 from mlia.core.events import CollectedDataEvent
 from mlia.target.ethos_u.config import EthosUConfiguration
 from mlia.target.ethos_u.data_collection import EthosUPerformance
@@ -684,6 +686,10 @@ def test_ethosu_collector_and_handler_write_json(  # pylint: disable=too-many-lo
 
     event = CollectedDataEvent(wrapped)
     handler.on_collected_data(event)
+
+    # Trigger advice stage finished to write JSON output
+    advice_event = AdviceStageFinishedEvent()
+    handler.on_advice_stage_finished(advice_event)
 
     # Check that a file with corstone_performance.json was created
     output_file = tmp_path / "corstone_performance.json"
