@@ -1,4 +1,5 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, 2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, 2025-2026, Arm Limited
+# and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Event handler."""
 from __future__ import annotations
@@ -9,6 +10,7 @@ from pathlib import Path
 
 from mlia.backend.vela.compat import Operators
 from mlia.backend.vela.compat import VelaCompatibilityResult
+from mlia.core.events import AdviceStageFinishedEvent
 from mlia.core.events import CollectedDataEvent
 from mlia.core.handlers import WorkflowEventsHandler
 from mlia.nn.tensorflow.tflite_compat import TFLiteCompatibilityInfo
@@ -31,6 +33,10 @@ class EthosUEventHandler(WorkflowEventsHandler, EthosUAdvisorEventHandler):
         """Init event handler."""
         super().__init__(ethos_u_formatters)
         self.output_dir = output_dir
+        self.vela_compatibility_result: VelaCompatibilityResult | None = None
+        self.combined_performance_result: CombinedPerformanceResult | None = None
+        self.vela_performance_result: VelaPerformanceResult | None = None
+        self.corstone_performance_result: CorstonePerformanceResult | None = None
 
     def on_collected_data(  # pylint: disable=too-many-branches,too-many-statements  # noqa: C901
         self, event: CollectedDataEvent
@@ -39,15 +45,8 @@ class EthosUEventHandler(WorkflowEventsHandler, EthosUAdvisorEventHandler):
         data_item = event.data_item
 
         if isinstance(data_item, VelaCompatibilityResult):
-            # Save standardized output JSON if available
-            if data_item.standardized_output and self.output_dir:
-                try:
-                    output_path = self.output_dir / "vela_compatibility.json"
-                    with open(output_path, "w", encoding="utf-8") as file_handle:
-                        json.dump(data_item.standardized_output, file_handle, indent=2)
-                    logger.info("Saved Vela compatibility output to %s", output_path)
-                except Exception as exc:  # pylint: disable=broad-exception-caught
-                    logger.warning("Failed to save Vela compatibility output: %s", exc)
+            # Store for later advice injection
+            self.vela_compatibility_result = data_item
 
             # Submit wrapper object so JSONReporter can access standardized_output
             self.reporter.submit(data_item, delay_print=True)
@@ -56,45 +55,22 @@ class EthosUEventHandler(WorkflowEventsHandler, EthosUAdvisorEventHandler):
             self.reporter.submit([data_item.ops, data_item], delay_print=True)
 
         if isinstance(data_item, CombinedPerformanceResult):
-            # Save combined standardized output JSON if available
-            if data_item.standardized_output and self.output_dir:
-                try:
-                    output_path = self.output_dir / "performance.json"
-                    with open(output_path, "w", encoding="utf-8") as file_handle:
-                        json.dump(data_item.standardized_output, file_handle, indent=2)
-                    logger.info("Saved combined performance output to %s", output_path)
-                except Exception as exc:  # pylint: disable=broad-exception-caught
-                    logger.warning(
-                        "Failed to save combined performance output: %s", exc
-                    )
+            # Store for later advice injection
+            self.combined_performance_result = data_item
 
             # Submit wrapper object so JSONReporter can access standardized_output
             self.reporter.submit(data_item, delay_print=True, space=True)
 
         elif isinstance(data_item, VelaPerformanceResult):
-            # Save standardized output JSON if available
-            if data_item.standardized_output and self.output_dir:
-                try:
-                    output_path = self.output_dir / "vela_performance.json"
-                    with open(output_path, "w", encoding="utf-8") as file_handle:
-                        json.dump(data_item.standardized_output, file_handle, indent=2)
-                    logger.info("Saved Vela performance output to %s", output_path)
-                except Exception as exc:  # pylint: disable=broad-exception-caught
-                    logger.warning("Failed to save Vela performance output: %s", exc)
+            # Store for later advice injection
+            self.vela_performance_result = data_item
 
             # Submit wrapper object so JSONReporter can access standardized_output
             self.reporter.submit(data_item, delay_print=True, space=True)
 
         elif isinstance(data_item, CorstonePerformanceResult):
-            # Save standardized output JSON if available
-            if data_item.standardized_output and self.output_dir:
-                try:
-                    output_path = self.output_dir / "corstone_performance.json"
-                    with open(output_path, "w", encoding="utf-8") as file_handle:
-                        json.dump(data_item.standardized_output, file_handle, indent=2)
-                    logger.info("Saved standardized output to %s", output_path)
-                except Exception as exc:  # pylint: disable=broad-exception-caught
-                    logger.warning("Failed to save standardized output: %s", exc)
+            # Store for later advice injection
+            self.corstone_performance_result = data_item
 
             # Submit wrapper object so JSONReporter can access standardized_output
             self.reporter.submit(data_item, delay_print=True, space=True)
@@ -123,3 +99,73 @@ class EthosUEventHandler(WorkflowEventsHandler, EthosUAdvisorEventHandler):
     def on_ethos_u_advisor_started(self, event: EthosUAdvisorStartedEvent) -> None:
         """Handle EthosUAdvisorStarted event."""
         self.reporter.submit(event.target_config)
+
+    def on_advice_stage_finished(self, event: AdviceStageFinishedEvent) -> None:
+        """Handle AdviceStageFinished event.
+
+        Write JSON files with advice included in the schema-compliant format.
+        """
+        # Call parent implementation first
+        super().on_advice_stage_finished(event)
+
+        if self.output_dir:
+            # Convert advice to schema objects
+            schema_advices = [advice.to_schema() for advice in self.advice]
+
+            self._write_json_with_advice(
+                self.vela_compatibility_result,
+                "vela_compatibility.json",
+                schema_advices,
+            )
+            self._write_json_with_advice(
+                self.combined_performance_result,
+                "performance.json",
+                schema_advices,
+            )
+            self._write_json_with_advice(
+                self.vela_performance_result,
+                "vela_performance.json",
+                schema_advices,
+            )
+            self._write_json_with_advice(
+                self.corstone_performance_result,
+                "corstone_performance.json",
+                schema_advices,
+            )
+
+    def _write_json_with_advice(
+        self,
+        result_item: VelaCompatibilityResult
+        | CombinedPerformanceResult
+        | VelaPerformanceResult
+        | CorstonePerformanceResult
+        | None,
+        filename: str,
+        advices: list,
+    ) -> None:
+        """Write standardized output JSON with advice included.
+
+        Args:
+            result_item: Result object with standardized_output
+            filename: Output filename
+            advices: List of schema Advice objects to include
+        """
+        if not result_item or not result_item.standardized_output:
+            return
+
+        try:
+            # Get the standardized output dictionary
+            output = result_item.standardized_output
+
+            # Add advice to each result in the output
+            if "results" in output:
+                for result in output["results"]:
+                    result["advices"] = [a.to_dict() for a in advices]
+
+            # Write to file
+            output_path = self.output_dir / filename  # type: ignore
+            with open(output_path, "w", encoding="utf-8") as file_handle:
+                json.dump(output, file_handle, indent=2)
+            logger.info("Saved output with advice to %s", output_path)
+        except Exception as exc:  # pylint: disable=broad-exception-caught
+            logger.warning("Failed to save output to %s: %s", filename, exc)
