@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, 2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Ethos-U advice generation."""
 from __future__ import annotations
@@ -11,6 +11,8 @@ from mlia.core.advice_generation import ContextAwareAdviceProducer
 from mlia.core.advice_generation import FactBasedAdviceProducer
 from mlia.core.common import AdviceCategory
 from mlia.core.common import DataItem
+from mlia.core.output_schema import AdviceCategory as SchemaAdviceCategory
+from mlia.core.output_schema import AdviceSeverity
 from mlia.nn.select import OptimizationSettings
 from mlia.target.common.reporters import handle_model_is_not_tflite_compatible_common
 from mlia.target.common.reporters import handle_tflite_check_failed_common
@@ -37,13 +39,13 @@ class EthosUAdviceProducer(FactBasedAdviceProducer):
         cpu_only_ops_num = len(data_item.cpu_only_ops)
 
         self.add_advice(
-            [
-                f"You have at least {cpu_only_ops_num} "
-                f"operator{'s' if cpu_only_ops_num > 1 else ''} that is CPU "
-                f"only: {cpu_only_ops}.",
-                "Using operators that are supported by the NPU will "
-                "improve performance.",
-            ]
+            message=f"You have at least {cpu_only_ops_num} "
+            f"operator{'s' if cpu_only_ops_num > 1 else ''} that is CPU "
+            f"only: {cpu_only_ops}. "
+            "Using operators that are supported by the NPU will "
+            "improve performance.",
+            category=SchemaAdviceCategory.COMPATIBILITY,
+            severity=AdviceSeverity.INFO,
         )
 
     @produce_advice.register
@@ -53,13 +55,13 @@ class EthosUAdviceProducer(FactBasedAdviceProducer):
     ) -> None:
         """Advice for the unsupported operators."""
         self.add_advice(
-            [
-                f"You have {data_item.npu_unsupported_ratio*100:.0f}% of operators "
-                "that cannot be placed on the NPU.",
-                "For better performance, please review the reasons reported "
-                "in the table, and adjust the model accordingly "
-                "where possible.",
-            ]
+            message=f"You have {data_item.npu_unsupported_ratio*100:.0f}% of operators "
+            "that cannot be placed on the NPU. "
+            "For better performance, please review the reasons reported "
+            "in the table, and adjust the model accordingly "
+            "where possible.",
+            category=SchemaAdviceCategory.COMPATIBILITY,
+            severity=AdviceSeverity.INFO,
         )
 
     @produce_advice.register
@@ -68,7 +70,7 @@ class EthosUAdviceProducer(FactBasedAdviceProducer):
         self, _data_item: AllOperatorsSupportedOnNPU
     ) -> None:
         """Advice if all operators supported."""
-        advice = [
+        advice_parts = [
             "You don't have any unsupported operators, your model will "
             "run completely on NPU."
         ]
@@ -76,9 +78,13 @@ class EthosUAdviceProducer(FactBasedAdviceProducer):
             AdviceCategory.COMPATIBILITY,
             AdviceCategory.PERFORMANCE,
         ):
-            advice += self.context.action_resolver.check_performance()
+            advice_parts += self.context.action_resolver.check_performance()
 
-        self.add_advice(advice)
+        self.add_advice(
+            message=" ".join(advice_parts),
+            category=SchemaAdviceCategory.COMPATIBILITY,
+            severity=AdviceSeverity.INFO,
+        )
 
     @produce_advice.register
     @advice_category(AdviceCategory.OPTIMIZATION)
@@ -141,14 +147,18 @@ class EthosUAdviceProducer(FactBasedAdviceProducer):
                 "try exploring different optimization types/targets."
             )
 
-        self.add_advice(messages)
+        self.add_advice(
+            message=" ".join(messages),
+            category=SchemaAdviceCategory.OPTIMIZATION,
+            severity=AdviceSeverity.INFO,
+        )
 
         self.add_advice(
-            [
-                "The applied tooling techniques have an impact "
-                "on accuracy. Additional hyperparameter tuning may be required "
-                "after any optimization."
-            ]
+            message="The applied tooling techniques have an impact "
+            "on accuracy. Additional hyperparameter tuning may be required "
+            "after any optimization.",
+            category=SchemaAdviceCategory.OPTIMIZATION,
+            severity=AdviceSeverity.INFO,
         )
 
     @produce_advice.register
@@ -201,27 +211,43 @@ class EthosUStaticAdviceProducer(ContextAwareAdviceProducer):
         advice_per_category = {
             AdviceCategory.PERFORMANCE: [
                 Advice(
-                    [
-                        "You can improve the inference time by using only operators "
-                        "that are supported by the NPU.",
-                    ]
-                    + self.context.action_resolver.check_operator_compatibility()
+                    id="0",
+                    category=SchemaAdviceCategory.PERFORMANCE,
+                    severity=AdviceSeverity.INFO,
+                    message=" ".join(
+                        [
+                            "You can improve the inference time by using only "
+                            "operators that are supported by the NPU.",
+                        ]
+                        + self.context.action_resolver.check_operator_compatibility()
+                    ),
                 ),
                 Advice(
-                    [
-                        "Check if you can improve the performance by applying "
-                        "tooling techniques to your model."
-                    ]
-                    + self.context.action_resolver.apply_optimizations()
+                    id="0",
+                    category=SchemaAdviceCategory.PERFORMANCE,
+                    severity=AdviceSeverity.INFO,
+                    message=" ".join(
+                        [
+                            "Check if you can improve the performance by applying "
+                            "tooling techniques to your model."
+                        ]
+                        + self.context.action_resolver.apply_optimizations()
+                    ),
                 ),
             ],
             AdviceCategory.OPTIMIZATION: [
                 Advice(
-                    [
-                        "For better performance, make sure that all the operators "
-                        "of your final TensorFlow Lite model are supported by the NPU.",
-                    ]
-                    + self.context.action_resolver.operator_compatibility_details()
+                    id="0",
+                    category=SchemaAdviceCategory.OPTIMIZATION,
+                    severity=AdviceSeverity.INFO,
+                    message=" ".join(
+                        [
+                            "For better performance, make sure that all the "
+                            "operators of your final TensorFlow Lite model are "
+                            "supported by the NPU.",
+                        ]
+                        + self.context.action_resolver.operator_compatibility_details()
+                    ),
                 )
             ],
         }
