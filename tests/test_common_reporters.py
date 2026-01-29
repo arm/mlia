@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2025-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for the common reporters module."""
 from __future__ import annotations
@@ -9,6 +9,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from mlia.core.output_schema import AdviceCategory as SchemaAdviceCategory
+from mlia.core.output_schema import AdviceSeverity
 from mlia.core.reporting import Table
 from mlia.nn.tensorflow.tflite_compat import TFLiteCompatibilityInfo
 from mlia.nn.tensorflow.tflite_compat import TFLiteCompatibilityStatus
@@ -90,36 +92,40 @@ def test_handle_model_is_not_tflite_compatible_common(
     if custom_ops:
         expected_calls.append(
             call(
-                [
+                message=(
                     "The following operators appear to be custom and not natively "
                     "supported by TensorFlow Lite: "
-                    f"{', '.join(custom_ops)}.",
+                    f"{', '.join(custom_ops)}. "
                     "Using custom operators in TensorFlow Lite model "
                     "requires special initialization of TFLiteConverter and "
-                    "TensorFlow Lite run-time.",
+                    "TensorFlow Lite run-time. "
                     "Please refer to the TensorFlow documentation for more "
-                    "details: https://www.tensorflow.org/lite/guide/ops_custom",
+                    "details: https://www.tensorflow.org/lite/guide/ops_custom "
                     "Note, such models are not supported by the "
-                    "ML Inference Advisor.",
-                ]
+                    "ML Inference Advisor."
+                ),
+                category=SchemaAdviceCategory.COMPATIBILITY,
+                severity=AdviceSeverity.WARNING,
             )
         )
 
     if flex_ops:
         expected_calls.append(
             call(
-                [
+                message=(
                     "The following operators are not natively "
                     "supported by TensorFlow Lite: "
-                    f"{', '.join(flex_ops)}.",
+                    f"{', '.join(flex_ops)}. "
                     "Using select TensorFlow operators in TensorFlow Lite model "
                     "requires special initialization of TFLiteConverter and "
-                    "TensorFlow Lite run-time.",
+                    "TensorFlow Lite run-time. "
                     "Please refer to the TensorFlow documentation for more "
-                    "details: https://www.tensorflow.org/lite/guide/ops_select",
+                    "details: https://www.tensorflow.org/lite/guide/ops_select "
                     "Note, such models are not supported by "
-                    "the ML Inference Advisor.",
-                ]
+                    "the ML Inference Advisor."
+                ),
+                category=SchemaAdviceCategory.COMPATIBILITY,
+                severity=AdviceSeverity.WARNING,
             )
         )
 
@@ -127,19 +133,13 @@ def test_handle_model_is_not_tflite_compatible_common(
         advice_producer.add_advice.assert_has_calls(expected_calls, any_order=True)
 
     if not flex_ops and not custom_ops:
-        expected_calls = [
-            call(
-                [
-                    "Model could not be converted into TensorFlow Lite format.",
-                    "Please refer to the table for more details.",
-                ]
-            ),
-        ]
         advice_producer.add_advice.assert_called_once_with(
-            [
-                "Model could not be converted into TensorFlow Lite format.",
-                "Please refer to the table for more details.",
-            ]
+            message=(
+                "Model could not be converted into TensorFlow Lite format. "
+                "Please refer to the table for more details."
+            ),
+            category=SchemaAdviceCategory.COMPATIBILITY,
+            severity=AdviceSeverity.WARNING,
         )
 
 
@@ -149,10 +149,12 @@ def test_handle_tflite_check_failed_common() -> None:
     handle_tflite_check_failed_common(advice_producer, TFLiteCompatibilityCheckFailed())
 
     advice_producer.add_advice.assert_called_once_with(
-        [
-            "Model could not be converted into TensorFlow Lite format.",
-            "Please refer to the table for more details.",
-        ]
+        message=(
+            "Model could not be converted into TensorFlow Lite format. "
+            "Please refer to the table for more details."
+        ),
+        category=SchemaAdviceCategory.COMPATIBILITY,
+        severity=AdviceSeverity.WARNING,
     )
 
 

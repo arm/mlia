@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """TOSA advice generation."""
 from functools import singledispatchmethod
@@ -7,6 +7,8 @@ from mlia.core.advice_generation import advice_category
 from mlia.core.advice_generation import FactBasedAdviceProducer
 from mlia.core.common import AdviceCategory
 from mlia.core.common import DataItem
+from mlia.core.output_schema import AdviceCategory as SchemaAdviceCategory
+from mlia.core.output_schema import AdviceSeverity
 from mlia.target.common.reporters import handle_model_is_not_tflite_compatible_common
 from mlia.target.common.reporters import handle_tflite_check_failed_common
 from mlia.target.common.reporters import ModelIsNotTFLiteCompatible
@@ -28,7 +30,11 @@ class TOSAAdviceProducer(FactBasedAdviceProducer):
         self, _data_item: ModelIsTOSACompatible
     ) -> None:
         """Advice for TOSA compatibility."""
-        self.add_advice(["Model is fully TOSA compatible."])
+        self.add_advice(
+            message="Model is fully TOSA compatible.",
+            category=SchemaAdviceCategory.COMPATIBILITY,
+            severity=AdviceSeverity.INFO,
+        )
 
     @produce_advice.register
     @advice_category(AdviceCategory.COMPATIBILITY)
@@ -37,10 +43,12 @@ class TOSAAdviceProducer(FactBasedAdviceProducer):
     ) -> None:
         """Advice for TOSA compatibility."""
         self.add_advice(
-            [
+            message=(
                 "Some operators in the model are not TOSA compatible. "
                 "Please, refer to the operators table for more information."
-            ]
+            ),
+            category=SchemaAdviceCategory.COMPATIBILITY,
+            severity=AdviceSeverity.WARNING,
         )
 
     @produce_advice.register

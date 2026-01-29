@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Reporting module."""
 from __future__ import annotations
@@ -648,13 +648,19 @@ class JSONReporter(Reporter):
             # Merge multiple standardized outputs
             output = self._merge_standardized_outputs(self.standardized_outputs)
 
-        # Add advice as an extension if available
-        if self.advice_data:
-            if isinstance(output, dict):
-                if "extensions" not in output:
-                    output["extensions"] = {}
-                advice_ext = self._format_advice_for_extension()
-                output["extensions"]["advice"] = advice_ext
+        # Add advice to results if available
+        if self.advice_data and isinstance(output, dict):
+            advice_list = []
+            for advice_items, _ in self.advice_data:
+                for advice in advice_items:
+                    advice_list.append(advice.to_schema())
+
+            # Add advice to each result in the output
+            if "results" in output:
+                for result in output["results"]:
+                    if "advices" not in result:
+                        result["advices"] = []
+                    result["advices"].extend([a.to_dict() for a in advice_list])
 
         print(json.dumps(output, indent=4, cls=CustomJSONEncoder))
 
