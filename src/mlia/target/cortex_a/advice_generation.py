@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, 2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Cortex-A advice generation."""
 from functools import singledispatchmethod
@@ -7,6 +7,8 @@ from mlia.core.advice_generation import advice_category
 from mlia.core.advice_generation import FactBasedAdviceProducer
 from mlia.core.common import AdviceCategory
 from mlia.core.common import DataItem
+from mlia.core.output_schema import AdviceCategory as SchemaAdviceCategory
+from mlia.core.output_schema import AdviceSeverity
 from mlia.target.common.reporters import handle_model_is_not_tflite_compatible_common
 from mlia.target.common.reporters import handle_tflite_check_failed_common
 from mlia.target.common.reporters import ModelHasCustomOperators
@@ -37,11 +39,12 @@ class CortexAAdviceProducer(FactBasedAdviceProducer):
     ) -> None:
         """Advice for Cortex-A compatibility."""
         self.add_advice(
-            [
+            message=(
                 f"Model is fully compatible with {data_item.backend_info} for "
-                "Cortex-A.",
-                self.cortex_a_disclaimer,
-            ]
+                f"Cortex-A. {self.cortex_a_disclaimer}"
+            ),
+            category=SchemaAdviceCategory.COMPATIBILITY,
+            severity=AdviceSeverity.INFO,
         )
 
     @produce_advice.register
@@ -51,37 +54,42 @@ class CortexAAdviceProducer(FactBasedAdviceProducer):
     ) -> None:
         """Advice for Cortex-A compatibility."""
         if data_item.unsupported_ops:
+            ops_list = "\n".join(f" - {op}" for op in data_item.unsupported_ops)
             self.add_advice(
-                [
-                    "The following operators are not supported by "
+                message=(
+                    f"The following operators are not supported by "
                     f"{data_item.backend_info} and will fall back to the "
-                    "TensorFlow Lite runtime:",
-                    "\n".join(f" - {op}" for op in data_item.unsupported_ops),
-                ]
+                    f"TensorFlow Lite runtime:\n{ops_list}"
+                ),
+                category=SchemaAdviceCategory.COMPATIBILITY,
+                severity=AdviceSeverity.WARNING,
             )
 
         if data_item.activation_func_support:
+            acts_list = "\n".join(
+                f" - {op}\n"
+                f"   - Used unsupported: {act.used_unsupported}\n"
+                f"   - Supported: {act.supported}"
+                for op, act in data_item.activation_func_support.items()
+            )
             self.add_advice(
-                [
-                    "The fused activation functions of the following operators "
+                message=(
+                    f"The fused activation functions of the following operators "
                     f"are not supported by {data_item.backend_info}. Please "
-                    "consider using one of the supported activation functions "
-                    "instead:",
-                    "\n".join(
-                        f" - {op}\n"
-                        f"   - Used unsupported: {act.used_unsupported}\n"
-                        f"   - Supported: {act.supported}"
-                        for op, act in data_item.activation_func_support.items()
-                    ),
-                ]
+                    f"consider using one of the supported activation functions "
+                    f"instead:\n{acts_list}"
+                ),
+                category=SchemaAdviceCategory.COMPATIBILITY,
+                severity=AdviceSeverity.WARNING,
             )
 
         self.add_advice(
-            [
+            message=(
                 "Please, refer to the full table of operators above for more "
-                "information.",
-                self.cortex_a_disclaimer,
-            ]
+                f"information. {self.cortex_a_disclaimer}"
+            ),
+            category=SchemaAdviceCategory.COMPATIBILITY,
+            severity=AdviceSeverity.INFO,
         )
 
     @produce_advice.register
@@ -107,8 +115,10 @@ class CortexAAdviceProducer(FactBasedAdviceProducer):
     ) -> None:
         """Advice for the models with custom operators."""
         self.add_advice(
-            [
+            message=(
                 "Models with custom operators require special initialization "
-                "and currently are not supported by the ML Inference Advisor.",
-            ]
+                "and currently are not supported by the ML Inference Advisor."
+            ),
+            category=SchemaAdviceCategory.COMPATIBILITY,
+            severity=AdviceSeverity.WARNING,
         )

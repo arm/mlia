@@ -1,4 +1,5 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, 2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, 2025-2026, Arm Limited and/or
+# its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for reporting module."""
 from __future__ import annotations
@@ -17,6 +18,8 @@ import pytest
 
 import mlia.core.output_schema as schema
 from mlia.core.advice_generation import Advice
+from mlia.core.output_schema import AdviceCategory as SchemaAdviceCategory
+from mlia.core.output_schema import AdviceSeverity
 from mlia.core.reporting import BytesCell
 from mlia.core.reporting import Cell
 from mlia.core.reporting import ClockCell
@@ -650,28 +653,39 @@ class TestJSONReporter:
     def test_produce_standardized_report_with_advice(
         self, mock_dumps: Mock, _mock_print: Mock
     ) -> None:
-        """Test JSONReporter adds advice as extension."""
+        """Test JSONReporter adds advice to results array."""
         format_resolver = MagicMock()
         reporter = JSONReporter(format_resolver)
 
-        # Add standardized output
-        reporter.standardized_outputs = [{"schema_version": "1.0.0", "results": []}]
+        # Add standardized output with results
+        reporter.standardized_outputs = [
+            {"schema_version": "1.0.0", "results": [{"kind": "performance"}]}
+        ]
 
-        # Add advice with metadata
-        advice = Advice(messages=["message1", "message2"], metadata=[{"key": "value"}])
+        # Add advice
+        advice = Advice(
+            id="0",
+            category=SchemaAdviceCategory.PERFORMANCE,
+            severity=AdviceSeverity.INFO,
+            message="Test advice message",
+            details={"key": "value"},
+        )
         reporter.advice_data = [([advice], MagicMock())]
 
         reporter._produce_standardized_report()  # pylint: disable=protected-access
 
-        # Verify advice was added to extensions with correct format
+        # Verify advice was added to results array
         call_args = mock_dumps.call_args[0][0]
-        assert "extensions" in call_args
-        assert "advice" in call_args["extensions"]
-        advice_list = call_args["extensions"]["advice"]
+        assert "results" in call_args
+        assert len(call_args["results"]) == 1
+        assert "advices" in call_args["results"][0]
+        advice_list = call_args["results"][0]["advices"]
         assert len(advice_list) == 1
-        assert "id" in advice_list[0]
-        assert advice_list[0]["message"] == "message1 message2"
-        assert advice_list[0]["metadata"] == [{"key": "value"}]
+        assert advice_list[0]["id"] == "0"
+        assert advice_list[0]["message"] == "Test advice message"
+        assert advice_list[0]["category"] == "PERFORMANCE"
+        assert advice_list[0]["severity"] == "INFO"
+        assert advice_list[0]["details"] == {"key": "value"}
 
     def test_merge_standardized_outputs(self) -> None:
         """Test merging multiple standardized outputs."""

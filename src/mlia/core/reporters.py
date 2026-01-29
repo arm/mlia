@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022, 2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Reports module."""
 from __future__ import annotations
@@ -16,7 +16,7 @@ def report_advice(advice: list[Advice]) -> Report:
             Column("#", only_for=["plain_text"]),
             Column("Advice", alias="advice_message"),
         ],
-        rows=[(i + 1, a.messages) for i, a in enumerate(advice)],
+        rows=[(i + 1, a.message) for i, a in enumerate(advice)],
         name="Advice",
         alias="advice",
     )

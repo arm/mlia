@@ -1,4 +1,5 @@
-# SPDX-FileCopyrightText: Copyright 2023, 2025 Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2023, 2025-2026, Arm Limited
+# and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for tosa-checker reporters."""
 import inspect
@@ -11,6 +12,8 @@ import pytest
 from mlia.backend.tosa_checker.compat import Operator
 from mlia.backend.tosa_checker.compat import TOSACompatibilityInfo
 from mlia.core.advice_generation import Advice
+from mlia.core.output_schema import AdviceCategory as SchemaAdviceCategory
+from mlia.core.output_schema import AdviceSeverity
 from mlia.core.reporting import CompoundReport
 from mlia.core.reporting import NestedReport
 from mlia.core.reporting import Report
@@ -36,7 +39,17 @@ def test_tosa_report_target() -> None:
 @pytest.mark.parametrize(
     "display_data, check_pkg_version",
     [
-        ([Advice(messages=[])], False),
+        (
+            [
+                Advice(
+                    id="0",
+                    category=SchemaAdviceCategory.COMPATIBILITY,
+                    severity=AdviceSeverity.INFO,
+                    message="",
+                )
+            ],
+            False,
+        ),
         (MetadataDisplay, True),
         (TOSAConfiguration(target="tosa"), False),
         (

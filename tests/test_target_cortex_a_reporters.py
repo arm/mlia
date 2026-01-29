@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, 2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for Cortex-A reporters."""
 from typing import Any
@@ -6,6 +6,8 @@ from typing import Any
 import pytest
 
 from mlia.core.advice_generation import Advice
+from mlia.core.output_schema import AdviceCategory as SchemaAdviceCategory
+from mlia.core.output_schema import AdviceSeverity
 from mlia.core.reporting import Report
 from mlia.nn.tensorflow.tflite_compat import TFLiteCompatibilityInfo
 from mlia.nn.tensorflow.tflite_compat import TFLiteCompatibilityStatus
@@ -26,7 +28,14 @@ def test_report_target() -> None:
 @pytest.mark.parametrize(
     "data",
     (
-        [Advice(["Sample", "Advice"])],
+        [
+            Advice(
+                id="0",
+                category=SchemaAdviceCategory.COMPATIBILITY,
+                severity=AdviceSeverity.INFO,
+                message="Sample Advice",
+            )
+        ],
         TFLiteCompatibilityInfo(status=TFLiteCompatibilityStatus.COMPATIBLE),
         CortexACompatibilityInfo(
             [

@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2023, 2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Common reports module."""
 from __future__ import annotations
@@ -6,6 +6,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from mlia.core.data_analysis import Fact
+from mlia.core.output_schema import AdviceCategory as SchemaAdviceCategory
+from mlia.core.output_schema import AdviceSeverity
 from mlia.core.reporting import Column
 from mlia.core.reporting import Format
 from mlia.core.reporting import Report
@@ -88,40 +90,46 @@ def handle_model_is_not_tflite_compatible_common(  # type: ignore
     """Advice for TensorFlow Lite compatibility."""
     if data_item.flex_ops:
         self.add_advice(
-            [
+            message=(
                 "The following operators are not natively "
                 "supported by TensorFlow Lite: "
-                f"{', '.join(data_item.flex_ops)}.",
+                f"{', '.join(data_item.flex_ops)}. "
                 "Using select TensorFlow operators in TensorFlow Lite model "
                 "requires special initialization of TFLiteConverter and "
-                "TensorFlow Lite run-time.",
+                "TensorFlow Lite run-time. "
                 "Please refer to the TensorFlow documentation for more "
-                "details: https://www.tensorflow.org/lite/guide/ops_select",
-                "Note, such models are not supported by the ML Inference Advisor.",
-            ]
+                "details: https://www.tensorflow.org/lite/guide/ops_select "
+                "Note, such models are not supported by the ML Inference Advisor."
+            ),
+            category=SchemaAdviceCategory.COMPATIBILITY,
+            severity=AdviceSeverity.WARNING,
         )
 
     if data_item.custom_ops:
         self.add_advice(
-            [
+            message=(
                 "The following operators appear to be custom and not natively "
                 "supported by TensorFlow Lite: "
-                f"{', '.join(data_item.custom_ops)}.",
+                f"{', '.join(data_item.custom_ops)}. "
                 "Using custom operators in TensorFlow Lite model "
                 "requires special initialization of TFLiteConverter and "
-                "TensorFlow Lite run-time.",
+                "TensorFlow Lite run-time. "
                 "Please refer to the TensorFlow documentation for more "
-                "details: https://www.tensorflow.org/lite/guide/ops_custom",
-                "Note, such models are not supported by the ML Inference Advisor.",
-            ]
+                "details: https://www.tensorflow.org/lite/guide/ops_custom "
+                "Note, such models are not supported by the ML Inference Advisor."
+            ),
+            category=SchemaAdviceCategory.COMPATIBILITY,
+            severity=AdviceSeverity.WARNING,
         )
 
     if not data_item.flex_ops and not data_item.custom_ops:
         self.add_advice(
-            [
-                "Model could not be converted into TensorFlow Lite format.",
-                "Please refer to the table for more details.",
-            ]
+            message=(
+                "Model could not be converted into TensorFlow Lite format. "
+                "Please refer to the table for more details."
+            ),
+            category=SchemaAdviceCategory.COMPATIBILITY,
+            severity=AdviceSeverity.WARNING,
         )
 
 
@@ -130,10 +138,12 @@ def handle_tflite_check_failed_common(  # type: ignore
 ) -> None:
     """Advice for the failed TensorFlow Lite compatibility checks."""
     self.add_advice(
-        [
-            "Model could not be converted into TensorFlow Lite format.",
-            "Please refer to the table for more details.",
-        ]
+        message=(
+            "Model could not be converted into TensorFlow Lite format. "
+            "Please refer to the table for more details."
+        ),
+        category=SchemaAdviceCategory.COMPATIBILITY,
+        severity=AdviceSeverity.WARNING,
     )
 
 

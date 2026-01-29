@@ -468,8 +468,8 @@ class Advice:
         """Convert to dictionary."""
         result: dict[str, Any] = {
             "id": self.id,
-            "category": self.category.value,
-            "severity": self.severity.value,
+            "category": self.category.value.upper(),
+            "severity": self.severity.value.upper(),
             "message": self.message,
         }
         if self.affected_entities:

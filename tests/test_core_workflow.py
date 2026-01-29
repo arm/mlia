@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, 2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for module workflow."""
 from dataclasses import dataclass
@@ -27,6 +27,8 @@ from mlia.core.events import EventHandler
 from mlia.core.events import ExecutionFailedEvent
 from mlia.core.events import ExecutionFinishedEvent
 from mlia.core.events import ExecutionStartedEvent
+from mlia.core.output_schema import AdviceCategory as SchemaAdviceCategory
+from mlia.core.output_schema import AdviceSeverity
 from mlia.core.workflow import DefaultWorkflowExecutor
 
 
@@ -56,10 +58,22 @@ def test_workflow_executor(tmpdir: str) -> None:
     data_analyzer_mock.get_analyzed_data.return_value = ["Really good number!"]
 
     advice_producer_mock1 = MagicMock(spec=ContextAwareAdviceProducer)
-    advice_producer_mock1.get_advice.return_value = Advice(["All good!"])
+    advice_producer_mock1.get_advice.return_value = Advice(
+        id="0",
+        category=SchemaAdviceCategory.COMPATIBILITY,
+        severity=AdviceSeverity.INFO,
+        message="All good!",
+    )
 
     advice_producer_mock2 = MagicMock(spec=ContextAwareAdviceProducer)
-    advice_producer_mock2.get_advice.return_value = [Advice(["Good advice!"])]
+    advice_producer_mock2.get_advice.return_value = [
+        Advice(
+            id="0",
+            category=SchemaAdviceCategory.COMPATIBILITY,
+            severity=AdviceSeverity.INFO,
+            message="Good advice!",
+        )
+    ]
 
     context = ExecutionContext(
         output_dir=tmpdir,
@@ -107,8 +121,26 @@ def test_workflow_executor(tmpdir: str) -> None:
         call(AnalyzedDataEvent(data_item="Really good number!")),
         call(DataAnalysisStageFinishedEvent()),
         call(AdviceStageStartedEvent()),
-        call(AdviceEvent(advice=Advice(messages=["All good!"]))),
-        call(AdviceEvent(advice=Advice(messages=["Good advice!"]))),
+        call(
+            AdviceEvent(
+                advice=Advice(
+                    id="0",
+                    category=SchemaAdviceCategory.COMPATIBILITY,
+                    severity=AdviceSeverity.INFO,
+                    message="All good!",
+                )
+            )
+        ),
+        call(
+            AdviceEvent(
+                advice=Advice(
+                    id="0",
+                    category=SchemaAdviceCategory.COMPATIBILITY,
+                    severity=AdviceSeverity.INFO,
+                    message="Good advice!",
+                )
+            )
+        ),
         call(AdviceStageFinishedEvent()),
         call(ExecutionFinishedEvent()),
     ]

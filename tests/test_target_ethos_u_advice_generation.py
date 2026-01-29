@@ -1,4 +1,5 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, 2026, Arm Limited and/or its
+# affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for Ethos-U advice generation."""
 from __future__ import annotations
@@ -12,6 +13,8 @@ from mlia.core.common import DataItem
 from mlia.core.context import ExecutionContext
 from mlia.core.helpers import ActionResolver
 from mlia.core.helpers import APIActionResolver
+from mlia.core.output_schema import AdviceCategory as SchemaAdviceCategory
+from mlia.core.output_schema import AdviceSeverity
 from mlia.nn.select import OptimizationSettings
 from mlia.target.ethos_u.advice_generation import EthosUAdviceProducer
 from mlia.target.ethos_u.advice_generation import EthosUStaticAdviceProducer
@@ -32,10 +35,13 @@ from mlia.target.ethos_u.data_analysis import PerfMetricDiff
             APIActionResolver(),
             [
                 Advice(
-                    [
-                        "You don't have any unsupported operators, your model will "
-                        "run completely on NPU."
-                    ]
+                    id="0",
+                    category=SchemaAdviceCategory.COMPATIBILITY,
+                    severity=AdviceSeverity.INFO,
+                    message=(
+                        "You don't have any unsupported operators, your "
+                        "model will run completely on NPU."
+                    ),
                 )
             ],
         ],
@@ -50,14 +56,16 @@ from mlia.target.ethos_u.data_analysis import PerfMetricDiff
             ),
             [
                 Advice(
-                    [
-                        "You don't have any unsupported operators, your model will "
-                        "run completely on NPU.",
-                        "Check the estimated performance by running the "
-                        "following command: ",
-                        "mlia check sample_model.tflite --target-profile sample_target "
-                        "--performance",
-                    ]
+                    id="0",
+                    category=SchemaAdviceCategory.COMPATIBILITY,
+                    severity=AdviceSeverity.INFO,
+                    message=(
+                        "You don't have any unsupported operators, your "
+                        "model will run completely on NPU. Check the "
+                        "estimated performance by running the following "
+                        "command:  mlia check sample_model.tflite "
+                        "--target-profile sample_target --performance"
+                    ),
                 )
             ],
         ],
@@ -67,12 +75,14 @@ from mlia.target.ethos_u.data_analysis import PerfMetricDiff
             APIActionResolver(),
             [
                 Advice(
-                    [
+                    id="0",
+                    category=SchemaAdviceCategory.COMPATIBILITY,
+                    severity=AdviceSeverity.INFO,
+                    message=(
                         "You have at least 3 operators that is CPU only: "
-                        "OP1,OP2,OP3.",
-                        "Using operators that are supported by the NPU will "
-                        "improve performance.",
-                    ]
+                        "OP1,OP2,OP3. Using operators that are supported by "
+                        "the NPU will improve performance."
+                    ),
                 )
             ],
         ],
@@ -80,14 +90,16 @@ from mlia.target.ethos_u.data_analysis import PerfMetricDiff
             HasCPUOnlyOperators(cpu_only_ops=["OP1", "OP2", "OP3"]),
             {AdviceCategory.COMPATIBILITY},
             CLIActionResolver({}),
-            [
+            [  # Line 78 context
                 Advice(
-                    [
+                    id="0",
+                    category=SchemaAdviceCategory.COMPATIBILITY,
+                    severity=AdviceSeverity.INFO,
+                    message=(
                         "You have at least 3 operators that is CPU only: "
-                        "OP1,OP2,OP3.",
-                        "Using operators that are supported by the NPU will "
-                        "improve performance.",
-                    ]
+                        "OP1,OP2,OP3. Using operators that are supported "
+                        "by the NPU will improve performance."
+                    ),
                 )
             ],
         ],
@@ -97,12 +109,15 @@ from mlia.target.ethos_u.data_analysis import PerfMetricDiff
             APIActionResolver(),
             [
                 Advice(
-                    [
-                        "You have 40% of operators that cannot be placed on the NPU.",
-                        "For better performance, please review the reasons reported "
-                        "in the table, and adjust the model accordingly "
-                        "where possible.",
-                    ]
+                    id="0",
+                    category=SchemaAdviceCategory.COMPATIBILITY,
+                    severity=AdviceSeverity.INFO,
+                    message=(
+                        "You have 40% of operators that cannot be placed on "
+                        "the NPU. For better performance, please review the "
+                        "reasons reported in the table, and adjust the model "
+                        "accordingly where possible."
+                    ),
                 )
             ],
         ],
@@ -110,14 +125,17 @@ from mlia.target.ethos_u.data_analysis import PerfMetricDiff
             HasUnsupportedOnNPUOperators(npu_unsupported_ratio=0.4),
             {AdviceCategory.COMPATIBILITY},
             CLIActionResolver({}),
-            [
+            [  # Line 104 context
                 Advice(
-                    [
-                        "You have 40% of operators that cannot be placed on the NPU.",
-                        "For better performance, please review the reasons reported "
-                        "in the table, and adjust the model accordingly "
-                        "where possible.",
-                    ]
+                    id="0",
+                    category=SchemaAdviceCategory.COMPATIBILITY,
+                    severity=AdviceSeverity.INFO,
+                    message=(
+                        "You have 40% of operators that cannot be placed "
+                        "on the NPU. For better performance, please review "
+                        "the reasons reported in the table, and adjust the "
+                        "model accordingly where possible."
+                    ),
                 )
             ],
         ],
@@ -140,24 +158,29 @@ from mlia.target.ethos_u.data_analysis import PerfMetricDiff
             APIActionResolver(),
             [
                 Advice(
-                    [
-                        "With the selected optimization (pruning: 0.5)",
-                        "- You have achieved 50.00% performance improvement in "
-                        "DRAM used (KB)",
-                        "- You have achieved 50.00% performance improvement in "
-                        "NPU total cycles",
-                        "- SRAM used (KB) have degraded by 50.00%",
-                        "You can try to push the optimization target higher "
-                        "(e.g. pruning: 0.6) "
-                        "to check if those results can be further improved.",
-                    ]
+                    id="0",
+                    category=SchemaAdviceCategory.OPTIMIZATION,
+                    severity=AdviceSeverity.INFO,
+                    message=(
+                        "With the selected optimization (pruning: 0.5) - "
+                        "You have achieved 50.00% performance improvement "
+                        "in DRAM used (KB) - You have achieved 50.00% "
+                        "performance improvement in NPU total cycles - "
+                        "SRAM used (KB) have degraded by 50.00% You can "
+                        "try to push the optimization target higher "
+                        "(e.g. pruning: 0.6) to check if those results "
+                        "can be further improved."
+                    ),
                 ),
-                Advice(
-                    [
-                        "The applied tooling techniques have an impact "
-                        "on accuracy. Additional hyperparameter tuning may be required "
-                        "after any optimization."
-                    ]
+                Advice(  # Line 170 context
+                    id="1",
+                    category=SchemaAdviceCategory.OPTIMIZATION,
+                    severity=AdviceSeverity.INFO,
+                    message=(
+                        "The applied tooling techniques have an impact on "
+                        "accuracy. Additional hyperparameter tuning may be "
+                        "required after any optimization."
+                    ),
                 ),
             ],
         ],
@@ -180,28 +203,32 @@ from mlia.target.ethos_u.data_analysis import PerfMetricDiff
             CLIActionResolver({"model": "sample_model.h5"}),
             [
                 Advice(
-                    [
-                        "With the selected optimization (pruning: 0.5)",
-                        "- You have achieved 50.00% performance improvement in "
-                        "DRAM used (KB)",
-                        "- You have achieved 50.00% performance improvement in "
-                        "NPU total cycles",
-                        "- SRAM used (KB) have degraded by 50.00%",
-                        "You can try to push the optimization target higher "
-                        "(e.g. pruning: 0.6) "
-                        "to check if those results can be further improved.",
-                        "For more info: mlia optimize --help",
-                        "Optimization command: "
-                        "mlia optimize sample_model.h5 --pruning "
-                        "--pruning-target 0.6",
-                    ]
+                    id="0",
+                    category=SchemaAdviceCategory.OPTIMIZATION,
+                    severity=AdviceSeverity.INFO,
+                    message=(
+                        "With the selected optimization (pruning: 0.5) - "
+                        "You have achieved 50.00% performance improvement "
+                        "in DRAM used (KB) - You have achieved 50.00% "
+                        "performance improvement in NPU total cycles - "
+                        "SRAM used (KB) have degraded by 50.00% You can "
+                        "try to push the optimization target higher "
+                        "(e.g. pruning: 0.6) to check if those results "
+                        "can be further improved. For more info: mlia "
+                        "optimize --help Optimization command: mlia "
+                        "optimize sample_model.h5 --pruning "
+                        "--pruning-target 0.6"
+                    ),
                 ),
-                Advice(
-                    [
-                        "The applied tooling techniques have an impact "
-                        "on accuracy. Additional hyperparameter tuning may be required "
-                        "after any optimization."
-                    ]
+                Advice(  # Line 170 context
+                    id="1",
+                    category=SchemaAdviceCategory.OPTIMIZATION,
+                    severity=AdviceSeverity.INFO,
+                    message=(
+                        "The applied tooling techniques have an impact on "
+                        "accuracy. Additional hyperparameter tuning may be "
+                        "required after any optimization."
+                    ),
                 ),
             ],
         ],
@@ -227,24 +254,30 @@ from mlia.target.ethos_u.data_analysis import PerfMetricDiff
             APIActionResolver(),
             [
                 Advice(
-                    [
-                        "With the selected optimization (pruning: 0.5, clustering: 32)",
-                        "- You have achieved 50.00% performance improvement in "
-                        "DRAM used (KB)",
-                        "- You have achieved 50.00% performance improvement in "
-                        "NPU total cycles",
-                        "- SRAM used (KB) have degraded by 50.00%",
-                        "You can try to push the optimization target higher "
-                        "(e.g. pruning: 0.6 and/or clustering: 16) "
-                        "to check if those results can be further improved.",
-                    ]
+                    id="0",
+                    category=SchemaAdviceCategory.OPTIMIZATION,
+                    severity=AdviceSeverity.INFO,
+                    message=(
+                        "With the selected optimization (pruning: 0.5, "
+                        "clustering: 32) - You have achieved 50.00% "
+                        "performance improvement in DRAM used (KB) - You "
+                        "have achieved 50.00% performance improvement in "
+                        "NPU total cycles - SRAM used (KB) have degraded "
+                        "by 50.00% You can try to push the optimization "
+                        "target higher (e.g. pruning: 0.6 and/or "
+                        "clustering: 16) to check if those results can be "
+                        "further improved."
+                    ),
                 ),
-                Advice(
-                    [
-                        "The applied tooling techniques have an impact "
-                        "on accuracy. Additional hyperparameter tuning may be required "
-                        "after any optimization."
-                    ]
+                Advice(  # Line 205 context
+                    id="1",
+                    category=SchemaAdviceCategory.OPTIMIZATION,
+                    severity=AdviceSeverity.INFO,
+                    message=(
+                        "The applied tooling techniques have an impact on "
+                        "accuracy. Additional hyperparameter tuning may be "
+                        "required after any optimization."
+                    ),
                 ),
             ],
         ],
@@ -269,21 +302,26 @@ from mlia.target.ethos_u.data_analysis import PerfMetricDiff
             APIActionResolver(),
             [
                 Advice(
-                    [
-                        "With the selected optimization (clustering: 2)",
-                        "- You have achieved 50.00% performance improvement in "
-                        "DRAM used (KB)",
-                        "- You have achieved 50.00% performance improvement in "
-                        "NPU total cycles",
-                        "- SRAM used (KB) have degraded by 50.00%",
-                    ]
+                    id="0",
+                    category=SchemaAdviceCategory.OPTIMIZATION,
+                    severity=AdviceSeverity.INFO,
+                    message=(
+                        "With the selected optimization (clustering: 2) - "
+                        "You have achieved 50.00% performance improvement "
+                        "in DRAM used (KB) - You have achieved 50.00% "
+                        "performance improvement in NPU total cycles - "
+                        "SRAM used (KB) have degraded by 50.00%"
+                    ),
                 ),
-                Advice(
-                    [
-                        "The applied tooling techniques have an impact "
-                        "on accuracy. Additional hyperparameter tuning may be required "
-                        "after any optimization."
-                    ]
+                Advice(  # Line 239 context
+                    id="1",
+                    category=SchemaAdviceCategory.OPTIMIZATION,
+                    severity=AdviceSeverity.INFO,
+                    message=(
+                        "The applied tooling techniques have an impact on "
+                        "accuracy. Additional hyperparameter tuning may be "
+                        "required after any optimization."
+                    ),
                 ),
             ],
         ],
@@ -306,24 +344,30 @@ from mlia.target.ethos_u.data_analysis import PerfMetricDiff
             APIActionResolver(),
             [
                 Advice(
-                    [
-                        "With the selected optimization (pruning: 0.5)",
-                        "- DRAM used (KB) have degraded by 50.00%",
-                        "- SRAM used (KB) have degraded by 50.00%",
-                        "- On chip flash used (KB) have degraded by 50.00%",
-                        "- Off chip flash used (KB) have degraded by 50.00%",
-                        "- NPU total cycles have degraded by 900.00%",
-                        "The performance seems to have degraded after "
-                        "applying the selected optimizations, "
-                        "try exploring different optimization types/targets.",
-                    ]
+                    id="0",
+                    category=SchemaAdviceCategory.OPTIMIZATION,
+                    severity=AdviceSeverity.INFO,
+                    message=(
+                        "With the selected optimization (pruning: 0.5) - "
+                        "DRAM used (KB) have degraded by 50.00% - SRAM "
+                        "used (KB) have degraded by 50.00% - On chip flash "
+                        "used (KB) have degraded by 50.00% - Off chip "
+                        "flash used (KB) have degraded by 50.00% - NPU "
+                        "total cycles have degraded by 900.00% The "
+                        "performance seems to have degraded after applying "
+                        "the selected optimizations, try exploring "
+                        "different optimization types/targets."
+                    ),
                 ),
                 Advice(
-                    [
-                        "The applied tooling techniques have an impact "
-                        "on accuracy. Additional hyperparameter tuning may be required "
-                        "after any optimization."
-                    ]
+                    id="1",
+                    category=SchemaAdviceCategory.OPTIMIZATION,
+                    severity=AdviceSeverity.INFO,
+                    message=(
+                        "The applied tooling techniques have an impact on "
+                        "accuracy. Additional hyperparameter tuning may be "
+                        "required after any optimization."
+                    ),
                 ),
             ],
         ],
@@ -377,7 +421,11 @@ def test_ethosu_advice_producer(
     producer.set_context(context)
     producer.produce_advice(input_data)
 
-    assert producer.get_advice() == expected_advice
+    actual = producer.get_advice()
+    assert isinstance(actual, list)
+    assert len(actual) == len(expected_advice)
+    for actual_adv, expected_adv in zip(actual, expected_advice):
+        assert actual_adv.message == expected_adv.message
 
 
 @pytest.mark.parametrize(
@@ -398,16 +446,22 @@ def test_ethosu_advice_producer(
             APIActionResolver(),
             [
                 Advice(
-                    [
-                        "You can improve the inference time by using only operators "
-                        "that are supported by the NPU.",
-                    ]
+                    id="0",
+                    category=SchemaAdviceCategory.PERFORMANCE,
+                    severity=AdviceSeverity.INFO,
+                    message=(
+                        "You can improve the inference time by using only "
+                        "operators that are supported by the NPU."
+                    ),
                 ),
                 Advice(
-                    [
-                        "Check if you can improve the performance by applying "
-                        "tooling techniques to your model."
-                    ]
+                    id="1",
+                    category=SchemaAdviceCategory.PERFORMANCE,
+                    severity=AdviceSeverity.INFO,
+                    message=(
+                        "Check if you can improve the performance by "
+                        "applying tooling techniques to your model."
+                    ),
                 ),
             ],
         ],
@@ -418,22 +472,29 @@ def test_ethosu_advice_producer(
             ),
             [
                 Advice(
-                    [
-                        "You can improve the inference time by using only operators "
-                        "that are supported by the NPU.",
-                        "Try running the following command to verify that:",
-                        "mlia check test_model.h5 --target-profile sample_target",
-                    ]
+                    id="0",
+                    category=SchemaAdviceCategory.PERFORMANCE,
+                    severity=AdviceSeverity.INFO,
+                    message=(
+                        "You can improve the inference time by using only "
+                        "operators that are supported by the NPU. Try "
+                        "running the following command to verify that: "
+                        "mlia check test_model.h5 --target-profile "
+                        "sample_target"
+                    ),
                 ),
                 Advice(
-                    [
-                        "Check if you can improve the performance by applying "
-                        "tooling techniques to your model.",
-                        "For example: mlia optimize test_model.h5 "
-                        "--pruning --clustering "
-                        "--pruning-target 0.5 --clustering-target 32",
-                        "For more info: mlia optimize --help",
-                    ]
+                    id="1",
+                    category=SchemaAdviceCategory.PERFORMANCE,
+                    severity=AdviceSeverity.INFO,
+                    message=(
+                        "Check if you can improve the performance by "
+                        "applying tooling techniques to your model. For "
+                        "example: mlia optimize test_model.h5 --pruning "
+                        "--clustering --pruning-target 0.5 "
+                        "--clustering-target 32 For more info: mlia "
+                        "optimize --help"
+                    ),
                 ),
             ],
         ],
@@ -442,10 +503,14 @@ def test_ethosu_advice_producer(
             APIActionResolver(),
             [
                 Advice(
-                    [
-                        "For better performance, make sure that all the operators "
-                        "of your final TensorFlow Lite model are supported by the NPU.",
-                    ]
+                    id="0",
+                    category=SchemaAdviceCategory.OPTIMIZATION,
+                    severity=AdviceSeverity.INFO,
+                    message=(
+                        "For better performance, make sure that all the "
+                        "operators of your final TensorFlow Lite model are "
+                        "supported by the NPU."
+                    ),
                 )
             ],
         ],
@@ -454,11 +519,15 @@ def test_ethosu_advice_producer(
             CLIActionResolver({"model": "test_model.h5"}),
             [
                 Advice(
-                    [
-                        "For better performance, make sure that all the operators "
-                        "of your final TensorFlow Lite model are supported by the NPU.",
-                        "For more details, run: mlia check --help",
-                    ]
+                    id="0",
+                    category=SchemaAdviceCategory.OPTIMIZATION,
+                    severity=AdviceSeverity.INFO,
+                    message=(
+                        "For better performance, make sure that all the "
+                        "operators of your final TensorFlow Lite model are "
+                        "supported by the NPU. For more details, run: mlia "
+                        "check --help"
+                    ),
                 )
             ],
         ],
@@ -479,4 +548,8 @@ def test_ethosu_static_advice_producer(
         action_resolver=action_resolver,
     )
     producer.set_context(context)
-    assert producer.get_advice() == expected_advice
+    actual = producer.get_advice()
+    assert isinstance(actual, list)
+    assert len(actual) == len(expected_advice)
+    for actual_adv, expected_adv in zip(actual, expected_advice):
+        assert actual_adv.message == expected_adv.message
