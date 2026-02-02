@@ -332,8 +332,8 @@ def test_add_target_options() -> None:
     args = parser.parse_args(["--target-profile", "ethos-u55-256"])
     assert args.target_profile == "ethos-u55-256"
 
-    args = parser.parse_args(["-t", "cortex-a"])
-    assert args.target_profile == "cortex-a"
+    args = parser.parse_args(["-t", "tosa"])
+    assert args.target_profile == "tosa"
 
 
 @pytest.mark.parametrize(
@@ -543,7 +543,7 @@ def test_add_backend_options_with_skip_list() -> None:
     parser = argparse.ArgumentParser()
 
     with patch("mlia.cli.options.get_available_backends") as mock_backends:
-        mock_backends.return_value = ["vela", "tosa-checker", "armnn-tflite-delegate"]
+        mock_backends.return_value = ["vela", "tosa-checker", "corstone-300"]
         add_backend_options(parser, backends_to_skip=["tosa-checker"])
 
         # tosa-checker should not be in choices

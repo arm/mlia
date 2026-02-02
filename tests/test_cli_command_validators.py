@@ -47,30 +47,6 @@ from mlia.cli.command_validators import (
             True,
         ],
         ["tosa", "compatibility", [], False],
-        [
-            "cortex-a",
-            {"performance"},
-            [
-                (
-                    "\nWARNING: Performance checks skipped as they cannot be "
-                    "performed with target profile cortex-a. "
-                    "No operation was performed."
-                )
-            ],
-            True,
-        ],
-        [
-            "cortex-a",
-            {"compatibility", "performance"},
-            [
-                (
-                    "\nWARNING: Performance checks skipped as they cannot be "
-                    "performed with target profile cortex-a."
-                )
-            ],
-            False,
-        ],
-        ["cortex-a", "compatibility", [], False],
     ],
 )
 def test_validate_check_target_profile(
@@ -135,20 +111,6 @@ def test_validate_check_target_profile(
             None,
         ],
         [
-            "cortex-a",
-            ["armnn-tflite-delegate"],
-            False,
-            None,
-            ["armnn-tflite-delegate"],
-        ],
-        [
-            "cortex-a",
-            ["tosa-checker"],
-            True,
-            "Backend tosa-checker not supported with target-profile cortex-a.",
-            None,
-        ],
-        [
             "ethos-u55-256",
             ["vela", "corstone-310"],
             False,
@@ -182,13 +144,6 @@ def test_validate_backend(
         assert validate_backend(input_target_profile, input_backends) == output_backends
 
 
-def test_validate_backend_default_available() -> None:
-    """Test default backend validation with available backend."""
-    backends = validate_backend("cortex-a", None)
-    assert backends
-    assert backends == ["armnn-tflite-delegate"]
-
-
 def test_validate_backend_default_unavailable(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -198,12 +153,12 @@ def test_validate_backend_default_unavailable(
         MagicMock(return_value=["UNKNOWN_BACKEND"]),
     )
     with pytest.raises(argparse.ArgumentError):
-        validate_backend("cortex-a", None)
+        validate_backend("ethos-u55-256", None)
 
 
 @pytest.mark.parametrize(
     "target_profile, sys_exit",
-    [("ethos-u55-128", False), ("tosa", True), ("cortex-a", True)],
+    [("ethos-u55-128", False), ("tosa", True)],
 )
 def test_validate_optimize_target_profile(
     target_profile: str,
@@ -230,7 +185,6 @@ def test_validate_optimize_target_profile(
         ["MixedCase-With-Hyphens", "mixedcasewithhyphens"],
         ["ToSa-cHecker", "tosachecker"],
         ["corstone-310", "corstone310"],
-        ["armnn-tflite-delegate", "armnntflitedelegate"],
         ["---multiple---hyphens---", "multiplehyphens"],
     ],
 )
@@ -243,13 +197,6 @@ def test_normalize_string(input_string: str, expected_output: str) -> None:
     "supported_backends, target, target_profile, backends, expected",
     [
         (
-            ["armnn-tflite-delegate"],
-            "cortex-a",
-            "cortex-a",
-            ["armnn-tflite-delegate"],
-            ["armnn-tflite-delegate"],
-        ),
-        (
             ["Vela", "Corstone-310"],
             "ethos-u55",
             "ethos-u55-256",
@@ -257,7 +204,7 @@ def test_normalize_string(input_string: str, expected_output: str) -> None:
             ["VELA", "corstone-310"],
         ),
     ],
-    ids=["hyphen_normalization", "case_insensitive"],
+    ids=["case_insensitive"],
 )
 def test_validate_backend_normalization(
     supported_backends: list[str],

@@ -88,7 +88,7 @@ def get_commands() -> list[CommandInfo]:
                 ),
                 partial(
                     add_backend_options,
-                    backends_to_skip=["tosa-checker", "armnn-tflite-delegate"],
+                    backends_to_skip=["tosa-checker"],
                 ),
                 add_multi_optimization_options,
                 add_output_options,
