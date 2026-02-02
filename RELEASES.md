@@ -19,6 +19,14 @@ scheme.
 
 ## Next
 
+### Breaking changes
+
+* **Removed ArmNN TensorFlow Lite Delegate backend**: The deprecated `armnn-tflite-delegate`
+  backend has been completely removed from MLIA. This backend relied on an unmaintained
+  project and was no longer actively supported.
+* **Removed Cortex-A target profile**: The `cortex-a` target profile has been removed as
+  it was solely dependent on the removed ArmNN TensorFlow Lite Delegate backend.
+
 ### Internal changes
 
 * Minimum required Python version bumped to 3.10

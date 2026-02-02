@@ -21,12 +21,6 @@ from mlia.core.common import AdviceCategory
     ("backend", "advices", "systems", "type_"),
     (
         (
-            "armnn-tflite-delegate",
-            [AdviceCategory.COMPATIBILITY],
-            None,
-            BackendType.BUILTIN,
-        ),
-        (
             "corstone-300",
             [
                 AdviceCategory.COMPATIBILITY,
@@ -103,16 +97,18 @@ def test_backend_registry(
     assert cfg.type == type_
 
 
+_SUPPORTED_BACKENDS = {
+    "corstone-300",
+    "corstone-310",
+    "corstone-320",
+    "tosa-checker",
+    "vela",
+}
+
+
 def test_get_supported_backends() -> None:
     """Test function get_supported_backends."""
-    assert get_supported_backends() == [
-        "armnn-tflite-delegate",
-        "corstone-300",
-        "corstone-310",
-        "corstone-320",
-        "tosa-checker",
-        "vela",
-    ]
+    assert get_supported_backends() == sorted(_SUPPORTED_BACKENDS)
 
 
 def test_get_supported_systems() -> None:

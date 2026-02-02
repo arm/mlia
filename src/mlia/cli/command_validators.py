@@ -55,7 +55,7 @@ def validate_check_target_profile(target_profile: str, category: set[str]) -> No
     compatible with the selected target profile. If no operation can be
     performed as a result of the validation, MLIA exits with error code 0.
     """
-    incompatible_targets_performance: list[str] = ["tosa", "cortex-a"]
+    incompatible_targets_performance: list[str] = ["tosa"]
     incompatible_targets_compatibility: list[str] = []
 
     # Check which check operation should be performed
@@ -107,7 +107,7 @@ def validate_optimize_target_profile(target_profile: str) -> None:
     This function exits with code 1 if the provided target profile is
     not supported.
     """
-    incompatible_targets_optimize: list[str] = ["tosa", "cortex-a"]
+    incompatible_targets_optimize: list[str] = ["tosa"]
     if target_profile in incompatible_targets_optimize:
         logger.error(
             "Optimization cannot be performed with target profile %s.", target_profile
