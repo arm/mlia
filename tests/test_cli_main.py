@@ -268,11 +268,11 @@ def wrap_mock_command(mock: MagicMock, command: Callable) -> Callable:
                 "sample_model.h5",
                 "--compatibility",
                 "--target-profile",
-                "cortex-a",
+                "ethos-u55-256",
             ],
             call(
                 ctx=ANY,
-                target_profile="cortex-a",
+                target_profile="ethos-u55-256",
                 model="sample_model.h5",
                 compatibility=True,
                 performance=False,

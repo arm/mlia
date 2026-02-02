@@ -161,12 +161,6 @@ the specified target.
 ```bash
 # List operator compatibility with Ethos-U55 with 256 MAC
 mlia check ~/models/mobilenet_v1_1.0_224_quant.tflite --target-profile ethos-u55-256
-
-# List operator compatibility with Cortex-A
-mlia check ~/models/mobilenet_v1_1.0_224_quant.tflite --target-profile cortex-a
-
-# Get help and further information
-mlia check --help
 ```
 
 ### performance
@@ -474,17 +468,6 @@ can customize the target using the following parameters in the .toml files:
   passed in the `--config` argument.
   If not given, uses the builtin path: `mlia/resources/vela/vela.ini`
 
-## Cortex-A
-
-> **DEPRECATION WARNING**
-> The *cortex-a* target profile uses the deprecated Arm NN TensorFlow Lite Delegate
-> backend which will be removed in the next major release.
-
-The profile *cortex-a* can be used to get the information about supported
-operators for Cortex-A CPUs when using the Arm NN TensorFlow Lite Delegate.
-Please, find more details in the section for the
-[corresponding backend](#arm-nn-tensorflow-lite-delegate).
-
 ## TOSA
 
 > **DEPRECATION WARNING**
@@ -559,21 +542,8 @@ the following table shows some compatibility information:
 | TOSA checker                      | x86_64 (manylinux2014) | Not compatible | Python>=3.8      |
 | Vela                              | x86_64 and  AArch64    | Windows 10     | Python~=3.7      |
 
-### Arm NN TensorFlow Lite Delegate
-
-> **DEPRECATION WARNING**
-> This backend is **deprecated** and will be **removed in the next major release**.
-> The Arm NN TensorFlow Lite Delegate backend relies on an unmaintained project
-> and is no longer actively supported.
-
-This backend provides general information about the compatibility of operators
-with the Arm NN TensorFlow Lite Delegate for Cortex-A. It comes pre-installed.
-
-For version 23.05 the classic delegate is used.
-
-For more information see:
-
-- [Arm NN TensorFlow Lite Delegate documentation](https://arm-software.github.io/armnn/latest/md_delegate__delegate_quick_start_guide.html)
+MLIA handles dependency backends that are handling conversions from supported formats to the format accepted by user-facing backend.
+These backends are listed in `mlia-backend list` output, but user is not required to explicitly install them.
 
 ### Corstone-300
 

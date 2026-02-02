@@ -21,8 +21,6 @@ from mlia.target.config import (
     is_builtin_target_profile,
     load_profile,
 )
-from mlia.target.cortex_a.advisor import CortexAInferenceAdvisor
-from mlia.target.cortex_a.config import CortexAConfiguration
 from mlia.target.tosa.config import TOSAConfiguration
 from mlia.utils.registry import Registry
 
@@ -31,7 +29,6 @@ def test_builtin_supported_profile_names() -> None:
     """Test built-in profile names."""
     assert BUILTIN_SUPPORTED_PROFILE_NAMES == get_builtin_supported_profile_names()
     assert set(BUILTIN_SUPPORTED_PROFILE_NAMES) == {
-        "cortex-a",
         "ethos-u55-128",
         "ethos-u55-256",
         "ethos-u65-256",
@@ -51,7 +48,7 @@ def test_builtin_supported_profile_names() -> None:
 
 def test_builtin_profile_files() -> None:
     """Test function 'get_bulitin_profile_file'."""
-    profile_file = get_builtin_target_profile_path("cortex-a")
+    profile_file = get_builtin_target_profile_path("ethos-u55-256")
     assert profile_file.is_file()
 
     profile_file = get_builtin_target_profile_path("UNKNOWN_FILE_THAT_DOES_NOT_EXIST")
@@ -169,8 +166,8 @@ def test_target_info(
     info = TargetInfo(
         ["backend"],
         ["backend"],
-        CortexAInferenceAdvisor,
-        CortexAConfiguration,
+        MagicMock(),
+        MagicMock(),
     )
     assert str(info) == "backend"
 
@@ -189,50 +186,15 @@ def test_target_info(
     assert info.is_supported(advice, check_system) == supported
     assert bool(info.filter_supported_backends(advice, check_system)) == supported
 
+    # Test with unknown backend
     info = TargetInfo(
         ["unknown_backend"],
         ["unknown_backend"],
-        CortexAInferenceAdvisor,
-        CortexAConfiguration,
+        MagicMock(),
+        MagicMock(),
     )
     assert not info.is_supported(advice, check_system)
     assert not info.filter_supported_backends(advice, check_system)
-
-
-def test_cortex_a_config_deprecation_warning() -> None:
-    """Test that creating Cortex-A configuration triggers deprecation warning."""
-    with warnings.catch_warnings(record=True) as warning_list:
-        warnings.simplefilter("always")
-
-        # Mock the backend configuration
-        mock_backend_config = {"armnn-tflite-delegate": {"version": "23.05"}}
-
-        try:
-            # Create Cortex-A configuration which should trigger deprecation warning
-            CortexAConfiguration(target="cortex-a", backend=mock_backend_config)
-
-        except (ImportError, ModuleNotFoundError):
-            # If creation fails due to missing dependencies, manually trigger the
-            # warning to test the warning mechanism itself
-            warnings.warn(
-                "The ArmNN TensorFlow Lite Delegate backend is deprecated and "
-                "will be removed in the next major release. This backend relies "
-                "on an unmaintained project.",
-                DeprecationWarning,
-                stacklevel=2,
-            )
-
-        # Check that a deprecation warning was issued
-        deprecation_warnings = [
-            w for w in warning_list if issubclass(w.category, DeprecationWarning)
-        ]
-        assert any(deprecation_warnings) > 0, (
-            "No DeprecationWarning was issued when creating Cortex-A config"
-        )
-
-        # Check the warning message content
-        warning_message = str(deprecation_warnings[0].message)
-        assert "ArmNN TensorFlow Lite Delegate backend is deprecated" in warning_message
 
 
 def test_tosa_config_deprecation_warning() -> None:
@@ -244,7 +206,7 @@ def test_tosa_config_deprecation_warning() -> None:
         mock_backend_config = {"tosa-checker": {"version": "23.05"}}
 
         try:
-            # Create Cortex-A configuration which should trigger deprecation warning
+            # Create TOSA configuration which should trigger deprecation warning
             TOSAConfiguration(target="tosa", backend=mock_backend_config)
 
         except (ImportError, ModuleNotFoundError):

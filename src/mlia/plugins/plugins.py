@@ -67,7 +67,12 @@ def call_entry_points(group: str, *args: Any) -> None:
                 entry_point.value,
             )
 
-        module = entry_point.load()
+        try:
+            module = entry_point.load()
+        except Exception:  # pylint: disable=broad-exception-caught
+            logger.error("Error importing plugin '%s'", entry_point.name)
+            logger.error(traceback.format_exc())
+            continue
 
         if module.plugin_interface_version != "0.0.1":
             logger.error(
