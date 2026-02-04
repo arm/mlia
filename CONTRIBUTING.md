@@ -1,7 +1,8 @@
 <!---
-SPDX-FileCopyrightText: Copyright 2023,2025, Arm Limited and/or its affiliates.
+SPDX-FileCopyrightText: Copyright 2023,2025-2026, Arm Limited and/or its affiliates.
 SPDX-License-Identifier: Apache-2.0
 --->
+
 # Contribution Guidelines
 
 The ML Inference Advisor (MLIA) project is open for external contributors and

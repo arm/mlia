@@ -1,7 +1,8 @@
 <!---
-SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
+SPDX-FileCopyrightText: Copyright 2022-2026, Arm Limited and/or its affiliates.
 SPDX-License-Identifier: Apache-2.0
 --->
+
 # ML Inference Advisor - Introduction
 
 The ML Inference Advisor (MLIA) helps AI developers design and optimize
@@ -18,33 +19,33 @@ with differing knowledge on hardware optimization and machine learning.
 ## Table of Contents
 
 - [General usage](#general-usage)
-   - [Prerequisites and dependencies](#prerequisites-and-dependencies)
-   - [Installation](#installation)
-   - [First steps](#first-steps)
+  - [Prerequisites and dependencies](#prerequisites-and-dependencies)
+  - [Installation](#installation)
+  - [First steps](#first-steps)
 - [Sub-commands](#sub-commands)
-   - [check](#check)
-      - [compatibility](#compatibility)
-      - [performance](#performance)
-   - [optimize](#optimize)
-   - [rewrite](#rewrite)
-      - [Random Dataset](#random-dataset)
+  - [check](#check)
+    - [compatibility](#compatibility)
+    - [performance](#performance)
+  - [optimize](#optimize)
+  - [rewrite](#rewrite)
+    - [Random Dataset](#random-dataset)
       - [Conv2d Rewrites](#conv2d-rewrites)
       - [Optimization Profiles](#optimization-profiles)
       - [Custom optimization Profiles](#custom-optimization-profiles)
 - [Target profiles](#target-profiles)
-   - [Listing target profiles](#listing-target-profiles)
-   - [Ethos-U](#ethos-u)
-   - [Cortex-A](#cortex-a)
-   - [TOSA](#tosa)
-   - [Custom target profiles](#custom-target-profiles)
+  - [Listing target profiles](#listing-target-profiles)
+  - [Ethos-U](#ethos-u)
+  - [Cortex-A](#cortex-a)
+  - [TOSA](#tosa)
+  - [Custom target profiles](#custom-target-profiles)
 - [Backend installation](#backend-installation)
-   - [Available backends](#available-backends)
-      - [Arm NN TensorFlow Lite Delegate](#arm-nn-tensorflow-lite-delegate)
-      - [Corstone-300](#corstone-300)
-      - [Corstone-310](#corstone-310)
-      - [Corstone-320](#corstone-320)
-      - [TOSA Checker](#tosa-checker)
-      - [Vela](#vela)
+  - [Available backends](#available-backends)
+    - [Arm NN TensorFlow Lite Delegate](#arm-nn-tensorflow-lite-delegate)
+    - [Corstone-300](#corstone-300)
+    - [Corstone-310](#corstone-310)
+    - [Corstone-320](#corstone-320)
+    - [TOSA Checker](#tosa-checker)
+    - [Vela](#vela)
 
 ## Inclusive language commitment
 
@@ -521,9 +522,9 @@ metrics for different target hardware. Some backends come pre-installed,
 but others can be added and managed using the command `mlia-backend`, that
 provides the following functionality:
 
-- **install**
-- **uninstall**
-- **list**
+- `install`
+- `uninstall`
+- `list`
 
  *Examples:*
 

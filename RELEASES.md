@@ -1,7 +1,8 @@
 <!---
-SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
+SPDX-FileCopyrightText: Copyright 2022-2026, Arm Limited and/or its affiliates.
 SPDX-License-Identifier: Apache-2.0
 --->
+
 # MLIA Releases
 
 These are the release notes for all MLIA releases. They document all of the
@@ -31,17 +32,17 @@ scheme.
 * Corstone-300/310 available on AArch64 and x86
 * Move Vela to a separate backend
 * Rewrite improvements (proof-of-concept feature):
-   * Add kernel size to user parameter list for conv2D rewrites
-   * Add support for rewrite-specific parameters
-   * Add support for unstructured polynomial decay pruning rewrites
-   * Allow the user to specify an activation function for conv2d rewrites
-   * CLI and API changes for the new conv2d rewrite targets
-   * Enable clustering and fully connected rewrites for conv2D layers
-   * Enable Depthwise Separable conv2d rewrites
-   * Enable random data usage if no dataset is provided
-   * Enable user to specify augmentations via the --optimization-profile
-   * Implement a clustering rewrite for fully connected layers for int8 models
-   * Implement int8/fp32 sparsity 2:4 rewrite
+  * Add kernel size to user parameter list for conv2D rewrites
+  * Add support for rewrite-specific parameters
+  * Add support for unstructured polynomial decay pruning rewrites
+  * Allow the user to specify an activation function for conv2d rewrites
+  * CLI and API changes for the new conv2d rewrite targets
+  * Enable clustering and fully connected rewrites for conv2D layers
+  * Enable Depthwise Separable conv2d rewrites
+  * Enable random data usage if no dataset is provided
+  * Enable user to specify augmentations via the --optimization-profile
+  * Implement a clustering rewrite for fully connected layers for int8 models
+  * Implement int8/fp32 sparsity 2:4 rewrite
 
 ### Bug fix
 
@@ -221,7 +222,7 @@ scheme.
 * Ethos-U operator compatibility, performance estimation and optimization
   advice
 * Arm IP support:
-   * Ethos-U55 via Corstone-300 and Corstone-310
-   * Ethos-U65 via Corstone-300
+  * Ethos-U55 via Corstone-300 and Corstone-310
+  * Ethos-U65 via Corstone-300
 
   Note: Corstone-310 is available on AVH only.
