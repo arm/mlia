@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 # Pre-commit checks
 #
@@ -66,11 +66,11 @@ repos:
   hooks:
     - id: pydocstyle
 
-- repo: https://github.com/markdownlint/markdownlint
-  rev: v0.12.0
+- repo: https://github.com/jackdewinter/pymarkdown
+  rev: v0.9.35
   hooks:
-    - id: markdownlint
-      args: ["-r", "~MD024,~MD002,~MD013"]
+    - id: pymarkdown
+      args: ["-d", "MD041,MD025,MD024,MD002,MD013", "scan"]
 
 - repo: https://github.com/ryanrhee/shellcheck-py
   rev: v0.9.0.5

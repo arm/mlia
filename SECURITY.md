@@ -1,7 +1,8 @@
 <!---
-SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+SPDX-FileCopyrightText: Copyright 2022,2026 Arm Limited and/or its affiliates.
 SPDX-License-Identifier: Apache-2.0
 --->
+
 # Reporting vulnerabilities
 
 Arm takes security issues seriously and welcomes feedback from researchers and
@@ -24,7 +25,7 @@ We support and encourage secure submission of vulnerability reports using PGP,
 using the key below. If you would like replies to be encrypted, please provide
 your own public key through a secure mechanism.
 
-```
+```gpg
 -----BEGIN PGP PUBLIC KEY BLOCK-----
 mQINBFr7/RMBEACjHR5QZL/z1t2aLCRNXLE4KJiQmCo7edU5Be+7MTjIJDzZNu68
 lNEUYRoLexeayif8eC4T19bUsSbGpxHiYsFFjV8ewLXDyDJRRuaBGPfQ5rn/mE6X
