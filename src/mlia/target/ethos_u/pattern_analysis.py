@@ -9,20 +9,20 @@ from dataclasses import field
 from mlia.core.data_analysis import Fact
 from mlia.core.data_analysis import PatternAnalyzer
 from mlia.core.data_analysis import register_fact_type
-from mlia.target.ethos_u.data_analysis import EthosULayerUsesLUT
+from mlia.target.ethos_u.data_analysis import EthosULayerSuboptimalActivation
 
 
 @register_fact_type(
     "ethos_u_ineffective_activation_pattern",
     "pattern",
-    "Multiple layers using LUT-based activations that could be optimized",
+    "Multiple layers using ineffective activations that could be optimized",
 )
 @dataclass
 class IneffectiveActivationPattern(Fact):
     """Pattern indicating multiple layers with inefficient activations.
 
-    This composite fact is generated when multiple layers use LUT-based
-    activations (like SOFTMAX) that run on CPU instead of NPU.
+    This composite fact is generated when multiple layers use
+    suboptimal activation functions that are hard to quantize effectively.
     """
 
     affected_layers: list[str] = field(default_factory=list)
@@ -47,7 +47,7 @@ class IneffectiveActivationPattern(Fact):
 class ActivationFunctionPatternAnalyzer(PatternAnalyzer):
     """Analyzes activation function patterns across layers.
 
-    Detects when multiple layers use LUT-based activations that could
+    Detects when multiple layers use suboptimal activation functions that could
     be replaced with more efficient alternatives or quantized differently.
     """
 
@@ -70,50 +70,45 @@ class ActivationFunctionPatternAnalyzer(PatternAnalyzer):
         if self.has_already_generated_patterns(facts):
             return []
 
-        # Filter for LUT-related facts
-        lut_facts = [f for f in facts if isinstance(f, EthosULayerUsesLUT)]
+        bad_activation_facts = [
+            f for f in facts if isinstance(f, EthosULayerSuboptimalActivation)
+        ]
 
-        # Group by activation type
-        activation_groups: dict[str, list] = {}
-        for fact in lut_facts:
+        if not bad_activation_facts:
+            return []
+
+        affected_layers = []
+        activation_types_set = set()
+
+        for fact in bad_activation_facts:
+            if hasattr(fact, "operator_name"):
+                affected_layers.append(f"{fact.operator_name} ({fact.location})")
             if hasattr(fact, "activation_type"):
-                act_type = fact.activation_type
-                if act_type not in activation_groups:
-                    activation_groups[act_type] = []
-                activation_groups[act_type].append(fact)
+                activation_types_set.add(fact.activation_type)
 
-        detected_patterns: list[Fact] = []
+        # Create single pattern for all suboptimal activations
+        activation_types = sorted(activation_types_set)
 
-        # Check for patterns in each activation type
-        for act_type, layer_facts in activation_groups.items():
-            if len(layer_facts) >= 1:  # Even single LUT usage is worth noting
-                # Collect affected layer information
-                affected_layers = []
-                for fact in layer_facts:
-                    if hasattr(fact, "operator_name"):
-                        affected_layers.append(
-                            f"{fact.operator_name} ({fact.location})"
-                        )
+        recommendation = (
+            "Consider replacing suboptimal activation functions with "
+            "NPU-friendly alternatives."
+        )
 
-                # Generate recommendation based on activation type
-                if act_type.upper() in ["SOFTMAX", "SIGMOID", "TANH"]:
-                    recommendation = (
-                        f"Consider replacing {act_type} "
-                        "with NPU-friendly alternatives."
-                    )
-                else:
-                    recommendation = (
-                        f"Layer uses {act_type} operation which is not "
-                        "easily quantized. Consider alternative activation "
-                        "functions that can be easily quantized."
-                    )
+        # Identify activation functions that use unsupported operations
+        unsupported_activations = {"MISH", "SELU", "SOFTPLUS"}
+        used_unsupported_activations = unsupported_activations & set(activation_types)
 
-                pattern = IneffectiveActivationPattern(
-                    affected_layers=affected_layers,
-                    layer_count=len(layer_facts),
-                    activation_types=[act_type],
-                    recommendation=recommendation,
-                )
-                detected_patterns.append(pattern)
+        if used_unsupported_activations:
+            recommendation += (
+                "\nThe following activation functions use unsupported operations: "
+                + ", ".join(sorted(used_unsupported_activations))
+            )
 
-        return detected_patterns
+        pattern = IneffectiveActivationPattern(
+            affected_layers=affected_layers,
+            layer_count=len(bad_activation_facts),
+            activation_types=activation_types,
+            recommendation=recommendation,
+        )
+
+        return [pattern]

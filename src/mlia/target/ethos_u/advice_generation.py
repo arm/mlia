@@ -210,7 +210,7 @@ class EthosUAdviceProducer(FactBasedAdviceProducer):
 
         message = (
             f"Detected {data_item.layer_count} {layer_word} using "
-            f"LUT-based activation functions ({activation_list}). "
+            f"suboptimal activation functions ({activation_list}). "
             f"{data_item.recommendation}"
         )
 

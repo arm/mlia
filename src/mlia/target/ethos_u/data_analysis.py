@@ -17,10 +17,7 @@ from mlia.core.data_analysis import register_fact_type
 from mlia.nn.select import OptimizationSettings
 from mlia.nn.tensorflow.tflite_compat import TFLiteCompatibilityInfo
 from mlia.target.common.reporters import analyze_tflite_compatibility_common
-from mlia.target.ethos_u.performance import CombinedPerformanceResult
 from mlia.target.ethos_u.performance import OptimizationPerformanceMetrics
-from mlia.target.ethos_u.performance import PerformanceMetrics
-from mlia.target.ethos_u.performance import VelaPerformanceResult
 
 
 @dataclass
@@ -64,17 +61,13 @@ class EthosULayerCompatibilityIssue(LayerCompatibilityIssue):
 
 
 @register_fact_type(
-    "ethos_u_layer_uses_lut",
+    "ethos_u_layer_suboptimal_activation",
     "layer",
-    "Layer uses lookup table (LUT) operation on Ethos-U",
+    "Layer uses suboptimal activation function on Ethos-U",
 )
 @dataclass
-class EthosULayerUsesLUT(LayerCompatibilityIssue):
-    """Fact indicating a layer uses LUT operation.
-
-    LUT operations typically run on CPU and may indicate
-    activation functions that could be optimized.
-    """
+class EthosULayerSuboptimalActivation(LayerCompatibilityIssue):
+    """Fact indicating a layer uses suboptimal activation function."""
 
     activation_type: str = "unknown"
 
@@ -131,6 +124,31 @@ class OptimizationResults(Fact):
     diffs: list[OptimizationDiff]
 
 
+@dataclass
+class LutPatternRule:
+    """Activation funciton operator patterns."""
+
+    op_seq: list[str]
+    op_label: str
+
+
+PATTERN_RULES = [
+    LutPatternRule(
+        ["greater", "fully_connected", "exp", "sub", "mul", "select"], "SELU"
+    ),
+    LutPatternRule(["greater", "mul", "exp", "sub", "mul", "select"], "SELU"),
+    LutPatternRule(["exp", "add", "log", "tanh", "mul"], "MISH"),
+    LutPatternRule(["exp", "add", "log"], "SOFTPLUS"),
+    LutPatternRule(["logistic", "mul"], "LOGISTIC BASED OPERATION"),
+    LutPatternRule(["exp"], "EXPONENTIAL"),
+    LutPatternRule(["gelu"], "GELU"),
+    LutPatternRule(["elu"], "ELU"),
+    LutPatternRule(["tanh"], "TANH"),
+    LutPatternRule(["logistic"], "SIGMOID"),
+    LutPatternRule(["softmax"], "SOFTMAX"),
+]
+
+
 class EthosUDataAnalyzer(FactExtractor):
     """Ethos-U data analyzer."""
 
@@ -147,117 +165,68 @@ class EthosUDataAnalyzer(FactExtractor):
         """Analyse Vela compatibility result and extract operator information."""
         # Extract the Operators object from VelaCompatibilityResult
         self.analyze_operator_compatibility(vela_result.legacy_info)
-        # Analyze softmax usage patterns
-        self._analyze_softmax(vela_result.legacy_info)
+        # Analyze activation usage patterns
+        self._analyze_activation_function(vela_result.legacy_info)
 
-    @analyze_data.register
-    def analyze_vela_performance(self, perf_result: VelaPerformanceResult) -> None:
-        """Analyse Vela performance result and extract operator information."""
-        self._extract_and_analyze_layerwise_perf(perf_result.legacy_info)
+    def _sequence_matches(self, ops: list, idx: int, function_ops: list[str]) -> bool:
+        """Check operators sequence matches activation function operator pattern."""
+        if idx + len(function_ops) > len(ops):
+            return False
+        for i, function_op in enumerate(function_ops):
+            # Check compatibility operators sequentially against activation function
+            if not ops[idx + i].op_type.lower() == function_op:
+                return False
+        return True
 
-    @analyze_data.register
-    def analyze_combined_performance(
-        self, perf_result: CombinedPerformanceResult
-    ) -> None:
-        """Analyse combined performance result and extract operator information."""
-        self._extract_and_analyze_layerwise_perf(perf_result.legacy_info)
-
-    @analyze_data.register
-    def analyze_performance_metrics(self, perf_metrics: PerformanceMetrics) -> None:
-        """Analyse performance metrics and extract operator information."""
-        self._extract_and_analyze_layerwise_perf(perf_metrics)
-
-    def _extract_and_analyze_layerwise_perf(
-        self, perf_metrics: PerformanceMetrics | None
-    ) -> None:
-        """Extract layerwise performance info and analyze for softmax operators.
-
-        :param perf_metrics: PerformanceMetrics object containing layerwise info
-        """
-        if (
-            perf_metrics
-            and hasattr(perf_metrics, "layerwise_perf_info")
-            and perf_metrics.layerwise_perf_info
-        ):
-            layerwise_info = perf_metrics.layerwise_perf_info.layerwise_info
-            if layerwise_info:
-                self._analyze_softmax(layerwise_info)
-
-    @singledispatchmethod
-    def _analyze_softmax(self, data: object) -> None:
-        """Analyze softmax operators from various data sources."""
-
-    @_analyze_softmax.register
-    def _analyze_softmax_from_operators(self, operators: Operators) -> None:
-        """Analyze and emit facts for softmax operators from compatibility data.
-
-        Softmax operations typically use lookup tables and may benefit
-        from optimization or replacement with NPU-friendly alternatives.
-        """
-        for idx, op in enumerate(operators.ops):  # pylint: disable=invalid-name
-            if "softmax" in op.name.lower() or "softmax" in op.op_type.lower():
-                lut_fact = EthosULayerUsesLUT(
-                    operator_name=op.name,
-                    location=f"operator/{idx}",
-                    operator_type=op.op_type,
-                    is_supported=op.run_on_npu.supported,
-                    reasons=op.run_on_npu.reasons,
-                    activation_type="SOFTMAX",
-                )
-                self.add_fact(lut_fact)
-
-    @_analyze_softmax.register(list)
-    def _analyze_softmax_from_layerwise(self, layerwise_info: list) -> None:
-        """Analyze and emit facts for softmax operators from performance data.
-
-        Extracts operator information from layerwise performance metrics.
-        """
-        for idx, layer_info in enumerate(layerwise_info):
-            # layer_info is LayerPerfInfo with name, tflite_operator, etc.
-            operator_name = layer_info.name
-            tflite_operator = layer_info.tflite_operator
-
-            # Check if this is a softmax operator
-            if (
-                "softmax" in operator_name.lower()
-                or "softmax" in tflite_operator.lower()
-            ):
-                lut_fact = EthosULayerUsesLUT(
-                    operator_name=operator_name,
-                    location=f"operator/{idx}",
-                    operator_type=tflite_operator,
-                    is_supported=True,  # If it's in perf data, it was processed
-                    # Performance data doesn't include compatibility reasons
-                    reasons=[],
-                    activation_type="SOFTMAX",
-                )
-                self.add_fact(lut_fact)
+    def _analyze_activation_function(self, operators: Operators) -> None:
+        """Analyze operators from compatibility check for activation functions."""
+        ops = operators.ops
+        idx = 0
+        while idx < len(ops):
+            # Check if activation function pattern occers
+            for rule in PATTERN_RULES:
+                if self._sequence_matches(ops, idx, rule.op_seq):
+                    operator = ops[idx]
+                    lut_fact = EthosULayerSuboptimalActivation(
+                        operator_name=operator.name,
+                        location=f"operator/{idx}",
+                        operator_type=operator.op_type,
+                        is_supported=operator.run_on_npu.supported,
+                        reasons=operator.run_on_npu.reasons,
+                        activation_type=rule.op_label,
+                    )
+                    self.add_fact(lut_fact)
+                    # Skip to next operation not in detected pattern
+                    idx += len(rule.op_seq)
+                    break
+            else:
+                idx += 1
 
     @analyze_data.register
     def analyze_operator_compatibility(self, operators: Operators) -> None:
         """Analyse operator compatibility information."""
-        for idx, op in enumerate(operators.ops):  # pylint: disable=invalid-name
+        for idx, operator in enumerate(operators.ops):
             # Determine NPU placement
-            if op.cpu_only:
+            if operator.cpu_only:
                 npu_placement = "cpu"
-            elif op.run_on_npu.supported:
+            elif operator.run_on_npu.supported:
                 npu_placement = "npu"
             else:
                 npu_placement = "unknown"
 
             # Create layer compatibility fact
             layer_fact = EthosULayerCompatibilityIssue(
-                operator_name=op.name,
+                operator_name=operator.name,
                 location=f"operator/{idx}",
-                operator_type=op.op_type,
-                is_supported=op.run_on_npu.supported,
-                reasons=op.run_on_npu.reasons,
+                operator_type=operator.op_type,
+                is_supported=operator.run_on_npu.supported,
+                reasons=operator.run_on_npu.reasons,
                 npu_placement=npu_placement,
             )
             self.add_fact(layer_fact)
 
         # Keep network-level facts for backward compatibility
-        cpu_only = [op.op_type for op in operators.ops if op.cpu_only]
+        cpu_only = [operator.op_type for operator in operators.ops if operator.cpu_only]
         if cpu_only:
             self.add_fact(HasCPUOnlyOperators(cpu_only))
 
