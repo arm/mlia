@@ -1,29 +1,33 @@
 # SPDX-FileCopyrightText: Copyright 2022-2023, 2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Ethos-U advice generation."""
+
 from __future__ import annotations
 
 from functools import singledispatchmethod
 
-from mlia.core.advice_generation import Advice
-from mlia.core.advice_generation import advice_category
-from mlia.core.advice_generation import ContextAwareAdviceProducer
-from mlia.core.advice_generation import FactBasedAdviceProducer
-from mlia.core.common import AdviceCategory
-from mlia.core.common import DataItem
+from mlia.core.advice_generation import (
+    Advice,
+    ContextAwareAdviceProducer,
+    FactBasedAdviceProducer,
+    advice_category,
+)
+from mlia.core.common import AdviceCategory, DataItem
 from mlia.core.output_schema import AdviceCategory as SchemaAdviceCategory
-from mlia.core.output_schema import AdviceSeverity
-from mlia.core.output_schema import OperatorIdentifier
-from mlia.core.output_schema import OperatorScope
+from mlia.core.output_schema import AdviceSeverity, OperatorIdentifier, OperatorScope
 from mlia.nn.select import OptimizationSettings
-from mlia.target.common.reporters import handle_model_is_not_tflite_compatible_common
-from mlia.target.common.reporters import handle_tflite_check_failed_common
-from mlia.target.common.reporters import ModelIsNotTFLiteCompatible
-from mlia.target.common.reporters import TFLiteCompatibilityCheckFailed
-from mlia.target.ethos_u.data_analysis import AllOperatorsSupportedOnNPU
-from mlia.target.ethos_u.data_analysis import HasCPUOnlyOperators
-from mlia.target.ethos_u.data_analysis import HasUnsupportedOnNPUOperators
-from mlia.target.ethos_u.data_analysis import OptimizationResults
+from mlia.target.common.reporters import (
+    ModelIsNotTFLiteCompatible,
+    TFLiteCompatibilityCheckFailed,
+    handle_model_is_not_tflite_compatible_common,
+    handle_tflite_check_failed_common,
+)
+from mlia.target.ethos_u.data_analysis import (
+    AllOperatorsSupportedOnNPU,
+    HasCPUOnlyOperators,
+    HasUnsupportedOnNPUOperators,
+    OptimizationResults,
+)
 from mlia.target.ethos_u.pattern_analysis import IneffectiveActivationPattern
 
 
@@ -61,7 +65,7 @@ class EthosUAdviceProducer(FactBasedAdviceProducer):
     ) -> None:
         """Advice for the unsupported operators."""
         message = (
-            f"You have {data_item.npu_unsupported_ratio*100:.0f}% of operators "
+            f"You have {data_item.npu_unsupported_ratio * 100:.0f}% of operators "
             "that cannot be placed on the NPU. "
             "For better performance, please review the reasons reported "
             "in the table, and adjust the model accordingly "
@@ -274,9 +278,9 @@ class EthosUStaticAdviceProducer(ContextAwareAdviceProducer):
                         + (
                             " "
                             + " ".join(
-                                self.context.action_resolver.check_operator_compatibility()  # pylint: disable=line-too-long
+                                self.context.action_resolver.check_operator_compatibility()  # noqa: E501
                             )
-                            if self.context.action_resolver.check_operator_compatibility()  # pylint: disable=line-too-long
+                            if self.context.action_resolver.check_operator_compatibility()  # noqa: E501
                             else ""
                         )
                     ),
@@ -310,9 +314,9 @@ class EthosUStaticAdviceProducer(ContextAwareAdviceProducer):
                         + (
                             " "
                             + " ".join(
-                                self.context.action_resolver.operator_compatibility_details()  # pylint: disable=line-too-long
+                                self.context.action_resolver.operator_compatibility_details()  # noqa: E501
                             )
-                            if self.context.action_resolver.operator_compatibility_details()  # pylint: disable=line-too-long
+                            if self.context.action_resolver.operator_compatibility_details()  # noqa: E501
                             else ""
                         )
                     ),

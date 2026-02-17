@@ -1,6 +1,7 @@
-# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for the target registry module."""
+
 from __future__ import annotations
 
 from unittest.mock import MagicMock
@@ -10,19 +11,23 @@ import pytest
 import mlia.target.registry
 from mlia.backend.manager import DefaultInstallationManager
 from mlia.core.common import AdviceCategory
-from mlia.target.config import get_builtin_optimization_profile_path
-from mlia.target.config import get_builtin_target_profile_path
-from mlia.target.config import TargetInfo
-from mlia.target.registry import all_supported_backends
-from mlia.target.registry import default_backends
-from mlia.target.registry import get_optimization_profile
-from mlia.target.registry import is_supported
-from mlia.target.registry import profile
-from mlia.target.registry import registry
-from mlia.target.registry import supported_advice
-from mlia.target.registry import supported_backends
-from mlia.target.registry import supported_targets
-from mlia.target.registry import table
+from mlia.target.config import (
+    TargetInfo,
+    get_builtin_optimization_profile_path,
+    get_builtin_target_profile_path,
+)
+from mlia.target.registry import (
+    all_supported_backends,
+    default_backends,
+    get_optimization_profile,
+    is_supported,
+    profile,
+    registry,
+    supported_advice,
+    supported_backends,
+    supported_targets,
+    table,
+)
 from mlia.utils.registry import Registry
 
 

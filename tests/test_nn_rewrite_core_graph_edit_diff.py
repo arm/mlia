@@ -1,13 +1,13 @@
-# SPDX-FileCopyrightText: Copyright 2023, 2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2023, 2025-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for module mlia.nn.rewrite.graph_edit.join."""
+
 from pathlib import Path
 
 import numpy as np
 import pytest
 
-from mlia.nn.rewrite.core.graph_edit.diff import calc_nrmse
-from mlia.nn.rewrite.core.graph_edit.diff import diff_stats
+from mlia.nn.rewrite.core.graph_edit.diff import calc_nrmse, diff_stats
 
 
 def assert_two_dictionaries_with_numpy_arrays(dict1: dict, dict2: dict) -> None:

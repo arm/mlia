@@ -9,19 +9,16 @@ calling application.
 Each component of the workflow can generate events of specific type.
 Application can subscribe and react to those events.
 """
+
 from __future__ import annotations
 
 import traceback
 import uuid
-from abc import ABC
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from contextlib import contextmanager
-from dataclasses import asdict
-from dataclasses import dataclass
-from dataclasses import field
+from dataclasses import asdict, dataclass, field
 from functools import singledispatchmethod
-from typing import Any
-from typing import Generator
+from typing import Any, Generator
 
 from mlia.core.common import DataItem
 
@@ -334,7 +331,7 @@ class EventDispatcherMetaclass(type):
 
         # override default handle_event method, replace it with the
         # dispatcher
-        setattr(new_class, "handle_event", dispatcher)
+        new_class.handle_event = dispatcher  # type: ignore
 
         return new_class
 

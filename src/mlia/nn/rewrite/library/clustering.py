@@ -1,20 +1,23 @@
-# SPDX-FileCopyrightText: Copyright 2024-2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2024-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Rewrite functions used to return layers ready for clustering."""
+
 from typing import Any
 
 import tensorflow_model_optimization as tfmot
 import tf_keras as keras
 
-from mlia.nn.rewrite.library.helper_functions import compute_conv2d_parameters
-from mlia.nn.rewrite.library.helper_functions import get_activation_function
+from mlia.nn.rewrite.library.helper_functions import (
+    compute_conv2d_parameters,
+    get_activation_function,
+)
 
 
 def fc_clustering_rewrite(
     input_shape: Any,
     output_shape: Any,
     num_clusters: int = 2,
-    cluster_centroids_init: tfmot.clustering.keras.CentroidInitialization = tfmot.clustering.keras.CentroidInitialization(  # pylint: disable=line-too-long
+    cluster_centroids_init: tfmot.clustering.keras.CentroidInitialization = tfmot.clustering.keras.CentroidInitialization(  # noqa: E501
         "CentroidInitialization.LINEAR"
     ),
 ) -> keras.Model:
@@ -31,7 +34,7 @@ def fc_clustering_rewrite(
                 keras.layers.Dense(units=output_shape),
             ]
         ),
-        **rewrite_params
+        **rewrite_params,
     )
     return model
 
@@ -40,7 +43,7 @@ def conv2d_clustering_rewrite(  # pylint: disable=dangerous-default-value
     input_shape: Any,
     output_shape: Any,
     num_clusters: int = 2,
-    cluster_centroids_init: tfmot.clustering.keras.CentroidInitialization = tfmot.clustering.keras.CentroidInitialization(  # pylint: disable=line-too-long
+    cluster_centroids_init: tfmot.clustering.keras.CentroidInitialization = tfmot.clustering.keras.CentroidInitialization(  # noqa: E501
         "CentroidInitialization.LINEAR"
     ),
     activation: str = "relu",
@@ -74,6 +77,6 @@ def conv2d_clustering_rewrite(  # pylint: disable=dangerous-default-value
                 *activation_func_found,
             ]
         ),
-        **rewrite_params
+        **rewrite_params,
     )
     return model

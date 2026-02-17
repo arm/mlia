@@ -1,29 +1,25 @@
-# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Vela compiler wrapper module."""
+
 from __future__ import annotations
 
 import csv
 import logging
 import re
 import sys
-from dataclasses import dataclass
-from dataclasses import fields
+from dataclasses import dataclass, fields
 from io import StringIO
 from pathlib import Path
-from typing import Any
-from typing import Literal
+from typing import Any, Literal
 
 from mlia.backend.errors import BackendUnavailableError
 from mlia.utils.filesystem import get_vela_config
-from mlia.utils.logging import redirect_output
-from mlia.utils.logging import redirect_raw_output
+from mlia.utils.logging import redirect_output, redirect_raw_output
 
 try:
-    from ethosu.vela.model_reader import ModelReaderOptions
-    from ethosu.vela.model_reader import read_model
-    from ethosu.vela.nn_graph import Graph
-    from ethosu.vela.nn_graph import NetworkType
+    from ethosu.vela.model_reader import ModelReaderOptions, read_model
+    from ethosu.vela.nn_graph import Graph, NetworkType
     from ethosu.vela.operation import CustomType
     from ethosu.vela.vela import main
 
@@ -32,10 +28,8 @@ except ImportError:
     from typing import TYPE_CHECKING
 
     if TYPE_CHECKING:
-        from ethosu.vela.model_reader import ModelReaderOptions
-        from ethosu.vela.model_reader import read_model
-        from ethosu.vela.nn_graph import Graph
-        from ethosu.vela.nn_graph import NetworkType
+        from ethosu.vela.model_reader import ModelReaderOptions, read_model
+        from ethosu.vela.nn_graph import Graph, NetworkType
         from ethosu.vela.operation import CustomType
         from ethosu.vela.vela import main
     else:

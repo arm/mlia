@@ -1,7 +1,8 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022, 2026, Arm Limited and/or its affiliates.
 # SPDX-FileCopyrightText: Copyright (c) 2007-2022 by the Sphinx team (see AUTHORS file)
 # SPDX-License-Identifier: Apache-2.0 AND BSD-2-Clause
 """Configuration file for the Sphinx documentation builder."""
+
 # This file only contains a selection of the most common options. For a full
 # list see the documentation:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html

@@ -1,31 +1,31 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, 2025-2026, Arm Limited
-# and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, 2025-2026, Arm Limited and/or its affiliates.  # pylint: disable=line-too-long
 # SPDX-License-Identifier: Apache-2.0
 """Tests for module backend/manager."""
+
 from __future__ import annotations
 
 import base64
 import subprocess  # nosec
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
-from typing import Generator
+from typing import Any, Generator
 from unittest.mock import MagicMock
 
 import pytest
 
 import mlia.core.output_schema as schema
-from mlia.backend.corstone.performance import build_corstone_command
-from mlia.backend.corstone.performance import CorstoneModelPerformanceMetrics
-from mlia.backend.corstone.performance import CorstonePerformanceMetrics
-from mlia.backend.corstone.performance import CorstoneRunConfig
-from mlia.backend.corstone.performance import estimate_performance
-from mlia.backend.corstone.performance import GenericInferenceOutputParser
-from mlia.backend.corstone.performance import get_metrics
+from mlia.backend.corstone.performance import (
+    CorstoneModelPerformanceMetrics,
+    CorstonePerformanceMetrics,
+    CorstoneRunConfig,
+    GenericInferenceOutputParser,
+    build_corstone_command,
+    estimate_performance,
+    get_metrics,
+)
 from mlia.backend.errors import BackendExecutionFailed
 from mlia.core.context import ExecutionContext
-from mlia.core.events import AdviceStageFinishedEvent
-from mlia.core.events import CollectedDataEvent
+from mlia.core.events import AdviceStageFinishedEvent, CollectedDataEvent
 from mlia.target.ethos_u.config import EthosUConfiguration
 from mlia.target.ethos_u.data_collection import EthosUPerformance
 from mlia.target.ethos_u.handlers import EthosUEventHandler
@@ -254,11 +254,9 @@ def test_get_metrics_wrong_fvp(tmp_path: Path) -> None:
     [
         (
             "default",
-            # pylint: disable=line-too-long
             """TFLite_operator,NNG Operator,SRAM Usage,Peak%,Op Cycles,Network%,NPU,SRAM AC,DRAM AC,OnFlash AC,OffFlash AC,MAC Count,Network%,Util%,Name
 CONV_2D,Conv2DBias,100,50,200,10,200,50,10,5,0,1000,20,40,loc0
-CONV_2D,Conv2DBias,120,60,250,15,250,60,15,8,0,1200,25,45,loc1""",
-            # pylint: enable=line-too-long
+CONV_2D,Conv2DBias,120,60,250,15,250,60,15,8,0,1200,25,45,loc1""",  # noqa: E501
             {
                 "NPU IDLE": 100,
                 "NPU AXI0_RD_DATA_BEAT_RECEIVED": 200,
@@ -313,11 +311,9 @@ CONV_2D,Conv2DBias,120,60,250,15,250,60,15,8,0,1200,25,45,loc1""",
         ),
         (
             "corstone-320",
-            # pylint: disable=line-too-long
             """Original Operator,NNG Operator,Target,Staging Usage,Peak% (Staging),Op Cycles,Network% (cycles),NPU,SRAM AC,DRAM AC,OnFlash AC,OffFlash AC,MAC Count,Network% (MAC),Util% (MAC),Name
 Conv2D,Conv2D,NPU,150,40,300,30,300,70,20,0,0,1500,18,35,loc0
-Conv2D,Relu,NPU,180,50,400,35,400,80,25,0,0,2000,22,42,loc1""",
-            # pylint: enable=line-too-long
+Conv2D,Relu,NPU,180,50,400,35,400,80,25,0,0,2000,22,42,loc1""",  # noqa: E501
             {
                 "NPU ACTIVE": 2000,
                 "NPU ETHOSU_PMU_SRAM_RD_DATA_BEAT_RECEIVED": 250,
@@ -415,9 +411,10 @@ def test_corstone_model_performance_metrics_missing_metric() -> None:
 def test_estimate_performance(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Test function estimate_performance."""
     mock_repository = MagicMock()
-    mock_repository.get_backend_settings.return_value = Path("backend_path"), {
-        "profile": "default"
-    }
+    mock_repository.get_backend_settings.return_value = (
+        Path("backend_path"),
+        {"profile": "default"},
+    )
 
     monkeypatch.setattr(
         "mlia.backend.corstone.performance.get_backend_repository",

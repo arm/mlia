@@ -1,8 +1,8 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, 2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Common items for the optimizations module."""
-from abc import ABC
-from abc import abstractmethod
+
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
 from mlia.nn.tensorflow.config import ModelConfiguration

@@ -1,6 +1,7 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, 2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for the API functions."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -8,11 +9,9 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from mlia.api import get_advice
-from mlia.api import get_advisor
+from mlia.api import get_advice, get_advisor
 from mlia.core.common import AdviceCategory
-from mlia.core.context import Context
-from mlia.core.context import ExecutionContext
+from mlia.core.context import Context, ExecutionContext
 from mlia.target.ethos_u.advisor import EthosUInferenceAdvisor
 from mlia.target.tosa.advisor import TOSAInferenceAdvisor
 

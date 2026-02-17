@@ -1,13 +1,11 @@
 # SPDX-FileCopyrightText: Copyright 2023,2025-2026 Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Ethos-U target module."""
+
 from mlia.plugins.plugins import TargetPlugin
 from mlia.target.ethos_u.advisor import configure_and_get_ethosu_advisor
-from mlia.target.ethos_u.config import EthosUConfiguration
-from mlia.target.ethos_u.config import get_default_ethos_u_backends
-from mlia.target.registry import TargetInfo
-from mlia.target.registry import TargetRegistry
-
+from mlia.target.ethos_u.config import EthosUConfiguration, get_default_ethos_u_backends
+from mlia.target.registry import TargetInfo, TargetRegistry
 
 ETHOS_U85 = "Ethos-U85"
 SUPPORTED_BACKENDS_PRIORITY_ETHOS_U85 = [

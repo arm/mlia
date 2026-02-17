@@ -1,6 +1,7 @@
-# SPDX-FileCopyrightText: Copyright 2023, 2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2023, 2025-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Numpy TFRecord utils."""
+
 from __future__ import annotations
 
 import json
@@ -8,11 +9,9 @@ import os
 import random
 from functools import lru_cache
 from pathlib import Path
-from typing import Any
-from typing import Callable
+from typing import Any, Callable
 
 import tensorflow as tf
-
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)

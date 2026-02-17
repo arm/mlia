@@ -1,7 +1,8 @@
-# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2026, Arm Limited and/or its affiliates.
 # SPDX-FileCopyrightText: Copyright The TensorFlow Authors. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0
 """Collection of useful functions for optimizations."""
+
 from __future__ import annotations
 
 from pathlib import Path

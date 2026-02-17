@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: Copyright 2023, 2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Common reports module."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -8,10 +9,7 @@ from dataclasses import dataclass
 from mlia.core.data_analysis import Fact
 from mlia.core.output_schema import AdviceCategory as SchemaAdviceCategory
 from mlia.core.output_schema import AdviceSeverity
-from mlia.core.reporting import Column
-from mlia.core.reporting import Format
-from mlia.core.reporting import Report
-from mlia.core.reporting import Table
+from mlia.core.reporting import Column, Format, Report, Table
 from mlia.nn.tensorflow.tflite_compat import TFLiteCompatibilityInfo
 
 

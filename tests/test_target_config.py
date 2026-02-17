@@ -1,6 +1,7 @@
-# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for the backend config module."""
+
 from __future__ import annotations
 
 import warnings
@@ -9,17 +10,17 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from mlia.backend.config import BackendConfiguration
-from mlia.backend.config import BackendType
-from mlia.backend.config import System
+from mlia.backend.config import BackendConfiguration, BackendType, System
 from mlia.core.common import AdviceCategory
-from mlia.target.config import BUILTIN_SUPPORTED_PROFILE_NAMES
-from mlia.target.config import get_builtin_supported_profile_names
-from mlia.target.config import get_builtin_target_profile_path
-from mlia.target.config import is_builtin_target_profile
-from mlia.target.config import load_profile
-from mlia.target.config import TargetInfo
-from mlia.target.config import TargetProfile
+from mlia.target.config import (
+    BUILTIN_SUPPORTED_PROFILE_NAMES,
+    TargetInfo,
+    TargetProfile,
+    get_builtin_supported_profile_names,
+    get_builtin_target_profile_path,
+    is_builtin_target_profile,
+    load_profile,
+)
 from mlia.target.cortex_a.advisor import CortexAInferenceAdvisor
 from mlia.target.cortex_a.config import CortexAConfiguration
 from mlia.target.tosa.config import TOSAConfiguration
@@ -225,9 +226,9 @@ def test_cortex_a_config_deprecation_warning() -> None:
         deprecation_warnings = [
             w for w in warning_list if issubclass(w.category, DeprecationWarning)
         ]
-        assert (
-            any(deprecation_warnings) > 0
-        ), "No DeprecationWarning was issued when creating Cortex-A config"
+        assert any(deprecation_warnings) > 0, (
+            "No DeprecationWarning was issued when creating Cortex-A config"
+        )
 
         # Check the warning message content
         warning_message = str(deprecation_warnings[0].message)
@@ -260,9 +261,9 @@ def test_tosa_config_deprecation_warning() -> None:
         deprecation_warnings = [
             w for w in warning_list if issubclass(w.category, DeprecationWarning)
         ]
-        assert any(
-            deprecation_warnings
-        ), "No DeprecationWarning was issued when creating TOSA config"
+        assert any(deprecation_warnings), (
+            "No DeprecationWarning was issued when creating TOSA config"
+        )
 
         # Check the warning message content
         warning_message = str(deprecation_warnings[0].message)

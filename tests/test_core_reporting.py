@@ -2,16 +2,13 @@
 # its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for reporting module."""
+
 from __future__ import annotations
 
 import json
 from enum import Enum
 from typing import Any
-from unittest.mock import ANY
-from unittest.mock import call
-from unittest.mock import MagicMock
-from unittest.mock import Mock
-from unittest.mock import patch
+from unittest.mock import ANY, MagicMock, Mock, call, patch
 
 import numpy as np
 import pytest
@@ -20,19 +17,21 @@ import mlia.core.output_schema as schema
 from mlia.core.advice_generation import Advice
 from mlia.core.output_schema import AdviceCategory as SchemaAdviceCategory
 from mlia.core.output_schema import AdviceSeverity
-from mlia.core.reporting import BytesCell
-from mlia.core.reporting import Cell
-from mlia.core.reporting import ClockCell
-from mlia.core.reporting import Column
-from mlia.core.reporting import CustomJSONEncoder
-from mlia.core.reporting import CyclesCell
-from mlia.core.reporting import Format
-from mlia.core.reporting import JSONReporter
-from mlia.core.reporting import NestedReport
-from mlia.core.reporting import ReportItem
-from mlia.core.reporting import SingleRow
-from mlia.core.reporting import Table
-from mlia.core.reporting import TextReporter
+from mlia.core.reporting import (
+    BytesCell,
+    Cell,
+    ClockCell,
+    Column,
+    CustomJSONEncoder,
+    CyclesCell,
+    Format,
+    JSONReporter,
+    NestedReport,
+    ReportItem,
+    SingleRow,
+    Table,
+    TextReporter,
+)
 from mlia.utils.console import remove_ascii_codes
 
 
@@ -705,10 +704,8 @@ class TestJSONReporter:
             },
         ]
 
-        merged = (
-            reporter._merge_standardized_outputs(  # pylint: disable=protected-access
-                outputs
-            )
+        merged = reporter._merge_standardized_outputs(  # pylint: disable=protected-access
+            outputs
         )
 
         assert merged["schema_version"] == "1.0.0"

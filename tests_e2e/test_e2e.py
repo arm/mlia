@@ -1,6 +1,7 @@
-# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2024, 2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """End to end tests for MLIA CLI."""
+
 from __future__ import annotations
 
 import argparse
@@ -13,21 +14,15 @@ import tempfile
 from contextlib import ExitStack
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
-from typing import Generator
-from typing import Iterable
-from typing import Sequence
+from typing import Any, Generator, Iterable, Sequence
 
 import pytest
 
 from mlia.backend.config import System
 from mlia.backend.manager import get_available_backends
-from mlia.cli.main import get_commands
-from mlia.cli.main import get_possible_command_names
-from mlia.cli.main import init_parser
+from mlia.cli.main import get_commands, get_possible_command_names, init_parser
 from mlia.target.config import get_builtin_supported_profile_names
 from mlia.utils.types import is_list_of
-
 
 pytestmark = pytest.mark.e2e
 
@@ -126,10 +121,8 @@ def run_command(
         if cmd_input is not None:
             print(f"Command will receive next input: {repr(cmd_input)}")
 
-            cmd_input_file = (
-                tempfile.NamedTemporaryFile(  # pylint: disable=consider-using-with
-                    mode="w", prefix="mlia_", suffix="_test"
-                )
+            cmd_input_file = tempfile.NamedTemporaryFile(  # pylint: disable=consider-using-with
+                mode="w", prefix="mlia_", suffix="_test"
             )
             exit_stack.enter_context(cmd_input_file)
 

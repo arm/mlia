@@ -1,6 +1,7 @@
-# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for TOSA advisor."""
+
 from pathlib import Path
 from unittest.mock import MagicMock
 
@@ -10,8 +11,10 @@ from mlia.core.common import AdviceCategory
 from mlia.core.context import ExecutionContext
 from mlia.core.workflow import DefaultWorkflowExecutor
 from mlia.target.common.optimization import _DEFAULT_OPTIMIZATION_TARGETS
-from mlia.target.tosa.advisor import configure_and_get_tosa_advisor
-from mlia.target.tosa.advisor import TOSAInferenceAdvisor
+from mlia.target.tosa.advisor import (
+    TOSAInferenceAdvisor,
+    configure_and_get_tosa_advisor,
+)
 
 
 def test_configure_and_get_tosa_advisor(

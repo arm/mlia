@@ -2,6 +2,7 @@
 # and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Inference advisor module."""
+
 from __future__ import annotations
 
 from abc import abstractmethod
@@ -11,13 +12,11 @@ from typing import cast
 from mlia.core.advice_generation import AdviceProducer
 from mlia.core.common import NamedEntity
 from mlia.core.context import Context
-from mlia.core.data_analysis import DataAnalyzer
-from mlia.core.data_analysis import PatternAnalyzer
+from mlia.core.data_analysis import DataAnalyzer, PatternAnalyzer
 from mlia.core.data_collection import DataCollector
 from mlia.core.events import Event
 from mlia.core.mixins import ParameterResolverMixin
-from mlia.core.workflow import DefaultWorkflowExecutor
-from mlia.core.workflow import WorkflowExecutor
+from mlia.core.workflow import DefaultWorkflowExecutor, WorkflowExecutor
 
 
 class InferenceAdvisor(NamedEntity):

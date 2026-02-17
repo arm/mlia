@@ -1,16 +1,19 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, 2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for console utility functions."""
+
 from __future__ import annotations
 
 from typing import Iterable
 
 import pytest
 
-from mlia.utils.console import apply_style
-from mlia.utils.console import create_section_header
-from mlia.utils.console import produce_table
-from mlia.utils.console import remove_ascii_codes
+from mlia.utils.console import (
+    apply_style,
+    create_section_header,
+    produce_table,
+    remove_ascii_codes,
+)
 
 
 @pytest.mark.parametrize(

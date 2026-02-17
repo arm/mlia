@@ -1,22 +1,16 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, 2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Logging utility functions."""
+
 from __future__ import annotations
 
 import logging
 import os
 import sys
 import tempfile
-from contextlib import contextmanager
-from contextlib import ExitStack
-from contextlib import redirect_stderr
-from contextlib import redirect_stdout
+from contextlib import ExitStack, contextmanager, redirect_stderr, redirect_stdout
 from pathlib import Path
-from typing import Any
-from typing import Callable
-from typing import Generator
-from typing import Iterable
-from typing import TextIO
+from typing import Any, Callable, Generator, Iterable, TextIO
 
 from mlia.utils.console import remove_ascii_codes
 

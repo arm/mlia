@@ -1,29 +1,27 @@
-# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Support module to call TFLiteConverter."""
+
 from __future__ import annotations
 
 import argparse
 import logging
 import sys
 from pathlib import Path
-from typing import Any
-from typing import Callable
-from typing import cast
-from typing import Iterable
+from typing import Any, Callable, Iterable, cast
 
 import numpy as np
 import tensorflow as tf
 import tf_keras as keras
 
-from mlia.nn.tensorflow.utils import get_tf_tensor_shape
-from mlia.nn.tensorflow.utils import is_keras_model
-from mlia.nn.tensorflow.utils import is_saved_model
-from mlia.nn.tensorflow.utils import save_tflite_model
+from mlia.nn.tensorflow.utils import (
+    get_tf_tensor_shape,
+    is_keras_model,
+    is_saved_model,
+    save_tflite_model,
+)
 from mlia.utils.logging import redirect_output
-from mlia.utils.proc import Command
-from mlia.utils.proc import command_output
-
+from mlia.utils.proc import Command, command_output
 
 logger = logging.getLogger(__name__)
 

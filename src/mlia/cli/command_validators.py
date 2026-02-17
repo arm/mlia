@@ -1,6 +1,7 @@
-# SPDX-FileCopyrightText: Copyright 2023, 2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2023, 2025-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """CLI command validators module."""
+
 from __future__ import annotations
 
 import argparse
@@ -8,9 +9,7 @@ import logging
 import sys
 
 from mlia.backend.manager import get_available_backends
-from mlia.target.registry import default_backends
-from mlia.target.registry import get_target
-from mlia.target.registry import supported_backends
+from mlia.target.registry import default_backends, get_target, supported_backends
 
 logger = logging.getLogger(__name__)
 

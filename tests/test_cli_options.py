@@ -1,6 +1,7 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, 2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, 2025-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for module options."""
+
 from __future__ import annotations
 
 import argparse
@@ -11,21 +12,23 @@ from unittest.mock import patch
 
 import pytest
 
-from mlia.cli.options import add_backend_install_options
-from mlia.cli.options import add_backend_options
-from mlia.cli.options import add_backend_uninstall_options
-from mlia.cli.options import add_check_category_options
-from mlia.cli.options import add_dataset_options
-from mlia.cli.options import add_debug_options
-from mlia.cli.options import add_keras_model_options
-from mlia.cli.options import add_model_options
-from mlia.cli.options import add_multi_optimization_options
-from mlia.cli.options import add_output_directory
-from mlia.cli.options import add_output_options
-from mlia.cli.options import add_target_options
-from mlia.cli.options import get_output_format
-from mlia.cli.options import get_target_profile_opts
-from mlia.cli.options import parse_optimization_parameters
+from mlia.cli.options import (
+    add_backend_install_options,
+    add_backend_options,
+    add_backend_uninstall_options,
+    add_check_category_options,
+    add_dataset_options,
+    add_debug_options,
+    add_keras_model_options,
+    add_model_options,
+    add_multi_optimization_options,
+    add_output_directory,
+    add_output_options,
+    add_target_options,
+    get_output_format,
+    get_target_profile_opts,
+    parse_optimization_parameters,
+)
 from mlia.core.common import AdviceCategory
 from mlia.core.errors import ConfigurationError
 from mlia.core.typing import OutputFormat

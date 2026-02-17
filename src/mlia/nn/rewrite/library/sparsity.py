@@ -1,6 +1,7 @@
-# SPDX-FileCopyrightText: Copyright 2024-2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2024-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Rewrite functions used to return layers ready for sparse pruning."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -8,8 +9,10 @@ from typing import Any
 import tensorflow_model_optimization as tfmot
 import tf_keras as keras
 
-from mlia.nn.rewrite.library.helper_functions import compute_conv2d_parameters
-from mlia.nn.rewrite.library.helper_functions import get_activation_function
+from mlia.nn.rewrite.library.helper_functions import (
+    compute_conv2d_parameters,
+    get_activation_function,
+)
 
 
 def fc_sparsity_unstructured_rewrite(

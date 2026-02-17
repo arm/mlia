@@ -1,21 +1,24 @@
 # SPDX-FileCopyrightText: Copyright 2022-2023, 2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Cortex-A advice generation."""
+
 from functools import singledispatchmethod
 
-from mlia.core.advice_generation import advice_category
-from mlia.core.advice_generation import FactBasedAdviceProducer
-from mlia.core.common import AdviceCategory
-from mlia.core.common import DataItem
+from mlia.core.advice_generation import FactBasedAdviceProducer, advice_category
+from mlia.core.common import AdviceCategory, DataItem
 from mlia.core.output_schema import AdviceCategory as SchemaAdviceCategory
 from mlia.core.output_schema import AdviceSeverity
-from mlia.target.common.reporters import handle_model_is_not_tflite_compatible_common
-from mlia.target.common.reporters import handle_tflite_check_failed_common
-from mlia.target.common.reporters import ModelHasCustomOperators
-from mlia.target.common.reporters import ModelIsNotTFLiteCompatible
-from mlia.target.common.reporters import TFLiteCompatibilityCheckFailed
-from mlia.target.cortex_a.data_analysis import ModelIsCortexACompatible
-from mlia.target.cortex_a.data_analysis import ModelIsNotCortexACompatible
+from mlia.target.common.reporters import (
+    ModelHasCustomOperators,
+    ModelIsNotTFLiteCompatible,
+    TFLiteCompatibilityCheckFailed,
+    handle_model_is_not_tflite_compatible_common,
+    handle_tflite_check_failed_common,
+)
+from mlia.target.cortex_a.data_analysis import (
+    ModelIsCortexACompatible,
+    ModelIsNotCortexACompatible,
+)
 
 
 class CortexAAdviceProducer(FactBasedAdviceProducer):

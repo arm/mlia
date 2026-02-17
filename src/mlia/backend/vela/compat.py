@@ -1,14 +1,14 @@
-# SPDX-FileCopyrightText: Copyright 2022, 2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022, 2025-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Vela operator compatibility module."""
+
 from __future__ import annotations
 
 import itertools
 import logging
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import mlia
 import mlia.core.output_schema as schema
@@ -36,6 +36,7 @@ except ImportError:
         from ethosu.vela.tflite_model_semantic import TFLiteSemantic
         from ethosu.vela.tflite_supported_operators import TFLiteSupportedOperators
         from ethosu.vela.vela import generate_supported_ops
+
         from mlia.backend.vela.compiler import VelaCompiler
     else:
 

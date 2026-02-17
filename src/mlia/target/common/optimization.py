@@ -1,30 +1,24 @@
-# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Data collector support for performance optimizations."""
+
 from __future__ import annotations
 
 import logging
 from abc import abstractmethod
 from functools import partial
 from pathlib import Path
-from typing import Any
-from typing import Callable
+from typing import Any, Callable
 
 from mlia.core.common import DataItem
 from mlia.core.context import Context
 from mlia.core.data_collection import ContextAwareDataCollector
 from mlia.core.errors import FunctionalityNotSupportedError
-from mlia.core.performance import estimate_performance
-from mlia.core.performance import P
-from mlia.core.performance import PerformanceEstimator
+from mlia.core.performance import P, PerformanceEstimator, estimate_performance
 from mlia.nn.rewrite.core.train import AUGMENTATION_PRESETS
-from mlia.nn.select import get_optimizer
-from mlia.nn.select import OptimizationSettings
-from mlia.nn.tensorflow.config import get_keras_model
-from mlia.nn.tensorflow.config import KerasModel
-from mlia.nn.tensorflow.config import TFLiteModel
-from mlia.nn.tensorflow.utils import save_keras_model
-from mlia.nn.tensorflow.utils import save_tflite_model
+from mlia.nn.select import OptimizationSettings, get_optimizer
+from mlia.nn.tensorflow.config import KerasModel, TFLiteModel, get_keras_model
+from mlia.nn.tensorflow.utils import save_keras_model, save_tflite_model
 from mlia.target.config import TargetProfile
 from mlia.utils.types import is_list_of
 

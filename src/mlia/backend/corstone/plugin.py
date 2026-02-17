@@ -1,9 +1,8 @@
 # SPDX-FileCopyrightText: Copyright 2023,2026 Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Corstone backend module."""
-from mlia.backend.config import BackendConfiguration
-from mlia.backend.config import BackendType
-from mlia.backend.config import System
+
+from mlia.backend.config import BackendConfiguration, BackendType, System
 from mlia.backend.corstone import CORSTONE_PRIORITY
 from mlia.backend.registry import BackendRegistry
 from mlia.core.common import AdviceCategory

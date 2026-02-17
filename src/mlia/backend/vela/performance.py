@@ -1,17 +1,16 @@
 # SPDX-FileCopyrightText: Copyright 2022-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Vela performance module."""
+
 from __future__ import annotations
 
 import csv
 import logging
 import os
 from collections import Counter
-from dataclasses import dataclass
-from dataclasses import fields
+from dataclasses import dataclass, fields
 from pathlib import Path
-from typing import Any
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from mlia.backend.errors import BackendUnavailableError
 
@@ -36,11 +35,8 @@ except ImportError:
 
 import mlia
 import mlia.core.output_schema as schema
-from mlia.backend.vela.compiler import VelaCompiler
-from mlia.backend.vela.compiler import VelaCompilerOptions
-from mlia.backend.vela.compiler import VelaSummary
+from mlia.backend.vela.compiler import VelaCompiler, VelaCompilerOptions, VelaSummary
 from mlia.utils.filesystem import sha256
-
 
 logger = logging.getLogger(__name__)
 

@@ -1,6 +1,7 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, 2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, 2025-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """TOSA Advisor event handlers."""
+
 # pylint: disable=R0801
 from __future__ import annotations
 
@@ -12,8 +13,7 @@ from mlia.core.events import CollectedDataEvent
 from mlia.core.handlers import WorkflowEventsHandler
 from mlia.nn.tensorflow.tflite_compat import TFLiteCompatibilityInfo
 from mlia.target.tosa.data_collection import TOSACompatibilityResult
-from mlia.target.tosa.events import TOSAAdvisorEventHandler
-from mlia.target.tosa.events import TOSAAdvisorStartedEvent
+from mlia.target.tosa.events import TOSAAdvisorEventHandler, TOSAAdvisorStartedEvent
 from mlia.target.tosa.reporters import tosa_formatters
 
 logger = logging.getLogger(__name__)

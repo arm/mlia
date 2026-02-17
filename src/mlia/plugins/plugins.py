@@ -1,14 +1,12 @@
 # SPDX-FileCopyrightText: Copyright 2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Collection of plugin utilities."""
+
 import logging
 import sys
 import traceback
-from abc import ABC
-from abc import abstractmethod
-from typing import Any
-from typing import Generic
-from typing import TypeVar
+from abc import ABC, abstractmethod
+from typing import Any, Generic, TypeVar
 
 if sys.version_info < (3, 10):
     import importlib_metadata as metadata

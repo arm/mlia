@@ -6,6 +6,7 @@ The import of subprocess module raises a B404 bandit error. MLIA usage of
 subprocess is needed and can be considered safe hence disabling the security
 check.
 """
+
 from __future__ import annotations
 
 import logging
@@ -14,14 +15,15 @@ import subprocess  # nosec
 from pathlib import Path
 
 from mlia.backend.config import System
-from mlia.backend.install import BackendInstallation
-from mlia.backend.install import CompoundPathChecker
-from mlia.backend.install import Installation
-from mlia.backend.install import PackagePathChecker
-from mlia.backend.install import StaticPathChecker
+from mlia.backend.install import (
+    BackendInstallation,
+    CompoundPathChecker,
+    Installation,
+    PackagePathChecker,
+    StaticPathChecker,
+)
 from mlia.utils.download import DownloadConfig
 from mlia.utils.filesystem import working_directory
-
 
 logger = logging.getLogger(__name__)
 

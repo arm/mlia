@@ -1,6 +1,7 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, 2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, 2025-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for ArmNN TensorFlow Lite Delegate backend."""
+
 import importlib
 import sys
 import warnings
@@ -46,9 +47,9 @@ def test_backend_module_deprecation_warning() -> None:
         deprecation_warnings = [
             w for w in warning_list if issubclass(w.category, DeprecationWarning)
         ]
-        assert (
-            any(deprecation_warnings) > 0
-        ), "No DeprecationWarning was issued when importing backend module"
+        assert any(deprecation_warnings) > 0, (
+            "No DeprecationWarning was issued when importing backend module"
+        )
 
         # Check the warning message content
         warning_message = str(deprecation_warnings[0].message)

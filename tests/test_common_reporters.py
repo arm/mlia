@@ -1,28 +1,32 @@
 # SPDX-FileCopyrightText: Copyright 2025-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for the common reporters module."""
+
 from __future__ import annotations
 
 from typing import Any
-from unittest.mock import call
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, call
 
 import pytest
 
 from mlia.core.output_schema import AdviceCategory as SchemaAdviceCategory
 from mlia.core.output_schema import AdviceSeverity
 from mlia.core.reporting import Table
-from mlia.nn.tensorflow.tflite_compat import TFLiteCompatibilityInfo
-from mlia.nn.tensorflow.tflite_compat import TFLiteCompatibilityStatus
-from mlia.nn.tensorflow.tflite_compat import TFLiteConversionError
-from mlia.nn.tensorflow.tflite_compat import TFLiteConversionErrorCode
-from mlia.target.common.reporters import analyze_tflite_compatibility_common
-from mlia.target.common.reporters import handle_model_is_not_tflite_compatible_common
-from mlia.target.common.reporters import handle_tflite_check_failed_common
-from mlia.target.common.reporters import ModelHasCustomOperators
-from mlia.target.common.reporters import ModelIsNotTFLiteCompatible
-from mlia.target.common.reporters import report_tflite_compatiblity
-from mlia.target.common.reporters import TFLiteCompatibilityCheckFailed
+from mlia.nn.tensorflow.tflite_compat import (
+    TFLiteCompatibilityInfo,
+    TFLiteCompatibilityStatus,
+    TFLiteConversionError,
+    TFLiteConversionErrorCode,
+)
+from mlia.target.common.reporters import (
+    ModelHasCustomOperators,
+    ModelIsNotTFLiteCompatible,
+    TFLiteCompatibilityCheckFailed,
+    analyze_tflite_compatibility_common,
+    handle_model_is_not_tflite_compatible_common,
+    handle_tflite_check_failed_common,
+    report_tflite_compatiblity,
+)
 
 
 @pytest.mark.parametrize(

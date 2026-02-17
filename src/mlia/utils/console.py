@@ -1,14 +1,13 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, 2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Console output utility functions."""
+
 from __future__ import annotations
 
 from typing import Iterable
 
-from rich.console import Console
-from rich.console import RenderableType
-from rich.table import box
-from rich.table import Table
+from rich.console import Console, RenderableType
+from rich.table import Table, box
 from rich.text import Text
 
 

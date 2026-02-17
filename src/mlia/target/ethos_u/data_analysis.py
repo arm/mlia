@@ -2,18 +2,20 @@
 # and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Ethos-U data analysis module."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
 from functools import singledispatchmethod
 
-from mlia.backend.vela.compat import Operators
-from mlia.backend.vela.compat import VelaCompatibilityResult
+from mlia.backend.vela.compat import Operators, VelaCompatibilityResult
 from mlia.core.common import DataItem
-from mlia.core.data_analysis import Fact
-from mlia.core.data_analysis import FactExtractor
-from mlia.core.data_analysis import LayerCompatibilityIssue
-from mlia.core.data_analysis import register_fact_type
+from mlia.core.data_analysis import (
+    Fact,
+    FactExtractor,
+    LayerCompatibilityIssue,
+    register_fact_type,
+)
 from mlia.nn.select import OptimizationSettings
 from mlia.nn.tensorflow.tflite_compat import TFLiteCompatibilityInfo
 from mlia.target.common.reporters import analyze_tflite_compatibility_common

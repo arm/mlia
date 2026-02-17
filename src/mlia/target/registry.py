@@ -1,6 +1,7 @@
-# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Target module."""
+
 from __future__ import annotations
 
 from functools import lru_cache
@@ -11,17 +12,18 @@ from mlia.backend.config import BackendType
 from mlia.backend.manager import get_installation_manager
 from mlia.backend.registry import registry as backend_registry
 from mlia.core.common import AdviceCategory
-from mlia.core.reporting import Column
-from mlia.core.reporting import Table
-from mlia.target.config import BUILTIN_SUPPORTED_OPTIMIZATION_NAMES
-from mlia.target.config import BUILTIN_SUPPORTED_PROFILE_NAMES
-from mlia.target.config import get_builtin_optimization_profile_path
-from mlia.target.config import get_builtin_target_profile_path
-from mlia.target.config import is_builtin_optimization_profile
-from mlia.target.config import is_builtin_target_profile
-from mlia.target.config import load_profile
-from mlia.target.config import TargetInfo
-from mlia.target.config import TargetProfile
+from mlia.core.reporting import Column, Table
+from mlia.target.config import (
+    BUILTIN_SUPPORTED_OPTIMIZATION_NAMES,
+    BUILTIN_SUPPORTED_PROFILE_NAMES,
+    TargetInfo,
+    TargetProfile,
+    get_builtin_optimization_profile_path,
+    get_builtin_target_profile_path,
+    is_builtin_optimization_profile,
+    is_builtin_target_profile,
+    load_profile,
+)
 from mlia.utils.registry import Registry
 
 

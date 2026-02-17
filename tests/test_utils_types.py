@@ -1,17 +1,14 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022, 2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for the types related utility functions."""
+
 from __future__ import annotations
 
-from typing import Any
-from typing import Iterable
+from typing import Any, Iterable
 
 import pytest
 
-from mlia.utils.types import is_list_of
-from mlia.utils.types import is_number
-from mlia.utils.types import only_one_selected
-from mlia.utils.types import parse_int
+from mlia.utils.types import is_list_of, is_number, only_one_selected, parse_int
 
 
 @pytest.mark.parametrize(

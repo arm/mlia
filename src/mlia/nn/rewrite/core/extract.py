@@ -1,6 +1,7 @@
-# SPDX-FileCopyrightText: Copyright 2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2023, 2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Extract module."""
+
 # pylint: disable=too-many-arguments, too-many-locals
 from __future__ import annotations
 
@@ -12,8 +13,7 @@ import tensorflow as tf
 from tensorflow.lite.python.schema_py_generated import SubGraphT
 
 from mlia.nn.rewrite.core.graph_edit.cut import cut_model
-from mlia.nn.rewrite.core.graph_edit.record import dequantized_path
-from mlia.nn.rewrite.core.graph_edit.record import record_model
+from mlia.nn.rewrite.core.graph_edit.record import dequantized_path, record_model
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)

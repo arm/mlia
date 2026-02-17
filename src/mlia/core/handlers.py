@@ -1,36 +1,33 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, 2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Event handlers module."""
+
 from __future__ import annotations
 
 import logging
-from typing import Any
-from typing import Callable
+from typing import Any, Callable
 
-from mlia.core.advice_generation import Advice
-from mlia.core.advice_generation import AdviceEvent
-from mlia.core.events import ActionFinishedEvent
-from mlia.core.events import ActionStartedEvent
-from mlia.core.events import AdviceStageFinishedEvent
-from mlia.core.events import AdviceStageStartedEvent
-from mlia.core.events import AnalyzedDataEvent
-from mlia.core.events import CollectedDataEvent
-from mlia.core.events import DataAnalysisStageFinishedEvent
-from mlia.core.events import DataAnalysisStageStartedEvent
-from mlia.core.events import DataCollectionStageFinishedEvent
-from mlia.core.events import DataCollectionStageStartedEvent
-from mlia.core.events import DataCollectorSkippedEvent
-from mlia.core.events import EventDispatcher
-from mlia.core.events import ExecutionFailedEvent
-from mlia.core.events import ExecutionFinishedEvent
-from mlia.core.events import ExecutionStartedEvent
+from mlia.core.advice_generation import Advice, AdviceEvent
+from mlia.core.events import (
+    ActionFinishedEvent,
+    ActionStartedEvent,
+    AdviceStageFinishedEvent,
+    AdviceStageStartedEvent,
+    AnalyzedDataEvent,
+    CollectedDataEvent,
+    DataAnalysisStageFinishedEvent,
+    DataAnalysisStageStartedEvent,
+    DataCollectionStageFinishedEvent,
+    DataCollectionStageStartedEvent,
+    DataCollectorSkippedEvent,
+    EventDispatcher,
+    ExecutionFailedEvent,
+    ExecutionFinishedEvent,
+    ExecutionStartedEvent,
+)
 from mlia.core.mixins import ContextMixin
-from mlia.core.reporting import JSONReporter
-from mlia.core.reporting import Report
-from mlia.core.reporting import Reporter
-from mlia.core.reporting import TextReporter
+from mlia.core.reporting import JSONReporter, Report, Reporter, TextReporter
 from mlia.utils.console import create_section_header
-
 
 logger = logging.getLogger(__name__)
 

@@ -1,6 +1,7 @@
-# SPDX-FileCopyrightText: Copyright 2023, 2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2023, 2025-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Common test utils for the rewrite tests."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -31,9 +32,7 @@ def models_are_equal(model1: ModelT, model2: ModelT) -> bool:
     return True
 
 
-class MockTrainingParameters(
-    TrainingParameters
-):  # pylint: disable=too-few-public-methods
+class MockTrainingParameters(TrainingParameters):  # pylint: disable=too-few-public-methods
     """
     TrainingParameter class for rewrites with different default values.
 

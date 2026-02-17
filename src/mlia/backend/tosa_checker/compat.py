@@ -1,15 +1,14 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, 2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, 2025-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """TOSA compatibility module."""
+
 from __future__ import annotations
 
 import logging
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
-from typing import cast
-from typing import Protocol
+from typing import Any, Protocol, cast
 
 import mlia
 import mlia.core.output_schema as schema
@@ -110,7 +109,7 @@ class TOSACompatibilityInfo:
             ],
             configuration=target_config or {},
             description=(
-                "TOSA (Tensor Operator Set Architecture) " "specification compatibility"
+                "TOSA (Tensor Operator Set Architecture) specification compatibility"
             ),
         )
 
@@ -220,9 +219,10 @@ def get_tosa_compatibility_info(
     """Return list of the operators."""
     # Capture the possible exception in running get_tosa_checker
     try:
-        with capture_raw_output(sys.stdout) as std_output_pkg, capture_raw_output(
-            sys.stderr
-        ) as stderr_output_pkg:
+        with (
+            capture_raw_output(sys.stdout) as std_output_pkg,
+            capture_raw_output(sys.stderr) as stderr_output_pkg,
+        ):
             checker = get_tosa_checker(tflite_model_path)
     except Exception as exc:  # pylint: disable=broad-except
         return TOSACompatibilityInfo(
@@ -241,9 +241,10 @@ def get_tosa_compatibility_info(
 
     # Capture the possible exception when checking ops compatibility
     try:
-        with capture_raw_output(sys.stdout) as std_output_ops, capture_raw_output(
-            sys.stderr
-        ) as stderr_output_ops:
+        with (
+            capture_raw_output(sys.stdout) as std_output_ops,
+            capture_raw_output(sys.stderr) as stderr_output_ops,
+        ):
             ops = [
                 Operator(item.location, item.name, item.is_tosa_compatible)
                 for item in checker._get_tosa_compatibility_for_ops()  # pylint: disable=protected-access

@@ -1,6 +1,7 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, 2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, 2025-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for the module cli.logging."""
+
 from __future__ import annotations
 
 import logging
@@ -23,11 +24,7 @@ def teardown_function() -> None:
 
 
 @pytest.mark.parametrize(
-    "logs_dir,"
-    "verbose,"
-    "output_format,"
-    "expected_output,"
-    "expected_log_file_content",
+    "logs_dir,verbose,output_format,expected_output,expected_log_file_content",
     [
         (
             None,

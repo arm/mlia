@@ -1,16 +1,15 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022, 2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Util functions for managing python packages."""
+
 from __future__ import annotations
 
 import logging
 import subprocess  # nosec
 import sys
-from importlib.metadata import distribution
-from importlib.metadata import PackageNotFoundError
+from importlib.metadata import PackageNotFoundError, distribution
 
 from mlia.core.errors import InternalError
-
 
 logger = logging.getLogger(__name__)
 

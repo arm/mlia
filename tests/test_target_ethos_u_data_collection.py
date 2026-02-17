@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: Copyright 2022-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for the data collection module for Ethos-U."""
+
 from pathlib import Path
 from unittest.mock import MagicMock
 
@@ -8,27 +9,29 @@ import pytest
 
 from mlia.backend.corstone.performance import CorstonePerformanceMetrics as CorstonePerf
 from mlia.backend.errors import BackendUnavailableError
-from mlia.backend.vela.compat import Operators
-from mlia.backend.vela.compat import VelaCompatibilityResult
+from mlia.backend.vela.compat import Operators, VelaCompatibilityResult
 from mlia.backend.vela.performance import LayerwisePerfInfo
 from mlia.backend.vela.performance import PerformanceMetrics as VelaPerf
-from mlia.core.context import Context
-from mlia.core.context import ExecutionContext
+from mlia.core.context import Context, ExecutionContext
 from mlia.core.data_collection import DataCollector
 from mlia.core.errors import FunctionalityNotSupportedError
 from mlia.nn.select import OptimizationSettings
 from mlia.target.common.optimization import add_common_optimization_params
 from mlia.target.ethos_u.config import EthosUConfiguration
-from mlia.target.ethos_u.data_collection import EthosUOperatorCompatibility
-from mlia.target.ethos_u.data_collection import EthosUOptimizationPerformance
-from mlia.target.ethos_u.data_collection import EthosUPerformance
-from mlia.target.ethos_u.performance import CombinedPerformanceResult
-from mlia.target.ethos_u.performance import CorstonePerformanceResult
-from mlia.target.ethos_u.performance import MemoryUsage
-from mlia.target.ethos_u.performance import NPUCycles
-from mlia.target.ethos_u.performance import OptimizationPerformanceMetrics
-from mlia.target.ethos_u.performance import PerformanceMetrics
-from mlia.target.ethos_u.performance import VelaPerformanceResult
+from mlia.target.ethos_u.data_collection import (
+    EthosUOperatorCompatibility,
+    EthosUOptimizationPerformance,
+    EthosUPerformance,
+)
+from mlia.target.ethos_u.performance import (
+    CombinedPerformanceResult,
+    CorstonePerformanceResult,
+    MemoryUsage,
+    NPUCycles,
+    OptimizationPerformanceMetrics,
+    PerformanceMetrics,
+    VelaPerformanceResult,
+)
 
 
 @pytest.mark.parametrize(

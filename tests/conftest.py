@@ -1,11 +1,11 @@
-# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Pytest conf module."""
+
 # mypy: disable-error-code=misc
 import shutil
 from pathlib import Path
-from typing import Callable
-from typing import Generator
+from typing import Callable, Generator
 from unittest.mock import MagicMock
 
 import numpy as np

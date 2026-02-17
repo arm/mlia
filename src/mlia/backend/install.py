@@ -1,26 +1,20 @@
 # SPDX-FileCopyrightText: Copyright 2022-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Module for installation process."""
+
 from __future__ import annotations
 
 import logging
 import platform
 import tarfile
-from abc import ABC
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable
-from typing import Iterable
-from typing import Optional
-from typing import Union
+from typing import Callable, Iterable, Optional, Union
 
 from mlia.backend.repo import get_backend_repository
-from mlia.utils.download import download
-from mlia.utils.download import DownloadConfig
-from mlia.utils.filesystem import all_files_exist
-from mlia.utils.filesystem import temp_directory
-from mlia.utils.filesystem import working_directory
+from mlia.utils.download import DownloadConfig, download
+from mlia.utils.filesystem import all_files_exist, temp_directory, working_directory
 from mlia.utils.py_manager import get_package_manager
 
 logger = logging.getLogger(__name__)

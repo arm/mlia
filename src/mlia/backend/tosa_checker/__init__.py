@@ -2,6 +2,7 @@
 # and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """TOSA checker backend module."""
+
 import logging
 import warnings
 
@@ -17,6 +18,5 @@ warnings.warn(
 )
 
 logger.warning(
-    "TOSA Checker backend is deprecated due to dependency on an unmaintained "
-    "project."
+    "TOSA Checker backend is deprecated due to dependency on an unmaintained project."
 )

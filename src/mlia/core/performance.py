@@ -1,13 +1,11 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022, 2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Module for performance estimation."""
+
 from __future__ import annotations
 
 from abc import abstractmethod
-from typing import Callable
-from typing import Generic
-from typing import TypeVar
-
+from typing import Callable, Generic, TypeVar
 
 M = TypeVar("M")  # model type
 P = TypeVar("P")  # performance metrics
