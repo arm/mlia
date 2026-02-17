@@ -1,6 +1,7 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, 2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, 2025-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for TOSA data collection module."""
+
 from pathlib import Path
 from unittest.mock import MagicMock
 
@@ -8,8 +9,10 @@ import pytest
 
 from mlia.backend.tosa_checker.compat import TOSACompatibilityInfo
 from mlia.core.context import ExecutionContext
-from mlia.target.tosa.data_collection import TOSACompatibilityResult
-from mlia.target.tosa.data_collection import TOSAOperatorCompatibility
+from mlia.target.tosa.data_collection import (
+    TOSACompatibilityResult,
+    TOSAOperatorCompatibility,
+)
 
 
 def test_tosa_data_collection(

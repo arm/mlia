@@ -6,43 +6,40 @@
 This module contains implementation of the workflow
 executors.
 """
+
 from __future__ import annotations
 
 import itertools
-from abc import ABC
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from functools import wraps
-from typing import Any
-from typing import Callable
-from typing import Sequence
+from typing import Any, Callable, Sequence
 
-from mlia.core.advice_generation import Advice
-from mlia.core.advice_generation import AdviceEvent
-from mlia.core.advice_generation import AdviceProducer
+from mlia.core.advice_generation import Advice, AdviceEvent, AdviceProducer
 from mlia.core.common import DataItem
 from mlia.core.context import Context
-from mlia.core.data_analysis import DataAnalyzer
-from mlia.core.data_analysis import PatternAnalyzer
+from mlia.core.data_analysis import DataAnalyzer, PatternAnalyzer
 from mlia.core.data_collection import DataCollector
 from mlia.core.errors import FunctionalityNotSupportedError
-from mlia.core.events import AdviceStageFinishedEvent
-from mlia.core.events import AdviceStageStartedEvent
-from mlia.core.events import AnalyzedDataEvent
-from mlia.core.events import CollectedDataEvent
-from mlia.core.events import DataAnalysisStageFinishedEvent
-from mlia.core.events import DataAnalysisStageStartedEvent
-from mlia.core.events import DataCollectionStageFinishedEvent
-from mlia.core.events import DataCollectionStageStartedEvent
-from mlia.core.events import DataCollectorSkippedEvent
-from mlia.core.events import DetectedPatternEvent
-from mlia.core.events import Event
-from mlia.core.events import ExecutionFailedEvent
-from mlia.core.events import ExecutionFinishedEvent
-from mlia.core.events import ExecutionStartedEvent
-from mlia.core.events import PatternDetectionPassEvent
-from mlia.core.events import PatternDetectionStageFinishedEvent
-from mlia.core.events import PatternDetectionStageStartedEvent
-from mlia.core.events import stage
+from mlia.core.events import (
+    AdviceStageFinishedEvent,
+    AdviceStageStartedEvent,
+    AnalyzedDataEvent,
+    CollectedDataEvent,
+    DataAnalysisStageFinishedEvent,
+    DataAnalysisStageStartedEvent,
+    DataCollectionStageFinishedEvent,
+    DataCollectionStageStartedEvent,
+    DataCollectorSkippedEvent,
+    DetectedPatternEvent,
+    Event,
+    ExecutionFailedEvent,
+    ExecutionFinishedEvent,
+    ExecutionStartedEvent,
+    PatternDetectionPassEvent,
+    PatternDetectionStageFinishedEvent,
+    PatternDetectionStageStartedEvent,
+    stage,
+)
 from mlia.core.mixins import ContextMixin
 
 

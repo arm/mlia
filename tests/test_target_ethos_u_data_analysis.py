@@ -2,39 +2,46 @@
 # and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for Ethos-U data analysis module."""
+
 from __future__ import annotations
 
 from typing import cast
 
 import pytest
 
-from mlia.backend.vela.compat import NpuSupported
-from mlia.backend.vela.compat import Operator
-from mlia.backend.vela.compat import Operators
+from mlia.backend.vela.compat import NpuSupported, Operator, Operators
 from mlia.backend.vela.performance import LayerwisePerfInfo
 from mlia.core.common import DataItem
 from mlia.core.data_analysis import Fact
 from mlia.nn.select import OptimizationSettings
-from mlia.nn.tensorflow.tflite_compat import TFLiteCompatibilityInfo
-from mlia.nn.tensorflow.tflite_compat import TFLiteCompatibilityStatus
-from mlia.nn.tensorflow.tflite_compat import TFLiteConversionError
-from mlia.nn.tensorflow.tflite_compat import TFLiteConversionErrorCode
-from mlia.target.common.reporters import ModelHasCustomOperators
-from mlia.target.common.reporters import ModelIsNotTFLiteCompatible
-from mlia.target.common.reporters import TFLiteCompatibilityCheckFailed
+from mlia.nn.tensorflow.tflite_compat import (
+    TFLiteCompatibilityInfo,
+    TFLiteCompatibilityStatus,
+    TFLiteConversionError,
+    TFLiteConversionErrorCode,
+)
+from mlia.target.common.reporters import (
+    ModelHasCustomOperators,
+    ModelIsNotTFLiteCompatible,
+    TFLiteCompatibilityCheckFailed,
+)
 from mlia.target.ethos_u.config import EthosUConfiguration
-from mlia.target.ethos_u.data_analysis import AllOperatorsSupportedOnNPU
-from mlia.target.ethos_u.data_analysis import EthosUDataAnalyzer
-from mlia.target.ethos_u.data_analysis import EthosULayerCompatibilityIssue
-from mlia.target.ethos_u.data_analysis import HasCPUOnlyOperators
-from mlia.target.ethos_u.data_analysis import HasUnsupportedOnNPUOperators
-from mlia.target.ethos_u.data_analysis import OptimizationDiff
-from mlia.target.ethos_u.data_analysis import OptimizationResults
-from mlia.target.ethos_u.data_analysis import PerfMetricDiff
-from mlia.target.ethos_u.performance import MemoryUsage
-from mlia.target.ethos_u.performance import NPUCycles
-from mlia.target.ethos_u.performance import OptimizationPerformanceMetrics
-from mlia.target.ethos_u.performance import PerformanceMetrics
+from mlia.target.ethos_u.data_analysis import (
+    AllOperatorsSupportedOnNPU,
+    EthosUDataAnalyzer,
+    EthosULayerCompatibilityIssue,
+    HasCPUOnlyOperators,
+    HasUnsupportedOnNPUOperators,
+    OptimizationDiff,
+    OptimizationResults,
+    PerfMetricDiff,
+)
+from mlia.target.ethos_u.performance import (
+    MemoryUsage,
+    NPUCycles,
+    OptimizationPerformanceMetrics,
+    PerformanceMetrics,
+)
 from mlia.target.registry import profile
 
 

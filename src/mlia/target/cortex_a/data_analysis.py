@@ -1,20 +1,21 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, 2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, 2025-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Cortex-A data analysis module."""
+
 from __future__ import annotations
 
 from collections import defaultdict
-from dataclasses import dataclass
-from dataclasses import field
+from dataclasses import dataclass, field
 from functools import singledispatchmethod
 
 from mlia.core.common import DataItem
-from mlia.core.data_analysis import Fact
-from mlia.core.data_analysis import FactExtractor
+from mlia.core.data_analysis import Fact, FactExtractor
 from mlia.nn.tensorflow.tflite_compat import TFLiteCompatibilityInfo
 from mlia.target.common.reporters import analyze_tflite_compatibility_common
-from mlia.target.cortex_a.operators import CortexACompatibilityInfo
-from mlia.target.cortex_a.operators import CortexACompatibilityResult
+from mlia.target.cortex_a.operators import (
+    CortexACompatibilityInfo,
+    CortexACompatibilityResult,
+)
 
 
 class CortexADataAnalyzer(FactExtractor):

@@ -1,25 +1,25 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, 2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, 2025-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for installation manager."""
+
 from __future__ import annotations
 
 from contextlib import ExitStack as does_not_raise
 from functools import partial
 from pathlib import Path
 from typing import Any
-from unittest.mock import call
-from unittest.mock import MagicMock
-from unittest.mock import PropertyMock
+from unittest.mock import MagicMock, PropertyMock, call
 
 import pytest
 
-from mlia.backend.install import DownloadAndInstall
-from mlia.backend.install import Installation
-from mlia.backend.install import InstallationType
-from mlia.backend.install import InstallFromPath
+from mlia.backend.install import (
+    DownloadAndInstall,
+    Installation,
+    InstallationType,
+    InstallFromPath,
+)
 from mlia.backend.manager import DefaultInstallationManager
-from mlia.core.errors import ConfigurationError
-from mlia.core.errors import InternalError
+from mlia.core.errors import ConfigurationError, InternalError
 
 
 def get_default_installation_manager_mock(

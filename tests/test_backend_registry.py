@@ -1,17 +1,19 @@
-# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for the backend registry module."""
+
 from __future__ import annotations
 
 from functools import partial
 
 import pytest
 
-from mlia.backend.config import BackendType
-from mlia.backend.config import System
-from mlia.backend.registry import get_supported_backends
-from mlia.backend.registry import get_supported_systems
-from mlia.backend.registry import registry
+from mlia.backend.config import BackendType, System
+from mlia.backend.registry import (
+    get_supported_backends,
+    get_supported_systems,
+    registry,
+)
 from mlia.core.common import AdviceCategory
 
 
@@ -88,16 +90,16 @@ def test_backend_registry(
 
     assert backend in registry.items
     cfg = registry.items[backend]
-    assert sorted_by_name(advices) == sorted_by_name(
-        cfg.supported_advice
-    ), f"Advices differs: {advices} != {cfg.supported_advice}"
+    assert sorted_by_name(advices) == sorted_by_name(cfg.supported_advice), (
+        f"Advices differs: {advices} != {cfg.supported_advice}"
+    )
     if systems is None:
         assert cfg.supported_systems is None
     else:
         assert cfg.supported_systems is not None
-        assert sorted_by_name(systems) == sorted_by_name(
-            cfg.supported_systems
-        ), f"Supported systems differs: {advices} != {cfg.supported_advice}"
+        assert sorted_by_name(systems) == sorted_by_name(cfg.supported_systems), (
+            f"Supported systems differs: {advices} != {cfg.supported_advice}"
+        )
     assert cfg.type == type_
 
 

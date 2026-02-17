@@ -1,31 +1,30 @@
-# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for main module."""
+
 from __future__ import annotations
 
 import argparse
 from functools import wraps
 from pathlib import Path
-from typing import Any
-from typing import Callable
-from unittest.mock import ANY
-from unittest.mock import call
-from unittest.mock import MagicMock
+from typing import Any, Callable
+from unittest.mock import ANY, MagicMock, call
 
 import pytest
 
 import mlia.cli.commands
 import mlia.cli.main as mlia_cli_main
 from mlia.backend.errors import BackendUnavailableError
-from mlia.cli.main import backend_main
-from mlia.cli.main import CommandInfo
-from mlia.cli.main import get_possible_command_names
-from mlia.cli.main import main
-from mlia.cli.main import target_main
+from mlia.cli.main import (
+    CommandInfo,
+    backend_main,
+    get_possible_command_names,
+    main,
+    target_main,
+)
 from mlia.cli.options import add_output_directory
 from mlia.core.context import ExecutionContext
-from mlia.core.errors import ConfigurationError
-from mlia.core.errors import InternalError
+from mlia.core.errors import ConfigurationError, InternalError
 from tests.utils.logging import clear_loggers
 
 
@@ -43,7 +42,6 @@ def test_option_version(capfd: pytest.CaptureFixture) -> None:
     with pytest.raises(SystemExit) as ex:
         main(["--version"])
 
-    assert ex.type == SystemExit
     assert ex.value.code == 0
 
     stdout, stderr = capfd.readouterr()
@@ -376,7 +374,7 @@ def test_commands_execution_backend_main(
 
     monkeypatch.setattr(
         "mlia.cli.main.backend_list",
-        wrap_mock_command(mock, getattr(mlia_cli_main, "backend_list")),
+        wrap_mock_command(mock, mlia_cli_main.backend_list),
     )
 
     backend_main(params)
@@ -400,7 +398,7 @@ def test_commands_execution_target_main(
 
     monkeypatch.setattr(
         "mlia.cli.main.target_list",
-        wrap_mock_command(mock, getattr(mlia.cli.commands, "target_list")),
+        wrap_mock_command(mock, mlia.cli.commands.target_list),
     )
 
     target_main(params)

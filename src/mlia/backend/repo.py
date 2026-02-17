@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2023, 2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2023, 2025-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Module for backend repository.
 
@@ -15,6 +15,7 @@ correct instantiation of the backend.
 If backend is removed then repository removes corresponding record
 from configuration file along with backend files if needed.
 """
+
 from __future__ import annotations
 
 import json

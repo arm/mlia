@@ -1,6 +1,7 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, 2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for TOSA data analysis module."""
+
 from __future__ import annotations
 
 import pytest
@@ -8,16 +9,22 @@ import pytest
 from mlia.backend.tosa_checker.compat import TOSACompatibilityInfo
 from mlia.core.common import DataItem
 from mlia.core.data_analysis import Fact
-from mlia.nn.tensorflow.tflite_compat import TFLiteCompatibilityInfo
-from mlia.nn.tensorflow.tflite_compat import TFLiteCompatibilityStatus
-from mlia.nn.tensorflow.tflite_compat import TFLiteConversionError
-from mlia.nn.tensorflow.tflite_compat import TFLiteConversionErrorCode
-from mlia.target.common.reporters import ModelHasCustomOperators
-from mlia.target.common.reporters import ModelIsNotTFLiteCompatible
-from mlia.target.common.reporters import TFLiteCompatibilityCheckFailed
-from mlia.target.tosa.data_analysis import ModelIsNotTOSACompatible
-from mlia.target.tosa.data_analysis import ModelIsTOSACompatible
-from mlia.target.tosa.data_analysis import TOSADataAnalyzer
+from mlia.nn.tensorflow.tflite_compat import (
+    TFLiteCompatibilityInfo,
+    TFLiteCompatibilityStatus,
+    TFLiteConversionError,
+    TFLiteConversionErrorCode,
+)
+from mlia.target.common.reporters import (
+    ModelHasCustomOperators,
+    ModelIsNotTFLiteCompatible,
+    TFLiteCompatibilityCheckFailed,
+)
+from mlia.target.tosa.data_analysis import (
+    ModelIsNotTOSACompatible,
+    ModelIsTOSACompatible,
+    TOSADataAnalyzer,
+)
 
 
 @pytest.mark.parametrize(

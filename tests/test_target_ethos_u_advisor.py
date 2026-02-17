@@ -1,6 +1,7 @@
-# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2024, 2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for Ethos-U MLIA module."""
+
 from __future__ import annotations
 
 from contextlib import ExitStack as does_not_raise
@@ -11,8 +12,10 @@ import pytest
 
 from mlia.core.common import AdviceCategory
 from mlia.core.context import ExecutionContext
-from mlia.target.ethos_u.advisor import configure_and_get_ethosu_advisor
-from mlia.target.ethos_u.advisor import EthosUInferenceAdvisor
+from mlia.target.ethos_u.advisor import (
+    EthosUInferenceAdvisor,
+    configure_and_get_ethosu_advisor,
+)
 
 
 def test_advisor_metadata() -> None:

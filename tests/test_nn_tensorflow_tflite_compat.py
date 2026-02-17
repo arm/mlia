@@ -1,6 +1,7 @@
-# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for tflite_compat module."""
+
 from __future__ import annotations
 
 from unittest.mock import MagicMock
@@ -10,12 +11,14 @@ import tensorflow as tf
 import tf_keras as keras
 from tensorflow.lite.python import convert
 
-from mlia.nn.tensorflow.tflite_compat import converter_error_data_pb2
-from mlia.nn.tensorflow.tflite_compat import TFLiteChecker
-from mlia.nn.tensorflow.tflite_compat import TFLiteCompatibilityInfo
-from mlia.nn.tensorflow.tflite_compat import TFLiteCompatibilityStatus
-from mlia.nn.tensorflow.tflite_compat import TFLiteConversionError
-from mlia.nn.tensorflow.tflite_compat import TFLiteConversionErrorCode
+from mlia.nn.tensorflow.tflite_compat import (
+    TFLiteChecker,
+    TFLiteCompatibilityInfo,
+    TFLiteCompatibilityStatus,
+    TFLiteConversionError,
+    TFLiteConversionErrorCode,
+    converter_error_data_pb2,
+)
 
 
 def test_not_fully_compatible_model_flex_ops() -> None:

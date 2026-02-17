@@ -2,6 +2,7 @@
 # and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Arm NN TensorFlow Lite Delegate backend module."""
+
 import logging
 import warnings
 

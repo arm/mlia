@@ -1,6 +1,7 @@
-# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2024, 2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Module for the API functions."""
+
 from __future__ import annotations
 
 import logging
@@ -10,8 +11,7 @@ from typing import Any
 from mlia.core.advisor import InferenceAdvisor
 from mlia.core.common import AdviceCategory
 from mlia.core.context import ExecutionContext
-from mlia.target.registry import get_optimization_profile
-from mlia.target.registry import profile
+from mlia.target.registry import get_optimization_profile, profile
 from mlia.target.registry import registry as target_registry
 
 logger = logging.getLogger(__name__)

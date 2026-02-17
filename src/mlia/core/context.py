@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2024, 2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Context module.
 
@@ -7,25 +7,20 @@ Context is an object that describes advisor working environment
 and requested behavior (advice categories, input configuration
 parameters).
 """
+
 from __future__ import annotations
 
 import logging
-from abc import ABC
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any
-from typing import Mapping
+from typing import Any, Mapping
 
 from mlia.core.common import AdviceCategory
 from mlia.core.errors import ConfigurationError
-from mlia.core.events import DefaultEventPublisher
-from mlia.core.events import EventHandler
-from mlia.core.events import EventPublisher
-from mlia.core.helpers import ActionResolver
-from mlia.core.helpers import APIActionResolver
+from mlia.core.events import DefaultEventPublisher, EventHandler, EventPublisher
+from mlia.core.helpers import ActionResolver, APIActionResolver
 from mlia.core.typing import OutputFormat
-from mlia.utils.filesystem import recreate_directory
-from mlia.utils.filesystem import USER_ONLY_PERM_MASK
+from mlia.utils.filesystem import USER_ONLY_PERM_MASK, recreate_directory
 
 logger = logging.getLogger(__name__)
 

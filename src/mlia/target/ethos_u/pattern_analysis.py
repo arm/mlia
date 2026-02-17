@@ -1,14 +1,12 @@
 # SPDX-FileCopyrightText: Copyright 2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Ethos-U pattern analysis module for detecting optimization opportunities."""
+
 from __future__ import annotations
 
-from dataclasses import dataclass
-from dataclasses import field
+from dataclasses import dataclass, field
 
-from mlia.core.data_analysis import Fact
-from mlia.core.data_analysis import PatternAnalyzer
-from mlia.core.data_analysis import register_fact_type
+from mlia.core.data_analysis import Fact, PatternAnalyzer, register_fact_type
 from mlia.target.ethos_u.data_analysis import EthosULayerSuboptimalActivation
 
 

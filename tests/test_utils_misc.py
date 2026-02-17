@@ -1,13 +1,12 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, 2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, 2025-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for misc util functions."""
+
 from unittest.mock import MagicMock
 
 import pytest
 
-from mlia.utils.misc import get_pkg_version
-from mlia.utils.misc import MetadataError
-from mlia.utils.misc import yes
+from mlia.utils.misc import MetadataError, get_pkg_version, yes
 
 
 @pytest.mark.parametrize(

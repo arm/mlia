@@ -1,23 +1,25 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, 2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, 2025-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for the logging utility functions."""
+
 from __future__ import annotations
 
 import logging
 import sys
 from contextlib import ExitStack as does_not_raise
 from pathlib import Path
-from typing import Any
-from typing import Callable
+from typing import Any, Callable
 from unittest.mock import MagicMock
 
 import pytest
 
-from mlia.utils.logging import capture_raw_output
-from mlia.utils.logging import create_log_handler
-from mlia.utils.logging import LogFilter
-from mlia.utils.logging import redirect_output
-from mlia.utils.logging import redirect_raw_output
+from mlia.utils.logging import (
+    LogFilter,
+    capture_raw_output,
+    create_log_handler,
+    redirect_output,
+    redirect_raw_output,
+)
 
 
 @pytest.mark.parametrize(
@@ -98,9 +100,10 @@ def test_output_redirection(redirect_context_manager: Callable) -> None:
 
 def test_output_and_error_capture() -> None:
     """Test output/error capturing."""
-    with capture_raw_output(sys.stdout) as std_output, capture_raw_output(
-        sys.stderr
-    ) as stderr_output:
+    with (
+        capture_raw_output(sys.stdout) as std_output,
+        capture_raw_output(sys.stderr) as stderr_output,
+    ):
         print("hello from stdout")
         print("hello from stderr", file=sys.stderr)
 

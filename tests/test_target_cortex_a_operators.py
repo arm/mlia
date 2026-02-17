@@ -1,6 +1,7 @@
-# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for Cortex-A operator compatibility."""
+
 from pathlib import Path
 
 import pytest
@@ -8,10 +9,12 @@ import tf_keras as keras
 
 from mlia.nn.tensorflow.tflite_convert import convert_to_tflite_bytes
 from mlia.target.cortex_a.config import CortexAConfiguration
-from mlia.target.cortex_a.operators import CortexACompatibilityInfo
-from mlia.target.cortex_a.operators import get_cortex_a_compatibility_info
-from mlia.target.cortex_a.operators import Operator
-from mlia.target.cortex_a.operators import TFL_ACTIVATION_FUNCTION
+from mlia.target.cortex_a.operators import (
+    TFL_ACTIVATION_FUNCTION,
+    CortexACompatibilityInfo,
+    Operator,
+    get_cortex_a_compatibility_info,
+)
 
 
 def check_get_cortex_a_compatibility_info(

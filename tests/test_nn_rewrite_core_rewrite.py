@@ -1,13 +1,13 @@
-# SPDX-FileCopyrightText: Copyright 2023-2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2023-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for module mlia.nn.rewrite.core.rewrite."""
+
 from __future__ import annotations
 
 import re
 from contextlib import ExitStack as does_not_raise
 from pathlib import Path
-from typing import Any
-from typing import cast
+from typing import Any, cast
 from unittest.mock import MagicMock
 
 import numpy as np
@@ -22,23 +22,29 @@ from tensorflow_model_optimization.python.core.sparsity.keras.pruning_wrapper im
 )
 
 from mlia.core.errors import ConfigurationError
-from mlia.nn.rewrite.core.rewrite import ClusteringRewrite
-from mlia.nn.rewrite.core.rewrite import GenericRewrite
-from mlia.nn.rewrite.core.rewrite import Rewrite
-from mlia.nn.rewrite.core.rewrite import RewriteCallable
-from mlia.nn.rewrite.core.rewrite import RewriteConfiguration
-from mlia.nn.rewrite.core.rewrite import RewriteRegistry
-from mlia.nn.rewrite.core.rewrite import RewritingOptimizer
-from mlia.nn.rewrite.core.rewrite import StructuredSparsityRewrite
-from mlia.nn.rewrite.core.rewrite import TrainingParameters
-from mlia.nn.rewrite.core.rewrite import UnstructuredSparsityRewrite
+from mlia.nn.rewrite.core.rewrite import (
+    ClusteringRewrite,
+    GenericRewrite,
+    Rewrite,
+    RewriteCallable,
+    RewriteConfiguration,
+    RewriteRegistry,
+    RewritingOptimizer,
+    StructuredSparsityRewrite,
+    TrainingParameters,
+    UnstructuredSparsityRewrite,
+)
 from mlia.nn.rewrite.core.train import train_in_dir
-from mlia.nn.rewrite.library.clustering import conv2d_clustering_rewrite
-from mlia.nn.rewrite.library.clustering import fc_clustering_rewrite
-from mlia.nn.rewrite.library.sparsity import conv2d_sparsity_rewrite
-from mlia.nn.rewrite.library.sparsity import conv2d_sparsity_unstructured_rewrite
-from mlia.nn.rewrite.library.sparsity import fc_sparsity_rewrite
-from mlia.nn.rewrite.library.sparsity import fc_sparsity_unstructured_rewrite
+from mlia.nn.rewrite.library.clustering import (
+    conv2d_clustering_rewrite,
+    fc_clustering_rewrite,
+)
+from mlia.nn.rewrite.library.sparsity import (
+    conv2d_sparsity_rewrite,
+    conv2d_sparsity_unstructured_rewrite,
+    fc_sparsity_rewrite,
+    fc_sparsity_unstructured_rewrite,
+)
 from mlia.nn.tensorflow.config import TFLiteModel
 from tests.utils.rewrite import MockTrainingParameters
 

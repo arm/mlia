@@ -1,6 +1,7 @@
-# SPDX-FileCopyrightText: Copyright 2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2023, 2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for module mlia.nn.rewrite.graph_edit.join."""
+
 from contextlib import ExitStack as does_not_raise
 from pathlib import Path
 from typing import Any
@@ -8,8 +9,7 @@ from typing import Any
 import pytest
 
 from mlia.nn.rewrite.core.graph_edit.cut import cut_model
-from mlia.nn.rewrite.core.graph_edit.join import append_relabel
-from mlia.nn.rewrite.core.graph_edit.join import join_models
+from mlia.nn.rewrite.core.graph_edit.join import append_relabel, join_models
 from mlia.nn.tensorflow.tflite_graph import load_fb
 from tests.utils.rewrite import models_are_equal
 

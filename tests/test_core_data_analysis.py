@@ -1,11 +1,11 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022, 2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for module data_analysis."""
+
 from dataclasses import dataclass
 
 from mlia.core.common import DataItem
-from mlia.core.data_analysis import Fact
-from mlia.core.data_analysis import FactExtractor
+from mlia.core.data_analysis import Fact, FactExtractor
 
 
 def test_fact_extractor() -> None:

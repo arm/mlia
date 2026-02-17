@@ -1,30 +1,32 @@
-# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2024, 2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for reports module."""
+
 from __future__ import annotations
 
-from typing import Any
-from typing import cast
+from typing import Any, cast
 
 import pytest
 
-from mlia.backend.vela.compat import NpuSupported
-from mlia.backend.vela.compat import Operator
-from mlia.backend.vela.performance import LayerPerfInfo
-from mlia.backend.vela.performance import LayerwisePerfInfo
-from mlia.core.reporting import CompoundReport
-from mlia.core.reporting import Report
-from mlia.core.reporting import Table
-from mlia.nn.tensorflow.tflite_compat import TFLiteCompatibilityInfo
-from mlia.nn.tensorflow.tflite_compat import TFLiteCompatibilityStatus
+from mlia.backend.vela.compat import NpuSupported, Operator
+from mlia.backend.vela.performance import LayerPerfInfo, LayerwisePerfInfo
+from mlia.core.reporting import CompoundReport, Report, Table
+from mlia.nn.tensorflow.tflite_compat import (
+    TFLiteCompatibilityInfo,
+    TFLiteCompatibilityStatus,
+)
 from mlia.target.ethos_u.config import EthosUConfiguration
-from mlia.target.ethos_u.performance import MemorySizeType
-from mlia.target.ethos_u.performance import MemoryUsage
-from mlia.target.ethos_u.performance import PerformanceMetrics
-from mlia.target.ethos_u.reporters import ethos_u_formatters
-from mlia.target.ethos_u.reporters import report_operators
-from mlia.target.ethos_u.reporters import report_perf_metrics
-from mlia.target.ethos_u.reporters import report_target_details
+from mlia.target.ethos_u.performance import (
+    MemorySizeType,
+    MemoryUsage,
+    PerformanceMetrics,
+)
+from mlia.target.ethos_u.reporters import (
+    ethos_u_formatters,
+    report_operators,
+    report_perf_metrics,
+    report_target_details,
+)
 from mlia.target.registry import profile
 from mlia.utils.console import remove_ascii_codes
 
@@ -95,7 +97,7 @@ Layer-Wise Metrics:
 ├──────────────┼─────────────────┼──────────────┼──────────────┼──────────────┼──────────────┼──────────────┼──────────────┼──────────────┼──────────────┼──────────────┤
 │ Test Layer 1 │ test_operator   │            0 │         0.00 │         0.00 │         0.00 │         0.00 │         0.00 │         0.00 │            0 │         0.00 │
 └──────────────┴─────────────────┴──────────────┴──────────────┴──────────────┴──────────────┴──────────────┴──────────────┴──────────────┴──────────────┴──────────────┘
-""".strip(),
+""".strip(),  # noqa: E501
             {
                 "performance_metrics": [
                     {"metric": "SRAM used", "value": 10, "unit": "KiB"},
@@ -193,7 +195,7 @@ Layer-Wise Metrics:
 ├────────────────┼─────────────────┼──────────────┼──────────────┼──────────────┼──────────────┼──────────────┼──────────────┼──────────────┼──────────────┼──────────────┤
 │ Test Layer (1) │ test_operator   │            0 │         0.00 │         0.00 │         0.00 │         0.00 │         0.00 │         0.00 │            0 │         0.00 │
 └────────────────┴─────────────────┴──────────────┴──────────────┴──────────────┴──────────────┴──────────────┴──────────────┴──────────────┴──────────────┴──────────────┘
-""".strip(),
+""".strip(),  # noqa: E501
             {
                 "performance_metrics": [
                     {"metric": "SRAM used", "value": 10, "unit": "KiB"},

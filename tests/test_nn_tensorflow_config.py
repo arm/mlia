@@ -1,26 +1,26 @@
-# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for config module."""
+
 from contextlib import ExitStack as does_not_raise
 from pathlib import Path
-from typing import Any
-from typing import Generator
-from typing import Union
-from unittest.mock import MagicMock
-from unittest.mock import Mock
+from typing import Any, Generator, Union
+from unittest.mock import MagicMock, Mock
 
 import numpy as np
 import pytest
 
 import mlia.nn.tensorflow.config
 from mlia.nn.rewrite.core.utils.numpy_tfrecord import numpytf_read
-from mlia.nn.tensorflow.config import get_keras_model
-from mlia.nn.tensorflow.config import get_model
-from mlia.nn.tensorflow.config import get_tflite_model
-from mlia.nn.tensorflow.config import KerasModel
-from mlia.nn.tensorflow.config import ModelConfiguration
-from mlia.nn.tensorflow.config import TFLiteModel
-from mlia.nn.tensorflow.config import TfModel
+from mlia.nn.tensorflow.config import (
+    KerasModel,
+    ModelConfiguration,
+    TFLiteModel,
+    TfModel,
+    get_keras_model,
+    get_model,
+    get_tflite_model,
+)
 from tests.conftest import create_tfrecord
 
 

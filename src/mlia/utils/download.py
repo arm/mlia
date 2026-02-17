@@ -1,20 +1,22 @@
-# SPDX-FileCopyrightText: Copyright 2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2023, 2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Utils for files downloading."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable
-from typing import Iterable
+from typing import Callable, Iterable
 
 import requests
-from rich.progress import BarColumn
-from rich.progress import DownloadColumn
-from rich.progress import FileSizeColumn
-from rich.progress import Progress
-from rich.progress import ProgressColumn
-from rich.progress import TextColumn
+from rich.progress import (
+    BarColumn,
+    DownloadColumn,
+    FileSizeColumn,
+    Progress,
+    ProgressColumn,
+    TextColumn,
+)
 
 from mlia.utils.filesystem import sha256
 from mlia.utils.types import parse_int

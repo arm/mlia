@@ -1,16 +1,15 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, 2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Module for data collection.
 
 This module contains base classes for the first stage
 of the ML Inference Advisor workflow - data collection.
 """
+
 from abc import abstractmethod
 
-from mlia.core.common import DataItem
-from mlia.core.common import NamedEntity
-from mlia.core.mixins import ContextMixin
-from mlia.core.mixins import ParameterResolverMixin
+from mlia.core.common import DataItem, NamedEntity
+from mlia.core.mixins import ContextMixin, ParameterResolverMixin
 
 
 class DataCollector(NamedEntity):

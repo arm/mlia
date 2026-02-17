@@ -1,24 +1,27 @@
-# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2024, 2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for the filesystem module."""
+
 import contextlib
 from pathlib import Path
 
 import pytest
 
-from mlia.utils.filesystem import all_files_exist
-from mlia.utils.filesystem import all_paths_valid
-from mlia.utils.filesystem import copy_all
-from mlia.utils.filesystem import get_mlia_resources
-from mlia.utils.filesystem import get_mlia_target_optimization_dir
-from mlia.utils.filesystem import get_mlia_target_profiles_dir
-from mlia.utils.filesystem import get_vela_config
-from mlia.utils.filesystem import recreate_directory
-from mlia.utils.filesystem import sha256
-from mlia.utils.filesystem import temp_directory
-from mlia.utils.filesystem import temp_file
-from mlia.utils.filesystem import USER_ONLY_PERM_MASK
-from mlia.utils.filesystem import working_directory
+from mlia.utils.filesystem import (
+    USER_ONLY_PERM_MASK,
+    all_files_exist,
+    all_paths_valid,
+    copy_all,
+    get_mlia_resources,
+    get_mlia_target_optimization_dir,
+    get_mlia_target_profiles_dir,
+    get_vela_config,
+    recreate_directory,
+    sha256,
+    temp_directory,
+    temp_file,
+    working_directory,
+)
 from tests.utils.common import check_expected_permissions
 
 

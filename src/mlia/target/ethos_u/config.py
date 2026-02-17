@@ -1,6 +1,7 @@
-# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Ethos-U configuration."""
+
 from __future__ import annotations
 
 import logging
@@ -14,9 +15,11 @@ from mlia.utils.filesystem import get_vela_config
 
 # Dynamic imports with fallback for when Vela is not available
 try:
-    from mlia.backend.vela.compiler import resolve_compiler_config
-    from mlia.backend.vela.compiler import VelaCompilerOptions
-    from mlia.backend.vela.compiler import VelaInitData  # pylint: disable=unused-import
+    from mlia.backend.vela.compiler import (
+        VelaCompilerOptions,
+        VelaInitData,  # pylint: disable=unused-import
+        resolve_compiler_config,
+    )
 
     _VELA_AVAILABLE = True
 except ImportError:
@@ -24,9 +27,11 @@ except ImportError:
     from typing import TYPE_CHECKING
 
     if TYPE_CHECKING:
-        from mlia.backend.vela.compiler import resolve_compiler_config
-        from mlia.backend.vela.compiler import VelaCompilerOptions
-        from mlia.backend.vela.compiler import VelaInitData
+        from mlia.backend.vela.compiler import (
+            VelaCompilerOptions,
+            VelaInitData,
+            resolve_compiler_config,
+        )
     else:
 
         def __getattr__(name: str) -> Any:

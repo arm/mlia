@@ -1,18 +1,17 @@
 # SPDX-FileCopyrightText: Copyright 2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Test for plugin interface."""
+
 import sys
 import typing
 from dataclasses import dataclass
 from os import PathLike
 from typing import Union
-from unittest.mock import call
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, call
 
 import pytest
 
-from mlia.plugins.plugins import call_entry_points
-from mlia.plugins.plugins import logger
+from mlia.plugins.plugins import call_entry_points, logger
 
 if sys.version_info < (3, 10):
     import importlib_metadata as metadata
@@ -59,9 +58,7 @@ class FakeDistribution(metadata.Distribution):
     def _normalized_name(self) -> str:
         return self._fake_name
 
-    def locate_file(
-        self, path: Union[str, PathLike[str]]
-    ) -> metadata.SimplePath:  # type: ignore
+    def locate_file(self, path: Union[str, PathLike[str]]) -> metadata.SimplePath:  # type: ignore
         return metadata.Distribution.from_name("mlia").locate_file(path)
 
     def read_text(self, filename: str) -> str:

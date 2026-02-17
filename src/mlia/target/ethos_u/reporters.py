@@ -1,32 +1,32 @@
-# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Reports module."""
+
 from __future__ import annotations
 
 from collections import defaultdict
-from dataclasses import asdict
-from dataclasses import fields
-from typing import Any
-from typing import Callable
+from dataclasses import asdict, fields
+from typing import Any, Callable
 
-from mlia.backend.vela.compat import Operator
-from mlia.backend.vela.compat import Operators
+from mlia.backend.vela.compat import Operator, Operators
 from mlia.backend.vela.performance import layer_metrics
 from mlia.core.advice_generation import Advice
 from mlia.core.reporters import report_advice
-from mlia.core.reporting import BytesCell
-from mlia.core.reporting import Cell
-from mlia.core.reporting import ClockCell
-from mlia.core.reporting import Column
-from mlia.core.reporting import CompoundFormatter
-from mlia.core.reporting import CompoundReport
-from mlia.core.reporting import CyclesCell
-from mlia.core.reporting import Format
-from mlia.core.reporting import NestedReport
-from mlia.core.reporting import Report
-from mlia.core.reporting import ReportItem
-from mlia.core.reporting import SingleRow
-from mlia.core.reporting import Table
+from mlia.core.reporting import (
+    BytesCell,
+    Cell,
+    ClockCell,
+    Column,
+    CompoundFormatter,
+    CompoundReport,
+    CyclesCell,
+    Format,
+    NestedReport,
+    Report,
+    ReportItem,
+    SingleRow,
+    Table,
+)
 from mlia.nn.tensorflow.tflite_compat import TFLiteCompatibilityInfo
 from mlia.target.common.reporters import report_tflite_compatiblity
 from mlia.target.ethos_u.config import EthosUConfiguration
@@ -257,13 +257,10 @@ def metrics_as_records(
                         if field.name != "name"
                     ]
                     duplicate_idx = 1
-                    dict_key = getattr(layerwise_metric, "name")
+                    dict_key = layerwise_metric.name
                     while dict_key in metric_map:
                         dict_key = (
-                            getattr(layerwise_metric, "name")
-                            + " ("
-                            + str(duplicate_idx)
-                            + ")"
+                            layerwise_metric.name + " (" + str(duplicate_idx) + ")"
                         )
                         duplicate_idx += 1
                     for field_name in field_names:

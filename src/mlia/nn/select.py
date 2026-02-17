@@ -1,29 +1,25 @@
-# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Module for optimization selection."""
+
 from __future__ import annotations
 
 import math
 from pathlib import Path
-from typing import Any
-from typing import cast
-from typing import List
-from typing import NamedTuple
+from typing import Any, List, NamedTuple, cast
 
 import tf_keras as keras
 
 from mlia.core.errors import ConfigurationError
-from mlia.nn.common import Optimizer
-from mlia.nn.common import OptimizerConfiguration
-from mlia.nn.rewrite.core.rewrite import RewriteConfiguration
-from mlia.nn.rewrite.core.rewrite import RewritingOptimizer
+from mlia.nn.common import Optimizer, OptimizerConfiguration
+from mlia.nn.rewrite.core.rewrite import RewriteConfiguration, RewritingOptimizer
 from mlia.nn.rewrite.core.train import TrainingParameters
-from mlia.nn.tensorflow.config import KerasModel
-from mlia.nn.tensorflow.config import TFLiteModel
-from mlia.nn.tensorflow.optimizations.clustering import Clusterer
-from mlia.nn.tensorflow.optimizations.clustering import ClusteringConfiguration
-from mlia.nn.tensorflow.optimizations.pruning import Pruner
-from mlia.nn.tensorflow.optimizations.pruning import PruningConfiguration
+from mlia.nn.tensorflow.config import KerasModel, TFLiteModel
+from mlia.nn.tensorflow.optimizations.clustering import (
+    Clusterer,
+    ClusteringConfiguration,
+)
+from mlia.nn.tensorflow.optimizations.pruning import Pruner, PruningConfiguration
 from mlia.utils.types import is_list_of
 
 

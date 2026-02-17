@@ -1,29 +1,29 @@
-# SPDX-FileCopyrightText: Copyright 2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2025-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Test event handlers module."""
+
 from __future__ import annotations
 
 from logging import Logger
-from typing import Any
-from typing import Callable
+from typing import Any, Callable
 from unittest.mock import MagicMock
 
 import pytest
 
 from mlia.core.advice_generation import AdviceEvent
 from mlia.core.context import Context
-from mlia.core.events import AdviceStageFinishedEvent
-from mlia.core.events import AdviceStageStartedEvent
-from mlia.core.events import DataAnalysisStageFinishedEvent
-from mlia.core.events import DataCollectionStageStartedEvent
-from mlia.core.events import DataCollectorSkippedEvent
-from mlia.core.events import ExecutionFailedEvent
-from mlia.core.events import ExecutionStartedEvent
+from mlia.core.events import (
+    AdviceStageFinishedEvent,
+    AdviceStageStartedEvent,
+    DataAnalysisStageFinishedEvent,
+    DataCollectionStageStartedEvent,
+    DataCollectorSkippedEvent,
+    ExecutionFailedEvent,
+    ExecutionStartedEvent,
+)
 from mlia.core.handlers import WorkflowEventsHandler
 from mlia.core.reporters import Report
-from mlia.core.reporting import JSONReporter
-from mlia.core.reporting import Reporter
-from mlia.core.reporting import TextReporter
+from mlia.core.reporting import JSONReporter, Reporter, TextReporter
 
 
 def _get_workflow_events_handler(output_format: str) -> WorkflowEventsHandler:

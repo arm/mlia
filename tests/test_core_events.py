@@ -1,23 +1,25 @@
-# SPDX-FileCopyrightText: Copyright 2022, 2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022, 2025-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for the module events."""
+
 from dataclasses import dataclass
-from unittest.mock import call
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, call
 
 import pytest
 
-from mlia.core.events import action
-from mlia.core.events import ActionFinishedEvent
-from mlia.core.events import ActionStartedEvent
-from mlia.core.events import DebugEventHandler
-from mlia.core.events import DefaultEventPublisher
-from mlia.core.events import Event
-from mlia.core.events import EventDispatcher
-from mlia.core.events import EventHandler
-from mlia.core.events import ExecutionFinishedEvent
-from mlia.core.events import ExecutionStartedEvent
-from mlia.core.events import stage
+from mlia.core.events import (
+    ActionFinishedEvent,
+    ActionStartedEvent,
+    DebugEventHandler,
+    DefaultEventPublisher,
+    Event,
+    EventDispatcher,
+    EventHandler,
+    ExecutionFinishedEvent,
+    ExecutionStartedEvent,
+    action,
+    stage,
+)
 from mlia.core.handlers import SystemEventsHandler
 
 

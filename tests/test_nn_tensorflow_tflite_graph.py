@@ -1,6 +1,7 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, 2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for the tflite_graph module."""
+
 import json
 from pathlib import Path
 
@@ -8,14 +9,16 @@ import pytest
 import tensorflow as tf
 from tensorflow.lite.python.schema_py_generated import ModelT
 
-from mlia.nn.tensorflow.tflite_graph import load_fb
-from mlia.nn.tensorflow.tflite_graph import Op
-from mlia.nn.tensorflow.tflite_graph import parse_subgraphs
-from mlia.nn.tensorflow.tflite_graph import save_fb
-from mlia.nn.tensorflow.tflite_graph import TensorInfo
-from mlia.nn.tensorflow.tflite_graph import TFL_ACTIVATION_FUNCTION
-from mlia.nn.tensorflow.tflite_graph import TFL_OP
-from mlia.nn.tensorflow.tflite_graph import TFL_TYPE
+from mlia.nn.tensorflow.tflite_graph import (
+    TFL_ACTIVATION_FUNCTION,
+    TFL_OP,
+    TFL_TYPE,
+    Op,
+    TensorInfo,
+    load_fb,
+    parse_subgraphs,
+    save_fb,
+)
 from tests.utils.rewrite import models_are_equal
 
 

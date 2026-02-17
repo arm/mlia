@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022,2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022,2025-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """
 Contains class TFLiteMetrics to calculate metrics from a TensorFlow Lite file.
@@ -8,6 +8,7 @@ These metrics include:
 * Unique weights (clusters) (per layer)
 * gzip compression ratio
 """
+
 from __future__ import annotations
 
 import os
@@ -264,9 +265,9 @@ class TFLiteMetrics:
             sparsity_accumulator.total_weights
         )
         if report_sparsity:
-            summary_row[
-                header.index("Sparsity")
-            ] = f"{sparsity_accumulator.sparsity():.2f}"
+            summary_row[header.index("Sparsity")] = (
+                f"{sparsity_accumulator.sparsity():.2f}"
+            )
         rows.append(summary_row)
         # Report detailed cluster info
         if report_cluster_mode is not None:

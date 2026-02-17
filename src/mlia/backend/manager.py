@@ -1,24 +1,24 @@
-# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Module for installation process."""
+
 from __future__ import annotations
 
 import logging
-from abc import ABC
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Callable
 
 from mlia.backend.config import BackendType
-from mlia.backend.install import DownloadAndInstall
-from mlia.backend.install import Installation
-from mlia.backend.install import InstallationType
-from mlia.backend.install import InstallFromPath
+from mlia.backend.install import (
+    DownloadAndInstall,
+    Installation,
+    InstallationType,
+    InstallFromPath,
+)
 from mlia.backend.registry import registry as backend_registry
-from mlia.core.errors import ConfigurationError
-from mlia.core.errors import InternalError
+from mlia.core.errors import ConfigurationError, InternalError
 from mlia.utils.misc import yes
-
 
 logger = logging.getLogger(__name__)
 
@@ -151,7 +151,7 @@ class DefaultInstallationManager(InstallationManager, InstallationFiltersMixin):
 
         if len(candidate_installs) > 1:
             raise InternalError(
-                f"{err_msg_prefix}: More than one backend with name " f"{name} found."
+                f"{err_msg_prefix}: More than one backend with name {name} found."
             )
 
         return candidate_installs[0]

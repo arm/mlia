@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """
 Contains class Pruner to prune a model to a specified sparsity.
@@ -7,6 +7,7 @@ In order to do this, we need to have a base model and corresponding training dat
 We also have to specify a subset of layers we want to prune. For more details,
 please refer to the documentation for TensorFlow Model Optimization Toolkit.
 """
+
 from __future__ import annotations
 
 import logging
@@ -17,16 +18,12 @@ from typing import Any
 import numpy as np
 import tensorflow_model_optimization as tfmot
 import tf_keras as keras
-from tensorflow_model_optimization.python.core.sparsity.keras import (  # pylint: disable=no-name-in-module
+from tensorflow_model_optimization.python.core.sparsity.keras import (  # pylint: disable=no-name-in-module  # pylint: disable=no-name-in-module
     prune_registry,
-)
-from tensorflow_model_optimization.python.core.sparsity.keras import (  # pylint: disable=no-name-in-module
     pruning_wrapper,
 )
 
-from mlia.nn.common import Optimizer
-from mlia.nn.common import OptimizerConfiguration
-
+from mlia.nn.common import Optimizer, OptimizerConfiguration
 
 logger = logging.getLogger(__name__)
 

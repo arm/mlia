@@ -1,6 +1,7 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, 2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, 2025-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Data collection module for Cortex-A."""
+
 from __future__ import annotations
 
 import logging
@@ -8,14 +9,14 @@ from pathlib import Path
 
 from mlia.core.data_collection import ContextAwareDataCollector
 from mlia.nn.tensorflow.config import get_tflite_model
-from mlia.nn.tensorflow.tflite_compat import TFLiteChecker
-from mlia.nn.tensorflow.tflite_compat import TFLiteCompatibilityInfo
+from mlia.nn.tensorflow.tflite_compat import TFLiteChecker, TFLiteCompatibilityInfo
 from mlia.nn.tensorflow.utils import is_tflite_model
 from mlia.target.cortex_a.config import CortexAConfiguration
-from mlia.target.cortex_a.operators import CortexACompatibilityResult
-from mlia.target.cortex_a.operators import get_cortex_a_compatibility_info
+from mlia.target.cortex_a.operators import (
+    CortexACompatibilityResult,
+    get_cortex_a_compatibility_info,
+)
 from mlia.utils.logging import log_action
-
 
 logger = logging.getLogger(__name__)
 

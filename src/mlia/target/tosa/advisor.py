@@ -2,23 +2,22 @@
 # and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """TOSA advisor."""
+
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
-from typing import cast
+from typing import Any, cast
 
-from mlia.core.advice_generation import AdviceCategory
-from mlia.core.advice_generation import AdviceProducer
-from mlia.core.advisor import DefaultInferenceAdvisor
-from mlia.core.advisor import InferenceAdvisor
-from mlia.core.context import Context
-from mlia.core.context import ExecutionContext
+from mlia.core.advice_generation import AdviceCategory, AdviceProducer
+from mlia.core.advisor import DefaultInferenceAdvisor, InferenceAdvisor
+from mlia.core.context import Context, ExecutionContext
 from mlia.core.data_analysis import DataAnalyzer
 from mlia.core.data_collection import DataCollector
 from mlia.core.events import Event
-from mlia.target.common.optimization import add_common_optimization_params
-from mlia.target.common.optimization import OptimizingDataCollector
+from mlia.target.common.optimization import (
+    OptimizingDataCollector,
+    add_common_optimization_params,
+)
 from mlia.target.registry import profile
 from mlia.target.tosa.advice_generation import TOSAAdviceProducer
 from mlia.target.tosa.config import TOSAConfiguration

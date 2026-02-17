@@ -19,8 +19,6 @@ repos:
 
     - id: end-of-file-fixer
 
-    - id: trailing-whitespace
-
     - id: mixed-line-ending
       args: ['--fix=lf']
       description: Forces to replace line ending by the UNIX 'lf' character.
@@ -33,33 +31,11 @@ repos:
       args: ['--maxkb=300', "--enforce-all"]
       exclude: src/mlia/resources
 
-- repo: https://github.com/Lucas-C/pre-commit-hooks
-  rev: v1.3.1
-  hooks:
-    - id: remove-tabs
-      args: [--whitespaces-count, '8']
-
-- repo: https://github.com/asottile/reorder_python_imports
-  rev: v3.10.0
-  hooks:
-    - id: reorder-python-imports
-      args: ["--application-directories", ".:src"]
-
 - repo: https://github.com/asottile/pyupgrade
   rev: v3.10.1
   hooks:
     - id: pyupgrade
       args: ["--py38-plus"]
-
-- repo: https://github.com/psf/black
-  rev: 23.7.0
-  hooks:
-    - id: black
-
-- repo: https://github.com/PyCQA/flake8
-  rev: 6.1.0
-  hooks:
-    - id: flake8
 
 - repo: https://github.com/PyCQA/pydocstyle
   rev: 6.3.0
@@ -89,14 +65,8 @@ repos:
     - id: blocklint
       exclude: setup.cfg
 
-- repo: https://github.com/PyCQA/bandit
-  rev: 1.8.6
-  hooks:
-    - id: bandit
-      args: ["--skip", "B311,B101"]
-
 - repo: https://github.com/macisamuele/language-formatters-pre-commit-hooks
-  rev: v2.11.0
+  rev: v2.16.0
   hooks:
   - id: pretty-format-toml
     args: [--autofix, "--no-sort", --indent, "4"]
@@ -111,13 +81,12 @@ repos:
       require_serial: true
       additional_dependencies: []
 
-- repo: local
+- repo: https://github.com/astral-sh/ruff-pre-commit
+  rev: v0.15.0
   hooks:
-    - id: pylint
-      name: pylint
-      entry: pylint
-      language: system
-      types: [python]
+    - id: ruff-check
+      args: [ --fix ]
+    - id: ruff-format
 
 - repo: https://github.com/commitizen-tools/commitizen
   rev: v3.13.0

@@ -1,6 +1,7 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, 2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for Cortex-A data analysis module."""
+
 from __future__ import annotations
 
 import pytest
@@ -10,20 +11,25 @@ from mlia.backend.armnn_tflite_delegate.compat import (
 )
 from mlia.core.common import DataItem
 from mlia.core.data_analysis import Fact
-from mlia.nn.tensorflow.tflite_compat import TFLiteCompatibilityInfo
-from mlia.nn.tensorflow.tflite_compat import TFLiteCompatibilityStatus
-from mlia.nn.tensorflow.tflite_compat import TFLiteConversionError
-from mlia.nn.tensorflow.tflite_compat import TFLiteConversionErrorCode
+from mlia.nn.tensorflow.tflite_compat import (
+    TFLiteCompatibilityInfo,
+    TFLiteCompatibilityStatus,
+    TFLiteConversionError,
+    TFLiteConversionErrorCode,
+)
 from mlia.nn.tensorflow.tflite_graph import TFL_ACTIVATION_FUNCTION
-from mlia.target.common.reporters import ModelHasCustomOperators
-from mlia.target.common.reporters import ModelIsNotTFLiteCompatible
-from mlia.target.common.reporters import TFLiteCompatibilityCheckFailed
+from mlia.target.common.reporters import (
+    ModelHasCustomOperators,
+    ModelIsNotTFLiteCompatible,
+    TFLiteCompatibilityCheckFailed,
+)
 from mlia.target.cortex_a.config import CortexAConfiguration
-from mlia.target.cortex_a.data_analysis import CortexADataAnalyzer
-from mlia.target.cortex_a.data_analysis import ModelIsCortexACompatible
-from mlia.target.cortex_a.data_analysis import ModelIsNotCortexACompatible
-from mlia.target.cortex_a.operators import CortexACompatibilityInfo
-from mlia.target.cortex_a.operators import Operator
+from mlia.target.cortex_a.data_analysis import (
+    CortexADataAnalyzer,
+    ModelIsCortexACompatible,
+    ModelIsNotCortexACompatible,
+)
+from mlia.target.cortex_a.operators import CortexACompatibilityInfo, Operator
 
 VERSION = CortexAConfiguration.load_profile("cortex-a").armnn_tflite_delegate_version
 BACKEND_INFO = f"{ARMNN_TFLITE_DELEGATE['backend']} {VERSION}"
@@ -86,7 +92,7 @@ BACKEND_INFO = f"{ARMNN_TFLITE_DELEGATE['backend']} {VERSION}"
                         "CUSTOM - 'UNSUPPORTED_OP'",
                     },
                     {
-                        "CONV_2D": ModelIsNotCortexACompatible.ActivationFunctionSupport(
+                        "CONV_2D": ModelIsNotCortexACompatible.ActivationFunctionSupport(  # noqa: E501
                             used_unsupported={TFL_ACTIVATION_FUNCTION.SIGN_BIT.name},
                             supported={
                                 "RELU",

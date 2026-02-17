@@ -1,6 +1,7 @@
-# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for the module context."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -11,8 +12,7 @@ from mlia.core.common import AdviceCategory
 from mlia.core.context import ExecutionContext
 from mlia.core.errors import ConfigurationError
 from mlia.core.events import DefaultEventPublisher
-from mlia.utils.filesystem import USER_ONLY_PERM_MASK
-from mlia.utils.filesystem import working_directory
+from mlia.utils.filesystem import USER_ONLY_PERM_MASK, working_directory
 from tests.utils.common import check_expected_permissions
 
 

@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2024-2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2024-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Pre-commit hook that checks the current year is in the Copyright header of a file.
 
@@ -6,6 +6,7 @@ Checks both staged files and files modified in the last commit to catch cases
 where files might have been committed with --no-verify and outdated headers.
 If the header is out of date it will print a warning.
 """
+
 import datetime
 import os
 import subprocess  # nosec
@@ -75,9 +76,7 @@ if __name__ == "__main__":
     # been committed with --no-verify and outdated copyright headers
     try:
         recently_modified_files = (
-            subprocess.check_output(
-                ["git", "diff", "--name-only", "HEAD~1", "HEAD"]
-            )  # nosec
+            subprocess.check_output(["git", "diff", "--name-only", "HEAD~1", "HEAD"])  # nosec
             .decode()
             .splitlines()
         )

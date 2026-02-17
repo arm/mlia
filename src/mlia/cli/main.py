@@ -1,6 +1,7 @@
-# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """CLI main entry point."""
+
 from __future__ import annotations
 
 import argparse
@@ -11,35 +12,36 @@ from inspect import signature
 
 from mlia import __version__
 from mlia.backend.errors import BackendUnavailableError
-from mlia.cli.commands import backend_install
-from mlia.cli.commands import backend_list
-from mlia.cli.commands import backend_uninstall
-from mlia.cli.commands import check
-from mlia.cli.commands import optimize
-from mlia.cli.commands import target_list
+from mlia.cli.commands import (
+    backend_install,
+    backend_list,
+    backend_uninstall,
+    check,
+    optimize,
+    target_list,
+)
 from mlia.cli.common import CommandInfo
-from mlia.cli.helpers import CLIActionResolver
-from mlia.cli.helpers import copy_profile_file_to_output_dir
-from mlia.cli.options import add_backend_install_options
-from mlia.cli.options import add_backend_options
-from mlia.cli.options import add_backend_uninstall_options
-from mlia.cli.options import add_check_category_options
-from mlia.cli.options import add_dataset_options
-from mlia.cli.options import add_debug_options
-from mlia.cli.options import add_keras_model_options
-from mlia.cli.options import add_model_options
-from mlia.cli.options import add_multi_optimization_options
-from mlia.cli.options import add_output_directory
-from mlia.cli.options import add_output_options
-from mlia.cli.options import add_target_options
-from mlia.cli.options import get_output_format
+from mlia.cli.helpers import CLIActionResolver, copy_profile_file_to_output_dir
+from mlia.cli.options import (
+    add_backend_install_options,
+    add_backend_options,
+    add_backend_uninstall_options,
+    add_check_category_options,
+    add_dataset_options,
+    add_debug_options,
+    add_keras_model_options,
+    add_model_options,
+    add_multi_optimization_options,
+    add_output_directory,
+    add_output_options,
+    add_target_options,
+    get_output_format,
+)
 from mlia.core.common import AdviceCategory
 from mlia.core.context import ExecutionContext
-from mlia.core.errors import ConfigurationError
-from mlia.core.errors import InternalError
+from mlia.core.errors import ConfigurationError, InternalError
 from mlia.core.logging import setup_logging
 from mlia.target.registry import table as target_table
-
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +52,7 @@ Help the design and optimization of neural network models for efficient inferenc
 
 {target_table().to_plain_text(show_title=True, space=False)}
 Use command 'mlia-backend' to install backends.
-""".strip()
+""".strip()  # noqa: E501
 
 
 def get_commands() -> list[CommandInfo]:

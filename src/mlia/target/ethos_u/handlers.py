@@ -2,25 +2,28 @@
 # and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Event handler."""
+
 from __future__ import annotations
 
 import json
 import logging
 from pathlib import Path
 
-from mlia.backend.vela.compat import Operators
-from mlia.backend.vela.compat import VelaCompatibilityResult
-from mlia.core.events import AdviceStageFinishedEvent
-from mlia.core.events import CollectedDataEvent
+from mlia.backend.vela.compat import Operators, VelaCompatibilityResult
+from mlia.core.events import AdviceStageFinishedEvent, CollectedDataEvent
 from mlia.core.handlers import WorkflowEventsHandler
 from mlia.nn.tensorflow.tflite_compat import TFLiteCompatibilityInfo
-from mlia.target.ethos_u.events import EthosUAdvisorEventHandler
-from mlia.target.ethos_u.events import EthosUAdvisorStartedEvent
-from mlia.target.ethos_u.performance import CombinedPerformanceResult
-from mlia.target.ethos_u.performance import CorstonePerformanceResult
-from mlia.target.ethos_u.performance import OptimizationPerformanceMetrics
-from mlia.target.ethos_u.performance import PerformanceMetrics
-from mlia.target.ethos_u.performance import VelaPerformanceResult
+from mlia.target.ethos_u.events import (
+    EthosUAdvisorEventHandler,
+    EthosUAdvisorStartedEvent,
+)
+from mlia.target.ethos_u.performance import (
+    CombinedPerformanceResult,
+    CorstonePerformanceResult,
+    OptimizationPerformanceMetrics,
+    PerformanceMetrics,
+    VelaPerformanceResult,
+)
 from mlia.target.ethos_u.reporters import ethos_u_formatters
 
 logger = logging.getLogger(__name__)

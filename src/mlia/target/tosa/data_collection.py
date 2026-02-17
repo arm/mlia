@@ -1,6 +1,7 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, 2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, 2025-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """TOSA data collection module."""
+
 from __future__ import annotations
 
 import logging
@@ -10,12 +11,13 @@ from pathlib import Path
 from typing import Any
 
 import mlia.core.output_schema as schema
-from mlia.backend.tosa_checker.compat import get_tosa_compatibility_info
-from mlia.backend.tosa_checker.compat import TOSACompatibilityInfo
+from mlia.backend.tosa_checker.compat import (
+    TOSACompatibilityInfo,
+    get_tosa_compatibility_info,
+)
 from mlia.core.data_collection import ContextAwareDataCollector
 from mlia.nn.tensorflow.config import get_tflite_model
-from mlia.nn.tensorflow.tflite_compat import TFLiteChecker
-from mlia.nn.tensorflow.tflite_compat import TFLiteCompatibilityInfo
+from mlia.nn.tensorflow.tflite_compat import TFLiteChecker, TFLiteCompatibilityInfo
 from mlia.nn.tensorflow.utils import is_tflite_model
 from mlia.utils.logging import log_action
 

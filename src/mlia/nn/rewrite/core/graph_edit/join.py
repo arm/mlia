@@ -1,18 +1,16 @@
-# SPDX-FileCopyrightText: Copyright 2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2023, 2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Join module."""
+
 from __future__ import annotations
 
 import os
 from pathlib import Path
 
 import tensorflow as tf
-from tensorflow.lite.python.schema_py_generated import ModelT
-from tensorflow.lite.python.schema_py_generated import OperatorCodeT
-from tensorflow.lite.python.schema_py_generated import SubGraphT
+from tensorflow.lite.python.schema_py_generated import ModelT, OperatorCodeT, SubGraphT
 
-from mlia.nn.tensorflow.tflite_graph import load_fb
-from mlia.nn.tensorflow.tflite_graph import save_fb
+from mlia.nn.tensorflow.tflite_graph import load_fb, save_fb
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
@@ -56,11 +54,11 @@ def join_subgraphs(
         if dst_subgraph.tensors[i].name == src_subgraph.tensors[o].name
     }
 
-    assert not (
-        src_to_dst and dst_to_src
-    ), f"Source and destination subgraphs appear to connect in a loop: \
+    assert not (src_to_dst and dst_to_src), (
+        f"Source and destination subgraphs appear to connect in a loop: \
         {len(src_to_dst)} tensors from src to dst, {len(dst_to_src)} \
         tensors from dst to src"
+    )
 
     # Relabel matched input/output tensors between graphs
     tensor_relabel = src_to_dst if src_to_dst else dst_to_src

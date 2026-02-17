@@ -1,24 +1,20 @@
 # SPDX-FileCopyrightText: Copyright 2022, 2025-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Module for advice generation."""
+
 from __future__ import annotations
 
-from abc import ABC
-from abc import abstractmethod
-from dataclasses import dataclass
-from dataclasses import field
+from abc import ABC, abstractmethod
+from dataclasses import dataclass, field
 from functools import wraps
-from typing import Any
-from typing import Callable
+from typing import Any, Callable
 
-from mlia.core.common import AdviceCategory
-from mlia.core.common import DataItem
+from mlia.core.common import AdviceCategory, DataItem
 from mlia.core.events import SystemEvent
 from mlia.core.mixins import ContextMixin
 from mlia.core.output_schema import Advice as SchemaAdvice
 from mlia.core.output_schema import AdviceCategory as SchemaAdviceCategory
-from mlia.core.output_schema import AdviceSeverity
-from mlia.core.output_schema import OperatorIdentifier
+from mlia.core.output_schema import AdviceSeverity, OperatorIdentifier
 
 
 @dataclass

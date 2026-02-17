@@ -1,12 +1,15 @@
-# SPDX-FileCopyrightText: Copyright 2023-2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2023-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Rewrite function used to return regular layers."""
+
 from typing import Any
 
 import tf_keras as keras
 
-from mlia.nn.rewrite.library.helper_functions import compute_conv2d_parameters
-from mlia.nn.rewrite.library.helper_functions import get_activation_function
+from mlia.nn.rewrite.library.helper_functions import (
+    compute_conv2d_parameters,
+    get_activation_function,
+)
 
 
 def fc_rewrite(input_shape: Any, output_shape: Any) -> keras.Model:

@@ -1,6 +1,7 @@
-# SPDX-FileCopyrightText: Copyright 2023, 2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2023, 2025-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for module mlia.nn.rewrite.core.utils.numpy_tfrecord."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -9,9 +10,11 @@ from unittest.mock import MagicMock
 import pytest
 import tensorflow as tf
 
-from mlia.nn.rewrite.core.utils.numpy_tfrecord import make_decode_fn
-from mlia.nn.rewrite.core.utils.numpy_tfrecord import numpytf_count
-from mlia.nn.rewrite.core.utils.numpy_tfrecord import sample_tfrec
+from mlia.nn.rewrite.core.utils.numpy_tfrecord import (
+    make_decode_fn,
+    numpytf_count,
+    sample_tfrec,
+)
 
 
 def test_sample_tfrec(test_tfrecord: Path, tmp_path: Path) -> None:

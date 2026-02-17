@@ -1,33 +1,30 @@
-# SPDX-FileCopyrightText: Copyright 2024-2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2024-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for the common optimization module."""
+
 from __future__ import annotations
 
 from contextlib import ExitStack as does_not_raise
 from pathlib import Path
-from typing import Any
-from typing import Callable
+from typing import Any, Callable
 from unittest.mock import MagicMock
 
 import pytest
 
-from mlia.core.context import Context
-from mlia.core.context import ExecutionContext
+from mlia.core.context import Context, ExecutionContext
 from mlia.core.errors import FunctionalityNotSupportedError
-from mlia.core.performance import P
-from mlia.core.performance import PerformanceEstimator
+from mlia.core.performance import P, PerformanceEstimator
 from mlia.nn.common import Optimizer
 from mlia.nn.select import OptimizationSettings
-from mlia.nn.tensorflow.config import get_keras_model
-from mlia.nn.tensorflow.config import KerasModel
-from mlia.nn.tensorflow.config import TFLiteModel
-from mlia.target.common.optimization import _DEFAULT_OPTIMIZATION_TARGETS
-from mlia.target.common.optimization import add_common_optimization_params
-from mlia.target.common.optimization import OptimizingDataCollector
-from mlia.target.common.optimization import OptimizingPerformaceDataCollector
-from mlia.target.common.optimization import parse_augmentations
-from mlia.target.config import load_profile
-from mlia.target.config import TargetProfile
+from mlia.nn.tensorflow.config import KerasModel, TFLiteModel, get_keras_model
+from mlia.target.common.optimization import (
+    _DEFAULT_OPTIMIZATION_TARGETS,
+    OptimizingDataCollector,
+    OptimizingPerformaceDataCollector,
+    add_common_optimization_params,
+    parse_augmentations,
+)
+from mlia.target.config import TargetProfile, load_profile
 
 
 def _get_mock_optimizer(returned_model: KerasModel | TFLiteModel | Path) -> Optimizer:

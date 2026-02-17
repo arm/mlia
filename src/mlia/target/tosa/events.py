@@ -1,13 +1,13 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, 2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """TOSA advisor events."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
 
-from mlia.core.events import Event
-from mlia.core.events import EventDispatcher
+from mlia.core.events import Event, EventDispatcher
 from mlia.target.tosa.config import TOSAConfiguration
 from mlia.target.tosa.reporters import MetadataDisplay
 
