@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: Copyright 2022-2023, 2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for Cortex-A reporters."""
+
 from typing import Any
 
 import pytest
@@ -9,14 +10,14 @@ from mlia.core.advice_generation import Advice
 from mlia.core.output_schema import AdviceCategory as SchemaAdviceCategory
 from mlia.core.output_schema import AdviceSeverity
 from mlia.core.reporting import Report
-from mlia.nn.tensorflow.tflite_compat import TFLiteCompatibilityInfo
-from mlia.nn.tensorflow.tflite_compat import TFLiteCompatibilityStatus
+from mlia.nn.tensorflow.tflite_compat import (
+    TFLiteCompatibilityInfo,
+    TFLiteCompatibilityStatus,
+)
 from mlia.nn.tensorflow.tflite_graph import TFL_ACTIVATION_FUNCTION
 from mlia.target.cortex_a.config import CortexAConfiguration
-from mlia.target.cortex_a.operators import CortexACompatibilityInfo
-from mlia.target.cortex_a.operators import Operator
-from mlia.target.cortex_a.reporters import cortex_a_formatters
-from mlia.target.cortex_a.reporters import report_target
+from mlia.target.cortex_a.operators import CortexACompatibilityInfo, Operator
+from mlia.target.cortex_a.reporters import cortex_a_formatters, report_target
 
 
 def test_report_target() -> None:

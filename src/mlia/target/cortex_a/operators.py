@@ -1,23 +1,21 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, 2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, 2025-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Cortex-A tools module."""
+
 from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Any
-from typing import cast
+from typing import Any, cast
 
 import mlia
 import mlia.core.output_schema as schema
 from mlia.backend.armnn_tflite_delegate.compat import (
     ARMNN_TFLITE_DELEGATE as TFLITE_DELEGATE_COMPAT,
 )
-from mlia.nn.tensorflow.tflite_graph import Op
-from mlia.nn.tensorflow.tflite_graph import parse_subgraphs
-from mlia.nn.tensorflow.tflite_graph import TFL_ACTIVATION_FUNCTION
+from mlia.nn.tensorflow.tflite_graph import TFL_ACTIVATION_FUNCTION, Op, parse_subgraphs
 from mlia.target.cortex_a.config import CortexAConfiguration
 from mlia.utils.filesystem import sha256
 

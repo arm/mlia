@@ -1,14 +1,14 @@
-# SPDX-FileCopyrightText: Copyright 2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2023, 2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Parallelize a TFLiteModel."""
+
 from __future__ import annotations
 
 import logging
 import math
 import os
 from collections import defaultdict
-from multiprocessing import cpu_count
-from multiprocessing import Pool
+from multiprocessing import Pool, cpu_count
 from pathlib import Path
 from typing import Any
 
@@ -105,7 +105,8 @@ class ParallelTFLiteModel(TFLiteModel):  # pylint: disable=abstract-method
             local_batches = [
                 {
                     key: values[
-                        i * self.batch_size : (i + 1) * self.batch_size  # noqa: E203
+                        i * self.batch_size : (i + 1)
+                        * self.batch_size  # noqa: E203
                     ]
                     for key, values in named_input.items()
                 }

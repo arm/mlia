@@ -1,10 +1,10 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022, 2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for the module performance."""
+
 from pathlib import Path
 
-from mlia.core.performance import estimate_performance
-from mlia.core.performance import PerformanceEstimator
+from mlia.core.performance import PerformanceEstimator, estimate_performance
 
 
 def test_estimate_performance(tmp_path: Path) -> None:

@@ -1,13 +1,13 @@
-# SPDX-FileCopyrightText: Copyright 2023, 2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2023, 2025-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for process management functions."""
+
 from subprocess import CalledProcessError  # nosec
 from unittest.mock import MagicMock
 
 import pytest
 
-from mlia.utils.proc import Command
-from mlia.utils.proc import process_command_output
+from mlia.utils.proc import Command, process_command_output
 
 
 def test_process_command_output() -> None:

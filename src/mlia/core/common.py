@@ -1,16 +1,15 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, 2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Common module.
 
 This module contains common interfaces/classess shared across
 core module.
 """
+
 from __future__ import annotations
 
-from abc import ABC
-from abc import abstractmethod
-from enum import auto
-from enum import Flag
+from abc import ABC, abstractmethod
+from enum import Flag, auto
 from typing import Any
 
 # This type is used as type alias for the items which are being passed around

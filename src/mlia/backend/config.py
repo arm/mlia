@@ -1,11 +1,11 @@
 # SPDX-FileCopyrightText: Copyright 2022-2023,2026 Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Backend config module."""
+
 from __future__ import annotations
 
 import platform
-from enum import auto
-from enum import Enum
+from enum import Enum, auto
 from typing import cast
 
 from mlia.backend.install import Installation

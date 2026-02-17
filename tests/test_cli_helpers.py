@@ -1,6 +1,7 @@
-# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for the helper classes."""
+
 from __future__ import annotations
 
 import re
@@ -9,8 +10,7 @@ from typing import Any
 
 import pytest
 
-from mlia.cli.helpers import CLIActionResolver
-from mlia.cli.helpers import copy_profile_file_to_output_dir
+from mlia.cli.helpers import CLIActionResolver, copy_profile_file_to_output_dir
 from mlia.nn.select import OptimizationSettings
 
 

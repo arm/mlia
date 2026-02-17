@@ -1,27 +1,26 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, 2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, 2025-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Reports module."""
+
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
-from typing import Callable
+from typing import Any, Callable
 
-from mlia.backend.tosa_checker.compat import Operator
-from mlia.backend.tosa_checker.compat import TOSACompatibilityInfo
+from mlia.backend.tosa_checker.compat import Operator, TOSACompatibilityInfo
 from mlia.core.advice_generation import Advice
-from mlia.core.metadata import Metadata
-from mlia.core.metadata import MLIAMetadata
-from mlia.core.metadata import ModelMetadata
+from mlia.core.metadata import Metadata, MLIAMetadata, ModelMetadata
 from mlia.core.reporters import report_advice
-from mlia.core.reporting import Cell
-from mlia.core.reporting import Column
-from mlia.core.reporting import CompoundReport
-from mlia.core.reporting import Format
-from mlia.core.reporting import NestedReport
-from mlia.core.reporting import Report
-from mlia.core.reporting import ReportItem
-from mlia.core.reporting import Table
+from mlia.core.reporting import (
+    Cell,
+    Column,
+    CompoundReport,
+    Format,
+    NestedReport,
+    Report,
+    ReportItem,
+    Table,
+)
 from mlia.nn.tensorflow.tflite_compat import TFLiteCompatibilityInfo
 from mlia.target.common.reporters import report_tflite_compatiblity
 from mlia.target.tosa.config import TOSAConfiguration

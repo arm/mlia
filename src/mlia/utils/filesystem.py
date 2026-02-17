@@ -1,6 +1,7 @@
-# SPDX-FileCopyrightText: Copyright 2022-2024, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2024, 2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Utils related to file management."""
+
 from __future__ import annotations
 
 import hashlib
@@ -9,10 +10,8 @@ import os
 import shutil
 from contextlib import contextmanager
 from pathlib import Path
-from tempfile import mkstemp
-from tempfile import TemporaryDirectory
-from typing import Generator
-from typing import Iterable
+from tempfile import TemporaryDirectory, mkstemp
+from typing import Generator, Iterable
 
 USER_ONLY_PERM_MASK = 0o700
 
@@ -67,7 +66,8 @@ def file_chunks(
 
 
 def hexdigest(
-    filepath: str | Path, hash_obj: hashlib._Hash  # pylint: disable=no-member
+    filepath: str | Path,
+    hash_obj: hashlib._Hash,  # pylint: disable=no-member
 ) -> str:
     """Return hex digest of the file."""
     for chunk in file_chunks(filepath):

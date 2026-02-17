@@ -1,10 +1,10 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, 2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Module for python package based installations."""
+
 from __future__ import annotations
 
-from mlia.backend.install import Installation
-from mlia.backend.install import PyPackageBackendInstallation
+from mlia.backend.install import Installation, PyPackageBackendInstallation
 
 
 def get_tosa_backend_installation() -> Installation:

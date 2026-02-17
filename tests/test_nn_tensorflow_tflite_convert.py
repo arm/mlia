@@ -1,9 +1,9 @@
-# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Test for module utils/test_utils."""
+
 import os
-from pathlib import Path
-from pathlib import PosixPath
+from pathlib import Path, PosixPath
 from unittest.mock import MagicMock
 
 import numpy as np
@@ -12,10 +12,12 @@ import tensorflow as tf
 import tf_keras as keras
 
 from mlia.nn.tensorflow import tflite_convert
-from mlia.nn.tensorflow.tflite_convert import convert_to_tflite
-from mlia.nn.tensorflow.tflite_convert import convert_to_tflite_bytes
-from mlia.nn.tensorflow.tflite_convert import main
-from mlia.nn.tensorflow.tflite_convert import representative_dataset
+from mlia.nn.tensorflow.tflite_convert import (
+    convert_to_tflite,
+    convert_to_tflite_bytes,
+    main,
+    representative_dataset,
+)
 
 
 def test_generate_representative_dataset() -> None:

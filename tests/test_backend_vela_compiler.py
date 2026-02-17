@@ -1,6 +1,7 @@
-# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for module vela/compiler."""
+
 from __future__ import annotations
 
 import tempfile
@@ -12,7 +13,6 @@ import pytest
 
 try:
     import ethosu.vela  # noqa: F401
-
     from ethosu.vela.vela import main
 except ImportError:
     pytest.skip(
@@ -22,15 +22,17 @@ else:
     # Only reference ethosu.vela if it was successfully imported
     _ = ethosu.vela
 
-from mlia.backend.vela.compiler import compile_model  # noqa: E402
-from mlia.backend.vela.compiler import parse_summary_csv_file  # noqa: E402
-from mlia.backend.vela.compiler import parse_vela_initialisation_file  # noqa: E402
-from mlia.backend.vela.compiler import resolve_compiler_config  # noqa: E402
-from mlia.backend.vela.compiler import VelaCompiler  # noqa: E402
-from mlia.backend.vela.compiler import VelaCompilerOptions  # noqa: E402
-from mlia.backend.vela.compiler import VelaInitData  # noqa: E402
-from mlia.backend.vela.compiler import VelaInitMemoryData  # noqa: E402
-from mlia.backend.vela.compiler import VelaSummary  # noqa: E402
+from mlia.backend.vela.compiler import (
+    VelaCompiler,  # noqa: E402
+    VelaCompilerOptions,  # noqa: E402
+    VelaInitData,  # noqa: E402
+    VelaInitMemoryData,  # noqa: E402
+    VelaSummary,  # noqa: E402
+    compile_model,  # noqa: E402
+    parse_summary_csv_file,  # noqa: E402
+    parse_vela_initialisation_file,  # noqa: E402
+    resolve_compiler_config,  # noqa: E402
+)
 from mlia.target.ethos_u.config import EthosUConfiguration  # noqa: E402
 
 
@@ -203,9 +205,9 @@ def test_vela_compiler_with_parameters_inherit_memory_mode(
 def test_compile_model(test_tflite_model: Path) -> None:
     """Test model optimization."""
     target_config = EthosUConfiguration.load_profile("ethos-u55-256")
-    assert (
-        target_config.compiler_options is not None
-    ), "Vela should be available in tests"
+    assert target_config.compiler_options is not None, (
+        "Vela should be available in tests"
+    )
     compiler = VelaCompiler(target_config.compiler_options)
 
     expected_model_path = Path(
@@ -247,9 +249,9 @@ def test_compile_model_system_exit(
         "mlia.backend.vela.compiler.main", MagicMock(side_effect=SystemExit)
     )
     target_config = EthosUConfiguration.load_profile("ethos-u55-256")
-    assert (
-        target_config.compiler_options is not None
-    ), "Vela should be available in tests"
+    assert target_config.compiler_options is not None, (
+        "Vela should be available in tests"
+    )
     compiler = VelaCompiler(target_config.compiler_options)
 
     # Create a fake StringIO object
@@ -272,9 +274,9 @@ def test_backend_compiler_model_already_compiled(
     the correct flag is passed and that main is called only once.
     """
     target_config = EthosUConfiguration.load_profile("ethos-u55-256")
-    assert (
-        target_config.compiler_options is not None
-    ), "Vela should be available in tests"
+    assert target_config.compiler_options is not None, (
+        "Vela should be available in tests"
+    )
 
     vela_main_mock = MagicMock(wraps=main)
 
@@ -292,9 +294,9 @@ def test_backend_compiler_model_already_compiled(
 def test_csv_file_created(test_tflite_model: Path) -> None:
     """Test that a csv file is created by the vela backend"""
     target_config = EthosUConfiguration.load_profile("ethos-u55-256")
-    assert (
-        target_config.compiler_options is not None
-    ), "Vela should be available in tests"
+    assert target_config.compiler_options is not None, (
+        "Vela should be available in tests"
+    )
     compiler = VelaCompiler(target_config.compiler_options)
     csv_file_name = test_tflite_model.stem + "_per-layer.csv"
     compiler.compile_model(test_tflite_model)
@@ -305,9 +307,9 @@ def test_csv_file_created(test_tflite_model: Path) -> None:
 def test_verbose_flag_passed() -> None:
     """Test that the verbose_performance flag is passed to vela backend"""
     target_config = EthosUConfiguration.load_profile("ethos-u55-256")
-    assert (
-        target_config.compiler_options is not None
-    ), "Vela should be available in tests"
+    assert target_config.compiler_options is not None, (
+        "Vela should be available in tests"
+    )
     compiler = VelaCompiler(target_config.compiler_options)
     assert compiler.verbose_performance
 
@@ -317,9 +319,9 @@ def test_compile_model_fail_sram_exceeded(
 ) -> None:
     """Test model optimization."""
     target_config = EthosUConfiguration.load_profile("ethos-u55-256")
-    assert (
-        target_config.compiler_options is not None
-    ), "Vela should be available in tests"
+    assert target_config.compiler_options is not None, (
+        "Vela should be available in tests"
+    )
     compiler = VelaCompiler(target_config.compiler_options)
 
     def fake_compiler(*_: Any) -> None:
@@ -336,9 +338,9 @@ def test_optimize_model(tmp_path: Path, test_tflite_model: Path) -> None:
     """Test model optimization and saving into file."""
     tmp_file = tmp_path / "test_model_int8_vela.tflite"
     target_config = EthosUConfiguration.load_profile("ethos-u55-256")
-    assert (
-        target_config.compiler_options is not None
-    ), "Vela should be available in tests"
+    assert target_config.compiler_options is not None, (
+        "Vela should be available in tests"
+    )
     target_config.compiler_options.output_dir = tmp_path
     compile_model(test_tflite_model, target_config.compiler_options)
 
@@ -349,12 +351,12 @@ def test_optimize_model(tmp_path: Path, test_tflite_model: Path) -> None:
 SUMMARY_TMP_DATA = """
 experiment,network,accelerator_configuration,system_config,memory_mode,core_clock,arena_cache_size,sram_bandwidth,dram_bandwidth,on_chip_flash_bandwidth,off_chip_flash_bandwidth,weights_storage_area,feature_map_storage_area,inferences_per_second,batch_size,inference_time,passes_before_fusing,passes_after_fusing,sram_memory_used,dram_memory_used,on_chip_flash_memory_used,off_chip_flash_memory_used,total_original_weights,total_npu_encoded_weights,sram_feature_map_read_bytes,sram_feature_map_write_bytes,sram_weight_read_bytes,sram_weight_write_bytes,sram_total_bytes,dram_feature_map_read_bytes,dram_feature_map_write_bytes,dram_weight_read_bytes,dram_weight_write_bytes,dram_total_bytes,on_chip_flash_feature_map_read_bytes,on_chip_flash_feature_map_write_bytes,on_chip_flash_weight_read_bytes,on_chip_flash_weight_write_bytes,on_chip_flash_total_bytes,off_chip_flash_feature_map_read_bytes,off_chip_flash_feature_map_write_bytes,off_chip_flash_weight_read_bytes,off_chip_flash_weight_write_bytes,off_chip_flash_total_bytes,nn_macs,nn_tops,cycles_npu,cycles_sram_access,cycles_dram_access,cycles_on_chip_flash_access,cycles_off_chip_flash_access,cycles_total
 default,test_model_fp32,Ethos_U55_256,Ethos_U55_High_End_Embedded,Shared_Sram,0.0,0.9,4.0,4.0,4.0,0.5,Off-chip Flash,SRAM,0.0,1,12.1e-05,7,2.0,1.5,0.0,0.0,1.4,7,8,6.0,5.0,7552.0,5.0,1.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,4.0,0.0,1.0,2,0.1,23297.0,1.5,0.0,0.0,1.0,2
-""".strip()
+""".strip()  # noqa: E501
 
 SUMMARY_TMP_DATA_MISSING_HEADER = """
 experiment,network,accelerator_configuration,system_config,memory_mode,core_clock,arena_cache_size,sram_bandwidth,dram_bandwidth,on_chip_flash_bandwidth,off_chip_flash_bandwidth,weights_storage_area,feature_map_storage_area,inferences_per_second,batch_size,inference_time,passes_before_fusing,passes_after_fusing,sram_memory_used,dram_memory_used,on_chip_flash_memory_used,off_chip_flash_memory_used,total_original_weights,total_npu_encoded_weights,sram_feature_map_read_bytes,sram_feature_map_write_bytes,sram_weight_read_bytes,sram_weight_write_bytes,sram_total_bytes,dram_feature_map_read_bytes,dram_feature_map_write_bytes,dram_weight_read_bytes,dram_weight_write_bytes,dram_total_bytes,on_chip_flash_feature_map_read_bytes,on_chip_flash_feature_map_write_bytes,on_chip_flash_weight_read_bytes,on_chip_flash_weight_write_bytes,on_chip_flash_total_bytes,off_chip_flash_feature_map_read_bytes,off_chip_flash_feature_map_write_bytes,off_chip_flash_weight_read_bytes,off_chip_flash_weight_write_bytes,off_chip_flash_total_bytes,nn_macs,nn_tops,cycles_npu,cycles_sram_access,cycles_dram_access,cycles_on_chip_flash_access,cycles_off_chip_flash_access
 default,test_model_fp32,Ethos_U55_256,Ethos_U55_High_End_Embedded,Shared_Sram,0.0,0.9,4.0,4.0,4.0,0.5,Off-chip Flash,SRAM,0.0,1,12.1e-05,7,2.0,1.5,0.0,0.0,1.4,7,8,6.0,5.0,7552.0,5.0,1.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,4.0,0.0,1.0,2,0.1,23297.0,1.5,0.0,0.0,1.0
-""".strip()
+""".strip()  # noqa: E501
 
 TMP_DATA_EXPECTED_STRING = "\
 cycles_total: 2.0, \

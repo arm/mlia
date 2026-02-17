@@ -1,14 +1,13 @@
 # SPDX-FileCopyrightText: Copyright 2022-2023, 2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for module advice_generation."""
+
 from __future__ import annotations
 
 import pytest
 
-from mlia.core.advice_generation import advice_category
-from mlia.core.advice_generation import FactBasedAdviceProducer
-from mlia.core.common import AdviceCategory
-from mlia.core.common import DataItem
+from mlia.core.advice_generation import FactBasedAdviceProducer, advice_category
+from mlia.core.common import AdviceCategory, DataItem
 from mlia.core.context import Context
 from mlia.core.output_schema import AdviceCategory as SchemaAdviceCategory
 from mlia.core.output_schema import AdviceSeverity

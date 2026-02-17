@@ -1,6 +1,7 @@
-# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Test for module optimizations/pruning."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -9,13 +10,14 @@ import pytest
 import tf_keras as keras
 from numpy import isclose
 
-from mlia.nn.tensorflow.optimizations.pruning import PrunableLayerPolicy
-from mlia.nn.tensorflow.optimizations.pruning import Pruner
-from mlia.nn.tensorflow.optimizations.pruning import PruningConfiguration
+from mlia.nn.tensorflow.optimizations.pruning import (
+    PrunableLayerPolicy,
+    Pruner,
+    PruningConfiguration,
+)
 from mlia.nn.tensorflow.tflite_convert import convert_to_tflite
 from mlia.nn.tensorflow.tflite_metrics import TFLiteMetrics
-from tests.utils.common import get_dataset
-from tests.utils.common import train_model
+from tests.utils.common import get_dataset, train_model
 
 
 def _test_sparsity(
@@ -42,9 +44,9 @@ def _test_check_sparsity(base_tflite_metrics: TFLiteMetrics) -> None:
     """Assert the sparsity of a model is zero."""
     base_sparsity_dict = base_tflite_metrics.sparsity_per_layer()
     for layer_name, sparsity in base_sparsity_dict.items():
-        assert isclose(
-            sparsity, 0, atol=1e-2
-        ), f"Sparsity for layer '{layer_name}' is {sparsity}, but should be zero."
+        assert isclose(sparsity, 0, atol=1e-2), (
+            f"Sparsity for layer '{layer_name}' is {sparsity}, but should be zero."
+        )
 
 
 def _get_tflite_metrics(

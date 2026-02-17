@@ -1,6 +1,7 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, 2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, 2025-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for TOSA compatibility."""
+
 from __future__ import annotations
 
 import importlib
@@ -14,9 +15,11 @@ from unittest.mock import MagicMock
 import pytest
 
 from mlia.backend.errors import BackendUnavailableError
-from mlia.backend.tosa_checker.compat import get_tosa_compatibility_info
-from mlia.backend.tosa_checker.compat import Operator
-from mlia.backend.tosa_checker.compat import TOSACompatibilityInfo
+from mlia.backend.tosa_checker.compat import (
+    Operator,
+    TOSACompatibilityInfo,
+    get_tosa_compatibility_info,
+)
 
 
 def replace_get_tosa_checker_with_mock(
@@ -123,9 +126,9 @@ def test_backend_module_deprecation_warning() -> None:
         deprecation_warnings = [
             w for w in warning_list if issubclass(w.category, DeprecationWarning)
         ]
-        assert any(
-            deprecation_warnings
-        ), "No DeprecationWarning was issued when importing backend module"
+        assert any(deprecation_warnings), (
+            "No DeprecationWarning was issued when importing backend module"
+        )
 
         # Check the warning message content
         warning_message = str(deprecation_warnings[0].message)

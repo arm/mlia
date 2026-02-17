@@ -1,6 +1,7 @@
-# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Test for module optimizations/clustering."""
+
 from __future__ import annotations
 
 import math
@@ -10,15 +11,14 @@ import pytest
 import tf_keras as keras
 from flaky import flaky
 
-from mlia.nn.tensorflow.optimizations.clustering import Clusterer
-from mlia.nn.tensorflow.optimizations.clustering import ClusteringConfiguration
-from mlia.nn.tensorflow.optimizations.pruning import Pruner
-from mlia.nn.tensorflow.optimizations.pruning import PruningConfiguration
+from mlia.nn.tensorflow.optimizations.clustering import (
+    Clusterer,
+    ClusteringConfiguration,
+)
+from mlia.nn.tensorflow.optimizations.pruning import Pruner, PruningConfiguration
 from mlia.nn.tensorflow.tflite_convert import convert_to_tflite
-from mlia.nn.tensorflow.tflite_metrics import ReportClusterMode
-from mlia.nn.tensorflow.tflite_metrics import TFLiteMetrics
-from tests.utils.common import get_dataset
-from tests.utils.common import train_model
+from mlia.nn.tensorflow.tflite_metrics import ReportClusterMode, TFLiteMetrics
+from tests.utils.common import get_dataset, train_model
 
 
 def _prune_model(

@@ -1,6 +1,7 @@
-# SPDX-FileCopyrightText: Copyright 2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2023, 2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Cut module."""
+
 from __future__ import annotations
 
 import os
@@ -8,11 +9,9 @@ from collections import defaultdict
 from pathlib import Path
 
 import tensorflow as tf
-from tensorflow.lite.python.schema_py_generated import ModelT
-from tensorflow.lite.python.schema_py_generated import SubGraphT
+from tensorflow.lite.python.schema_py_generated import ModelT, SubGraphT
 
-from mlia.nn.tensorflow.tflite_graph import load_fb
-from mlia.nn.tensorflow.tflite_graph import save_fb
+from mlia.nn.tensorflow.tflite_graph import load_fb, save_fb
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
@@ -33,18 +32,18 @@ def cut_subgraph(
     """Change the global inputs and outputs of a graph to the provided named tensors."""
     if input_tensor_names is not None:
         subgraph.inputs = tensors_by_name(subgraph, input_tensor_names)
-        assert len(subgraph.inputs) == len(
-            input_tensor_names
-        ), f"Expected {len(subgraph.inputs)} input tensors: \
+        assert len(subgraph.inputs) == len(input_tensor_names), (
+            f"Expected {len(subgraph.inputs)} input tensors: \
             {', '.join(input_tensor_names)}\nFound: \
             {', '.join(subgraph.tensors[i].name for i in subgraph.inputs)}"
+        )
     if output_tensor_names is not None:
         subgraph.outputs = tensors_by_name(subgraph, output_tensor_names)
-        assert len(subgraph.outputs) == len(
-            output_tensor_names
-        ), f"Expected {len(subgraph.outputs)} output tensors: \
+        assert len(subgraph.outputs) == len(output_tensor_names), (
+            f"Expected {len(subgraph.outputs)} output tensors: \
             {', '.join(output_tensor_names)}\nFound: \
             {', '.join(subgraph.tensors[i].name for i in subgraph.outputs)}"
+        )
 
 
 def simplify(model: ModelT) -> None:

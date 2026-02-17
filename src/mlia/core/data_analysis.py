@@ -1,15 +1,12 @@
 # SPDX-FileCopyrightText: Copyright 2022, 2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Module for data analysis."""
+
 from __future__ import annotations
 
-from abc import ABC
-from abc import abstractmethod
-from dataclasses import dataclass
-from dataclasses import field
-from typing import Any
-from typing import Callable
-from typing import ClassVar
+from abc import ABC, abstractmethod
+from dataclasses import dataclass, field
+from typing import Any, Callable, ClassVar
 
 from mlia.core.common import DataItem
 from mlia.core.mixins import ContextMixin

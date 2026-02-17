@@ -1,19 +1,18 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, 2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Utilities for TensorFlow Lite graphs."""
+
 from __future__ import annotations
 
 import enum
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
-from typing import cast
+from typing import Any, cast
 
 import flatbuffers
 from tensorflow.lite.python import schema_py_generated as schema_fb
-from tensorflow.lite.python.schema_py_generated import Model
-from tensorflow.lite.python.schema_py_generated import ModelT
+from tensorflow.lite.python.schema_py_generated import Model, ModelT
 from tensorflow.lite.tools import visualize
 
 

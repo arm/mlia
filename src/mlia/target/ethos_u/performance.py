@@ -1,28 +1,28 @@
 # SPDX-FileCopyrightText: Copyright 2022-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Performance estimation."""
+
 from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Any
-from typing import Union
+from typing import Any, Union
 
 import mlia.backend.vela.compiler as vela_comp
 import mlia.backend.vela.performance as vela_perf
 from mlia.backend.corstone import is_corstone_backend
-from mlia.backend.corstone.performance import CorstonePerformanceMetrics
-from mlia.backend.corstone.performance import estimate_performance
+from mlia.backend.corstone.performance import (
+    CorstonePerformanceMetrics,
+    estimate_performance,
+)
 from mlia.backend.errors import BackendUnavailableError
 from mlia.backend.vela.performance import LayerwisePerfInfo
-from mlia.core.context import Context
-from mlia.core.context import ExecutionContext
+from mlia.core.context import Context, ExecutionContext
 from mlia.core.performance import PerformanceEstimator
 from mlia.nn.select import OptimizationSettings
-from mlia.nn.tensorflow.config import get_tflite_model
-from mlia.nn.tensorflow.config import ModelConfiguration
+from mlia.nn.tensorflow.config import ModelConfiguration, get_tflite_model
 from mlia.target.ethos_u.config import EthosUConfiguration
 from mlia.target.registry import supported_backends
 from mlia.utils.logging import log_action
@@ -227,12 +227,8 @@ class VelaPerformanceEstimator(
             )
 
             # Store the raw backend metrics and compiler options for standardized output
-            self.vela_perf_metrics = (
-                vela_perf_metrics  # pylint: disable=attribute-defined-outside-init
-            )
-            self.vela_compiler_options = (
-                self.target.compiler_options
-            )  # pylint: disable=attribute-defined-outside-init
+            self.vela_perf_metrics = vela_perf_metrics  # pylint: disable=attribute-defined-outside-init
+            self.vela_compiler_options = self.target.compiler_options  # pylint: disable=attribute-defined-outside-init
 
             return (
                 MemoryUsage(
@@ -373,8 +369,7 @@ class EthosUPerformanceEstimator(
                 corstone_metrics = corstone_estimator.backend_metrics
             else:
                 logger.warning(
-                    "Backend '%s' is not supported for Ethos-U performance "
-                    "estimation.",
+                    "Backend '%s' is not supported for Ethos-U performance estimation.",
                     backend,
                 )
         perf = PerformanceMetrics(
@@ -384,9 +379,7 @@ class EthosUPerformanceEstimator(
         # Attach vela raw metrics object so callers can build standardized output
         # if available. We set attribute only when vela metrics were produced.
         if vela_perf_metrics is not None:
-            self.vela_perf_metrics = (
-                vela_perf_metrics  # pylint: disable=attribute-defined-outside-init
-            )
+            self.vela_perf_metrics = vela_perf_metrics  # pylint: disable=attribute-defined-outside-init
 
         # Attach corstone raw metrics object so callers can build standardized output
         # if available. We set attribute only when corstone metrics were produced.

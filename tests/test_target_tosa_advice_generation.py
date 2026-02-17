@@ -2,21 +2,25 @@
 # its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for advice generation."""
+
 from __future__ import annotations
 
 import pytest
 
 from mlia.core.advice_generation import Advice
-from mlia.core.common import AdviceCategory
-from mlia.core.common import DataItem
+from mlia.core.common import AdviceCategory, DataItem
 from mlia.core.context import ExecutionContext
 from mlia.core.output_schema import AdviceCategory as SchemaAdviceCategory
 from mlia.core.output_schema import AdviceSeverity
-from mlia.target.common.reporters import ModelIsNotTFLiteCompatible
-from mlia.target.common.reporters import TFLiteCompatibilityCheckFailed
+from mlia.target.common.reporters import (
+    ModelIsNotTFLiteCompatible,
+    TFLiteCompatibilityCheckFailed,
+)
 from mlia.target.tosa.advice_generation import TOSAAdviceProducer
-from mlia.target.tosa.data_analysis import ModelIsNotTOSACompatible
-from mlia.target.tosa.data_analysis import ModelIsTOSACompatible
+from mlia.target.tosa.data_analysis import (
+    ModelIsNotTOSACompatible,
+    ModelIsTOSACompatible,
+)
 
 
 @pytest.mark.parametrize(

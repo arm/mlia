@@ -1,6 +1,7 @@
-# SPDX-FileCopyrightText: Copyright 2023, 2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2023, 2025-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for module optimizations/quantization."""
+
 from __future__ import annotations
 
 from itertools import chain
@@ -11,10 +12,12 @@ import numpy as np
 from numpy import isclose
 
 from mlia.nn.tensorflow.config import TFLiteModel
-from mlia.nn.tensorflow.optimizations.quantization import dequantize
-from mlia.nn.tensorflow.optimizations.quantization import is_quantized
-from mlia.nn.tensorflow.optimizations.quantization import QuantizationParameters
-from mlia.nn.tensorflow.optimizations.quantization import quantize
+from mlia.nn.tensorflow.optimizations.quantization import (
+    QuantizationParameters,
+    dequantize,
+    is_quantized,
+    quantize,
+)
 
 
 def model_io_quant_params(model_path: Path) -> Generator:

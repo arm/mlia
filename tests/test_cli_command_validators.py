@@ -1,6 +1,7 @@
-# SPDX-FileCopyrightText: Copyright 2023, 2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2023, 2025-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for cli.command_validators module."""
+
 from __future__ import annotations
 
 import argparse
@@ -9,10 +10,12 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from mlia.cli.command_validators import normalize_string
-from mlia.cli.command_validators import validate_backend
-from mlia.cli.command_validators import validate_check_target_profile
-from mlia.cli.command_validators import validate_optimize_target_profile
+from mlia.cli.command_validators import (
+    normalize_string,
+    validate_backend,
+    validate_check_target_profile,
+    validate_optimize_target_profile,
+)
 
 
 @pytest.mark.parametrize(

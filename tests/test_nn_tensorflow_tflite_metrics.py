@@ -1,6 +1,7 @@
-# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Test for module utils/tflite_metrics."""
+
 from __future__ import annotations
 
 import os
@@ -15,9 +16,11 @@ import tensorflow as tf
 import tf_keras as keras
 from numpy import isclose
 
-from mlia.nn.tensorflow.tflite_metrics import calculate_num_unique_weights_per_axis
-from mlia.nn.tensorflow.tflite_metrics import ReportClusterMode
-from mlia.nn.tensorflow.tflite_metrics import TFLiteMetrics
+from mlia.nn.tensorflow.tflite_metrics import (
+    ReportClusterMode,
+    TFLiteMetrics,
+    calculate_num_unique_weights_per_axis,
+)
 
 
 def _sample_keras_model() -> keras.Model:
@@ -122,9 +125,9 @@ class TestTFLiteMetrics:
                     "arith.constant1",
                 ]:
                     for num_unique in num_unique_per_axis:
-                        assert (
-                            num_unique == 2
-                        ), f"Layer '{name}' has incorrect number of clusters."
+                        assert num_unique == 2, (
+                            f"Layer '{name}' has incorrect number of clusters."
+                        )
         # NUM_CLUSTERS_HISTOGRAM
         hists = metrics.num_unique_weights(ReportClusterMode.NUM_CLUSTERS_HISTOGRAM)
         assert hists

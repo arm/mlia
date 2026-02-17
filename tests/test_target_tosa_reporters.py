@@ -2,6 +2,7 @@
 # and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for tosa-checker reporters."""
+
 import inspect
 from pathlib import Path
 from typing import Any
@@ -9,25 +10,25 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from mlia.backend.tosa_checker.compat import Operator
-from mlia.backend.tosa_checker.compat import TOSACompatibilityInfo
+from mlia.backend.tosa_checker.compat import Operator, TOSACompatibilityInfo
 from mlia.core.advice_generation import Advice
 from mlia.core.output_schema import AdviceCategory as SchemaAdviceCategory
 from mlia.core.output_schema import AdviceSeverity
-from mlia.core.reporting import CompoundReport
-from mlia.core.reporting import NestedReport
-from mlia.core.reporting import Report
-from mlia.core.reporting import Table
-from mlia.nn.tensorflow.tflite_compat import TFLiteCompatibilityInfo
-from mlia.nn.tensorflow.tflite_compat import TFLiteCompatibilityStatus
+from mlia.core.reporting import CompoundReport, NestedReport, Report, Table
+from mlia.nn.tensorflow.tflite_compat import (
+    TFLiteCompatibilityInfo,
+    TFLiteCompatibilityStatus,
+)
 from mlia.target.tosa.config import TOSAConfiguration
-from mlia.target.tosa.reporters import MetadataDisplay
-from mlia.target.tosa.reporters import report_target
-from mlia.target.tosa.reporters import report_tosa_compatibility
-from mlia.target.tosa.reporters import report_tosa_errors
-from mlia.target.tosa.reporters import report_tosa_exception
-from mlia.target.tosa.reporters import report_tosa_operators
-from mlia.target.tosa.reporters import tosa_formatters
+from mlia.target.tosa.reporters import (
+    MetadataDisplay,
+    report_target,
+    report_tosa_compatibility,
+    report_tosa_errors,
+    report_tosa_exception,
+    report_tosa_operators,
+    tosa_formatters,
+)
 
 
 def test_tosa_report_target() -> None:

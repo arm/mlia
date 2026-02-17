@@ -1,12 +1,11 @@
 # SPDX-FileCopyrightText: Copyright 2022, 2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Reports module."""
+
 from __future__ import annotations
 
 from mlia.core.advice_generation import Advice
-from mlia.core.reporting import Column
-from mlia.core.reporting import Report
-from mlia.core.reporting import Table
+from mlia.core.reporting import Column, Report, Table
 
 
 def report_advice(advice: list[Advice]) -> Report:

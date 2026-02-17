@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: Copyright 2022-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Module for backend integration."""
+
 from __future__ import annotations
 
 import base64
@@ -9,8 +10,7 @@ import json
 import logging
 import re
 import subprocess  # nosec
-from dataclasses import dataclass
-from dataclasses import field
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -18,12 +18,8 @@ import mlia
 import mlia.core.output_schema as schema
 from mlia.backend.errors import BackendExecutionFailed
 from mlia.backend.repo import get_backend_repository
-from mlia.utils.filesystem import get_mlia_resources
-from mlia.utils.filesystem import sha256
-from mlia.utils.proc import Command
-from mlia.utils.proc import OutputLogger
-from mlia.utils.proc import process_command_output
-
+from mlia.utils.filesystem import get_mlia_resources, sha256
+from mlia.utils.proc import Command, OutputLogger, process_command_output
 
 logger = logging.getLogger(__name__)
 

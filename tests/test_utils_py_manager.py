@@ -1,6 +1,7 @@
-# SPDX-FileCopyrightText: Copyright 2022, 2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022, 2025-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for python package manager."""
+
 import subprocess  # nosec
 import sys
 from unittest.mock import MagicMock
@@ -8,8 +9,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from mlia.core.errors import InternalError
-from mlia.utils.py_manager import get_package_manager
-from mlia.utils.py_manager import PyPackageManager
+from mlia.utils.py_manager import PyPackageManager, get_package_manager
 
 
 def test_get_package_manager() -> None:

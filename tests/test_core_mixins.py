@@ -1,13 +1,12 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, 2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for the module mixins."""
+
 import pytest
 
 from mlia.core.common import AdviceCategory
-from mlia.core.context import Context
-from mlia.core.context import ExecutionContext
-from mlia.core.mixins import ContextMixin
-from mlia.core.mixins import ParameterResolverMixin
+from mlia.core.context import Context, ExecutionContext
+from mlia.core.mixins import ContextMixin, ParameterResolverMixin
 
 
 def test_context_mixin(sample_context: Context) -> None:

@@ -1,29 +1,24 @@
 # SPDX-FileCopyrightText: Copyright 2022-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Reporting module."""
+
 from __future__ import annotations
 
 import json
 import logging
-from abc import ABC
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from collections import defaultdict
 from dataclasses import dataclass
 from enum import Enum
 from functools import partial
-from textwrap import fill
-from textwrap import indent
-from typing import Any
-from typing import Callable
-from typing import Collection
-from typing import Iterable
+from textwrap import fill, indent
+from typing import Any, Callable, Collection, Iterable
 
 import numpy as np
 
 from mlia.core.advice_generation import Advice
 from mlia.core.typing import OutputFormat
-from mlia.utils.console import apply_style
-from mlia.utils.console import produce_table
+from mlia.utils.console import apply_style, produce_table
 from mlia.utils.types import is_list_of
 
 logger = logging.getLogger(__name__)

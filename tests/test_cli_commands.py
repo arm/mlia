@@ -1,30 +1,30 @@
-# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for cli.commands module."""
+
 from __future__ import annotations
 
 import re
 from contextlib import ExitStack as does_not_raise
 from pathlib import Path
 from typing import Any
-from unittest.mock import call
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, call
 
 import pytest
 
 from mlia.backend.manager import DefaultInstallationManager
 from mlia.backend.vela.performance import LayerwisePerfInfo
-from mlia.cli.commands import backend_install
-from mlia.cli.commands import backend_list
-from mlia.cli.commands import backend_uninstall
-from mlia.cli.commands import check
-from mlia.cli.commands import optimize
-from mlia.cli.commands import target_list
+from mlia.cli.commands import (
+    backend_install,
+    backend_list,
+    backend_uninstall,
+    check,
+    optimize,
+    target_list,
+)
 from mlia.core.context import ExecutionContext
 from mlia.target.ethos_u.config import EthosUConfiguration
-from mlia.target.ethos_u.performance import MemoryUsage
-from mlia.target.ethos_u.performance import NPUCycles
-from mlia.target.ethos_u.performance import PerformanceMetrics
+from mlia.target.ethos_u.performance import MemoryUsage, NPUCycles, PerformanceMetrics
 
 
 def test_operators_expected_parameters(sample_context: ExecutionContext) -> None:
@@ -224,8 +224,7 @@ def test_performance_unknown_target(
             "ethos-u55-256",
             False,
             False,
-            "src/mlia/resources/optimization_profiles/"
-            "optimization-conv2d-pruning.toml",
+            "src/mlia/resources/optimization_profiles/optimization-conv2d-pruning.toml",
             None,
             None,
             True,

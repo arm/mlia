@@ -1,6 +1,7 @@
-# SPDX-FileCopyrightText: Copyright 2022-2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for config module."""
+
 from contextlib import ExitStack as does_not_raise
 from typing import Any
 
@@ -33,7 +34,7 @@ from mlia.target.cortex_a.config import CortexAConfiguration
             },
             pytest.raises(
                 ValueError,
-                match="No version for ArmNN TensorFlow" " Lite delegate specified.",
+                match="No version for ArmNN TensorFlow Lite delegate specified.",
             ),
         ],
         [

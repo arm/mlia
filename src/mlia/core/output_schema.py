@@ -1,13 +1,12 @@
 # SPDX-FileCopyrightText: Copyright 2025-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Standardized output schema classes for MLIA."""
+
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
-from dataclasses import field
-from datetime import datetime
-from datetime import timezone
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
 from typing import Any
@@ -170,9 +169,7 @@ class Component:
         if self.name is not None:
             result["name"] = self.name
         if self.components:
-            result["components"] = [
-                comp.to_dict() for comp in self.components
-            ]  # type: ignore[assignment]
+            result["components"] = [comp.to_dict() for comp in self.components]  # type: ignore[assignment]
         return result
 
     @classmethod

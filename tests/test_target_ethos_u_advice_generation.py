@@ -2,28 +2,31 @@
 # affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for Ethos-U advice generation."""
+
 from __future__ import annotations
 
 import pytest
 
 from mlia.cli.helpers import CLIActionResolver
 from mlia.core.advice_generation import Advice
-from mlia.core.common import AdviceCategory
-from mlia.core.common import DataItem
+from mlia.core.common import AdviceCategory, DataItem
 from mlia.core.context import ExecutionContext
-from mlia.core.helpers import ActionResolver
-from mlia.core.helpers import APIActionResolver
+from mlia.core.helpers import ActionResolver, APIActionResolver
 from mlia.core.output_schema import AdviceCategory as SchemaAdviceCategory
 from mlia.core.output_schema import AdviceSeverity
 from mlia.nn.select import OptimizationSettings
-from mlia.target.ethos_u.advice_generation import EthosUAdviceProducer
-from mlia.target.ethos_u.advice_generation import EthosUStaticAdviceProducer
-from mlia.target.ethos_u.data_analysis import AllOperatorsSupportedOnNPU
-from mlia.target.ethos_u.data_analysis import HasCPUOnlyOperators
-from mlia.target.ethos_u.data_analysis import HasUnsupportedOnNPUOperators
-from mlia.target.ethos_u.data_analysis import OptimizationDiff
-from mlia.target.ethos_u.data_analysis import OptimizationResults
-from mlia.target.ethos_u.data_analysis import PerfMetricDiff
+from mlia.target.ethos_u.advice_generation import (
+    EthosUAdviceProducer,
+    EthosUStaticAdviceProducer,
+)
+from mlia.target.ethos_u.data_analysis import (
+    AllOperatorsSupportedOnNPU,
+    HasCPUOnlyOperators,
+    HasUnsupportedOnNPUOperators,
+    OptimizationDiff,
+    OptimizationResults,
+    PerfMetricDiff,
+)
 
 
 @pytest.mark.parametrize(

@@ -1,6 +1,7 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, 2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """CLI logging configuration."""
+
 from __future__ import annotations
 
 import logging
@@ -9,10 +10,7 @@ from pathlib import Path
 from typing import Iterable
 
 from mlia.core.typing import OutputFormat
-from mlia.utils.logging import attach_handlers
-from mlia.utils.logging import create_log_handler
-from mlia.utils.logging import NoASCIIFormatter
-
+from mlia.utils.logging import NoASCIIFormatter, attach_handlers, create_log_handler
 
 _CONSOLE_DEBUG_FORMAT = "%(name)s - %(levelname)s - %(message)s"
 _FILE_DEBUG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"

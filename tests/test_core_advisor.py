@@ -1,20 +1,19 @@
 # SPDX-FileCopyrightText: Copyright 2022, 2025-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for module advisor."""
+
 from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
 
 from mlia.core.advice_generation import AdviceProducer
-from mlia.core.advisor import DefaultInferenceAdvisor
-from mlia.core.advisor import InferenceAdvisor
+from mlia.core.advisor import DefaultInferenceAdvisor, InferenceAdvisor
 from mlia.core.context import Context
 from mlia.core.data_analysis import DataAnalyzer
 from mlia.core.data_collection import DataCollector
 from mlia.core.events import Event
-from mlia.core.workflow import DefaultWorkflowExecutor
-from mlia.core.workflow import WorkflowExecutor
+from mlia.core.workflow import DefaultWorkflowExecutor, WorkflowExecutor
 
 
 def test_inference_advisor_run() -> None:

@@ -1,11 +1,11 @@
-# SPDX-FileCopyrightText: Copyright 2023, 2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2023, 2025-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for module mlia.nn.rewrite.core.extract."""
+
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
-from typing import Iterable
+from typing import Any, Iterable
 
 import pytest
 

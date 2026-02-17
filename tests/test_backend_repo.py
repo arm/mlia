@@ -1,6 +1,7 @@
-# SPDX-FileCopyrightText: Copyright 2023, 2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2023, 2025-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Tests for backend repository."""
+
 from __future__ import annotations
 
 import json
@@ -8,8 +9,7 @@ from pathlib import Path
 
 import pytest
 
-from mlia.backend.repo import BackendRepository
-from mlia.backend.repo import get_backend_repository
+from mlia.backend.repo import BackendRepository, get_backend_repository
 
 
 def test_get_backend_repository(

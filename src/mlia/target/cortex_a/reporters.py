@@ -1,26 +1,29 @@
-# SPDX-FileCopyrightText: Copyright 2022-2023, 2025, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022-2023, 2025-2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """Reports module."""
+
 from __future__ import annotations
 
-from typing import Any
-from typing import Callable
-from typing import cast
+from typing import Any, Callable, cast
 
 from mlia.core.advice_generation import Advice
 from mlia.core.reporters import report_advice
-from mlia.core.reporting import Cell
-from mlia.core.reporting import Column
-from mlia.core.reporting import Format
-from mlia.core.reporting import NestedReport
-from mlia.core.reporting import Report
-from mlia.core.reporting import ReportItem
-from mlia.core.reporting import Table
+from mlia.core.reporting import (
+    Cell,
+    Column,
+    Format,
+    NestedReport,
+    Report,
+    ReportItem,
+    Table,
+)
 from mlia.nn.tensorflow.tflite_compat import TFLiteCompatibilityInfo
 from mlia.target.common.reporters import report_tflite_compatiblity
 from mlia.target.cortex_a.config import CortexAConfiguration
-from mlia.target.cortex_a.operators import CortexACompatibilityInfo
-from mlia.target.cortex_a.operators import CortexACompatibilityResult
+from mlia.target.cortex_a.operators import (
+    CortexACompatibilityInfo,
+    CortexACompatibilityResult,
+)
 from mlia.utils.console import style_improvement
 from mlia.utils.types import is_list_of
 
