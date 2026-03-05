@@ -17,6 +17,7 @@ build-backend = "setuptools.build_meta"
 
 [tool.pytest.ini_options]
 testpaths = "tests"
+pythonpath = ["src"]
 markers = [
     "e2e",  # e2e tests
     "install",  # installation tests

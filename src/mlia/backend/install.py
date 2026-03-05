@@ -5,14 +5,17 @@
 from __future__ import annotations
 
 import logging
+import os
 import platform
 import tarfile
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from functools import partial
 from pathlib import Path
 from typing import Callable, Iterable, Optional, Union
 
 from mlia.backend.repo import get_backend_repository
+from mlia.backend.vendor import vendor_artifact_path
 from mlia.utils.download import DownloadConfig, download
 from mlia.utils.filesystem import all_files_exist, temp_directory, working_directory
 from mlia.utils.py_manager import get_package_manager
@@ -34,7 +37,12 @@ class DownloadAndInstall:
     eula_agreement: bool = True
 
 
-InstallationType = Union[InstallFromPath, DownloadAndInstall]
+@dataclass
+class InstallFromVendorPackage:
+    """Installation from a vendor package."""
+
+
+InstallationType = Union[InstallFromPath, DownloadAndInstall, InstallFromVendorPackage]
 
 
 class Installation(ABC):
@@ -112,6 +120,7 @@ class BackendInstallation(Installation):
         path_checker: PathChecker,
         backend_installer: BackendInstaller | None,
         dependencies: list[str] | None = None,
+        vendor_path: str | None = None,
     ) -> None:
         """Init the backend installation."""
         super().__init__(name, description, dependencies)
@@ -121,6 +130,16 @@ class BackendInstallation(Installation):
         self.supported_platforms = supported_platforms
         self.path_checker = path_checker
         self.backend_installer = backend_installer
+        self._vendor_path = vendor_path
+
+    @property
+    def vendor_path(self) -> Path | None:
+        """Dynamically resolve the vendor path when accessed."""
+        return (
+            vendor_artifact_path(self._vendor_path)
+            if self._vendor_path is not None
+            else None
+        )
 
     @property
     def already_installed(self) -> bool:
@@ -144,7 +163,9 @@ class BackendInstallation(Installation):
         if isinstance(install_type, InstallFromPath):
             return self.path_checker(install_type.backend_path) is not None
 
-        return False  # type: ignore
+        if isinstance(install_type, InstallFromVendorPackage):
+            return self.vendor_path is not None
+        return False  # type: ignore[unreachable]
 
     def install(self, install_type: InstallationType) -> None:
         """Install the backend."""
@@ -159,8 +180,53 @@ class BackendInstallation(Installation):
 
             assert backend_info is not None, "Unable to resolve backend path"
             self._install_from(backend_info)
+        elif isinstance(install_type, InstallFromVendorPackage):
+            resolved_path = self.vendor_path
+            if resolved_path is None:
+                raise RuntimeError("Vendor package is not available.")
+            backend_info = self.path_checker(resolved_path)
+            assert backend_info is not None, "Unable to resolve vendor backend path"
+            self._install_from(backend_info)
         else:
             raise RuntimeError(f"Unable to install {install_type}.")
+
+    def uninstall(self) -> None:
+        """Uninstall the backend."""
+        backend_repo = get_backend_repository()
+        backend_repo.remove_backend(self.name)
+
+    def _download_and_install(self, cfg: DownloadConfig, eula_agreement: bool) -> None:
+        """Download and install the backend."""
+        with temp_directory() as tmpdir:
+            with working_directory(tmpdir / "dist", create_dir=True) as dist_dir:
+                try:
+                    dest = tmpdir / cfg.filename
+                    download(
+                        dest=dest,
+                        cfg=cfg,
+                        show_progress=True,
+                    )
+
+                except Exception as err:
+                    raise RuntimeError("Unable to download backend artifact.") from err
+
+                with tarfile.open(dest) as archive:
+                    logger.debug(
+                        "Extracting downloaded artifact %s to %s.", dest, dist_dir
+                    )
+                    archive.extractall(
+                        dist_dir,
+                        members=_filter_tar_members(archive.getmembers(), dist_dir),
+                    )
+
+                backend_path = dist_dir
+                if self.backend_installer:
+                    backend_path = self.backend_installer(eula_agreement, dist_dir)
+
+                if self.path_checker(backend_path) is None:
+                    raise ValueError("Downloaded artifact has invalid structure.")
+
+                self.install(InstallFromPath(backend_path))
 
     def _install_from(self, backend_info: BackendInfo) -> None:
         """Install backend from the directory."""
@@ -183,92 +249,77 @@ class BackendInstallation(Installation):
                 backend_info.settings,
             )
 
-    @staticmethod
-    def _filter_tar_members(
-        members: Iterable[tarfile.TarInfo], dst_dir: Path
-    ) -> Iterable[tarfile.TarInfo]:
-        """
-        Make sure we only handle safe files from the tar file.
 
-        To avoid traversal attacks we only allow files that are
-        - relative paths, i.e. no absolute file paths
-        - not including directory traversal sequences '..'
-        """
+ARTIFACTORY_USERNAME_ENV_VAR = "MLIA_ARTIFACTORY_USERNAME"
+ARTIFACTORY_PASSWORD_ENV_VAR = "MLIA_ARTIFACTORY_PASSWORD"  # nosec
 
-        def check_rel(path: Path) -> None:
-            if path.is_absolute():
-                raise ValueError("Path is absolute, but must be relative.")
 
-        def check_in_dir(path: Path) -> None:
-            abs_path = (dst_dir / path).resolve()
-            abs_path.relative_to(dst_dir)
+def credentials_from_env(user_env: str, pw_env: str) -> tuple[str, str]:
+    """Get the credentials from environment variables."""
+    try:
+        return (os.environ[user_env], os.environ[pw_env])
+    except KeyError as ex:
+        raise RuntimeError(
+            "Failed to retrieve the credentials from environment variables."
+            "Make sure your credentials are available as environment variables "
+            f"'{user_env}' and '{pw_env}'."
+        ) from ex
 
-        for member in members:
-            try:
-                path = Path(member.path)
-                check_rel(path)
-                check_in_dir(path)
 
-                if member.islnk() or member.issym():
-                    # Make sure we are only linking within the
-                    # archive.
-                    lnk = Path(member.linkname)
-                    check_rel(lnk)
-                    check_in_dir(lnk)
+artifactory_credentials_from_env = partial(
+    credentials_from_env, ARTIFACTORY_USERNAME_ENV_VAR, ARTIFACTORY_PASSWORD_ENV_VAR
+)
 
-                yield member
-            except ValueError as ex:
-                logger.warning(
-                    "File '%s' ignored while extracting: %s",
-                    member.path,
-                    ex,
-                )
 
-    def _download_and_install(self, cfg: DownloadConfig, eula_agrement: bool) -> None:
-        """Download and install the backend."""
-        with temp_directory() as tmpdir:
-            try:
-                dest = tmpdir / cfg.filename
-                download(
-                    dest=dest,
-                    cfg=cfg,
-                    show_progress=True,
-                )
+def artifactory_credential_headers() -> dict[str, str]:
+    """Get credentials from env vars and create HTTP headers for Artifactory."""
+    username, password = artifactory_credentials_from_env()
+    headers = {
+        "Username": username,
+        "X-JFrog-Art-Api": password,
+    }
+    return headers
 
-            except Exception as err:
-                raise RuntimeError("Unable to download backend artifact.") from err
 
-            with working_directory(tmpdir / "dist", create_dir=True) as dist_dir:
-                with tarfile.open(dest) as archive:
-                    # Filter files from the tarfile to avoid traversal attacks.
-                    # Note: bandit is still putting out a low severity /
-                    # low confidence warning despite the check
-                    # From Python 3.9.17 on there is a built-in feature to fix
-                    # this using the new argument filter="data", see
-                    # https://docs.python.org/3.9/library/tarfile.html#tarfile.TarFile.extractall
-                    logger.debug(
-                        "Extracting downloaded artifact %s to %s.", dest, dist_dir
-                    )
-                    archive.extractall(  # nosec
-                        dist_dir,
-                        members=self._filter_tar_members(
-                            archive.getmembers(), dist_dir
-                        ),
-                    )
+def _filter_tar_members(
+    members: Iterable[tarfile.TarInfo], dst_dir: Path
+) -> Iterable[tarfile.TarInfo]:
+    """
+    Make sure we only handle safe files from the tar file.
 
-                backend_path = dist_dir
-                if self.backend_installer:
-                    backend_path = self.backend_installer(eula_agrement, dist_dir)
+    To avoid traversal attacks we only allow files that are
+    - relative paths, i.e. no absolute file paths
+    - not including directory traversal sequences '..'
+    """
 
-                if self.path_checker(backend_path) is None:
-                    raise ValueError("Downloaded artifact has invalid structure.")
+    def check_rel(path: Path) -> None:
+        if path.is_absolute():
+            raise ValueError("Path is absolute, but must be relative.")
 
-                self.install(InstallFromPath(backend_path))
+    def check_in_dir(path: Path) -> None:
+        abs_path = (dst_dir / path).resolve()
+        abs_path.relative_to(dst_dir)
 
-    def uninstall(self) -> None:
-        """Uninstall the backend."""
-        backend_repo = get_backend_repository()
-        backend_repo.remove_backend(self.name)
+    for member in members:
+        try:
+            path = Path(member.path)
+            check_rel(path)
+            check_in_dir(path)
+
+            if member.islnk() or member.issym():
+                # Make sure we are only linking within the
+                # archive.
+                lnk = Path(member.linkname)
+                check_rel(lnk)
+                check_in_dir(lnk)
+
+            yield member
+        except ValueError as ex:
+            logger.warning(
+                "File '%s' ignored while extracting: %s",
+                member.path,
+                ex,
+            )
 
 
 class PackagePathChecker:
@@ -356,20 +407,34 @@ class PyPackageBackendInstallation(Installation):
 
     def __init__(
         self,
-        name: str,
         description: str,
+        name: str,
         packages_to_install: list[str],
         packages_to_uninstall: list[str],
         expected_packages: list[str],
+        download_config: DownloadConfig | None = None,
+        vendor_path: str | None = None,
     ) -> None:
         """Init the backend installation."""
         super().__init__(name, description)
 
+        self.download_config = download_config
         self._packages_to_install = packages_to_install
         self._packages_to_uninstall = packages_to_uninstall
         self._expected_packages = expected_packages
+        self._vendor_path = vendor_path
 
         self.package_manager = get_package_manager()
+
+    @property
+    def vendor_path(self) -> str | None:
+        """Dynamically resolve the vendor path when accessed."""
+        if self._vendor_path is None:
+            return None
+        resolved_path = vendor_artifact_path(self._vendor_path)
+        if resolved_path is None:
+            return None
+        return " ".join(str(p) for p in resolved_path.glob("*.whl"))
 
     @property
     def could_be_installed(self) -> bool:
@@ -383,14 +448,52 @@ class PyPackageBackendInstallation(Installation):
 
     def supports(self, install_type: InstallationType) -> bool:
         """Return true if installation supports requested installation type."""
-        return isinstance(install_type, DownloadAndInstall)
+        if isinstance(install_type, (DownloadAndInstall, InstallFromPath)):
+            return True
+        if isinstance(install_type, InstallFromVendorPackage):
+            return self.vendor_path is not None
+        return False  # type: ignore[unreachable]
 
     def install(self, install_type: InstallationType) -> None:
         """Install the backend."""
         if not self.supports(install_type):
-            raise ValueError(f"Unsupported installation type {install_type}.")
+            raise ValueError(
+                f"Insufficient configuration for installation type {install_type}."
+            )
+
+        if self.download_config is not None and isinstance(
+            install_type, DownloadAndInstall
+        ):
+            self._download_and_install(self.download_config)
+            return
+
+        if isinstance(install_type, InstallFromVendorPackage):
+            if self.vendor_path is None:
+                raise RuntimeError("Vendor package is not available.")
+            self.package_manager.install(self.vendor_path.split())
+            return
+
+        if isinstance(install_type, InstallFromPath):
+            self.package_manager.install([str(install_type.backend_path)])
+            return
 
         self.package_manager.install(self._packages_to_install)
+
+    def _download_and_install(self, cfg: DownloadConfig) -> None:
+        """Download and install packages."""
+        with temp_directory() as tmpdir:
+            assert cfg.url.endswith(".whl"), "Only wheel files are supported."
+            try:
+                dest = tmpdir / cfg.filename
+                download(
+                    dest=dest,
+                    cfg=cfg,
+                    show_progress=True,
+                )
+            except Exception as err:
+                raise RuntimeError("Unable to download wheel.") from err
+
+            self.package_manager.install([str(dest)])
 
     def uninstall(self) -> None:
         """Uninstall the backend."""

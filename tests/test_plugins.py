@@ -47,12 +47,14 @@ mock_entrypoints: MockEntrypoints = MockEntrypoints(
 class FakeDistribution(metadata.Distribution):
     """Fake metadata distribution for testing."""
 
-    def __init__(self, fake_name: str) -> None:
+    def __init__(self, fake_name: str, requires: list[str] | None = None) -> None:
         """Construct a fake distribution for testing
 
         :param fake_name: Fake name to return when queried
+        :param requires: requirements to return when queried
         """
         self._fake_name = fake_name
+        self._requires = requires if requires is not None else ["mlia>=0"]
 
     @property
     def _normalized_name(self) -> str:
@@ -66,6 +68,10 @@ class FakeDistribution(metadata.Distribution):
         return (mlia_distribution.read_text(filename) or "").replace(
             "mlia", self._fake_name
         )
+
+    @property
+    def requires(self) -> list[str] | None:
+        return self._requires
 
 
 @typing.no_type_check
@@ -376,3 +382,34 @@ def test_plugin_loader_many_error(
     )
     multiple_entrypoint.first_plugin.register.assert_called_once_with("registry_here")
     multiple_entrypoint.second_plugin.register.assert_called_once_with("registry_here")
+
+
+def test_plugin_loader_incompatible_core_version(
+    monkeypatch: pytest.MonkeyPatch, mock_logging: MockLogging
+) -> None:
+    """Skip plugins that require incompatible core versions."""
+    entry_point = metadata.EntryPoint(
+        "plugin", "tests.test_plugins:mock_entrypoints.first_plugin", "stub.entrypoint"
+    )
+    external_distribution = FakeDistribution(
+        "mlia-external-plugin", requires=["mlia<0"]
+    )
+    entry_point = _bind_entrypoint(entry_point, external_distribution)
+
+    mock_entrypoints = MockEntrypoints(
+        metadata_entry_points=MagicMock(
+            return_value=metadata.EntryPoints([entry_point])
+        ),
+        first_plugin=MagicMock(),
+        second_plugin=MagicMock(),
+    )
+    mock_entrypoints.first_plugin.plugin_interface_version = "0.0.1"
+
+    monkeypatch.setattr(
+        metadata, "entry_points", mock_entrypoints.metadata_entry_points
+    )
+
+    call_entry_points("stub.entrypoint", "registry_here")
+
+    mock_logging.mock_error.assert_called_once()
+    assert "plugin" in mock_logging.mock_error.call_args.args[1]

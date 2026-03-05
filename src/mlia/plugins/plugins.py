@@ -8,6 +8,8 @@ import traceback
 from abc import ABC, abstractmethod
 from typing import Any, Generic, TypeVar
 
+from mlia.plugins.registry import check_core_compatibility
+
 if sys.version_info < (3, 10):
     import importlib_metadata as metadata
 else:
@@ -17,6 +19,8 @@ logger = logging.getLogger("mlia")
 
 TARGET_PLUGIN_GROUP = "mlia.plugin.target"
 BACKEND_PLUGIN_GROUP = "mlia.plugin.backend"
+CLI_PLUGIN_GROUP = "mlia.plugin.cli"
+CONVERTER_PLUGIN_GROUP = "mlia.plugin.converter"
 
 (MLIA_ENTRY_POINT,) = metadata.entry_points(group="console_scripts", name="mlia")
 
@@ -49,11 +53,12 @@ def call_entry_points(group: str, *args: Any) -> None:
     logger.debug("Loading plugins from '%s'", group)
     matching_entry_points = metadata.entry_points(group=group)
     for entry_point in matching_entry_points:
-        if (
+        is_internal = (
             entry_point.dist
             and MLIA_ENTRY_POINT.dist
-            and entry_point.dist.name != MLIA_ENTRY_POINT.dist.name
-        ):
+            and entry_point.dist.name == MLIA_ENTRY_POINT.dist.name
+        )
+        if not is_internal and entry_point.dist and MLIA_ENTRY_POINT.dist:
             logger.debug(
                 "Loading external plugin '%s' from '%s' (dist '%s')",
                 entry_point.name,
@@ -66,6 +71,12 @@ def call_entry_points(group: str, *args: Any) -> None:
                 entry_point.name,
                 entry_point.value,
             )
+
+        if not is_internal:
+            is_compatible, error_message = check_core_compatibility(entry_point)
+            if not is_compatible:
+                logger.error("%s", error_message)
+                continue
 
         try:
             module = entry_point.load()
@@ -97,3 +108,13 @@ def load_target_plugins(*args: Any) -> None:
 def load_backend_plugins(*args: Any) -> None:
     """Load all backend plugins by calling their entry points."""
     call_entry_points(BACKEND_PLUGIN_GROUP, *args)
+
+
+def load_cli_plugins(*args: Any) -> None:
+    """Load all CLI plugins by calling their entry points."""
+    call_entry_points(CLI_PLUGIN_GROUP, *args)
+
+
+def load_converter_plugins(*args: Any) -> None:
+    """Load all converter plugins by calling their entry points."""
+    call_entry_points(CONVERTER_PLUGIN_GROUP, *args)

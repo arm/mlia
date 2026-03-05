@@ -19,6 +19,7 @@ from mlia.backend.registry import registry as backend_registry
 from mlia.core.advisor import InferenceAdvisor
 from mlia.core.common import AdviceCategory
 from mlia.utils.filesystem import (
+    get_mlia_resource_dirs,
     get_mlia_target_optimization_dir,
     get_mlia_target_profiles_dir,
 )
@@ -30,6 +31,10 @@ def get_builtin_target_profile_path(target_profile: str) -> Path:
 
     No checks are performed.
     """
+    for resources_dir in get_mlia_resource_dirs():
+        candidate = resources_dir / "target_profiles" / f"{target_profile}.toml"
+        if candidate.is_file():
+            return candidate
     return get_mlia_target_profiles_dir() / f"{target_profile}.toml"
 
 
@@ -39,6 +44,12 @@ def get_builtin_optimization_profile_path(optimization_profile: str) -> Path:
 
     No checks are performed.
     """
+    for resources_dir in get_mlia_resource_dirs():
+        candidate = (
+            resources_dir / "optimization_profiles" / f"{optimization_profile}.toml"
+        )
+        if candidate.is_file():
+            return candidate
     return get_mlia_target_optimization_dir() / f"{optimization_profile}.toml"
 
 
@@ -53,43 +64,38 @@ def load_profile(path: str | Path) -> dict[str, Any]:
 
 def get_builtin_supported_profile_names() -> list[str]:
     """Return list of default profiles in the target profiles directory."""
-    return sorted(
-        [
-            item.stem
-            for item in get_mlia_target_profiles_dir().iterdir()
-            if item.is_file() and item.suffix == ".toml"
-        ]
-    )
-
-
-BUILTIN_SUPPORTED_PROFILE_NAMES = get_builtin_supported_profile_names()
+    profile_names: set[str] = set()
+    for resources_dir in get_mlia_resource_dirs():
+        profiles_dir = resources_dir / "target_profiles"
+        if not profiles_dir.exists():
+            continue
+        for item in profiles_dir.iterdir():
+            if item.is_file() and item.suffix == ".toml":
+                profile_names.add(item.stem)
+    return sorted(profile_names)
 
 
 def is_builtin_target_profile(profile_name: str | Path) -> bool:
     """Check if the given profile name belongs to a built-in profile."""
-    return profile_name in BUILTIN_SUPPORTED_PROFILE_NAMES
+    return profile_name in get_builtin_supported_profile_names()
 
 
-BUILTIN_SUPPORTED_OPTIMIZATION_NAMES = [
-    "optimization",
-    "optimization-custom-augmentation",
-    "optimization-fully-connected-clustering",
-    "optimization-fully-connected-pruning",
-    "optimization-fully-connected-unstructured-pruning",
-    "optimization-conv2d",
-    "optimization-conv2d-clustering",
-    "optimization-conv2d-pruning",
-    "optimization-conv2d-unstructured-pruning",
-    "optimization-depthwise-separable-conv2d",
-    "optimization-depthwise-separable-conv2d-clustering",
-    "optimization-depthwise-separable-conv2d-pruning",
-    "optimization-depthwise-separable-conv2d-unstructured-pruning",
-]
+def get_builtin_supported_optimization_names() -> list[str]:
+    """Return list of default optimization profiles in the profiles directory."""
+    profile_names: set[str] = set()
+    for resources_dir in get_mlia_resource_dirs():
+        profiles_dir = resources_dir / "optimization_profiles"
+        if not profiles_dir.exists():
+            continue
+        for item in profiles_dir.iterdir():
+            if item.is_file() and item.suffix == ".toml":
+                profile_names.add(item.stem)
+    return sorted(profile_names)
 
 
 def is_builtin_optimization_profile(optimization_name: str | Path) -> bool:
     """Check if the given optimization name belongs to a built-in optimization."""
-    return optimization_name in BUILTIN_SUPPORTED_OPTIMIZATION_NAMES
+    return optimization_name in get_builtin_supported_optimization_names()
 
 
 T = TypeVar("T", bound="TargetProfile")
@@ -105,11 +111,19 @@ class TargetProfile(ABC):
         self.backend_config = {} if backend_config is None else backend_config
 
     @classmethod
-    def load(cls: type[T], path: str | Path) -> T:
+    def load(cls: type[T], path: str | Path, backend_options: dict | None = None) -> T:
         """Load and verify a target profile from file and return new instance."""
         profile_data = load_profile(path)
 
         try:
+            if backend_options:
+                backend_config = profile_data.get("backend_config", {})
+                for backend_name, options in backend_options.items():
+                    if backend_name not in backend_config:
+                        backend_config[backend_name] = {}
+                    backend_config[backend_name].update(options)
+                profile_data["backend_config"] = backend_config
+
             new_instance = cls.load_json_data(profile_data)
         except KeyError as ex:
             raise KeyError(f"Missing key in file {path}.") from ex
@@ -119,6 +133,13 @@ class TargetProfile(ABC):
     @classmethod
     def load_json_data(cls: type[T], profile_data: dict) -> T:
         """Load a target profile from the JSON data."""
+        return cls.load_data(profile_data)
+
+    @classmethod
+    def load_data(
+        cls: type[T], profile_data: dict, override_backend_options: dict | None = None
+    ) -> T:
+        """Load a target profile from a dictionary and backend override options."""
         # Support both old 'target' field and new 'target_type' field
         # Map target_type to target for backward compatibility with existing code
         if "target_type" in profile_data and "target" not in profile_data:
@@ -128,18 +149,33 @@ class TargetProfile(ABC):
             # Merge config fields into top level for backward compatibility
             config_data = profile_data.pop("config")
             profile_data = {**config_data, **profile_data}
+
+        backend_config: dict = {}
+        for backend_name, backend_opts in profile_data.get("backend", {}).items():
+            backend_config[backend_name] = dict(backend_opts)
+
+        # Apply backend parameter options if provided
+        if override_backend_options:
+            for backend_name, options in override_backend_options.items():
+                if backend_name not in backend_config:
+                    backend_config[backend_name] = {}
+                backend_config[backend_name].update(options)
+
+        profile_data["backend_config"] = backend_config
         new_instance = cls(**profile_data)
         new_instance.verify()
         return new_instance
 
     @classmethod
-    def load_profile(cls: type[T], target_profile: str | Path) -> T:
+    def load_profile(
+        cls: type[T], target_profile: str | Path, backend_options: dict | None = None
+    ) -> T:
         """Load a target profile from built-in target profile name or file path."""
         if is_builtin_target_profile(target_profile):
             profile_file = get_builtin_target_profile_path(cast(str, target_profile))
         else:
             profile_file = Path(target_profile)
-        return cls.load(profile_file)
+        return cls.load(profile_file, backend_options)
 
     def save(self, path: str | Path) -> None:
         """Save this target profile to a file."""

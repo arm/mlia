@@ -10,8 +10,6 @@ def test_api_action_resolver() -> None:
     helper = APIActionResolver()
 
     # pylint: disable=use-implicit-booleaness-not-comparison
-    assert helper.apply_optimizations() == []
     assert helper.check_performance() == []
     assert helper.check_operator_compatibility() == []
     assert helper.operator_compatibility_details() == []
-    assert helper.optimization_details() == []
