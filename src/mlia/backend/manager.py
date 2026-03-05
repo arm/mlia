@@ -15,7 +15,9 @@ from mlia.backend.install import (
     Installation,
     InstallationType,
     InstallFromPath,
+    InstallFromVendorPackage,
 )
+from mlia.backend.registry import ensure_backend_plugins_loaded
 from mlia.backend.registry import registry as backend_registry
 from mlia.core.errors import ConfigurationError, InternalError
 from mlia.utils.misc import yes
@@ -305,6 +307,8 @@ class DefaultInstallationManager(InstallationManager, InstallationFiltersMixin):
     def _get_default_insallation_type(
         self, installation: Installation
     ) -> InstallationType | None:
+        if installation.supports(InstallFromVendorPackage()):
+            return InstallFromVendorPackage()
         if installation.supports(DownloadAndInstall()):
             return DownloadAndInstall()
         return None
@@ -319,10 +323,18 @@ class DefaultInstallationManager(InstallationManager, InstallationFiltersMixin):
         self, backend_names: list[str], eula_agreement: bool = True, force: bool = False
     ) -> None:
         """Download and install available backends."""
-        install_types = [DownloadAndInstall(eula_agreement=eula_agreement)] * len(
-            backend_names
-        )
-        self._install(backend_names, install_types, force)  # type: ignore[arg-type]
+        install_types: list[InstallationType] = []
+        for name in backend_names:
+            installation = self._resolve_backend(name)
+            install_type = self._get_default_insallation_type(installation)
+            if install_type is None:
+                raise InternalError(
+                    f"{name} found, but can only be installed from a file."
+                )
+            if isinstance(install_type, DownloadAndInstall):
+                install_type.eula_agreement = eula_agreement
+            install_types.append(install_type)
+        self._install(backend_names, install_types, force)
 
     def show_env_details(self) -> None:
         """Print current state of the execution environment."""
@@ -397,6 +409,7 @@ class DefaultInstallationManager(InstallationManager, InstallationFiltersMixin):
 
 def get_installation_manager(noninteractive: bool = False) -> InstallationManager:
     """Return installation manager."""
+    ensure_backend_plugins_loaded()
     backends = [
         cfg.installation for cfg in backend_registry.items.values() if cfg.installation
     ]
@@ -405,6 +418,7 @@ def get_installation_manager(noninteractive: bool = False) -> InstallationManage
 
 def get_available_backends() -> list[str]:
     """Return list of the available backends."""
+    ensure_backend_plugins_loaded()
     manager = get_installation_manager()
     available_backends = [
         backend

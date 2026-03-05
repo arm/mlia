@@ -8,23 +8,88 @@ import hashlib
 import importlib.resources as pkg_resources
 import os
 import shutil
+import sys
 from contextlib import contextmanager
+from importlib import import_module
 from pathlib import Path
 from tempfile import TemporaryDirectory, mkstemp
+from types import ModuleType
 from typing import Generator, Iterable
+
+if sys.version_info < (3, 10):
+    import importlib_metadata as metadata
+else:
+    from importlib import metadata
 
 USER_ONLY_PERM_MASK = 0o700
 
 
-def get_mlia_resources() -> Path:
-    """Get the path to the resources directory."""
+def get_mlia_resource_dirs() -> list[Path]:
+    """Get all available resources directories from installed MLIA packages."""
+    try:
+        mlia_module: ModuleType | None = import_module("mlia")
+    except Exception:  # pragma: no cover - defensive guard
+        mlia_module = None
+
+    resource_dirs: list[Path] = []
+    if mlia_module is not None:
+        for base in mlia_module.__path__:
+            candidate = Path(base) / "resources"
+            if candidate.exists():
+                resource_dirs.append(candidate)
+
+    # Fallback: inspect installed distributions for packaged resources
+    try:
+        for dist in metadata.distributions():
+            files = dist.files or []
+            has_resources = any(
+                str(file).startswith("mlia/resources/") for file in files
+            )
+            if not has_resources:
+                continue
+            candidate = Path(dist.locate_file("mlia/resources"))
+            if candidate.exists():
+                resource_dirs.append(candidate)
+    except Exception:  # pragma: no cover - defensive guard
+        pass
+
+    # Fallback: scan sys.path entries for namespace resources
+    try:
+        for path_entry in sys.path:
+            candidate = Path(path_entry) / "mlia" / "resources"
+            if candidate.exists():
+                resource_dirs.append(candidate)
+    except Exception:  # pragma: no cover - defensive guard
+        pass
+
+    # De-duplicate while preserving order
+    deduped: list[Path] = []
+    seen: set[Path] = set()
+    for item in resource_dirs:
+        if item not in seen:
+            deduped.append(item)
+            seen.add(item)
+    resource_dirs = deduped
+
+    if resource_dirs:
+        return resource_dirs
+
     with pkg_resources.path("mlia", "__init__.py") as init_path:
         project_root = init_path.parent
-        return project_root / "resources"
+        return [project_root / "resources"]
+
+
+def get_mlia_resources() -> Path:
+    """Get the path to the primary resources directory."""
+    return get_mlia_resource_dirs()[0]
 
 
 def get_vela_config() -> Path:
     """Get the path to the default Vela config file."""
+    for resources_dir in get_mlia_resource_dirs():
+        candidate = resources_dir / "vela/vela.ini"
+        if candidate.exists():
+            return candidate
     return get_mlia_resources() / "vela/vela.ini"
 
 

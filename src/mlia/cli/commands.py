@@ -27,10 +27,10 @@ from mlia.backend.manager import get_installation_manager
 from mlia.cli.command_validators import (
     validate_backend,
     validate_check_target_profile,
-    validate_optimize_target_profile,
 )
-from mlia.cli.options import parse_optimization_parameters
 from mlia.core.reporting import Column, Format, Table
+from mlia.plugins.plugins import BACKEND_PLUGIN_GROUP, TARGET_PLUGIN_GROUP
+from mlia.plugins.registry import list_entry_points
 from mlia.target.config import get_builtin_target_profile_path, load_profile
 from mlia.target.registry import profiles_by_target
 from mlia.utils.console import create_section_header
@@ -102,82 +102,6 @@ def check(
     )
 
 
-def optimize(  # pylint: disable=too-many-locals,too-many-arguments
-    ctx: ExecutionContext,
-    target_profile: str,
-    model: str,
-    pruning: bool,
-    clustering: bool,
-    pruning_target: float | None,
-    clustering_target: int | None,
-    optimization_profile: str | None = None,
-    rewrite: bool | None = None,
-    rewrite_target: str | None = None,
-    rewrite_start: str | None = None,
-    rewrite_end: str | None = None,
-    layers_to_optimize: list[str] | None = None,
-    backend: list[str] | None = None,
-    dataset: Path | None = None,
-) -> None:
-    """Show the performance improvements (if any) after applying the optimizations.
-
-    This command applies the selected optimization techniques (up to the
-    indicated targets) and generates a report with advice on how to improve
-    the inference performance (if possible).
-
-    :param ctx: execution context
-    :param target_profile: target profile identifier. Will load appropriate parameters
-            from the profile.json file based on this argument.
-    :param model: path to the TensorFlow Lite model
-    :param pruning: perform pruning optimization (default if no option specified)
-    :param clustering: perform clustering optimization
-    :param clustering_target: clustering optimization target
-    :param pruning_target: pruning optimization target
-    :param layers_to_optimize: list of the layers of the model which should be
-           optimized, if None then all layers are used
-    :param backend: list of the backends to use for evaluation
-
-    Example:
-        Run command for the target profile ethos-u55-256 and
-        the provided TensorFlow Lite model and print report on the standard output
-
-        >>> from mlia.core.logging import setup_logging
-        >>> from mlia.api import ExecutionContext
-        >>> setup_logging()
-        >>> from mlia.cli.commands import optimize
-        >>> optimize(ExecutionContext(),
-                         target_profile="ethos-u55-256",
-                         model="model.tflite", pruning=True,
-                         clustering=False, pruning_target=0.5,
-                         clustering_target=None)
-    """
-    opt_params = parse_optimization_parameters(  # pylint: disable=too-many-function-args
-        pruning,
-        clustering,
-        pruning_target,
-        clustering_target,
-        rewrite,
-        rewrite_target,
-        rewrite_start,
-        rewrite_end,
-        layers_to_optimize,
-        dataset,
-    )
-
-    validate_optimize_target_profile(target_profile)
-    validated_backend = validate_backend(target_profile, backend)
-
-    get_advice(
-        target_profile,
-        model,
-        {"optimization"},
-        optimization_targets=opt_params,
-        optimization_profile=optimization_profile,
-        context=ctx,
-        backends=validated_backend,
-    )
-
-
 def backend_install(
     names: list[str],
     path: Path | None = None,
@@ -195,7 +119,7 @@ def backend_install(
             raise ValueError("Exactly one backend name is required.")
         manager.install_from(path, names[0], force)
     else:
-        eula_agreement = not i_agree_to_the_contained_eula
+        eula_agreement = i_agree_to_the_contained_eula
         manager.download_and_install(names, eula_agreement, force)
 
 
@@ -211,6 +135,8 @@ def backend_list() -> None:
     """List backends status."""
     logger.info(CONFIG)
 
+    _log_plugin_list("Backend Plugins", BACKEND_PLUGIN_GROUP)
+
     manager = get_installation_manager(noninteractive=True)
     manager.show_env_details()
 
@@ -218,6 +144,8 @@ def backend_list() -> None:
 def target_list() -> None:
     """List available target profiles."""
     logger.info(CONFIG)
+
+    _log_plugin_list("Target Plugins", TARGET_PLUGIN_GROUP)
 
     grouped_profiles = profiles_by_target()
 
@@ -248,3 +176,32 @@ def target_list() -> None:
         )
 
         logger.info("%s\n", table.to_plain_text())
+
+
+def _log_plugin_list(title: str, group: str) -> None:
+    """Log available plugins for a given entry point group."""
+    plugins = list_entry_points(group)
+    if not plugins:
+        logger.info("%s\nNo plugins found.\n", title)
+        return
+
+    rows = [
+        (
+            plugin.name,
+            plugin.value,
+            plugin.dist_name or "-",
+            plugin.dist_version or "-",
+        )
+        for plugin in plugins
+    ]
+    table = Table(
+        columns=[
+            Column("Name"),
+            Column("Entry Point", fmt=Format(wrap_width=60)),
+            Column("Package"),
+            Column("Version"),
+        ],
+        rows=rows,
+        name=f"{title}:",
+    )
+    logger.info("%s\n", table.to_plain_text())

@@ -8,17 +8,11 @@ import argparse
 from pathlib import Path
 from typing import Any, Callable, Sequence
 
-from mlia.backend.corstone import is_corstone_backend
 from mlia.backend.manager import get_available_backends
 from mlia.core.common import AdviceCategory
-from mlia.core.errors import ConfigurationError
 from mlia.core.typing import OutputFormat
-from mlia.nn.rewrite.core.rewrite import RewritingOptimizer
-from mlia.target.registry import builtin_optimization_names, builtin_profile_names
+from mlia.target.registry import builtin_profile_names
 from mlia.target.registry import registry as target_registry
-
-DEFAULT_PRUNING_TARGET = 0.5
-DEFAULT_CLUSTERING_TARGET = 32
 
 
 def add_check_category_options(parser: argparse.ArgumentParser) -> None:
@@ -76,68 +70,6 @@ def add_target_options(
     )
 
 
-def add_multi_optimization_options(parser: argparse.ArgumentParser) -> None:
-    """Add optimization specific options."""
-    multi_optimization_group = parser.add_argument_group("optimization options")
-
-    multi_optimization_group.add_argument(
-        "--pruning", action="store_true", help="Apply pruning optimization."
-    )
-
-    multi_optimization_group.add_argument(
-        "--clustering", action="store_true", help="Apply clustering optimization."
-    )
-
-    multi_optimization_group.add_argument(
-        "--rewrite", action="store_true", help="Apply rewrite optimization."
-    )
-
-    multi_optimization_group.add_argument(
-        "--pruning-target",
-        type=float,
-        help="Sparsity to be reached during optimization "
-        f"(default: {DEFAULT_PRUNING_TARGET})",
-    )
-
-    multi_optimization_group.add_argument(
-        "--clustering-target",
-        type=int,
-        help="Number of clusters to reach during optimization "
-        f"(default: {DEFAULT_CLUSTERING_TARGET})",
-    )
-
-    multi_optimization_group.add_argument(
-        "--rewrite-target",
-        type=str,
-        help=(
-            "Type of rewrite to apply to the subgraph/layer. "
-            f"Available rewrites: {RewritingOptimizer.builtin_rewrite_names()}"
-        ),
-    )
-
-    multi_optimization_group.add_argument(
-        "--rewrite-start",
-        type=str,
-        help="Starting node in the graph of the subgraph to be rewritten.",
-    )
-
-    multi_optimization_group.add_argument(
-        "--rewrite-end",
-        type=str,
-        help="Ending node in the graph of the subgraph to be rewritten.",
-    )
-
-    optimization_profiles = builtin_optimization_names()
-    multi_optimization_group.add_argument(
-        "-o",
-        "--optimization-profile",
-        required=False,
-        default="optimization",
-        help="Built-in optimization profile or path to the custom profile. "
-        f"Built-in optimization profiles are {', '.join(optimization_profiles)}. ",
-    )
-
-
 def add_model_options(parser: argparse.ArgumentParser) -> None:
     """Add model specific options."""
     parser.add_argument("model", help="TensorFlow Lite model or Keras model")
@@ -163,22 +95,6 @@ def add_debug_options(parser: argparse.ArgumentParser) -> None:
         action="store_true",
         help="Produce verbose output",
     )
-
-
-def add_dataset_options(parser: argparse.ArgumentParser) -> None:
-    """Addd dataset options."""
-    dataset_group = parser.add_argument_group("dataset options")
-    dataset_group.add_argument(
-        "--dataset",
-        type=Path,
-        help="The path of input tfrec file",
-    )
-
-
-def add_keras_model_options(parser: argparse.ArgumentParser) -> None:
-    """Add model specific options."""
-    model_group = parser.add_argument_group("Keras model options")
-    model_group.add_argument("model", help="Keras model")
 
 
 def add_backend_install_options(parser: argparse.ArgumentParser) -> None:
@@ -244,10 +160,15 @@ def add_backend_options(
         """
         num_corstones = 0
 
+        def is_corstone_backend_name(backend_name: str) -> bool:
+            """Detect Corstone backends by name without importing plugin modules."""
+            name = backend_name.casefold()
+            return name.startswith("corstone-") or name.startswith("corstone")
+
         def check(backend: str) -> str:
             """Count Corstone backends and raise an exception if more than one."""
             nonlocal num_corstones
-            if is_corstone_backend(backend):
+            if is_corstone_backend_name(backend):
                 num_corstones = num_corstones + 1
                 if num_corstones > 1:
                     raise argparse.ArgumentTypeError(
@@ -285,78 +206,6 @@ def add_output_directory(parser: argparse.ArgumentParser) -> None:
         "If not specified then 'mlia-output' directory will be created "
         "in the current working directory.",
     )
-
-
-def parse_optimization_parameters(  # pylint: disable=too-many-arguments
-    pruning: bool = False,
-    clustering: bool = False,
-    pruning_target: float | None = None,
-    clustering_target: int | None = None,
-    rewrite: bool | None = False,
-    rewrite_target: str | None = None,
-    rewrite_start: str | None = None,
-    rewrite_end: str | None = None,
-    layers_to_optimize: list[str] | None = None,
-    dataset: Path | None = None,
-) -> list[dict[str, Any]]:
-    """Parse provided optimization parameters."""
-    opt_types = []
-    opt_targets = []
-
-    if clustering_target and not clustering:
-        raise argparse.ArgumentError(
-            None,
-            "To enable clustering optimization you need to include the "
-            "`--clustering` flag in your command.",
-        )
-
-    if not pruning_target:
-        pruning_target = DEFAULT_PRUNING_TARGET
-
-    if not clustering_target:
-        clustering_target = DEFAULT_CLUSTERING_TARGET
-
-    if rewrite:
-        if not rewrite_target or not rewrite_start or not rewrite_end:
-            raise ConfigurationError(
-                "To perform rewrite, rewrite-target, rewrite-start and "
-                "rewrite-end must be set."
-            )
-
-    if not any((pruning, clustering, rewrite)) or pruning:
-        opt_types.append("pruning")
-        opt_targets.append(pruning_target)
-
-    if clustering:
-        opt_types.append("clustering")
-        opt_targets.append(clustering_target)
-
-    optimizer_params = [
-        {
-            "optimization_type": opt_type.strip(),
-            "optimization_target": float(opt_target),
-            "layers_to_optimize": layers_to_optimize,
-            "dataset": dataset,
-        }
-        for opt_type, opt_target in zip(opt_types, opt_targets)
-    ]
-
-    if rewrite:
-        if rewrite_target not in RewritingOptimizer.builtin_rewrite_names():
-            raise ConfigurationError(
-                f"Invalid rewrite target: '{rewrite_target}'. "
-                f"Supported rewrites: {RewritingOptimizer.builtin_rewrite_names()}"
-            )
-        optimizer_params.append(
-            {
-                "optimization_type": "rewrite",
-                "optimization_target": rewrite_target,
-                "layers_to_optimize": [rewrite_start, rewrite_end],
-                "dataset": dataset,
-            }
-        )
-
-    return optimizer_params
 
 
 def get_target_profile_opts(target_args: dict | None) -> list[str]:

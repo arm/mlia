@@ -4,7 +4,11 @@
 
 import logging
 import os
+import pkgutil
 from importlib.metadata import version
+
+# Allow mlia subpackages to be provided by multiple distributions.
+__path__ = pkgutil.extend_path(__path__, __name__)
 
 # redirect warnings to logging
 logging.captureWarnings(True)
