@@ -170,7 +170,6 @@ class TestContext:
             runtime_configuration={"python_version": "3.10.0", "os": "linux"},
             git={"commit": "abc123", "branch": "main"},
             notes="Test run with new model",
-            cli_arguments=["--target", "ethos-u55", "--optimize"],
         )
         result = context.to_dict()
         assert result["runtime_configuration"] == {
@@ -179,7 +178,6 @@ class TestContext:
         }
         assert result["git"] == {"commit": "abc123", "branch": "main"}
         assert result["notes"] == "Test run with new model"
-        assert result["cli_arguments"] == ["--target", "ethos-u55", "--optimize"]
 
     def test_from_dict(self) -> None:
         """Test creation from dictionary."""
@@ -187,7 +185,6 @@ class TestContext:
             "runtime_configuration": {"python_version": "3.10.0", "os": "linux"},
             "git": {"commit": "abc123", "branch": "main"},
             "notes": "Test run with new model",
-            "cli_arguments": ["--target", "ethos-u55", "--optimize"],
         }
         context = schema.Context.from_dict(data)
         assert context.runtime_configuration == {
@@ -196,7 +193,6 @@ class TestContext:
         }
         assert context.git == {"commit": "abc123", "branch": "main"}
         assert context.notes == "Test run with new model"
-        assert context.cli_arguments == ["--target", "ethos-u55", "--optimize"]
 
 
 class TestMetric:

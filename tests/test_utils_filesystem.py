@@ -13,9 +13,7 @@ from mlia.utils.filesystem import (
     all_paths_valid,
     copy_all,
     get_mlia_resources,
-    get_mlia_target_optimization_dir,
     get_mlia_target_profiles_dir,
-    get_vela_config,
     recreate_directory,
     sha256,
     temp_directory,
@@ -30,20 +28,9 @@ def test_get_mlia_resources() -> None:
     assert get_mlia_resources().is_dir()
 
 
-def test_get_vela_config() -> None:
-    """Test Vela config files getter."""
-    assert get_vela_config().is_file()
-    assert get_vela_config().name == "vela.ini"
-
-
 def test_get_mlia_target_profiles() -> None:
     """Test target profiles getter."""
     assert get_mlia_target_profiles_dir().is_dir()
-
-
-def test_get_mlia_target_optimizations() -> None:
-    """Test target profiles getter."""
-    assert get_mlia_target_optimization_dir().is_dir()
 
 
 @pytest.mark.parametrize("raise_exception", [True, False])

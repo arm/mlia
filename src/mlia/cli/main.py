@@ -17,7 +17,6 @@ from mlia.cli.commands import (
     backend_list,
     backend_uninstall,
     check,
-    optimize,
     target_list,
 )
 from mlia.cli.common import CommandInfo
@@ -27,11 +26,8 @@ from mlia.cli.options import (
     add_backend_options,
     add_backend_uninstall_options,
     add_check_category_options,
-    add_dataset_options,
     add_debug_options,
-    add_keras_model_options,
     add_model_options,
-    add_multi_optimization_options,
     add_output_directory,
     add_output_options,
     add_target_options,
@@ -41,6 +37,7 @@ from mlia.core.common import AdviceCategory
 from mlia.core.context import ExecutionContext
 from mlia.core.errors import ConfigurationError, InternalError
 from mlia.core.logging import setup_logging
+from mlia.plugins.plugins import load_cli_plugins
 from mlia.target.registry import table as target_table
 
 logger = logging.getLogger(__name__)
@@ -57,7 +54,7 @@ Use command 'mlia-backend' to install backends.
 
 def get_commands() -> list[CommandInfo]:
     """Return commands configuration."""
-    return [
+    commands = [
         CommandInfo(
             check,
             [],
@@ -77,26 +74,11 @@ def get_commands() -> list[CommandInfo]:
                 add_debug_options,
             ],
         ),
-        CommandInfo(
-            optimize,
-            [],
-            [
-                add_output_directory,
-                add_keras_model_options,
-                partial(
-                    add_target_options, supported_advice=[AdviceCategory.OPTIMIZATION]
-                ),
-                partial(
-                    add_backend_options,
-                    backends_to_skip=["tosa-checker"],
-                ),
-                add_multi_optimization_options,
-                add_output_options,
-                add_debug_options,
-                add_dataset_options,
-            ],
-        ),
     ]
+
+    load_cli_plugins(commands)
+
+    return commands
 
 
 def get_backend_commands() -> list[CommandInfo]:

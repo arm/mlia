@@ -21,6 +21,7 @@ with differing knowledge on hardware optimization and machine learning.
 - [General usage](#general-usage)
   - [Prerequisites and dependencies](#prerequisites-and-dependencies)
   - [Installation](#installation)
+  - [Plugin wheels](#plugin-wheels)
   - [First steps](#first-steps)
 - [Sub-commands](#sub-commands)
   - [check](#check)
@@ -46,6 +47,7 @@ with differing knowledge on hardware optimization and machine learning.
     - [Corstone-320](#corstone-320)
     - [TOSA Checker](#tosa-checker)
     - [Vela](#vela)
+- [Migration from monolithic installs](#migration-from-monolithic-installs)
 
 ## Inclusive language commitment
 
@@ -115,6 +117,31 @@ It is highly recommended to create a new virtual environment for the installatio
 
 For details on installing and managing backends required for specific hardware targets, see the [Backend installation](#backend-installation) section below.
 
+## Plugin wheels
+
+MLIA now ships a minimal core wheel (`mlia`) and optional plugin wheels.
+To use Ethos-U targets and the Vela/Corstone backends, install the Ethos plugin:
+
+```bash
+pip install mlia-ethos-u
+```
+
+Legacy functionality (TOSA target, TOSA checker backend, and optimize) is provided
+by a deprecated legacy plugin:
+
+```bash
+pip install mlia-legacy
+```
+
+You can list discovered plugins with:
+
+```bash
+mlia-backend list
+mlia-target list
+```
+
+If you only need core functionality, install just `mlia`.
+
 ## First steps
 
 After the installation, you can check that MLIA is installed correctly by
@@ -135,7 +162,7 @@ mlia [sub-command] [arguments]
 Where the following sub-commands are available:
 
 - ["check"](#check): perform compatibility or performance checks on the model
-- ["optimize"](#optimize): apply specified optimizations
+- ["optimize"](#optimize): apply specified optimizations (requires `mlia-legacy`)
 
 Detailed help about the different sub-commands can be shown like this:
 
@@ -204,6 +231,8 @@ optional `extensions.advice[]`.
 
 ## **optimize**
 
+**Note:** The `optimize` command is available only when the `mlia-legacy` plugin is installed.
+
 This sub-command applies optimizations to a Keras model (.h5 or SavedModel) or
 a TensorFlow Lite model and shows the performance improvements compared to
 the original unoptimized model.
@@ -238,6 +267,8 @@ mlia optimize --help
 perform pruning and clustering.
 
 ## **rewrite**
+
+**Note:** Rewrite is part of the legacy optimization flow and requires `mlia-legacy`.
 
 Replaces certain subgraph/layer of the pre-trained model with candidates from the rewrite library, with or without training using a small portion of the training data, to achieve local performance gains.
 
@@ -470,6 +501,8 @@ can customize the target using the following parameters in the .toml files:
 
 ## TOSA
 
+**Note:** The TOSA target is provided by the deprecated `mlia-legacy` plugin.
+
 > **DEPRECATION WARNING**
 > The *tosa* target profile uses the deprecated TOSA Checker backend.
 
@@ -585,6 +618,8 @@ on [Arm® Cortex™-M85 processor](https://www.arm.com/products/silicon-ip-cpu/c
 
 ### TOSA Checker
 
+**Note:** The TOSA Checker backend is available only when the deprecated `mlia-legacy` plugin is installed.
+
 > **DEPRECATION WARNING**
 > This backend is **deprecated**.
 > The TOSA Checker backend relies on an unmaintained project
@@ -616,3 +651,20 @@ mlia-backend install vela
 Additional resources:
 
 - <https://pypi.org/project/ethos-u-vela/>
+
+# Migration from monolithic installs
+
+Previous releases bundled all targets and backends in the `mlia` wheel.
+Starting with the plugin split, Ethos-U targets and the Vela/Corstone backends
+are provided by the `mlia-ethos-u` plugin wheel.
+
+If you previously used Ethos-U or Vela/Corstone, install the plugin:
+
+```bash
+pip install mlia-ethos-u
+```
+
+If you only used core functionality or TOSA, no additional packages are required.
+
+The monolithic install pattern is deprecated and will be removed in a future
+major release. Plan to install the required plugin wheels explicitly.

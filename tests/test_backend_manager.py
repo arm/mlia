@@ -323,7 +323,11 @@ def test_installation_manager_unsupported_install_type(
     manager = get_installation_manager(False, install_mocks, monkeypatch)
     manager.install_from(tmp_path, "could_be_downloaded_and_installed")
 
-    manager.download_and_install(["could_be_installed_from"])
+    with pytest.raises(
+        InternalError,
+        match="could_be_installed_from found, but can only be installed from a file.",
+    ):
+        manager.download_and_install(["could_be_installed_from"])
 
     for mock in install_mocks:
         mock.install.assert_not_called()

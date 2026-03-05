@@ -11,9 +11,6 @@ from typing import Any, cast
 
 from mlia.cli.options import get_target_profile_opts
 from mlia.core.helpers import ActionResolver
-from mlia.nn.select import OptimizationSettings
-from mlia.nn.tensorflow.utils import is_keras_model
-from mlia.utils.types import is_list_of
 
 
 class CLIActionResolver(ActionResolver):
@@ -27,9 +24,19 @@ class CLIActionResolver(ActionResolver):
     def _general_optimization_command(model_path: str | None) -> list[str]:
         """Return general optimization command description."""
         keras_note = []
-        if model_path is None or not is_keras_model(model_path):
+        if model_path is None:
             model_path = "/path/to/keras_model"
             keras_note = ["Note: you will need a Keras model for that."]
+        else:
+            try:
+                from mlia.nn.tensorflow.utils import (
+                    is_keras_model,  # pylint: disable=import-error
+                )
+            except ModuleNotFoundError:
+                is_keras_model = None
+
+            if is_keras_model is None or not is_keras_model(model_path):
+                keras_note = ["Note: you will need a Keras model for that."]
 
         return [
             *keras_note,
@@ -42,17 +49,25 @@ class CLIActionResolver(ActionResolver):
     def _specific_optimization_command(
         model_path: str,
         target_opts: str,
-        opt_settings: list[OptimizationSettings],
+        opt_settings: list[Any],
     ) -> list[str]:
         """Return specific optimization command description."""
-        opt_types = " ".join("--" + opt.optimization_type for opt in opt_settings)
+
+        def get_value(item: Any, name: str) -> Any:
+            if isinstance(item, dict):
+                return item.get(name)
+            return getattr(item, name, None)
+
+        opt_types = " ".join(
+            "--" + str(get_value(opt, "optimization_type")) for opt in opt_settings
+        )
         opt_targs_strings = [
             "--pruning-target",
             "--clustering-target",
             "--rewrite-target",
         ]
         opt_targs = ",".join(
-            f"{opt_targs_strings[i]} {opt.optimization_target}"
+            f"{opt_targs_strings[i]} {get_value(opt, 'optimization_target')}"
             for i, opt in enumerate(opt_settings)
         )
 
@@ -69,7 +84,20 @@ class CLIActionResolver(ActionResolver):
         if (opt_settings := kwargs.pop("opt_settings", None)) is None:
             return self._general_optimization_command(model_path)
 
-        if is_list_of(opt_settings, OptimizationSettings) and model_path:
+        if isinstance(opt_settings, list) and model_path:
+            try:
+                from mlia.nn.select import (  # pylint: disable=import-error
+                    OptimizationSettings,
+                )
+            except ModuleNotFoundError:
+                OptimizationSettings = None
+
+            if OptimizationSettings and all(
+                isinstance(setting, OptimizationSettings) for setting in opt_settings
+            ):
+                return self._specific_optimization_command(
+                    model_path, target_opts, opt_settings
+                )
             return self._specific_optimization_command(
                 model_path, target_opts, opt_settings
             )
