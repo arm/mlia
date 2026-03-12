@@ -4,11 +4,11 @@
 
 from __future__ import annotations
 
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 
 import pytest
 
-from setup import replace_markdown_relative_paths
+from hatch_build import replace_markdown_relative_paths
 
 
 @pytest.mark.parametrize(
@@ -37,15 +37,13 @@ from setup import replace_markdown_relative_paths
         ],
     ],
 )
-@patch("pathlib.Path")
 def test_replace_markdown_relative_paths(
-    path_mock: Mock,
     linked_file_found: bool,
     file_content: str,
     expected_result: str,
 ) -> None:
     """Test replacement of relative md paths with links to GitHub."""
-    # Set a mock setuptools scm version for testing
+    path_mock = Mock()
     tag = "0.1.0"
     path_mock.read_text.return_value = file_content
     path_mock.exists.return_value = linked_file_found

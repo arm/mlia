@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022, 2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 *.pyc
 *~
@@ -9,8 +9,13 @@ dist
 src/*.egg-info
 .vscode
 venv
+.venv
 e2e_config
 mlia-output
 report
 .ipynb_checkpoints
-.tox
+.mypy_cache
+.pytest_cache
+.ruff_cache
+uv.lock
+coverage.xml

@@ -12,6 +12,10 @@ import os
 import subprocess  # nosec
 import sys
 
+BUILD_FILES = [
+    ".python-version",
+]
+
 
 class CopyrightHeaderChecker:
     """Class that wraps the checker for the Copyright header."""
@@ -33,8 +37,8 @@ class CopyrightHeaderChecker:
             if not os.path.exists(filename):
                 continue
 
-            # For JSON files, check for sidecar .license file
-            if filename.endswith(".json"):
+            # For JSON files or specific build files, check for sidecar .license file
+            if filename.endswith(".json") or filename in BUILD_FILES:
                 license_file = filename + ".license"
                 if os.path.exists(license_file):
                     filename = license_file
