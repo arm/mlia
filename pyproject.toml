@@ -6,17 +6,79 @@
 
 [build-system]
 requires = [
-    "setuptools>=42",
-    "wheel",
-    "setuptools_scm[toml]>=6.2"
+    "hatchling>=1.27.0",
+    "uv-dynamic-versioning>=0.8.2,<0.9.0"
 ]
-build-backend = "setuptools.build_meta"
+build-backend = "hatchling.build"
 
-# Enable setuptools_scm
-[tool.setuptools_scm]
+[project]
+name = "mlia"
+dynamic = ["version", "readme"]
+description = "ML Inference Advisor"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy>=2.0.0",
+    "requests~=2.32.3",
+    "rich~=13.7.1",
+    "packaging>=24.0",
+    "tomli>=2.0.1 ; python_version<'3.11'",
+    "importlib-metadata>=8.7.0 ; python_version<'3.10'"
+]
+keywords = ["ml", "arm", "ethos-u", "tflite"]
+authors = [{name = "Arm Ltd", email = "mlia@arm.com"}]
+license = {text = "Apache-2.0"}
+license-files = ["LICENSES/*.txt"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence"
+]
 
-[tool.pytest.ini_options]
-testpaths = "tests"
+[project.urls]
+Homepage = "https://github.com/arm/mlia.git"
+
+[project.scripts]
+mlia = "mlia.cli.main:main"
+mlia-backend = "mlia.cli.main:backend_main"
+mlia-target = "mlia.cli.main:target_main"
+
+[tool.hatch.version]
+source = "uv-dynamic-versioning"
+
+[tool.hatch.metadata.hooks.custom]
+path = "hatch_build.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/mlia"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "src/mlia/**",
+    "docs/**",
+    "LICENSES/*.txt",
+    "**/*.md",
+    "pyproject.toml",
+    "hatch_build.py"
+]
+
+[tool.uv-dynamic-versioning]
+vcs = "git"
+style = "pep440"
+pattern = "default-unprefixed"
+bump = true
+fallback-version = "0.11.0"
+
+[tool.pytest]
+addopts = [
+    "--cov=mlia",
+    "--cov-report=term-missing",
+    "--cov-report=xml:coverage.xml",
+    "--cov-fail-under=65"
+]
+testpaths = ["tests"]
 pythonpath = ["src"]
 markers = [
     "e2e",  # e2e tests
@@ -62,6 +124,12 @@ module = [
 ]
 ignore_missing_imports = true
 
+[tool.blocklint]
+max_issue_threshold = 1
+blocklist = ["master", "slave", "blacklist", "whitelist", "dummy"]
+wordlist = ["he", "she", "him", "her", "his", "hers"]
+skip_files = ["LICENSES/CC-PDDC.txt", "docs/source/conf.py"]
+
 [tool.commitizen]
 # This simply signifies that we want to customize the commitizen configuration
 name = "cz_customize"
@@ -72,7 +140,7 @@ version_provider = "scm"
 update_changelog_on_bump = true
 
 [tool.commitizen.customize]
-# Schema pattern is used by `cz check`, and `tox -e lint` in turn. Builtin CC pattern:
+# Schema pattern is used by `cz check`, and CI linting in turn. Builtin CC pattern:
 # (?s)(build|ci|docs|feat|fix|perf|refactor|style|test|chore|revert|bump)(\\(\\S+\\))?!?:( [^\\n\\r]+)((\\n\\n.*)|(\\s*))?$
 # We customize this slightly by removing types that don't seem relevant now:
 schema_pattern = "(?s)(build|ci|docs|feat|fix|perf|refactor|style|test)(\\(\\S+\\))?!?:( [A-Z][^\\n\\r]+)((\\n\\n.*)|(\\s*))?$"
@@ -81,3 +149,20 @@ schema = "<type>(<scope>): <Subject-capitalized>\n<BLANK LINE>\n<body>\n<BLANK L
 commit_parser = "^((?P<change_type>build|ci|docs|feat|fix|perf|refactor|style|test|BREAKING CHANGE)(?:\\((?P<scope>[^()\\r\\n]*)\\)|\\()?(?P<breaking>!)?|\\w+!):\\s(?P<message>.*)?"
 # Change type map to render the title for that category as per {tag:title}
 change_type_map = {'feat' = 'Feature changes', 'fix' = 'Bug fix', 'perf' = 'Performance improvements', 'build' = 'Development changes'}
+
+[dependency-groups]
+test = [
+    "pytest~=9.0",
+    "pytest-cov~=7.0",
+    "flaky~=3.8.1",
+    "hatchling>=1.27.0"
+]
+dev = [
+    {include-group = "test"},
+    "mypy==1.5.1",
+    "pre-commit==4.5.1"
+]
+docs = [
+    "sphinx==7.4.7",
+    "sphinx-rtd-theme==2.0.0"
+]

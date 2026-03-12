@@ -115,6 +115,23 @@ pip install mlia
 
 It is highly recommended to create a new virtual environment for the installation.
 
+## Development setup
+
+Install `uv`, then sync dependencies for local development:
+
+```bash
+uv sync --group dev
+```
+
+Common commands:
+
+```bash
+uv run pre-commit run --all-files --hook-stage=push
+uv run pytest --no-success-flaky-report -m "not slow" tests/
+uv run pytest --no-success-flaky-report tests/
+uv build
+```
+
 For details on installing and managing backends required for specific hardware targets, see the [Backend installation](#backend-installation) section below.
 
 ## Plugin wheels
