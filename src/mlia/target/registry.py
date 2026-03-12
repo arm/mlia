@@ -242,14 +242,24 @@ def table() -> Table:
             )
         )
 
+    
+    def get_selectable_backends(backends: list[str]) -> list[str]:
+        """Filter backends to only include selectable ones or unregistered ones."""
+        return [
+            backend
+            for backend in backends
+            if backend not in backend_registry.items
+            or backend_registry.items[backend].selectable
+        ]
+
     rows = [
         (
             f"{registry.pretty_name(name)}\n<{name}>",
             "\n".join(
                 f"{backend_registry.pretty_name(backend)}\n<{backend}>"
-                for backend in info.supported_backends
+                for backend in get_selectable_backends(info.supported_backends)
             ),
-            "\n\n".join(get_status(backend) for backend in info.supported_backends),
+            "\n\n".join(get_status(backend) for backend in get_selectable_backends(info.supported_backends)),
             "/".join(get_advice(name)),
         )
         for name, info in registry.items.items()

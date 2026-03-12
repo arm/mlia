@@ -359,7 +359,11 @@ class DefaultInstallationManager(InstallationManager, InstallationFiltersMixin):
         logger.info("%s%s\n", "\n" if new_section else "", header)
 
         for installation in installations:
-            logger.info("  - %s", installation.name)
+            if installation.dependencies:
+                deps_str = ", ".join(installation.dependencies)
+                logger.info("  - %s (depends on: %s)", installation.name, deps_str)
+            else:
+                logger.info("  - %s", installation.name)
 
     def uninstall(self, backend_names: list[str]) -> None:
         """Uninstall the backend with name backend_name."""
@@ -423,6 +427,7 @@ def get_available_backends() -> list[str]:
     available_backends = [
         backend
         for backend, cfg in backend_registry.items.items()
-        if cfg.type == BackendType.BUILTIN or manager.backend_installed(backend)
+        if cfg.selectable
+        and (cfg.type == BackendType.BUILTIN or manager.backend_installed(backend))
     ]
     return available_backends

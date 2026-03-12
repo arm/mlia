@@ -95,11 +95,19 @@ def get_vela_config() -> Path:
 
 def get_mlia_target_profiles_dir() -> Path:
     """Get the profiles file."""
+    for resources_dir in get_mlia_resource_dirs():
+        candidate = resources_dir / "target_profiles"
+        if candidate.exists():
+            return candidate
     return get_mlia_resources() / "target_profiles"
 
 
 def get_mlia_target_optimization_dir() -> Path:
     """Get the profiles file."""
+    for resources_dir in get_mlia_resource_dirs():
+        candidate = resources_dir / "optimization_profiles"
+        if candidate.exists():
+            return candidate
     return get_mlia_resources() / "optimization_profiles"
 
 

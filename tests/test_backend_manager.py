@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import sys
 from contextlib import ExitStack as does_not_raise
 from functools import partial
 from pathlib import Path
@@ -12,14 +13,17 @@ from unittest.mock import MagicMock, PropertyMock, call
 
 import pytest
 
+from mlia.backend.config import BackendConfiguration, BackendType
 from mlia.backend.install import (
     DownloadAndInstall,
     Installation,
     InstallationType,
     InstallFromPath,
 )
-from mlia.backend.manager import DefaultInstallationManager
+from mlia.backend.manager import DefaultInstallationManager, get_available_backends
+from mlia.core.common import AdviceCategory
 from mlia.core.errors import ConfigurationError, InternalError
+from mlia.utils.registry import Registry
 
 
 def get_default_installation_manager_mock(
@@ -418,6 +422,36 @@ def test_show_env_details(monkeypatch: pytest.MonkeyPatch) -> None:
     manager.show_env_details()
     logger_info_mock.assert_has_calls([call("No backends installed")])
 
+def test_show_env_details_with_dependencies(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test method show_env_details with backends that have dependencies."""
+    backend_with_single_dep = get_installation_mock(
+        name="backend1",
+        already_installed=True,
+        dependencies=["backend2"],
+    )
+    backend_no_deps = get_installation_mock(
+        name="backend3",
+        already_installed=True,
+    )
+    logger_info_mock = MagicMock()
+
+    monkeypatch.setattr("mlia.backend.manager.logger.info", logger_info_mock)
+
+    manager = get_installation_manager(
+        False,
+        [backend_with_single_dep, backend_no_deps],
+        monkeypatch,
+    )
+    manager.show_env_details()
+
+    # Verify that backends with dependencies show them correctly
+    logger_info_mock.assert_has_calls(
+        [
+            call("  - %s (depends on: %s)", "backend1", "backend2"),
+            call("  - %s", "backend3"),
+        ],
+        any_order=False,
+    )
 
 @pytest.mark.parametrize(
     "dependency",
@@ -781,3 +815,154 @@ def test_uninstall_with_dep(
 
     dependency.install.assert_not_called()
     install_mock.uninstall.assert_not_called()
+
+_TEST_ONLY_SELECTABLE_RETURNED = "only_selectable_backends_returned"
+_TEST_BUILTIN_ALWAYS_INCLUDED = "builtin_backends_always_included_if_selectable"
+_TEST_INSTALLED_WHEEL_INCLUDED = "installed_wheel_backends_included_if_selectable"
+_TEST_NOT_INSTALLED_WHEEL_EXCLUDED = "not_installed_wheel_backends_excluded"
+_TEST_NON_SELECTABLE_EXCLUDED = "non_selectable_backends_excluded_even_if_installed"
+_TEST_MIX_SELECTABLE_NON_SELECTABLE = "mix_of_selectable_and_non_selectable_backends"
+
+
+@pytest.mark.parametrize(
+    ("backend_configs", "installed_backends", "expected_result"),
+    [
+        pytest.param(
+            {
+                "backend1": BackendConfiguration(
+                    supported_advice=[AdviceCategory.COMPATIBILITY],
+                    supported_systems=None,
+                    backend_type=BackendType.BUILTIN,
+                    installation=None,
+                    selectable=True,
+                ),
+                "backend2": BackendConfiguration(
+                    supported_advice=[AdviceCategory.COMPATIBILITY],
+                    supported_systems=None,
+                    backend_type=BackendType.BUILTIN,
+                    installation=None,
+                    selectable=False,
+                ),
+            },
+            [],
+            ["backend1"],
+            id=_TEST_ONLY_SELECTABLE_RETURNED,
+        ),
+        pytest.param(
+            {
+                "builtin_backend": BackendConfiguration(
+                    supported_advice=[AdviceCategory.COMPATIBILITY],
+                    supported_systems=None,
+                    backend_type=BackendType.BUILTIN,
+                    installation=None,
+                    selectable=True,
+                ),
+            },
+            [],
+            ["builtin_backend"],
+            id=_TEST_BUILTIN_ALWAYS_INCLUDED,
+        ),
+        pytest.param(
+            {
+                "wheel_backend": BackendConfiguration(
+                    supported_advice=[AdviceCategory.COMPATIBILITY],
+                    supported_systems=None,
+                    backend_type=BackendType.WHEEL,
+                    installation=MagicMock(spec=Installation),
+                    selectable=True,
+                ),
+            },
+            ["wheel_backend"],
+            ["wheel_backend"],
+            id=_TEST_INSTALLED_WHEEL_INCLUDED,
+        ),
+        pytest.param(
+            {
+                "wheel_backend": BackendConfiguration(
+                    supported_advice=[AdviceCategory.COMPATIBILITY],
+                    supported_systems=None,
+                    backend_type=BackendType.WHEEL,
+                    installation=MagicMock(spec=Installation),
+                    selectable=True,
+                ),
+            },
+            [],
+            [],
+            id=_TEST_NOT_INSTALLED_WHEEL_EXCLUDED,
+        ),
+        pytest.param(
+            {
+                "non_selectable": BackendConfiguration(
+                    supported_advice=[AdviceCategory.COMPATIBILITY],
+                    supported_systems=None,
+                    backend_type=BackendType.WHEEL,
+                    installation=MagicMock(spec=Installation),
+                    selectable=False,
+                ),
+            },
+            ["non_selectable"],
+            [],
+            id=_TEST_NON_SELECTABLE_EXCLUDED,
+        ),
+        pytest.param(
+            {
+                "builtin1": BackendConfiguration(
+                    supported_advice=[AdviceCategory.COMPATIBILITY],
+                    supported_systems=None,
+                    backend_type=BackendType.BUILTIN,
+                    installation=None,
+                    selectable=True,
+                ),
+                "builtin2": BackendConfiguration(
+                    supported_advice=[AdviceCategory.COMPATIBILITY],
+                    supported_systems=None,
+                    backend_type=BackendType.BUILTIN,
+                    installation=None,
+                    selectable=False,
+                ),
+                "installed_wheel": BackendConfiguration(
+                    supported_advice=[AdviceCategory.COMPATIBILITY],
+                    supported_systems=None,
+                    backend_type=BackendType.WHEEL,
+                    installation=MagicMock(spec=Installation),
+                    selectable=True,
+                ),
+                "not_installed_wheel": BackendConfiguration(
+                    supported_advice=[AdviceCategory.COMPATIBILITY],
+                    supported_systems=None,
+                    backend_type=BackendType.WHEEL,
+                    installation=MagicMock(spec=Installation),
+                    selectable=True,
+                ),
+            },
+            ["installed_wheel"],
+            ["builtin1", "installed_wheel"],
+            id=_TEST_MIX_SELECTABLE_NON_SELECTABLE,
+        ),
+    ],
+)
+def test_get_available_backends_filtering(
+    backend_configs: dict[str, BackendConfiguration],
+    installed_backends: list[str],
+    expected_result: list[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test that get_available_backends correctly filters by selectable attribute."""
+    test_registry: Registry = Registry()
+    for name, config in backend_configs.items():
+        test_registry.register(name, config)
+
+    monkeypatch.setattr(sys.modules["mlia.backend.registry"], "registry", test_registry)
+    monkeypatch.setattr("mlia.backend.manager.backend_registry", test_registry)
+
+    mock_manager = MagicMock(spec=DefaultInstallationManager)
+    mock_manager.backend_installed.side_effect = lambda backend: (
+        backend in installed_backends
+    )
+    monkeypatch.setattr(
+        "mlia.backend.manager.get_installation_manager",
+        MagicMock(return_value=mock_manager),
+    )
+
+    result = get_available_backends()
+    assert sorted(result) == sorted(expected_result)
