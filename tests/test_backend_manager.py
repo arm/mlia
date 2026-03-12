@@ -422,6 +422,7 @@ def test_show_env_details(monkeypatch: pytest.MonkeyPatch) -> None:
     manager.show_env_details()
     logger_info_mock.assert_has_calls([call("No backends installed")])
 
+
 def test_show_env_details_with_dependencies(monkeypatch: pytest.MonkeyPatch) -> None:
     """Test method show_env_details with backends that have dependencies."""
     backend_with_single_dep = get_installation_mock(
@@ -452,6 +453,7 @@ def test_show_env_details_with_dependencies(monkeypatch: pytest.MonkeyPatch) -> 
         ],
         any_order=False,
     )
+
 
 @pytest.mark.parametrize(
     "dependency",
@@ -815,6 +817,7 @@ def test_uninstall_with_dep(
 
     dependency.install.assert_not_called()
     install_mock.uninstall.assert_not_called()
+
 
 _TEST_ONLY_SELECTABLE_RETURNED = "only_selectable_backends_returned"
 _TEST_BUILTIN_ALWAYS_INCLUDED = "builtin_backends_always_included_if_selectable"

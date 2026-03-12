@@ -86,8 +86,9 @@ repos:
   rev: v0.15.0
   hooks:
     - id: ruff-check
-      args: [ --fix ]
+      args: [--fix]
     - id: ruff-format
+      args: [--diff]
 
 - repo: https://github.com/commitizen-tools/commitizen
   rev: v3.13.0
