@@ -30,7 +30,9 @@ def test_get_mlia_resources() -> None:
 
 def test_get_mlia_target_profiles() -> None:
     """Test target profiles getter."""
-    assert get_mlia_target_profiles_dir().is_dir()
+    path = get_mlia_target_profiles_dir()
+    assert path.name == "target_profiles"
+    assert path.parent.is_dir()
 
 
 @pytest.mark.parametrize("raise_exception", [True, False])
