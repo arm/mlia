@@ -168,6 +168,11 @@ class LayerFact(Fact):
     operator_name: str
     location: str
 
+    @property
+    def key(self) -> tuple[str, str]:
+        """Convert name and location to a layer key."""
+        return (self.operator_name, self.location)
+
 
 @register_fact_type(
     "layer_compatibility_issue",
@@ -190,6 +195,20 @@ class LayerCompatibilityIssue(LayerFact):
             {"category": cat, "detail": detail} for cat, detail in self.reasons
         ]
         return result
+
+
+@register_fact_type(
+    "layer_performance_issue",
+    "layer",
+    "A layer has a performance-related issue",
+)
+@dataclass
+class LayerPerformanceIssue(LayerFact):
+    """Base class for performance-related layer findings."""
+
+    metric: str
+    metric_value: float
+    metric_unit: str
 
 
 @register_fact_type(
