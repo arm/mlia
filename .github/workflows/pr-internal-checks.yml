@@ -1,0 +1,22 @@
+# SPDX-FileCopyrightText: Copyright 2026, Arm Limited and/or its affiliates.
+# SPDX-License-Identifier: Apache-2.0
+
+name: Internal PR Checks
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, edited, ready_for_review, labeled, unlabeled]
+
+permissions:
+  pull-requests: write
+  issues: write
+  contents: read
+
+jobs:
+  checks:
+    if: ${{ github.event.repository.private }}
+    uses: Arm-Debug/ai-debug-workflows/.github/workflows/internal-checks.yml@main
+    with:
+      internal_scan: true
+      internal_review: true
+    secrets: inherit
