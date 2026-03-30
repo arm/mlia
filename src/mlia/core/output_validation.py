@@ -37,6 +37,52 @@ def load_schema() -> dict[str, Any]:
         return json.load(schema_file)  # type: ignore[no-any-return]
 
 
+def load_target_schema() -> dict[str, Any]:
+    """Load the standardized target JSON schema."""
+    schema_path = (
+        Path(__file__).parent.parent
+        / "resources"
+        / f"mlia-target-schema-{schema.SCHEMA_VERSION}.json"
+    )
+    if not schema_path.exists():
+        raise FileNotFoundError(f"Schema file not found: {schema_path}")
+
+    with open(schema_path, encoding="utf-8") as schema_file:
+        return json.load(schema_file)  # type: ignore[no-any-return]
+
+
+def _build_schema_registry(output_schema: dict[str, Any]) -> Any:
+    """Build a local registry for resolving schema references."""
+    if not JSONSCHEMA_AVAILABLE:
+        raise ImportError(
+            "jsonschema library is required for schema validation. "
+            "Install it with: pip install jsonschema"
+        )
+
+    from referencing import (
+        Registry,  # pylint: disable=import-outside-toplevel
+        Resource,  # pylint: disable=import-outside-toplevel
+    )
+    from referencing.jsonschema import (  # pylint: disable=import-outside-toplevel
+        DRAFT202012,
+    )
+
+    target_schema = load_target_schema()
+    registry: Registry = Registry().with_resources(
+        [
+            (
+                output_schema.get("$id", ""),
+                Resource.from_contents(output_schema, DRAFT202012),
+            ),
+            (
+                target_schema.get("$id", ""),
+                Resource.from_contents(target_schema, DRAFT202012),
+            ),
+        ]
+    )
+    return registry
+
+
 def validate_with_jsonschema(
     data: dict[str, Any], output_schema: dict[str, Any]
 ) -> None:
@@ -57,9 +103,60 @@ def validate_with_jsonschema(
         )
 
     try:
-        jsonschema.validate(instance=data, schema=output_schema)
+        errors = _collect_jsonschema_errors(data, output_schema)
     except jsonschema.exceptions.ValidationError as err:
         raise SchemaValidationError(f"Schema validation failed: {err.message}") from err
+    if errors:
+        raise SchemaValidationError(f"Schema validation failed: {errors[0]}")
+
+
+def _collect_jsonschema_errors(
+    data: dict[str, Any], output_schema: dict[str, Any]
+) -> list[str]:
+    """Collect jsonschema validation errors."""
+    registry = _build_schema_registry(output_schema)
+    validator = jsonschema.Draft202012Validator(output_schema, registry=registry)
+    return [err.message for err in validator.iter_errors(data)]
+
+
+def collect_validation_errors(
+    data: dict[str, Any], use_jsonschema: bool = True
+) -> list[str]:
+    """Collect validation errors without raising.
+
+    Args:
+        data: Data to validate
+        use_jsonschema: Whether to use jsonschema library for validation
+
+    Returns:
+        List of validation error messages.
+    """
+    errors = validate_basic_structure(data)
+    if not use_jsonschema:
+        return errors
+    if not JSONSCHEMA_AVAILABLE:
+        import warnings  # pylint: disable=import-outside-toplevel
+
+        warnings.warn(
+            "jsonschema library not available. Using basic validation only. "
+            "For full validation, install with: pip install jsonschema",
+            UserWarning,
+        )
+        return errors
+    validation_error = getattr(
+        getattr(globals().get("jsonschema"), "exceptions", None),
+        "ValidationError",
+        None,
+    )
+    try:
+        output_schema = load_schema()
+        errors.extend(_collect_jsonschema_errors(data, output_schema))
+    except Exception as err:
+        if isinstance(validation_error, type) and isinstance(err, validation_error):
+            errors.append(getattr(err, "message", str(err)))
+        else:
+            errors.append(f"Schema validation could not be completed: {err}")
+    return errors
 
 
 def validate_version_format(version: str) -> bool:

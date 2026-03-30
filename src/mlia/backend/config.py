@@ -63,6 +63,8 @@ class BackendConfiguration:
         installation: Installation | None,
         selectable: bool = True,
         cli_options: dict[str, str] | None = None,
+        is_deprecated: bool = False,
+        deprecated_message: str | None = None,
     ) -> None:
         """Set up basic information about the backend."""
         self.supported_advice = supported_advice
@@ -71,6 +73,8 @@ class BackendConfiguration:
         self.installation = installation
         self.selectable = selectable
         self.cli_options = cli_options or {}
+        self.is_deprecated = is_deprecated
+        self.deprecated_message = deprecated_message
 
     def __str__(self) -> str:
         """List supported advice."""
@@ -84,6 +88,9 @@ class BackendConfiguration:
                 and self.supported_systems == other.supported_systems
                 and self.type == other.type
                 and self.installation == other.installation
+                and self.cli_options == other.cli_options
+                and self.is_deprecated == other.is_deprecated
+                and self.deprecated_message == other.deprecated_message
             )
         raise NotImplementedError
 

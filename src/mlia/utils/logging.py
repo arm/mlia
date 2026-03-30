@@ -8,6 +8,7 @@ import logging
 import os
 import sys
 import tempfile
+import threading
 from contextlib import ExitStack, contextmanager, redirect_stderr, redirect_stdout
 from pathlib import Path
 from typing import Any, Callable, Generator, Iterable, TextIO
@@ -22,11 +23,22 @@ class LoggerWriter:
         """Init logger writer."""
         self.logger = logger
         self.level = level
+        self._write_state = threading.local()
 
     def write(self, message: str) -> None:
         """Write message."""
-        if message.strip() != "":
+        if not message.strip():
+            return
+
+        # Avoid recursive logging when a handler stream points back to this
+        # writer (e.g. nested redirections in tool runtimes).
+        if getattr(self._write_state, "active", False):
+            return
+        self._write_state.active = True
+        try:
             self.logger.log(self.level, message)
+        finally:
+            self._write_state.active = False
 
     def flush(self) -> None:
         """Flush buffers."""

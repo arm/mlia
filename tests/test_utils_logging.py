@@ -15,6 +15,7 @@ import pytest
 
 from mlia.utils.logging import (
     LogFilter,
+    LoggerWriter,
     capture_raw_output,
     create_log_handler,
     redirect_output,
@@ -143,3 +144,14 @@ def test_log_filtration_by_skip(capfd: pytest.CaptureFixture) -> None:
 
     stdout, _ = capfd.readouterr()
     assert stdout == "Error message\n"
+
+
+def test_logger_writer_recursion_guard() -> None:
+    """LoggerWriter should drop recursive writes instead of re-entering logging."""
+    logger_mock = MagicMock()
+    writer = LoggerWriter(logger_mock, logging.INFO)
+    writer._write_state.active = True
+
+    writer.write("recursive message")
+
+    logger_mock.log.assert_not_called()

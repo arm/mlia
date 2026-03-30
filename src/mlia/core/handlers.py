@@ -8,6 +8,7 @@ import logging
 from typing import Any, Callable
 
 from mlia.core.advice_generation import Advice, AdviceEvent
+from mlia.core.errors import InternalError
 from mlia.core.events import (
     ActionFinishedEvent,
     ActionStartedEvent,
@@ -100,15 +101,21 @@ class WorkflowEventsHandler(SystemEventsHandler, ContextMixin):
     def __init__(
         self,
         formatter_resolver: Callable[[Any], Callable[[Any], Report]],
+        *,
+        collect_only: bool = False,
     ) -> None:
         """Init event handler."""
         self.formatter_resolver = formatter_resolver
+        self.collect_only = collect_only
+        self.output: dict[str, object] | None = None
         self.advice: list[Advice] = []
 
     def on_execution_started(self, event: ExecutionStartedEvent) -> None:
         """Handle ExecutionStarted event."""
-        if self.context.output_format == "json":
+        if self.collect_only or self.context.output_format == "json":
             self.reporter = JSONReporter(self.formatter_resolver)
+            if self.collect_only:
+                self.reporter.require_standardized_output = True
         else:
             self.reporter = TextReporter(self.formatter_resolver)
         logger.info(_ADV_EXECUTION_STARTED)
@@ -152,5 +159,13 @@ class WorkflowEventsHandler(SystemEventsHandler, ContextMixin):
             space="between",
             table_style="no_borders",
         )
+
+        if self.collect_only:
+            if not isinstance(self.reporter, JSONReporter):
+                raise InternalError(
+                    "collect_only=True requires JSONReporter for standardized output."
+                )
+            self.output = self.reporter.build_output()
+            return
 
         self.reporter.generate_report()

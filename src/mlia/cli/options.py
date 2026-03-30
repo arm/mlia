@@ -5,9 +5,12 @@
 from __future__ import annotations
 
 import argparse
+import importlib
+import pkgutil
 from pathlib import Path
-from typing import Any, Callable, Sequence
+from typing import Any, Callable, Sequence, TypedDict
 
+import mlia.backend
 from mlia.backend.manager import get_available_backends
 from mlia.core.common import AdviceCategory
 from mlia.core.typing import OutputFormat
@@ -83,6 +86,58 @@ def add_output_options(parser: argparse.ArgumentParser) -> None:
         action="store_true",
         help=("Print the output in JSON format."),
     )
+
+
+class BackendOptionSpec(TypedDict):
+    """Describe backend option metadata discovered from CLI mappings."""
+
+    module: str
+    backend: str
+    config_key: str
+    cli_option: str
+    full_cli_option: str
+    dest: str
+    type: type
+    help: str
+
+
+def discover_backend_option_specs() -> list[BackendOptionSpec]:
+    """Return backend option metadata derived from CONFIG_TO_CLI_OPTION."""
+    specs: list[BackendOptionSpec] = []
+    backend_package_path = mlia.backend.__path__
+    for _, module_name, is_pkg in pkgutil.iter_modules(backend_package_path):
+        if not is_pkg:
+            continue
+
+        for submodule in ["config", "compiler", "__init__"]:
+            try:
+                full_name = f"mlia.backend.{module_name}.{submodule}"
+                module = importlib.import_module(full_name)
+            except (ImportError, AttributeError):
+                continue
+
+            if not hasattr(module, "CONFIG_TO_CLI_OPTION"):
+                continue
+
+            config_mapping = module.CONFIG_TO_CLI_OPTION
+            for config_key, cli_option in config_mapping.items():
+                specs.append(
+                    {
+                        "module": module_name,
+                        "backend": module_name.replace("_", "-"),
+                        "config_key": config_key,
+                        "cli_option": cli_option,
+                        "full_cli_option": (
+                            f"--{module_name.replace('_', '-')}"
+                            f".{cli_option.lstrip('-')}"
+                        ),
+                        "dest": f"{module_name}_{config_key}",
+                        "type": Path,
+                        "help": f"Overrides the {cli_option} backend option.",
+                    }
+                )
+
+    return specs
 
 
 def add_debug_options(parser: argparse.ArgumentParser) -> None:
