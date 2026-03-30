@@ -48,6 +48,11 @@ with differing knowledge on hardware optimization and machine learning.
     - [TOSA Checker](#tosa-checker)
     - [Vela](#vela)
 - [Migration from monolithic installs](#migration-from-monolithic-installs)
+- [Python API](#python-api)
+  - [API overview](#api-overview)
+  - [Example usage](#example-usage)
+  - [Module inputs](#module-inputs)
+  - [Discovery helpers](#discovery-helpers)
 
 ## Inclusive language commitment
 
@@ -685,3 +690,119 @@ If you only used core functionality or TOSA, no additional packages are required
 
 The monolithic install pattern is deprecated and will be removed in a future
 major release. Plan to install the required plugin wheels explicitly.
+
+# Python API
+
+MLIA also provides a Python API for programmatic compatibility and performance
+analysis. The main entry point is `run_advisor()`, which mirrors the CLI
+`check` workflow and returns standardized output as a Python `dict`.
+
+The following public API functions are re-exported from the package root:
+
+```python
+from mlia import (
+    ValidationMode,
+    list_backend_options,
+    list_backends,
+    list_target_profiles,
+    list_targets,
+    run_advisor,
+    supported_backends,
+)
+```
+
+## API overview
+
+`run_advisor()` supports:
+
+- `advice_category="compatibility"` or `"performance"`
+- model inputs as a file path, and for supported plugin paths a
+  `torch.nn.Module`
+- optional backend selection and backend-specific options
+- schema validation control via `ValidationMode`
+
+By default, the API keeps results in memory and does not write output files.
+Set `write_output_files=True` to preserve generated artifacts on disk.
+
+The most commonly used parameters are:
+
+- `advice_category`: `"compatibility"` or `"performance"`
+- `target_profile`: built-in profile name or target profile file path
+- `model`: model file path, or `torch.nn.Module` for supported plugin paths
+- `backends`: optional explicit backend selection
+- `example_inputs`: required for `torch.nn.Module` inputs
+- `write_output_files` and `output_dir`: keep generated artifacts on disk
+- `validation`: control standardized schema validation. Defaults to
+  `ValidationMode.WARN`
+
+Advanced options such as `context`, `logs_dir`, and `backend_options` are also
+available; refer to the API docstrings for full details.
+
+## Example usage
+
+```python
+from mlia import run_advisor
+
+result = run_advisor(
+    advice_category="performance",
+    target_profile="ethos-u55-256",
+    model="model.tflite",
+)
+
+print(result["schema_version"])
+print(result["results"])
+```
+
+## Module inputs
+
+`run_advisor()` also accepts `torch.nn.Module` inputs for supported
+target/backend plugin paths:
+
+```python
+from mlia import run_advisor
+
+result = run_advisor(
+    advice_category="compatibility",
+    target_profile="your-target-profile",
+    model=my_module,
+    example_inputs=(sample_input,),
+)
+```
+
+For `torch.nn.Module` inputs:
+
+- `example_inputs` is required
+- MLIA exports a temporary `.pt2` artifact before running analysis
+- if `torch` is not installed, MLIA raises `ConfigurationError`
+- unsupported target or backend combinations raise
+  `UnsupportedConfigurationError`
+
+Install with the optional torch extra to enable module inputs:
+
+```bash
+pip install mlia[torch]
+```
+
+Support for module inputs depends on the installed target and backend plugins.
+
+## Discovery helpers
+
+Use the discovery helpers to inspect the currently installed MLIA plugin set:
+
+- `list_targets()`
+- `list_target_profiles()`
+- `list_backends()`
+- `list_backend_options()`
+- `supported_backends(target_profile)`
+
+```python
+from mlia import list_backends, list_target_profiles, supported_backends
+
+profiles = list_target_profiles()
+backends = list_backends()
+available = supported_backends("ethos-u55-256")
+
+print(list(profiles))
+print([entry["name"] for entry in backends])
+print(available)
+```

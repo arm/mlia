@@ -5,13 +5,14 @@
 from __future__ import annotations
 
 from logging import Logger
-from typing import Any, Callable
+from typing import Any, Callable, cast
 from unittest.mock import MagicMock
 
 import pytest
 
 from mlia.core.advice_generation import AdviceEvent
 from mlia.core.context import Context
+from mlia.core.errors import InternalError
 from mlia.core.events import (
     AdviceStageFinishedEvent,
     AdviceStageStartedEvent,
@@ -140,10 +141,7 @@ def test_workflow_events_handler_on_data_analysis_stage_finished(
     mock_event = MagicMock(spec=DataAnalysisStageFinishedEvent)
     workflow_events_handler.on_data_analysis_stage_finished(mock_event)
     handlers_logger.info.assert_called_once()
-    # fmt: off
-    workflow_events_handler. \
-        reporter.print_delayed.assert_called_once()  # type: ignore[attr-defined]
-    # fmt: on
+    cast(MagicMock, workflow_events_handler.reporter.print_delayed).assert_called_once()
 
 
 def test_workflow_events_handler_on_advice_event(
@@ -163,9 +161,47 @@ def test_workflow_events_handler_on_advice_stage_finished(
     """Test on_advice_stage_finished method"""
     mock_event = MagicMock(spec=AdviceStageFinishedEvent)
     workflow_events_handler.on_advice_stage_finished(mock_event)
-    # fmt: off
-    workflow_events_handler. \
-        reporter.submit.assert_called_once()  # type: ignore[attr-defined]
-    workflow_events_handler. \
-        reporter.generate_report.assert_called_once()  # type: ignore[attr-defined]
-    # fmt: on
+    cast(MagicMock, workflow_events_handler.reporter.submit).assert_called_once()
+    cast(
+        MagicMock, workflow_events_handler.reporter.generate_report
+    ).assert_called_once()
+
+
+def test_workflow_events_handler_collect_only_sets_json_reporter(
+    handlers_logger: MagicMock,
+) -> None:
+    """Collect-only mode should force a JSON reporter and enable strict capture."""
+    events_handler = _get_workflow_events_handler("plain_text")
+    events_handler.collect_only = True
+
+    mock_event = MagicMock(spec=ExecutionStartedEvent)
+    events_handler.on_execution_started(mock_event)
+
+    assert isinstance(events_handler.reporter, JSONReporter)
+    assert events_handler.reporter.require_standardized_output is True
+    handlers_logger.info.assert_called_once()
+
+
+def test_workflow_events_handler_collect_only_requires_json_reporter() -> None:
+    """Collect-only mode should fail if a non-JSON reporter is in use."""
+    events_handler = _get_workflow_events_handler("plain_text")
+    events_handler.collect_only = True
+    events_handler.reporter = TextReporter(lambda _arg: lambda _item: MagicMock())
+
+    with pytest.raises(InternalError, match="collect_only=True requires JSONReporter"):
+        events_handler.on_advice_stage_finished(
+            MagicMock(spec=AdviceStageFinishedEvent)
+        )
+
+
+def test_workflow_events_handler_collect_only_builds_output() -> None:
+    """Collect-only advice completion should store the JSON reporter output."""
+    events_handler = _get_workflow_events_handler("plain_text")
+    events_handler.collect_only = True
+    events_handler.reporter = MagicMock(spec=JSONReporter)
+    events_handler.reporter.build_output.return_value = {"results": []}
+
+    events_handler.on_advice_stage_finished(MagicMock(spec=AdviceStageFinishedEvent))
+
+    assert events_handler.output == {"results": []}
+    events_handler.reporter.build_output.assert_called_once()

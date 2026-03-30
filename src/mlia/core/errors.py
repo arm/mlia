@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022, 2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 """MLIA exceptions module."""
 
@@ -20,3 +20,7 @@ class FunctionalityNotSupportedError(Exception):
 
         self.reason = reason
         self.description = description
+
+
+class UnsupportedConfigurationError(ConfigurationError):
+    """Unsupported target/backend configuration error."""

@@ -12,11 +12,12 @@ from dataclasses import dataclass
 from enum import Enum
 from functools import partial
 from textwrap import fill, indent
-from typing import Any, Callable, Collection, Iterable
+from typing import Any, Callable, Collection, Iterable, cast
 
 import numpy as np
 
 from mlia.core.advice_generation import Advice
+from mlia.core.errors import InternalError
 from mlia.core.typing import OutputFormat
 from mlia.utils.console import apply_style, produce_table
 from mlia.utils.types import is_list_of
@@ -589,6 +590,8 @@ class JSONReporter(Reporter):
         super().__init__(formatter_resolver)
         self.output_format: OutputFormat = "json"
         self.standardized_outputs: list[Any] = []
+        self.require_standardized_output = False
+        self.missing_standardized_output = False
         self.advice_data: list[tuple[Any, Callable[[Any], Report]]] = []
 
     def submit(self, data_item: Any, **kwargs: Any) -> None:
@@ -597,9 +600,11 @@ class JSONReporter(Reporter):
         Collects standardized outputs when available, otherwise falls back
         to legacy formatting.
         """
-        # Check if data_item has standardized_output attribute
-        if hasattr(data_item, "standardized_output") and data_item.standardized_output:
-            self.standardized_outputs.append(data_item.standardized_output)
+        standardized_output = None
+        if hasattr(data_item, "standardized_output"):
+            standardized_output = data_item.standardized_output
+            if standardized_output:
+                self.standardized_outputs.append(standardized_output)
 
         # Check if this is advice data (list of Advice objects)
         if is_list_of(data_item, Advice):
@@ -610,6 +615,9 @@ class JSONReporter(Reporter):
             # Also add to regular data for fallback
             self.data.append((data_item, formatter))
         else:
+            if self.require_standardized_output and standardized_output is None:
+                self.missing_standardized_output = True
+
             formatter = _apply_format_parameters(
                 self.formatter_resolver(data_item), self.output_format, **kwargs
             )
@@ -634,8 +642,31 @@ class JSONReporter(Reporter):
                 formatter=CompoundFormatter(list(formatters)),
             )
 
+    def build_output(self) -> dict[str, Any] | None:
+        """Build report output without printing."""
+        if not self.data:
+            return None
+
+        if not self.standardized_outputs:
+            raise InternalError(
+                "Standardized output is required for API execution, but no "
+                "standardized output was produced."
+            )
+        if self.missing_standardized_output:
+            raise InternalError(
+                "Standardized output is required for API execution, but one "
+                "or more results only produced legacy output."
+            )
+
+        return self._build_standardized_output()
+
     def _produce_standardized_report(self) -> None:
         """Produce report using standardized output format."""
+        output = self._build_standardized_output()
+        print(json.dumps(output, indent=4, cls=CustomJSONEncoder))
+
+    def _build_standardized_output(self) -> dict[str, Any]:
+        """Build standardized output format."""
         # Combine all standardized outputs into a single report
         if len(self.standardized_outputs) == 1:
             output = self.standardized_outputs[0]
@@ -657,7 +688,7 @@ class JSONReporter(Reporter):
                         result["advices"] = []
                     result["advices"].extend([a.to_dict() for a in advice_list])
 
-        print(json.dumps(output, indent=4, cls=CustomJSONEncoder))
+        return cast(dict[str, Any], output)
 
     def _format_advice_for_extension(self) -> list[dict[str, Any]]:
         """Format advice for inclusion in standardized output extensions."""
@@ -671,22 +702,31 @@ class JSONReporter(Reporter):
         """Merge multiple standardized outputs into a single unified report."""
         # Simplified merge logic
         merged: dict[str, Any] = {
-            "backend": {},
             "results": [],
             "model": {},
             "target": {},
             "context": {},
+            "backends": [],
         }
 
         for output in outputs:
             if isinstance(output, dict):
+                if (
+                    merged.get("schema_version")
+                    and output.get("schema_version")
+                    and output["schema_version"] != merged["schema_version"]
+                ):
+                    logger.warning(
+                        "Merging standardized outputs with mismatched schema_version: "
+                        "%s (kept) vs %s (ignored).",
+                        merged["schema_version"],
+                        output["schema_version"],
+                    )
                 # Merge results arrays
                 if "results" in output:
                     merged["results"].extend(output.get("results", []))
                 # Merge backends arrays
                 if "backends" in output:
-                    if "backends" not in merged:
-                        merged["backends"] = []
                     merged["backends"].extend(output.get("backends", []))
                 # Take first non-empty model, target, context
                 keys = [
@@ -697,6 +737,7 @@ class JSONReporter(Reporter):
                     "run_id",
                     "timestamp",
                     "tool",
+                    "extensions",
                 ]
                 for key in keys:
                     if output.get(key) and not merged.get(key):

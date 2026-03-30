@@ -6,13 +6,17 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
 
 from mlia.core.output_validation import (
     SchemaValidationError,
+    _build_schema_registry,
+    collect_validation_errors,
     load_schema,
+    load_target_schema,
     validate_basic_structure,
     validate_output_file,
     validate_sha256_format,
@@ -68,6 +72,25 @@ def test_load_schema(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     assert schema == {"key": "value"}
 
 
+def test_load_target_schema(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test load_target_schema function."""
+    schema_file = tmp_path / "resources" / "mlia-target-schema-1.0.0.json"
+    mock_file_path = tmp_path / schema_file
+
+    monkeypatch.setattr("mlia.core.output_validation.Path", lambda _: mock_file_path)
+    monkeypatch.setattr("mlia.core.output_schema.SCHEMA_VERSION", "1.0.0")
+
+    with pytest.raises(FileNotFoundError, match="Schema file not found"):
+        _ = load_target_schema()
+
+    schema_content = {"target": "schema"}
+    schema_file.parent.mkdir()
+    with open(schema_file, "w", encoding="utf-8") as file:
+        json.dump(schema_content, file)
+
+    assert load_target_schema() == schema_content
+
+
 def test_validate_with_jsonschema(monkeypatch: pytest.MonkeyPatch) -> None:
     """Test validate_with_jsonschema function."""
 
@@ -76,15 +99,12 @@ def test_validate_with_jsonschema(monkeypatch: pytest.MonkeyPatch) -> None:
         validate_with_jsonschema({}, {})
 
     # pylint: disable=missing-class-docstring,too-few-public-methods,invalid-name
-    # Mock jsonschema.validate
     class MockJsonSchema:
         class exceptions:
             class ValidationError(Exception):
-                pass
-
-        @staticmethod
-        def validate(instance: dict, schema: dict) -> None:
-            """Mock validate function."""
+                def __init__(self, message: str):
+                    self.message = message
+                    super().__init__(message)
 
     # pylint: enable=missing-class-docstring,too-few-public-methods,invalid-name
 
@@ -93,37 +113,223 @@ def test_validate_with_jsonschema(monkeypatch: pytest.MonkeyPatch) -> None:
         "mlia.core.output_validation.jsonschema", MockJsonSchema(), raising=False
     )
 
-    # Test successful validation
+    monkeypatch.setattr(
+        "mlia.core.output_validation._collect_jsonschema_errors",
+        lambda _data, _schema: [],
+    )
     validate_with_jsonschema({}, {})
 
-    # pylint: disable=missing-class-docstring,too-few-public-methods,invalid-name
-    # Test validation error is caught and re-raised as SchemaValidationError
-    class MockJsonSchemaWithError:
+    def raise_validation_error(_data: dict, _schema: dict) -> list[str]:
+        raise MockJsonSchema.exceptions.ValidationError("Test validation error")
+
+    monkeypatch.setattr(
+        "mlia.core.output_validation._collect_jsonschema_errors",
+        raise_validation_error,
+    )
+    with pytest.raises(
+        SchemaValidationError, match="Schema validation failed: Test validation error"
+    ):
+        validate_with_jsonschema({}, {})
+
+
+def test_build_schema_registry_requires_jsonschema(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Schema registry building should require jsonschema support."""
+    monkeypatch.setattr("mlia.core.output_validation.JSONSCHEMA_AVAILABLE", False)
+
+    with pytest.raises(ImportError, match="jsonschema library is required"):
+        _build_schema_registry({"$id": "output"})
+
+
+def test_build_schema_registry_success(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Schema registry helper should wire output and target schemas together."""
+
+    class FakeResource:
+        @staticmethod
+        def from_contents(contents: dict[str, Any], _draft: object) -> tuple[str, dict]:
+            return ("resource", contents)
+
+    class FakeRegistryBuilder:
+        def __init__(self) -> None:
+            self.resources: list[tuple[str, tuple[str, dict]]] | None = None
+
+        def with_resources(
+            self, resources: list[tuple[str, tuple[str, dict]]]
+        ) -> dict[str, object]:
+            self.resources = resources
+            return {"resources": resources}
+
+    fake_registry_builder = FakeRegistryBuilder()
+    monkeypatch.setattr("mlia.core.output_validation.JSONSCHEMA_AVAILABLE", True)
+    monkeypatch.setattr(
+        "mlia.core.output_validation.load_target_schema",
+        lambda: {"$id": "target-schema"},
+    )
+    monkeypatch.setitem(
+        __import__("sys").modules,
+        "referencing",
+        MagicMock(Registry=lambda: fake_registry_builder, Resource=FakeResource),
+    )
+    monkeypatch.setitem(
+        __import__("sys").modules,
+        "referencing.jsonschema",
+        MagicMock(DRAFT202012="draft"),
+    )
+
+    registry = _build_schema_registry({"$id": "output-schema"})
+
+    assert registry["resources"][0][0] == "output-schema"
+    assert registry["resources"][1][0] == "target-schema"
+
+
+def test_validate_with_jsonschema_raises_on_collected_errors(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Collected jsonschema errors should be re-raised as SchemaValidationError."""
+    monkeypatch.setattr("mlia.core.output_validation.JSONSCHEMA_AVAILABLE", True)
+    monkeypatch.setattr(
+        "mlia.core.output_validation._collect_jsonschema_errors",
+        lambda _data, _schema: ["first error"],
+    )
+
+    with pytest.raises(SchemaValidationError, match="first error"):
+        validate_with_jsonschema({}, {})
+
+
+def test_collect_jsonschema_errors_uses_validator(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Collected jsonschema errors should come from the configured validator."""
+
+    class FakeError:
+        def __init__(self, message: str):
+            self.message = message
+
+    class FakeValidator:
+        def __init__(self, _schema: dict, registry: object) -> None:
+            self.registry = registry
+
+        def iter_errors(self, _data: dict) -> list[FakeError]:
+            return [FakeError("err1"), FakeError("err2")]
+
+    monkeypatch.setattr(
+        "mlia.core.output_validation._build_schema_registry",
+        lambda _schema: "registry",
+    )
+    monkeypatch.setattr(
+        "mlia.core.output_validation.jsonschema",
+        MagicMock(Draft202012Validator=FakeValidator),
+        raising=False,
+    )
+
+    from mlia.core.output_validation import _collect_jsonschema_errors
+
+    assert _collect_jsonschema_errors({}, {"$id": "schema"}) == ["err1", "err2"]
+
+
+def test_collect_validation_errors_use_jsonschema_false(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Validation collection can stop after basic structure checks."""
+    monkeypatch.setattr(
+        "mlia.core.output_validation.validate_basic_structure",
+        lambda _data: ["basic error"],
+    )
+
+    assert collect_validation_errors({}, use_jsonschema=False) == ["basic error"]
+
+
+def test_collect_validation_errors_warns_without_jsonschema(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Missing jsonschema should warn and return basic validation errors."""
+    monkeypatch.setattr(
+        "mlia.core.output_validation.validate_basic_structure",
+        lambda _data: ["basic error"],
+    )
+    monkeypatch.setattr("mlia.core.output_validation.JSONSCHEMA_AVAILABLE", False)
+
+    with pytest.warns(UserWarning, match="jsonschema library not available"):
+        assert collect_validation_errors({}) == ["basic error"]
+
+
+def test_collect_validation_errors_handles_validator_exception(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Validation collection should append jsonschema errors without raising."""
+
+    class MockJsonSchema:
         class exceptions:
             class ValidationError(Exception):
                 def __init__(self, message: str):
                     self.message = message
                     super().__init__(message)
 
-        @staticmethod
-        def validate(instance: dict, schema: dict) -> None:
-            """Mock validate function that raises ValidationError."""
-            raise MockJsonSchemaWithError.exceptions.ValidationError(
-                "Test validation error"
-            )
+    monkeypatch.setattr(
+        "mlia.core.output_validation.validate_basic_structure",
+        lambda _data: [],
+    )
+    monkeypatch.setattr("mlia.core.output_validation.JSONSCHEMA_AVAILABLE", True)
+    monkeypatch.setattr(
+        "mlia.core.output_validation.jsonschema", MockJsonSchema(), raising=False
+    )
+    monkeypatch.setattr("mlia.core.output_validation.load_schema", lambda: {"$id": "x"})
 
-    # pylint: enable=missing-class-docstring,too-few-public-methods,invalid-name
+    def raise_validation_error(_data: dict, _schema: dict) -> list[str]:
+        raise MockJsonSchema.exceptions.ValidationError("jsonschema exploded")
 
     monkeypatch.setattr(
-        "mlia.core.output_validation.jsonschema",
-        MockJsonSchemaWithError(),
-        raising=False,
+        "mlia.core.output_validation._collect_jsonschema_errors",
+        raise_validation_error,
     )
 
-    with pytest.raises(
-        SchemaValidationError, match="Schema validation failed: Test validation error"
-    ):
-        validate_with_jsonschema({}, {})
+    assert collect_validation_errors({}) == ["jsonschema exploded"]
+
+
+def test_collect_validation_errors_handles_schema_load_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Schema-loading failures should be reported as validation errors."""
+    monkeypatch.setattr(
+        "mlia.core.output_validation.validate_basic_structure",
+        lambda _data: [],
+    )
+    monkeypatch.setattr("mlia.core.output_validation.JSONSCHEMA_AVAILABLE", True)
+    monkeypatch.setattr(
+        "mlia.core.output_validation.load_schema",
+        lambda: (_ for _ in ()).throw(FileNotFoundError("schema file missing")),
+    )
+    monkeypatch.setattr(
+        "mlia.core.output_validation.jsonschema", MagicMock(), raising=False
+    )
+    assert collect_validation_errors({}) == [
+        "Schema validation could not be completed: schema file missing"
+    ]
+
+
+def test_collect_validation_errors_handles_validator_setup_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Validator setup failures should be reported without raising."""
+    monkeypatch.setattr(
+        "mlia.core.output_validation.validate_basic_structure",
+        lambda _data: [],
+    )
+    monkeypatch.setattr("mlia.core.output_validation.JSONSCHEMA_AVAILABLE", True)
+    monkeypatch.setattr("mlia.core.output_validation.load_schema", lambda: {"$id": "x"})
+    monkeypatch.setattr(
+        "mlia.core.output_validation._collect_jsonschema_errors",
+        lambda _data, _schema: (_ for _ in ()).throw(
+            RuntimeError("validator setup failed")
+        ),
+    )
+    monkeypatch.setattr(
+        "mlia.core.output_validation.jsonschema", MagicMock(), raising=False
+    )
+    assert collect_validation_errors({}) == [
+        "Schema validation could not be completed: validator setup failed"
+    ]
 
 
 def test_validate_version_format() -> None:
