@@ -4,25 +4,27 @@
 
 from __future__ import annotations
 
+import sys
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 from typing import Any, Callable, TypeVar, cast
 
-try:
-    import tomllib
-except ModuleNotFoundError:
-    import tomli as tomllib
-
 from mlia.backend.registry import registry as backend_registry
 from mlia.core.advisor import InferenceAdvisor
 from mlia.core.common import AdviceCategory
+from mlia.core.handlers import WorkflowEventsHandler
 from mlia.utils.filesystem import (
     get_mlia_resource_dirs,
     get_mlia_target_optimization_dir,
     get_mlia_target_profiles_dir,
 )
+
+if sys.version_info >= (3, 11):
+    import tomllib  # pragma: no cover
+else:
+    import tomli as tomllib  # pragma: no cover
 
 
 def get_builtin_target_profile_path(target_profile: str) -> Path:
@@ -111,29 +113,18 @@ class TargetProfile(ABC):
         self.backend_config = {} if backend_config is None else backend_config
 
     @classmethod
-    def load(cls: type[T], path: str | Path, backend_options: dict | None = None) -> T:
+    def load(
+        cls: type[T], path: str | Path, override_backend_options: dict | None = None
+    ) -> T:
         """Load and verify a target profile from file and return new instance."""
         profile_data = load_profile(path)
 
         try:
-            if backend_options:
-                backend_config = profile_data.get("backend_config", {})
-                for backend_name, options in backend_options.items():
-                    if backend_name not in backend_config:
-                        backend_config[backend_name] = {}
-                    backend_config[backend_name].update(options)
-                profile_data["backend_config"] = backend_config
-
-            new_instance = cls.load_json_data(profile_data)
+            new_instance = cls.load_data(profile_data, override_backend_options)
         except KeyError as ex:
             raise KeyError(f"Missing key in file {path}.") from ex
 
         return new_instance
-
-    @classmethod
-    def load_json_data(cls: type[T], profile_data: dict) -> T:
-        """Load a target profile from the JSON data."""
-        return cls.load_data(profile_data)
 
     @classmethod
     def load_data(
@@ -149,13 +140,13 @@ class TargetProfile(ABC):
             # Merge config fields into top level for backward compatibility
             config_data = profile_data.pop("config")
             profile_data = {**config_data, **profile_data}
-
-        backend_config: dict = {}
+        backend_config = {}
         for backend_name, backend_opts in profile_data.get("backend", {}).items():
             backend_config[backend_name] = dict(backend_opts)
 
         # Apply backend parameter options if provided
         if override_backend_options:
+            # Deep merge the options into the backend config
             for backend_name, options in override_backend_options.items():
                 if backend_name not in backend_config:
                     backend_config[backend_name] = {}
@@ -200,6 +191,10 @@ class TargetInfo:
     default_backends: list[str]
     advisor_factory_func: Callable[..., InferenceAdvisor]
     target_profile_cls: type[TargetProfile]
+    event_handler_factory: Callable[[Path | None], WorkflowEventsHandler] | None = None
+    supports_torch_module: bool = False
+    torch_module_backend: str | None = None
+    torch_module_quantization_option: str = "enable_quantization"
 
     def __str__(self) -> str:
         """List supported backends."""

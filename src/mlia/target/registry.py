@@ -151,7 +151,7 @@ def create_target_profile(path: Path) -> TargetProfile:
     if not target:
         raise ValueError(f"Profile {path} must contain 'target_type' or 'target' field")
     target_info = registry.items[target]
-    return target_info.target_profile_cls.load_json_data(profile_data)
+    return target_info.target_profile_cls.load_data(profile_data)
 
 
 def supported_advice(target: str) -> list[AdviceCategory]:

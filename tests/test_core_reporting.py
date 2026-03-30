@@ -15,6 +15,7 @@ import pytest
 
 import mlia.core.output_schema as schema
 from mlia.core.advice_generation import Advice
+from mlia.core.errors import InternalError
 from mlia.core.output_schema import AdviceCategory as SchemaAdviceCategory
 from mlia.core.output_schema import AdviceSeverity
 from mlia.core.reporting import (
@@ -713,3 +714,54 @@ class TestJSONReporter:
         assert len(merged["results"]) == 2
         assert merged["model"] == {"path": "model.tflite"}
         assert merged["target"] == {"name": "ethos-u55"}
+
+    def test_build_output_requires_standardized_output(self) -> None:
+        """API build_output should reject legacy-only results."""
+        format_resolver = MagicMock()
+        reporter = JSONReporter(format_resolver)
+        reporter.submit("legacy")
+
+        with pytest.raises(InternalError, match="no standardized output was produced"):
+            reporter.build_output()
+
+    def test_build_output_requires_all_results_to_be_standardized(self) -> None:
+        """API build_output should reject mixed legacy and standardized results."""
+        format_resolver = MagicMock()
+        reporter = JSONReporter(format_resolver)
+        reporter.require_standardized_output = True
+        reporter.submit(
+            MagicMock(standardized_output={"schema_version": "1.0.0", "results": []})
+        )
+        reporter.submit("legacy")
+
+        with pytest.raises(InternalError, match="only produced legacy output"):
+            reporter.build_output()
+
+    def test_build_output_returns_none_when_empty(self) -> None:
+        """API build_output should be empty when no data was submitted."""
+        reporter = JSONReporter(MagicMock())
+        assert reporter.build_output() is None
+
+    def test_build_output_returns_standardized_output(self) -> None:
+        """API build_output should return the built standardized payload."""
+        reporter = JSONReporter(MagicMock())
+        reporter.submit(
+            MagicMock(standardized_output={"schema_version": "1.0.0", "results": []})
+        )
+
+        assert reporter.build_output() == {"schema_version": "1.0.0", "results": []}
+
+    def test_merge_standardized_outputs_warns_on_schema_mismatch(self) -> None:
+        """Merging outputs with different schema versions should warn."""
+        reporter = JSONReporter(MagicMock())
+        with patch("mlia.core.reporting.logger.warning") as warning:
+            merged = reporter._merge_standardized_outputs(
+                [
+                    {"schema_version": "1.0.0", "results": [], "extensions": {"a": 1}},
+                    {"schema_version": "2.0.0", "results": [], "extensions": {"b": 2}},
+                ]
+            )
+
+        warning.assert_called_once()
+        assert merged["schema_version"] == "1.0.0"
+        assert merged["extensions"] == {"a": 1}
