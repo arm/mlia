@@ -17,7 +17,7 @@ from typing import Callable, Iterable, Optional, Union
 from mlia.backend.repo import get_backend_repository
 from mlia.backend.vendor import vendor_artifact_path
 from mlia.utils.download import DownloadConfig, download
-from mlia.utils.filesystem import all_files_exist, temp_directory, working_directory
+from mlia.utils.filesystem import all_files_exist, temp_directory
 from mlia.utils.py_manager import get_package_manager
 
 logger = logging.getLogger(__name__)
@@ -185,8 +185,12 @@ class BackendInstallation(Installation):
             if resolved_path is None:
                 raise RuntimeError("Vendor package is not available.")
             backend_info = self.path_checker(resolved_path)
-            assert backend_info is not None, "Unable to resolve vendor backend path"
-            self._install_from(backend_info)
+            if backend_info is None:
+                with temp_directory() as tmpdir:
+                    backend_info = self._resolve_vendor_archive(resolved_path, tmpdir)
+                    self._install_from(backend_info)
+            else:
+                self._install_from(backend_info)
         else:
             raise RuntimeError(f"Unable to install {install_type}.")
 
@@ -198,35 +202,70 @@ class BackendInstallation(Installation):
     def _download_and_install(self, cfg: DownloadConfig, eula_agreement: bool) -> None:
         """Download and install the backend."""
         with temp_directory() as tmpdir:
-            with working_directory(tmpdir / "dist", create_dir=True) as dist_dir:
-                try:
-                    dest = tmpdir / cfg.filename
-                    download(
-                        dest=dest,
-                        cfg=cfg,
-                        show_progress=True,
-                    )
+            try:
+                dest = tmpdir / cfg.filename
+                download(
+                    dest=dest,
+                    cfg=cfg,
+                    show_progress=True,
+                )
+            except Exception as err:
+                raise RuntimeError("Unable to download backend artifact.") from err
 
-                except Exception as err:
-                    raise RuntimeError("Unable to download backend artifact.") from err
+            dist_dir = self._extract_archive_to_dist(dest, tmpdir)
 
-                with tarfile.open(dest) as archive:
-                    logger.debug(
-                        "Extracting downloaded artifact %s to %s.", dest, dist_dir
-                    )
-                    archive.extractall(
-                        dist_dir,
-                        members=_filter_tar_members(archive.getmembers(), dist_dir),
-                    )
+            backend_path = dist_dir
+            if self.backend_installer:
+                backend_path = self.backend_installer(eula_agreement, dist_dir)
 
-                backend_path = dist_dir
-                if self.backend_installer:
-                    backend_path = self.backend_installer(eula_agreement, dist_dir)
+            if self.path_checker(backend_path) is None:
+                raise ValueError("Downloaded artifact has invalid structure.")
 
-                if self.path_checker(backend_path) is None:
-                    raise ValueError("Downloaded artifact has invalid structure.")
+            self.install(InstallFromPath(backend_path))
 
-                self.install(InstallFromPath(backend_path))
+    def _resolve_vendor_archive(self, vendor_dir: Path, tmpdir: Path) -> BackendInfo:
+        """Extract a vendored archive and return backend info."""
+        archives = sorted(path.name for path in vendor_dir.glob("*.tar.gz"))
+        if len(archives) != 1:
+            raise RuntimeError(
+                "Unable to resolve backend path from vendor archive. "
+                f"Vendor directory: {vendor_dir}. "
+                f"Found archives: {archives or 'none'}."
+            )
+        archive_path = vendor_dir / archives[0]
+        dist_dir = self._extract_archive_to_dist(
+            archive_path, tmpdir, log_prefix="vendor"
+        )
+        backend_path = dist_dir
+        if self.backend_installer:
+            backend_path = self.backend_installer(True, dist_dir)
+        backend_info = self.path_checker(backend_path)
+        if backend_info is None:
+            raise RuntimeError(
+                "Unable to resolve backend path from vendor archive. "
+                f"Vendor directory: {vendor_dir}. "
+                f"Archive: {archive_path.name}."
+            )
+        return backend_info
+
+    def _extract_archive_to_dist(
+        self, archive_path: Path, tmpdir: Path, log_prefix: str = "downloaded"
+    ) -> Path:
+        """Extract a tar.gz archive into a temp dist directory."""
+        dist_dir = tmpdir / "dist"
+        dist_dir.mkdir(parents=True, exist_ok=True)
+        with tarfile.open(archive_path) as archive:
+            logger.debug(
+                "Extracting %s artifact %s to %s.",
+                log_prefix,
+                archive_path,
+                dist_dir,
+            )
+            archive.extractall(
+                dist_dir,
+                members=_filter_tar_members(archive.getmembers(), dist_dir),
+            )
+        return dist_dir
 
     def _install_from(self, backend_info: BackendInfo) -> None:
         """Install backend from the directory."""
