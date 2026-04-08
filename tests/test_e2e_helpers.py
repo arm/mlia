@@ -16,14 +16,10 @@ from mlia.testing.e2e import (
     MLIA_E2E_SHARD_INDEX,
     E2ECase,
     E2EExecutionRuntimeError,
-    _get_cli_commands,
-    _get_valid_commands,
-    _get_validation_parser,
     _install_requested_backends,
     _load_artifacts_dir,
     _load_backends,
     _load_cases,
-    _validate_case,
     emit_e2e_results,
     run_case,
 )
@@ -32,10 +28,7 @@ from mlia.testing.e2e import (
 @pytest.fixture(autouse=True)
 def _clear_backend_install_cache() -> None:
     """Keep e2e helper cache state isolated between tests."""
-    _get_cli_commands.cache_clear()
     _install_requested_backends.cache_clear()
-    _get_valid_commands.cache_clear()
-    _get_validation_parser.cache_clear()
 
 
 def test_case_str_renders_full_mlia_command() -> None:
@@ -183,10 +176,10 @@ def test_load_cases_rejects_missing_artifacts_directory(
         _load_cases()
 
 
-def test_load_cases_does_not_validate_parser_during_collection(
+def test_load_cases_does_not_touch_cli_command_loading(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Collection should normalize cases without invoking argparse validation."""
+    """Collection should normalize cases without touching CLI command setup."""
     artifacts_dir = tmp_path / "prepared"
     keras_dir = artifacts_dir / "e2e_config" / "keras_models"
     keras_dir.mkdir(parents=True)
@@ -212,10 +205,10 @@ def test_load_cases_does_not_validate_parser_during_collection(
         ]""",
     )
 
-    def fail_validate(_case: E2ECase) -> None:
-        raise AssertionError("collection should not validate parser")
+    def fail_get_commands() -> list[object]:
+        raise AssertionError("collection should not load CLI commands")
 
-    monkeypatch.setattr("mlia.testing.e2e._validate_case", fail_validate)
+    monkeypatch.setattr("mlia.cli.main.get_commands", fail_get_commands)
 
     cases = _load_cases()
 
@@ -437,13 +430,9 @@ def test_run_case_installs_requested_backends_once(
         commands.append(tuple(argv))
         return subprocess.CompletedProcess(argv, 0, stdout="ok", stderr="")
 
-    def validate_case(_case: E2ECase) -> None:
-        """Skip argparse validation in this unit test."""
-
     monkeypatch.setattr(subprocess, "run", fake_run)
     monkeypatch.setenv("MLIA_E2E_ARTIFACTS", str(prepared_root))
     monkeypatch.setenv("MLIA_E2E_BACKENDS", "dummy-backend")
-    monkeypatch.setattr("mlia.testing.e2e._validate_case", validate_case)
 
     run_case(case, workdir=tmp_path / "workdir-1")
     run_case(case, workdir=tmp_path / "workdir-2")
@@ -516,7 +505,6 @@ def test_run_case_runs_command_once(
 
     monkeypatch.setattr(subprocess, "run", run_mock)
     monkeypatch.setenv("MLIA_E2E_ARTIFACTS", str(prepared_root))
-    monkeypatch.setattr("mlia.testing.e2e._validate_case", MagicMock())
 
     workdir = tmp_path / "workdir"
     workdir.mkdir()
@@ -577,7 +565,6 @@ def test_run_case_preserves_explicit_columns(
     monkeypatch.setattr(subprocess, "run", run_mock)
     monkeypatch.setenv("MLIA_E2E_ARTIFACTS", str(prepared_root))
     monkeypatch.setenv("COLUMNS", "321")
-    monkeypatch.setattr("mlia.testing.e2e._validate_case", MagicMock())
 
     workdir = tmp_path / "workdir-explicit-columns"
     workdir.mkdir()
@@ -613,7 +600,6 @@ def test_run_case_rejects_artifact_path_traversal(
     run_mock = MagicMock()
     monkeypatch.setattr(subprocess, "run", run_mock)
     monkeypatch.setenv("MLIA_E2E_ARTIFACTS", str(prepared_root))
-    monkeypatch.setattr("mlia.testing.e2e._validate_case", MagicMock())
 
     with pytest.raises(
         E2EExecutionRuntimeError,
@@ -625,43 +611,6 @@ def test_run_case_rejects_artifact_path_traversal(
         run_case(case, workdir=tmp_path / "workdir-traversal")
 
     assert run_mock.call_count == 0
-
-
-def test_validate_case_reuses_cached_parser(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Repeated validation should not rebuild the CLI parser."""
-    parser = MagicMock()
-    fake_command = MagicMock()
-    fake_command.command_name_and_aliases = ("check",)
-    get_commands_calls = 0
-    init_parser_calls = 0
-
-    def fake_get_commands() -> list[object]:
-        nonlocal get_commands_calls
-        get_commands_calls += 1
-        return [fake_command]
-
-    def fake_init_parser(_commands: list[object]) -> MagicMock:
-        nonlocal init_parser_calls
-        init_parser_calls += 1
-        return parser
-
-    monkeypatch.setattr("mlia.testing.e2e.get_commands", fake_get_commands)
-    monkeypatch.setattr("mlia.testing.e2e.init_parser", fake_init_parser)
-
-    case = E2ECase(
-        command="check",
-        args=("--compatibility", "--target-profile", "target-profile.toml"),
-    )
-
-    _validate_case(case)
-    _validate_case(case)
-
-    assert get_commands_calls == 1
-    assert init_parser_calls == 1
-    assert parser.parse_args.call_args_list == [
-        call(["check", "--compatibility", "--target-profile", "target-profile.toml"]),
-        call(["check", "--compatibility", "--target-profile", "target-profile.toml"]),
-    ]
 
 
 def test_load_backends_reads_csv_from_environment(
