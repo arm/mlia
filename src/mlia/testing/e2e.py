@@ -4,7 +4,6 @@
 
 from __future__ import annotations
 
-import argparse
 import glob
 import itertools
 import json
@@ -18,8 +17,6 @@ from functools import cache
 from pathlib import Path
 from typing import Any, Callable, Iterable, Sequence, TypeVar, cast
 
-from mlia.cli.common import CommandInfo
-from mlia.cli.main import get_commands, get_possible_command_names, init_parser
 from mlia.utils.types import is_list_of
 
 MLIA_E2E_ARTIFACTS = "MLIA_E2E_ARTIFACTS"
@@ -54,24 +51,6 @@ class E2EExecutionRuntimeError(RuntimeError):
     """Raised when e2e execution cannot be prepared or run."""
 
 
-@cache
-def _get_cli_commands() -> tuple[CommandInfo, ...]:
-    """Return the CLI command configuration, loading plugins only once."""
-    return tuple(get_commands())
-
-
-@cache
-def _get_valid_commands() -> tuple[str, ...]:
-    """Return the known CLI command names for e2e validation."""
-    return tuple(get_possible_command_names(list(_get_cli_commands())))
-
-
-@cache
-def _get_validation_parser() -> argparse.ArgumentParser:
-    """Build the CLI parser once for repeated e2e case validation."""
-    return init_parser(list(_get_cli_commands()))
-
-
 @dataclass(frozen=True)
 class E2ECase:
     """One concrete e2e command execution."""
@@ -101,8 +80,6 @@ class _ExecutionConfiguration:
 
         if not isinstance(command, str) or not command:
             raise E2EExecutionRuntimeError("Execution command is not defined.")
-        if command not in _get_valid_commands():
-            raise E2EExecutionRuntimeError(f"Command {command} is unknown.")
         if not isinstance(parameters, dict) or not parameters:
             raise E2EExecutionRuntimeError(f"Command {command} should have parameters.")
         if not all(
@@ -325,13 +302,6 @@ def _resolve_command_arguments(
     return (tuple(args),)
 
 
-def _validate_case(case: E2ECase) -> None:
-    try:
-        _get_validation_parser().parse_args([case.command, *case.args])
-    except SystemExit as exc:
-        raise E2EExecutionRuntimeError(f"Invalid e2e command: {case}") from exc
-
-
 def _load_cases() -> tuple[E2ECase, ...]:
     executions = tuple(
         _ExecutionConfiguration.from_dict(item) for item in _load_execution_payload()
@@ -410,7 +380,6 @@ def _artifact_paths(args: Sequence[str], prepared_root: Path) -> tuple[str, ...]
 def run_case(case: E2ECase, *, workdir: Path) -> subprocess.CompletedProcess[str]:
     """Stage artifacts and run one e2e case."""
     _install_requested_backends()
-    _validate_case(case)
     artifacts_dir = _load_artifacts_dir()
     if artifacts_dir is None:
         raise E2EExecutionRuntimeError(
