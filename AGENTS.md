@@ -11,7 +11,8 @@ Use `uv` for local workflows.
 - `uv run pytest --no-success-flaky-report tests/`: run the full test suite.
 - `uv run pre-commit run --all-files --hook-stage=push`: run lint, formatting, SPDX, and commit checks.
 - `uv build --wheel`: build the distributable wheel.
-- `make -C docs html`: build Sphinx docs into `docs/build/`.
+- `make -C docs build`: build the MkDocs site.
+- `make -C docs serve`: serve the MkDocs site locally for preview.
 
 ## Coding Style & Naming Conventions
 Target Python 3.10+ and keep imports and packaging compatible with `pyproject.toml`. Use 4-space indentation, type annotations on new code, snake_case for modules, functions, and tests, and CapWords for classes. Ruff enforces imports and common lint rules; mypy runs with strict options such as `disallow_untyped_defs = true`. Pre-commit also runs `pyupgrade`, `pydocstyle`, `reuse`, `blocklint`, and a local copyright-header check.

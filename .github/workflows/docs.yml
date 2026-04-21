@@ -1,0 +1,37 @@
+# SPDX-FileCopyrightText: Copyright 2026, Arm Limited and/or its affiliates.
+# SPDX-License-Identifier: Apache-2.0
+
+name: Docs
+
+on:
+  pull_request:
+    paths:
+      - 'README.md'
+      - 'mkdocs.yml'
+      - 'pyproject.toml'
+      - 'docs/**'
+      - '.github/workflows/docs.yml'
+
+env:
+  PYTHON_VERSION: '3.10'
+  UV_DEFAULT_INDEX: ${{ secrets.INTERNAL_PYPI_HOST && format('internal={0}', secrets.INTERNAL_PYPI_HOST) || '' }}
+  UV_INDEX_INTERNAL_USERNAME: ${{ secrets.INTERNAL_PYPI_HOST && secrets.INTERNAL_PYPI_USERNAME || '' }}
+  UV_INDEX_INTERNAL_PASSWORD: ${{ secrets.INTERNAL_PYPI_HOST && secrets.INTERNAL_PYPI_PASSWORD || '' }}
+
+jobs:
+  build-docs:
+    name: Build docs
+    runs-on: ${{ fromJson(vars.UBUNTU_RUNNER || '["ubuntu-24.04-arm"]') }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v7
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - run: uv sync --no-sources --no-install-project --only-group docs
+      - run: uv run mkdocs build --strict
+      - name: Upload docs artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: docs-site-mlia
+          path: .mkdocs/site/
+          if-no-files-found: error
