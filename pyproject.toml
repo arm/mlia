@@ -131,7 +131,7 @@ ignore_missing_imports = true
 max_issue_threshold = 1
 blocklist = ["master", "slave", "blacklist", "whitelist", "dummy"]
 wordlist = ["he", "she", "him", "her", "his", "hers"]
-skip_files = ["LICENSES/CC-PDDC.txt", "docs/source/conf.py"]
+skip_files = ["LICENSES/CC-PDDC.txt"]
 
 [tool.commitizen]
 # This simply signifies that we want to customize the commitizen configuration
@@ -166,6 +166,7 @@ dev = [
     "pre-commit==4.5.1"
 ]
 docs = [
-    "sphinx==7.4.7",
-    "sphinx-rtd-theme==2.0.0"
+    "mkdocs>=1.6,<2.0",
+    "mkdocs-material>=9.5,<10.0",
+    "pymdown-extensions>=10.0,<11.0"
 ]

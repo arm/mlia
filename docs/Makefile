@@ -1,22 +1,20 @@
-# SPDX-FileCopyrightText: Copyright 2022, Arm Limited and/or its affiliates.
+# SPDX-FileCopyrightText: Copyright 2022, 2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 
-# Minimal makefile for Sphinx documentation
+UV ?= uv
+CONFIG ?= ../mkdocs.yml
 
-# You can set these variables from the command line, and also
-# from the environment for the first two.
-SPHINXOPTS    ?=
-SPHINXBUILD   ?= sphinx-build
-SOURCEDIR     = source
-BUILDDIR      = build
-
-# Put it first so that "make" without argument is like "make help".
 help:
-	@$(SPHINXBUILD) -M help "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+	@echo "Targets: build serve clean"
+	@echo "Run '$(UV) sync --no-install-project --only-group docs' first to install the docs dependencies."
 
-.PHONY: help Makefile
+build:
+	@$(UV) run mkdocs build --strict -f $(CONFIG)
 
-# Catch-all target: route all unknown targets to Sphinx using the new
-# "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).
-%: Makefile
-	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+serve:
+	@$(UV) run mkdocs serve -f $(CONFIG)
+
+clean:
+	rm -rf ../.mkdocs/site
+
+.PHONY: help build serve clean

@@ -1,0 +1,40 @@
+# SPDX-FileCopyrightText: Copyright 2026, Arm Limited and/or its affiliates.
+# SPDX-License-Identifier: Apache-2.0
+
+site_name: ML Inference Advisor
+site_description: Core documentation for the ML Inference Advisor repository.
+site_url: https://github.com/arm/mlia
+repo_url: https://github.com/arm/mlia
+repo_name: arm/mlia
+edit_uri: edit/main/docs/source/
+docs_dir: docs/source
+site_dir: .mkdocs/site
+strict: true
+
+theme:
+  name: material
+  features:
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+    - search.highlight
+    - search.share
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - tables
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - Overview: overview.md
+  - Plugin Architecture: plugin_architecture.md
+  - CLI: cli.md
+  - API: api.md
+  - Backends: backends.md
+  - Outputs: metrics.md
+  - Development: development.md
