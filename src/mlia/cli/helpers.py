@@ -20,88 +20,8 @@ class CLIActionResolver(ActionResolver):
         """Init action resolver."""
         self.args = args
 
-    @staticmethod
-    def _general_optimization_command(model_path: str | None) -> list[str]:
-        """Return general optimization command description."""
-        keras_note = []
-        if model_path is None:
-            model_path = "/path/to/keras_model"
-            keras_note = ["Note: you will need a Keras model for that."]
-        else:
-            try:
-                from mlia.nn.tensorflow.utils import (
-                    is_keras_model,  # pylint: disable=import-error
-                )
-            except ModuleNotFoundError:
-                is_keras_model = None
-
-            if is_keras_model is None or not is_keras_model(model_path):
-                keras_note = ["Note: you will need a Keras model for that."]
-
-        return [
-            *keras_note,
-            f"For example: mlia optimize {model_path} --pruning --clustering "
-            "--pruning-target 0.5 --clustering-target 32",
-            "For more info: mlia optimize --help",
-        ]
-
-    @staticmethod
-    def _specific_optimization_command(
-        model_path: str,
-        target_opts: str,
-        opt_settings: list[Any],
-    ) -> list[str]:
-        """Return specific optimization command description."""
-
-        def get_value(item: Any, name: str) -> Any:
-            if isinstance(item, dict):
-                return item.get(name)
-            return getattr(item, name, None)
-
-        opt_types = " ".join(
-            "--" + str(get_value(opt, "optimization_type")) for opt in opt_settings
-        )
-        opt_targs_strings = [
-            "--pruning-target",
-            "--clustering-target",
-            "--rewrite-target",
-        ]
-        opt_targs = ",".join(
-            f"{opt_targs_strings[i]} {get_value(opt, 'optimization_target')}"
-            for i, opt in enumerate(opt_settings)
-        )
-
-        return [
-            "For more info: mlia optimize --help",
-            "Optimization command: "
-            f"mlia optimize {model_path}{target_opts} {opt_types} {opt_targs}",
-        ]
-
     def apply_optimizations(self, **kwargs: Any) -> list[str]:
-        """Return command details for applying optimizations."""
-        model_path, target_opts = self._get_model_and_target_opts()
-
-        if (opt_settings := kwargs.pop("opt_settings", None)) is None:
-            return self._general_optimization_command(model_path)
-
-        if isinstance(opt_settings, list) and model_path:
-            try:
-                from mlia.nn.select import (  # pylint: disable=import-error
-                    OptimizationSettings,
-                )
-            except ModuleNotFoundError:
-                OptimizationSettings = None
-
-            if OptimizationSettings and all(
-                isinstance(setting, OptimizationSettings) for setting in opt_settings
-            ):
-                return self._specific_optimization_command(
-                    model_path, target_opts, opt_settings
-                )
-            return self._specific_optimization_command(
-                model_path, target_opts, opt_settings
-            )
-
+        """Return no optimization command details for the CLI resolver."""
         return []
 
     def check_performance(self) -> list[str]:
@@ -129,10 +49,6 @@ class CLIActionResolver(ActionResolver):
     def operator_compatibility_details(self) -> list[str]:
         """Return command details for op compatibility."""
         return ["For more details, run: mlia check --help"]
-
-    def optimization_details(self) -> list[str]:
-        """Return command details for optimization."""
-        return ["For more info, see: mlia optimize --help"]
 
     def _get_model_and_target_opts(
         self, separate_target_opts: bool = True
