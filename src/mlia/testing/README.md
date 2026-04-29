@@ -42,6 +42,9 @@ MLIA repos:
 - expanding globs relative to that work directory
 - running one `mlia` command for one case
 - providing small pytest helpers such as `parametrize(...)`
+- providing small setup helpers such as `install_requested_backends()` and
+  `prepared_artifact_path(...)` for tests that need the shared e2e environment
+  but do not run through `run_case(...)`
 
 ## Repo responsibilities
 

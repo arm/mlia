@@ -209,7 +209,8 @@ def _default_backend_installer(argv: Sequence[str]) -> None:
 
 
 @cache
-def _install_requested_backends() -> tuple[str, ...]:
+def install_requested_backends() -> tuple[str, ...]:
+    """Install backends requested by the shared e2e environment."""
     backends = tuple(_load_backends())
     for backend in backends:
         _default_backend_installer(
@@ -222,6 +223,15 @@ def _install_requested_backends() -> tuple[str, ...]:
             ]
         )
     return backends
+
+
+def prepared_artifact_path(artifact_path: str | Path) -> Path | None:
+    """Resolve a prepared artifact path from the shared e2e artifacts root."""
+    artifacts_dir = _load_artifacts_dir()
+    if artifacts_dir is None:
+        return None
+    prepared_root = _validate_prepared_artifacts_dir(artifacts_dir)
+    return _resolve_prepared_artifact_path(prepared_root, artifact_path)
 
 
 def _load_execution_payload() -> list[dict[str, Any]]:
@@ -379,7 +389,7 @@ def _artifact_paths(args: Sequence[str], prepared_root: Path) -> tuple[str, ...]
 
 def run_case(case: E2ECase, *, workdir: Path) -> subprocess.CompletedProcess[str]:
     """Stage artifacts and run one e2e case."""
-    _install_requested_backends()
+    install_requested_backends()
     artifacts_dir = _load_artifacts_dir()
     if artifacts_dir is None:
         raise E2EExecutionRuntimeError(
