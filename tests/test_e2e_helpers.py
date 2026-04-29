@@ -16,11 +16,12 @@ from mlia.testing.e2e import (
     MLIA_E2E_SHARD_INDEX,
     E2ECase,
     E2EExecutionRuntimeError,
-    _install_requested_backends,
     _load_artifacts_dir,
     _load_backends,
     _load_cases,
     emit_e2e_results,
+    install_requested_backends,
+    prepared_artifact_path,
     run_case,
 )
 
@@ -28,7 +29,7 @@ from mlia.testing.e2e import (
 @pytest.fixture(autouse=True)
 def _clear_backend_install_cache() -> None:
     """Keep e2e helper cache state isolated between tests."""
-    _install_requested_backends.cache_clear()
+    install_requested_backends.cache_clear()
 
 
 def test_case_str_renders_full_mlia_command() -> None:
@@ -639,6 +640,44 @@ def test_load_artifacts_dir_requires_value_when_cases_are_configured(
         _load_artifacts_dir()
 
 
+def test_prepared_artifact_path_returns_none_without_artifacts(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Unconfigured artifact roots should let optional e2e tests skip."""
+    monkeypatch.delenv("MLIA_E2E_ARTIFACTS", raising=False)
+    monkeypatch.delenv("MLIA_E2E_EXECUTIONS", raising=False)
+
+    assert prepared_artifact_path("e2e_config/model.tflite") is None
+
+
+def test_prepared_artifact_path_resolves_relative_artifact(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Relative artifacts should resolve under the configured prepared root."""
+    prepared_root = tmp_path / "prepared"
+    model = prepared_root / "e2e_config" / "model.tflite"
+    model.parent.mkdir(parents=True)
+    model.touch()
+    monkeypatch.setenv("MLIA_E2E_ARTIFACTS", str(prepared_root))
+
+    assert prepared_artifact_path("e2e_config/model.tflite") == model.resolve()
+
+
+def test_prepared_artifact_path_rejects_path_traversal(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Resolved artifact paths must stay under the prepared root."""
+    prepared_root = tmp_path / "prepared"
+    prepared_root.mkdir()
+    monkeypatch.setenv("MLIA_E2E_ARTIFACTS", str(prepared_root))
+
+    with pytest.raises(
+        E2EExecutionRuntimeError,
+        match=r"Prepared artifact path escapes prepared artifacts directory",
+    ):
+        prepared_artifact_path("../outside-model.tflite")
+
+
 def test_install_requested_backends_uses_backend_env(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -658,7 +697,7 @@ def test_install_requested_backends_uses_backend_env(
     monkeypatch.setattr(subprocess, "run", fake_run)
 
     monkeypatch.setenv("MLIA_E2E_BACKENDS", "backend-a, backend-b")
-    installed = _install_requested_backends()
+    installed = install_requested_backends()
 
     assert installed == ("backend-a", "backend-b")
     assert commands == [
@@ -704,7 +743,7 @@ def test_install_requested_backends_streams_install_failure_output(
     with pytest.raises(
         E2EExecutionRuntimeError, match="Backend installation failed"
     ) as exc_info:
-        _install_requested_backends()
+        install_requested_backends()
 
     message = str(exc_info.value)
     captured = capsys.readouterr()
