@@ -19,6 +19,16 @@ BUILD_FILES = [
 ]
 
 
+def should_skip_file(filename: str) -> bool:
+    """Return whether the file should be skipped by the copyright checker.
+
+    LICENSES/ contains canonical license texts with fixed example copyright
+    lines. Keep this skip here because the hook builds its own staged/recent
+    file list, so pre-commit excludes are not the final source of truth.
+    """
+    return Path(filename).parts[0] == "LICENSES"
+
+
 class UnreadableFileError(Exception):
     """Raised when a file cannot be read for header validation."""
 
@@ -118,7 +128,7 @@ class CopyrightHeaderChecker:
 
         for filename in filenames:
             # Skip deleted or missing files (e.g. after git rm)
-            if not os.path.exists(filename):
+            if not os.path.exists(filename) or should_skip_file(filename):
                 continue
 
             header_filename, error = resolve_header_source(filename)
@@ -158,8 +168,8 @@ if __name__ == "__main__":
         .splitlines()
     )
 
-    # Also check files modified in the last commit to catch files that might have
-    # been committed with --no-verify and outdated copyright headers
+    # Also check files modified in the last commit to catch cases where files
+    # might have been committed with --no-verify and outdated headers.
     try:
         recently_modified_files = (
             subprocess.check_output(["git", "diff", "--name-only", "HEAD~1", "HEAD"])  # nosec
@@ -167,10 +177,10 @@ if __name__ == "__main__":
             .splitlines()
         )
     except subprocess.CalledProcessError:
-        # Handle case where there's no previous commit (initial commit)
+        # Handle case where there's no previous commit (initial commit).
         recently_modified_files = []
 
-    # Combine and deduplicate files to check
+    # Combine and deduplicate files to check.
     all_files_to_check = list(set(staged_files + recently_modified_files))
 
     checker = CopyrightHeaderChecker()

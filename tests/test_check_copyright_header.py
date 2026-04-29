@@ -176,6 +176,26 @@ def test_missing_files_are_skipped(checker_module: ModuleType) -> None:
     assert checker.check_files_have_updated_header(["missing-file.txt"]) is True
 
 
+def test_license_text_files_are_skipped(
+    tmp_path: Path,
+    checker_module: ModuleType,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test canonical license texts are ignored by the copyright checker."""
+    license_file = tmp_path / "LICENSES" / "BSD-3-Clause.txt"
+    license_file.parent.mkdir()
+    license_file.write_text(
+        "Copyright <YEAR> <COPYRIGHT HOLDER>\n"
+        "Redistribution and use in source and binary forms...\n",
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(tmp_path)
+
+    checker = checker_module.CopyrightHeaderChecker()
+
+    assert checker.check_files_have_updated_header(["LICENSES/BSD-3-Clause.txt"])
+
+
 def test_license_files_do_not_probe_for_nested_sidecars(
     checker_module: ModuleType,
     monkeypatch: pytest.MonkeyPatch,
