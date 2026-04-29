@@ -15,7 +15,9 @@ from .e2e import (
     PERFORMANCE_PATTERNS,
     E2ECase,
     E2EExecutionRuntimeError,
+    install_requested_backends,
     parametrize,
+    prepared_artifact_path,
     run_case,
 )
 
@@ -26,6 +28,7 @@ __all__ = [
     "E2EExecutionRuntimeError",
     "E2E_COMPATIBILITY",
     "E2E_PERFORMANCE",
+    "install_requested_backends",
     "MLIA_E2E_ARTIFACTS",
     "MLIA_E2E_BACKENDS",
     "MLIA_E2E_EXECUTIONS",
@@ -33,5 +36,6 @@ __all__ = [
     "MLIA_E2E_SHARD_INDEX",
     "PERFORMANCE_PATTERNS",
     "parametrize",
+    "prepared_artifact_path",
     "run_case",
 ]
