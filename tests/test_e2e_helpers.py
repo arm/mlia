@@ -20,6 +20,7 @@ from mlia.testing.e2e import (
     _load_backends,
     _load_cases,
     emit_e2e_results,
+    ensure_backends_available,
     install_requested_backends,
     prepared_artifact_path,
     run_case,
@@ -756,6 +757,212 @@ def test_install_requested_backends_streams_install_failure_output(
     assert "backend install stderr" in message
     assert captured.out == "backend install stdout\nextra detail\n"
     assert captured.err == "backend install stderr\n"
+
+
+def test_ensure_backends_available_installs_only_required_backends(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Per-case setup should install only the required missing backends."""
+    installed: set[str] = set()
+    installs: list[tuple[str, ...]] = []
+
+    def fake_list_backends() -> list[dict[str, object]]:
+        return [
+            {"name": "backend-a", "installed": "backend-a" in installed},
+            {"name": "backend-b", "installed": "backend-b" in installed},
+        ]
+
+    def fake_installer(argv: list[str]) -> None:
+        installs.append(tuple(argv))
+        installed.add(argv[-1])
+
+    monkeypatch.setattr("mlia.api.list_backends", fake_list_backends)
+    monkeypatch.setattr("mlia.testing.e2e._default_backend_installer", fake_installer)
+    monkeypatch.setenv("MLIA_E2E_BACKENDS", "backend-a, backend-b")
+
+    verified = ensure_backends_available(("backend-b",))
+
+    assert verified == ("backend-b",)
+    assert installs == [
+        (
+            "mlia-backend",
+            "install",
+            "--noninteractive",
+            "--i-agree-to-the-contained-eula",
+            "backend-b",
+        )
+    ]
+
+
+def test_ensure_backends_available_rejects_undeclared_backend_even_when_installed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Configured e2e backend drift should not be hidden by cached state."""
+    installs: list[tuple[str, ...]] = []
+
+    def fake_list_backends() -> list[dict[str, object]]:
+        return [{"name": "backend-b", "installed": True}]
+
+    def fake_installer(argv: list[str]) -> None:
+        installs.append(tuple(argv))
+
+    monkeypatch.setattr("mlia.api.list_backends", fake_list_backends)
+    monkeypatch.setattr("mlia.testing.e2e._default_backend_installer", fake_installer)
+    monkeypatch.setenv("MLIA_E2E_BACKENDS", "backend-a")
+
+    with pytest.raises(
+        E2EExecutionRuntimeError,
+        match=(
+            "Required e2e backend\\(s\\) are not listed in MLIA_E2E_BACKENDS: backend-b"
+        ),
+    ):
+        ensure_backends_available(("backend-b",))
+
+    assert installs == []
+
+
+def test_ensure_backends_available_rejects_empty_backend_env_in_github_actions(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """CI runs should fail when required backends are not declared."""
+    installs: list[tuple[str, ...]] = []
+
+    def fake_list_backends() -> list[dict[str, object]]:
+        return [{"name": "backend-a", "installed": True}]
+
+    def fake_installer(argv: list[str]) -> None:
+        installs.append(tuple(argv))
+
+    monkeypatch.setattr("mlia.api.list_backends", fake_list_backends)
+    monkeypatch.setattr("mlia.testing.e2e._default_backend_installer", fake_installer)
+    monkeypatch.setenv("GITHUB_ACTIONS", "true")
+    monkeypatch.setenv("MLIA_E2E_BACKENDS", "")
+
+    with pytest.raises(
+        E2EExecutionRuntimeError,
+        match=(
+            "Required e2e backend\\(s\\) are not listed in MLIA_E2E_BACKENDS: backend-a"
+        ),
+    ) as exc_info:
+        ensure_backends_available(("backend-a",))
+
+    assert "Configured backend(s): <empty>" in str(exc_info.value)
+    assert installs == []
+
+
+def test_ensure_backends_available_installs_required_backend_without_env(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Local e2e runs may request explicit backends without an env allow-list."""
+    installed: set[str] = set()
+    installs: list[tuple[str, ...]] = []
+
+    def fake_list_backends() -> list[dict[str, object]]:
+        return [{"name": "backend-a", "installed": "backend-a" in installed}]
+
+    def fake_installer(argv: list[str]) -> None:
+        installs.append(tuple(argv))
+        installed.add(argv[-1])
+
+    monkeypatch.setattr("mlia.api.list_backends", fake_list_backends)
+    monkeypatch.setattr("mlia.testing.e2e._default_backend_installer", fake_installer)
+    monkeypatch.delenv("GITHUB_ACTIONS", raising=False)
+    monkeypatch.delenv("MLIA_E2E_BACKENDS", raising=False)
+
+    verified = ensure_backends_available(("backend-a",))
+
+    assert verified == ("backend-a",)
+    assert installs == [
+        (
+            "mlia-backend",
+            "install",
+            "--noninteractive",
+            "--i-agree-to-the-contained-eula",
+            "backend-a",
+        )
+    ]
+
+
+def test_ensure_backends_available_refreshes_installed_state_after_each_install(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Installing one backend may make another required backend available."""
+    installed: set[str] = set()
+    installs: list[tuple[str, ...]] = []
+
+    def fake_list_backends() -> list[dict[str, object]]:
+        return [
+            {"name": "backend-a", "installed": "backend-a" in installed},
+            {"name": "backend-b", "installed": "backend-b" in installed},
+        ]
+
+    def fake_installer(argv: list[str]) -> None:
+        installs.append(tuple(argv))
+        installed.update({"backend-a", "backend-b"})
+
+    monkeypatch.setattr("mlia.api.list_backends", fake_list_backends)
+    monkeypatch.setattr("mlia.testing.e2e._default_backend_installer", fake_installer)
+    monkeypatch.setenv("MLIA_E2E_BACKENDS", "backend-a, backend-b")
+
+    verified = ensure_backends_available(("backend-a", "backend-b"))
+
+    assert verified == ("backend-a", "backend-b")
+    assert installs == [
+        (
+            "mlia-backend",
+            "install",
+            "--noninteractive",
+            "--i-agree-to-the-contained-eula",
+            "backend-a",
+        )
+    ]
+
+
+def test_ensure_backends_available_rejects_backend_missing_after_install(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Backend install success must be followed by visible installed state."""
+    installs: list[tuple[str, ...]] = []
+
+    def fake_list_backends() -> list[dict[str, object]]:
+        return [{"name": "backend-a", "installed": False}]
+
+    def fake_installer(argv: list[str]) -> None:
+        installs.append(tuple(argv))
+
+    monkeypatch.setattr("mlia.api.list_backends", fake_list_backends)
+    monkeypatch.setattr("mlia.testing.e2e._default_backend_installer", fake_installer)
+    monkeypatch.setenv("MLIA_E2E_BACKENDS", "backend-a")
+
+    with pytest.raises(
+        E2EExecutionRuntimeError,
+        match="Required e2e backend\\(s\\) are not installed after installation",
+    ):
+        ensure_backends_available(("backend-a",))
+
+    assert installs == [
+        (
+            "mlia-backend",
+            "install",
+            "--noninteractive",
+            "--i-agree-to-the-contained-eula",
+            "backend-a",
+        )
+    ]
+
+
+def test_ensure_backends_available_normalizes_required_backends(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Required backend names should be stripped and de-duplicated."""
+
+    def fake_list_backends() -> list[dict[str, object]]:
+        return [{"name": "backend-a", "installed": True}]
+
+    monkeypatch.setattr("mlia.api.list_backends", fake_list_backends)
+    monkeypatch.setenv("MLIA_E2E_BACKENDS", "backend-a")
+
+    assert ensure_backends_available((" backend-a ", "", "backend-a")) == ("backend-a",)
 
 
 def test_emit_e2e_results_streams_stdout_and_stderr(
