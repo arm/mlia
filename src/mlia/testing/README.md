@@ -42,9 +42,9 @@ MLIA repos:
 - expanding globs relative to that work directory
 - running one `mlia` command for one case
 - providing small pytest helpers such as `parametrize(...)`
-- providing small setup helpers such as `install_requested_backends()` and
-  `prepared_artifact_path(...)` for tests that need the shared e2e environment
-  but do not run through `run_case(...)`
+- providing small setup helpers such as `install_requested_backends()`,
+  `ensure_backends_available(...)`, and `prepared_artifact_path(...)` for tests
+  that need the shared e2e environment but do not run through `run_case(...)`
 
 ## Repo responsibilities
 
@@ -63,8 +63,19 @@ readable.
 
 `mlia.testing.e2e` assumes:
 
-- backends are installed globally once, outside per-case execution concerns
 - prepared artifacts already exist in a known location before the test runs
+
+The standard CLI e2e flow installs every backend listed in
+`MLIA_E2E_BACKENDS` once for the process.
+
+Tests with explicit per-case backend requirements, such as API e2e tests that
+compare one Python API call with one equivalent CLI command, should use
+`ensure_backends_available(required_backends)` instead. That helper installs
+only the required backends for the current case. In GitHub Actions, the helper
+treats `MLIA_E2E_BACKENDS` as the declared backend set for the e2e job, even if
+the value is empty, and fails if a required backend is missing from that
+declaration. This check runs even if the backend already appears to be
+installed.
 
 The shared helper may stage prepared artifacts into a case work directory, but
 it should not own artifact download policy or repo-specific layout rules.

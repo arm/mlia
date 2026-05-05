@@ -109,6 +109,18 @@ def _load_backends() -> tuple[str, ...]:
     return tuple(value.strip() for value in raw_value.split(",") if value.strip())
 
 
+def _normalize_backend_names(backends: Iterable[str]) -> tuple[str, ...]:
+    normalized: list[str] = []
+    seen: set[str] = set()
+    for backend in backends:
+        name = backend.strip()
+        if not name or name in seen:
+            continue
+        normalized.append(name)
+        seen.add(name)
+    return tuple(normalized)
+
+
 def _load_artifacts_dir() -> Path | None:
     raw_value = os.environ.get(MLIA_E2E_ARTIFACTS, "").strip()
     if raw_value:
@@ -208,21 +220,97 @@ def _default_backend_installer(argv: Sequence[str]) -> None:
         )
 
 
+def _install_backend(backend: str) -> None:
+    _default_backend_installer(
+        [
+            "mlia-backend",
+            "install",
+            "--noninteractive",
+            "--i-agree-to-the-contained-eula",
+            backend,
+        ]
+    )
+
+
+def _installed_backend_names() -> set[str]:
+    from mlia.api import list_backends
+
+    installed: set[str] = set()
+    for backend in list_backends():
+        name = backend.get("name")
+        if isinstance(name, str) and backend.get("installed") is True:
+            installed.add(name)
+    return installed
+
+
 @cache
 def install_requested_backends() -> tuple[str, ...]:
     """Install backends requested by the shared e2e environment."""
     backends = tuple(_load_backends())
     for backend in backends:
-        _default_backend_installer(
-            [
-                "mlia-backend",
-                "install",
-                "--noninteractive",
-                "--i-agree-to-the-contained-eula",
-                backend,
-            ]
-        )
+        _install_backend(backend)
     return backends
+
+
+def ensure_backends_available(required_backends: Iterable[str]) -> tuple[str, ...]:
+    """Install and verify the backends required by one e2e test case.
+
+    This helper is intended for API e2e tests that have an explicit per-case
+    backend list, for example a CLI/API parity case with
+    ``backends=("vela", "corstone-300")``.
+
+    The helper installs only the backends passed in ``required_backends``. It
+    does not install every backend listed in ``MLIA_E2E_BACKENDS``. This avoids
+    making one API e2e case depend on unrelated backends that may belong to a
+    different case or suite.
+
+    In GitHub Actions, ``MLIA_E2E_BACKENDS`` is treated as the e2e job's
+    declared backend set. In that case, every backend in ``required_backends``
+    must also be listed in ``MLIA_E2E_BACKENDS``. This check is performed even
+    if the backend already appears to be installed, so cached runner state
+    cannot hide a missing CI backend declaration.
+
+    Args:
+        required_backends: Backend names required by the current e2e case.
+
+    Returns:
+        A tuple of normalized backend names that were required and verified.
+        Duplicate names and blank values are removed while preserving first
+        occurrence order.
+
+    Raises:
+        E2EExecutionRuntimeError: A required backend is not declared in
+            ``MLIA_E2E_BACKENDS``, backend installation fails, or a backend is
+            still not reported as installed after installation.
+    """
+    required = _normalize_backend_names(required_backends)
+    if not required:
+        return required
+
+    declared = set(_load_backends())
+    if declared or os.environ.get("GITHUB_ACTIONS") == "true":
+        undeclared = tuple(backend for backend in required if backend not in declared)
+        if undeclared:
+            configured = ", ".join(sorted(declared)) or "<empty>"
+            raise E2EExecutionRuntimeError(
+                "Required e2e backend(s) are not listed in "
+                f"{MLIA_E2E_BACKENDS}: {', '.join(undeclared)}. "
+                f"Configured backend(s): {configured}."
+            )
+
+    installed = _installed_backend_names()
+    for backend in required:
+        if backend not in installed:
+            _install_backend(backend)
+            installed = _installed_backend_names()
+
+    missing = tuple(backend for backend in required if backend not in installed)
+    if missing:
+        raise E2EExecutionRuntimeError(
+            "Required e2e backend(s) are not installed after installation: "
+            f"{', '.join(missing)}."
+        )
+    return required
 
 
 def prepared_artifact_path(artifact_path: str | Path) -> Path | None:
