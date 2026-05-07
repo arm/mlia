@@ -602,16 +602,16 @@ def test_run_advisor_maps_argparse_error(
     monkeypatch: pytest.MonkeyPatch, test_tflite_model: Path
 ) -> None:
     """Ensure argparse errors map to ConfigurationError."""
-    parser = argparse.ArgumentParser()
-    argument = parser.add_argument("--foo")
 
     def raise_error(*_args: object, **_kwargs: object) -> list[str]:
-        raise argparse.ArgumentError(argument, "bad argument")
+        raise argparse.ArgumentError(None, "bad argument")
 
     monkeypatch.setattr("mlia.api.validate_backend", raise_error)
 
-    with pytest.raises(ConfigurationError, match="bad argument"):
+    with pytest.raises(ConfigurationError) as err:
         run_advisor("compatibility", "tosa", test_tflite_model)
+
+    assert str(err.value) == "bad argument"
 
 
 def test_run_advisor_maps_value_error(
@@ -999,6 +999,15 @@ def test_get_advice_updates_context_and_runs_advisor(
     advisor = MagicMock()
     context = ExecutionContext()
     monkeypatch.setattr("mlia.api.get_advisor", lambda *args, **kwargs: advisor)
+    monkeypatch.setattr(
+        "mlia.api.validate_backend",
+        lambda *_args, **_kwargs: ["backend-a"],
+    )
+    ensure_backends_installed = MagicMock()
+    monkeypatch.setattr(
+        "mlia.api.ensure_backends_installed",
+        ensure_backends_installed,
+    )
 
     get_advice(
         "profile",
@@ -1010,6 +1019,7 @@ def test_get_advice_updates_context_and_runs_advisor(
     )
 
     assert context.advice_category == {AdviceCategory.COMPATIBILITY}
+    ensure_backends_installed.assert_called_once_with(["backend-a"], accept_eula=False)
     advisor.run.assert_called_once_with(context)
 
 
@@ -1019,6 +1029,15 @@ def test_get_advice_creates_context_when_missing(
     """get_advice should create an execution context when one is not provided."""
     advisor = MagicMock()
     captured: dict[str, object] = {}
+    monkeypatch.setattr(
+        "mlia.api.validate_backend",
+        lambda *_args, **_kwargs: ["backend-a"],
+    )
+    ensure_backends_installed = MagicMock()
+    monkeypatch.setattr(
+        "mlia.api.ensure_backends_installed",
+        ensure_backends_installed,
+    )
 
     def fake_get_advisor(
         context: ExecutionContext, *_args: object, **_kwargs: object
@@ -1028,10 +1047,11 @@ def test_get_advice_creates_context_when_missing(
 
     monkeypatch.setattr("mlia.api.get_advisor", fake_get_advisor)
 
-    get_advice("profile", "model.tflite", {"compatibility"})
+    get_advice("profile", "model.tflite", {"compatibility"}, accept_eula=None)
 
     context = cast(ExecutionContext, captured["context"])
     assert context.advice_category == {AdviceCategory.COMPATIBILITY}
+    ensure_backends_installed.assert_called_once_with(["backend-a"], accept_eula=None)
     advisor.run.assert_called_once_with(context)
 
 

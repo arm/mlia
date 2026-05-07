@@ -431,3 +431,96 @@ def get_available_backends() -> list[str]:
         and (cfg.type == BackendType.BUILTIN or manager.backend_installed(backend))
     ]
     return available_backends
+
+
+def get_selectable_backends() -> list[str]:
+    """Return list of selectable backends regardless of installation state."""
+    ensure_backend_plugins_loaded()
+    return [
+        backend for backend, cfg in backend_registry.items.items() if cfg.selectable
+    ]
+
+
+def ensure_backends_installed(
+    backend_names: list[str],
+    *,
+    accept_eula: bool | None,
+) -> None:
+    """Ensure requested backends are installed.
+
+    accept_eula:
+      - None: allow interactive EULA handling (CLI behavior)
+      - False: deterministic API mode; fail if EULA acceptance is required
+      - True: noninteractive acceptance for EULA backends
+    """
+    if not backend_names:
+        return
+
+    ensure_backend_plugins_loaded()
+
+    def collect_missing_backend_names(names: list[str]) -> tuple[list[str], list[str]]:
+        """Return missing backend names split into non-EULA and EULA groups."""
+        missing_non_eula: list[str] = []
+        missing_eula: list[str] = []
+        visited: set[str] = set()
+
+        def visit(backend_name: str) -> None:
+            if backend_name in visited:
+                return
+            visited.add(backend_name)
+
+            cfg = backend_registry.items.get(backend_name)
+            if cfg is None:
+                raise ConfigurationError(f"Backend '{backend_name}' is not registered.")
+            if cfg.type == BackendType.BUILTIN:
+                return
+            if cfg.installation is None:
+                raise ConfigurationError(
+                    f"Backend '{backend_name}' does not provide installation metadata."
+                )
+
+            for dependency in cfg.installation.dependencies:
+                visit(dependency)
+
+            if cfg.installation.already_installed:
+                return
+            if cfg.installation.requires_eula:
+                missing_eula.append(backend_name)
+            else:
+                missing_non_eula.append(backend_name)
+
+        for name in names:
+            visit(name)
+
+        return missing_non_eula, missing_eula
+
+    missing_non_eula, missing_eula = collect_missing_backend_names(backend_names)
+
+    if missing_eula and accept_eula is False:
+        raise ConfigurationError(
+            "EULA acceptance required for one or more backends. "
+            "Pass accept_eula=True to proceed."
+        )
+
+    if missing_eula and accept_eula is None:
+        get_installation_manager(noninteractive=False).download_and_install(
+            missing_eula,
+            eula_agreement=False,
+            force=False,
+        )
+        missing_non_eula, missing_eula = collect_missing_backend_names(backend_names)
+        if missing_eula:
+            return
+    elif missing_eula:
+        get_installation_manager(noninteractive=True).download_and_install(
+            missing_eula,
+            eula_agreement=True,
+            force=False,
+        )
+
+    if missing_non_eula:
+        get_installation_manager(noninteractive=True).download_and_install(
+            missing_non_eula,
+            eula_agreement=True,
+            force=False,
+        )

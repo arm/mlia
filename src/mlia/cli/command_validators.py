@@ -8,7 +8,6 @@ import argparse
 import logging
 import sys
 
-from mlia.backend.manager import get_available_backends
 from mlia.target.registry import default_backends, get_target, supported_backends
 
 logger = logging.getLogger(__name__)
@@ -24,17 +23,12 @@ def validate_backend(target_profile: str, backend: list[str] | None) -> list[str
     target = get_target(target_profile)
 
     if not backend:
-        defaults = default_backends(target)
-        missing_backends = set(defaults)
-        missing_backends.difference_update(get_available_backends())
-        if missing_backends:
-            raise argparse.ArgumentError(
-                None,
-                f"The following default backends are not installed: {missing_backends}",
-            )
-        return defaults
+        return default_backends(target)
 
-    compatible_backends = list(map(normalize_string, supported_backends(target)))
+    compatible_backends = {
+        normalize_string(canonical_backend): canonical_backend
+        for canonical_backend in supported_backends(target)
+    }
     backends = {normalize_string(b): b for b in backend}
 
     incompatible_backends = [b for b in backends if b not in compatible_backends]
@@ -45,7 +39,7 @@ def validate_backend(target_profile: str, backend: list[str] | None) -> list[str
             f"Backend {', '.join(backends[b] for b in incompatible_backends)} "
             f"not supported with target-profile {target_profile}.",
         )
-    return backend
+    return [compatible_backends[b] for b in backends]
 
 
 def validate_check_target_profile(target_profile: str, category: set[str]) -> None:

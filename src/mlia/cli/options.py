@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any, Callable, Sequence, TypedDict
 
 import mlia.backend
-from mlia.backend.manager import get_available_backends
+from mlia.backend.manager import get_selectable_backends
 from mlia.core.common import AdviceCategory
 from mlia.core.typing import OutputFormat
 from mlia.target.registry import builtin_profile_names
@@ -183,7 +183,7 @@ def add_backend_install_options(parser: argparse.ArgumentParser) -> None:
         "--noninteractive",
         default=False,
         action="store_true",
-        help="Non interactive mode with automatic confirmation of every action",
+        help="Run non-interactively with automatic confirmation of actions",
     )
     parser.add_argument(
         "names",
@@ -205,7 +205,7 @@ def add_backend_options(
     parser: argparse.ArgumentParser, backends_to_skip: list[str] | None = None
 ) -> None:
     """Add evaluation options."""
-    available_backends = get_available_backends()
+    available_backends = get_selectable_backends()
 
     def only_one_corstone_checker() -> Callable:
         """
@@ -247,6 +247,22 @@ def add_backend_options(
         action="append",
         choices=available_backends,
         type=only_one_corstone_checker(),
+    )
+
+
+def add_check_backend_install_options(parser: argparse.ArgumentParser) -> None:
+    """Add backend auto-install options for check command."""
+    parser.add_argument(
+        "--i-agree-to-the-contained-eula",
+        default=False,
+        action="store_true",
+        help=argparse.SUPPRESS,
+    )
+    parser.add_argument(
+        "--noninteractive",
+        default=False,
+        action="store_true",
+        help="Run non-interactively with automatic confirmation of actions",
     )
 
 
