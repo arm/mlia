@@ -61,6 +61,22 @@ def test_install_from_vendor_archive(
     assert (backend_dir / "tool").is_file()
 
 
+def test_backend_installation_accepts_requires_eula() -> None:
+    """Backend installation should expose EULA requirements at construction."""
+    installation = BackendInstallation(
+        name="sample-backend",
+        description="Sample backend",
+        fvp_dir_name="sample-backend",
+        download_config=None,
+        supported_platforms=["Linux"],
+        path_checker=PackagePathChecker(expected_files=["tool"]),
+        backend_installer=None,
+        requires_eula=True,
+    )
+
+    assert installation.requires_eula is True
+
+
 def _make_installation(
     monkeypatch: pytest.MonkeyPatch, repo_path: Path, vendor_dir: Path
 ) -> BackendInstallation:
