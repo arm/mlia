@@ -24,10 +24,7 @@ from pathlib import Path
 
 from mlia.api import ExecutionContext, get_advice
 from mlia.backend.manager import get_installation_manager
-from mlia.cli.command_validators import (
-    validate_backend,
-    validate_check_target_profile,
-)
+from mlia.cli.command_validators import validate_check_target_profile
 from mlia.core.reporting import Column, Format, Table
 from mlia.plugins.plugins import BACKEND_PLUGIN_GROUP, TARGET_PLUGIN_GROUP
 from mlia.plugins.registry import list_entry_points
@@ -47,6 +44,8 @@ def check(
     compatibility: bool = False,
     performance: bool = False,
     backend: list[str] | None = None,
+    i_agree_to_the_contained_eula: bool = False,
+    noninteractive: bool = False,
 ) -> None:
     """Generate a full report on the input model.
 
@@ -65,6 +64,8 @@ def check(
     :param compatibility: flag that identifies whether to run compatibility checks
     :param performance: flag that identifies whether to run performance checks
     :param backend: list of the backends to use for evaluation
+    :param i_agree_to_the_contained_eula: flag indicating EULA acceptance
+    :param noninteractive: flag indicating noninteractive mode
 
     Example:
         Run command for the target profile ethos-u55-256 to verify both performance
@@ -91,14 +92,18 @@ def check(
         category = {"compatibility"}
 
     validate_check_target_profile(target_profile, category)
-    validated_backend = validate_backend(target_profile, backend)
 
     get_advice(
         target_profile,
         model,
         category,
         context=ctx,
-        backends=validated_backend,
+        backends=backend,
+        accept_eula=True
+        if i_agree_to_the_contained_eula
+        else False
+        if noninteractive
+        else None,
     )
 
 

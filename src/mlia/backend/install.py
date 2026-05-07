@@ -49,7 +49,11 @@ class Installation(ABC):
     """Base class for the installation process of the backends."""
 
     def __init__(
-        self, name: str, description: str, dependencies: list[str] | None = None
+        self,
+        name: str,
+        description: str,
+        dependencies: list[str] | None = None,
+        requires_eula: bool = False,
     ) -> None:
         """Init the installation."""
         assert not dependencies or name not in dependencies, (
@@ -60,6 +64,7 @@ class Installation(ABC):
         self.name = name
         self.description = description
         self.dependencies = dependencies if dependencies else []
+        self.requires_eula = requires_eula
 
     @property
     @abstractmethod
@@ -90,6 +95,7 @@ class Installation(ABC):
                 self.name == other.name
                 and self.description == other.description
                 and self.dependencies == other.dependencies
+                and self.requires_eula == other.requires_eula
             )
         raise NotImplementedError
 
@@ -121,9 +127,10 @@ class BackendInstallation(Installation):
         backend_installer: BackendInstaller | None,
         dependencies: list[str] | None = None,
         vendor_path: str | None = None,
+        requires_eula: bool = False,
     ) -> None:
         """Init the backend installation."""
-        super().__init__(name, description, dependencies)
+        super().__init__(name, description, dependencies, requires_eula)
 
         self.fvp_dir_name = fvp_dir_name
         self.download_config = download_config
@@ -453,9 +460,10 @@ class PyPackageBackendInstallation(Installation):
         expected_packages: list[str],
         download_config: DownloadConfig | None = None,
         vendor_path: str | None = None,
+        requires_eula: bool = False,
     ) -> None:
         """Init the backend installation."""
-        super().__init__(name, description)
+        super().__init__(name, description, requires_eula=requires_eula)
 
         self.download_config = download_config
         self._packages_to_install = packages_to_install

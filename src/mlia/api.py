@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Iterator, cast
 
 from mlia.backend.config import BackendType
-from mlia.backend.manager import get_installation_manager
+from mlia.backend.manager import ensure_backends_installed, get_installation_manager
 from mlia.backend.registry import registry as backend_registry
 from mlia.cli.command_validators import validate_backend
 from mlia.cli.options import discover_backend_option_specs
@@ -208,6 +208,7 @@ def run_advisor(
     output_dir: str | Path | None = None,
     logs_dir: str | Path | None = None,
     verbose: bool = False,
+    accept_eula: bool = False,
     context: ExecutionContext | None = None,
     backend_options: dict[str, dict[str, Any]] | None = None,
     validation: ValidationMode | str = ValidationMode.WARN,
@@ -236,6 +237,9 @@ def run_advisor(
             not configure logging and defers to caller configuration. MLIA uses
             Python logging under the "mlia" namespace (e.g., "mlia", "mlia.api").
         verbose: Enable verbose file logging when logs_dir is provided.
+        accept_eula: Whether to accept required EULAs for auto-installed backends.
+            Defaults to False. When False and an EULA is required, MLIA raises
+            ConfigurationError.
         context: Optional ExecutionContext template to derive advanced
             execution components from. API-controlled fields such as output
             directory, output format, and event handlers are still owned by
@@ -280,7 +284,7 @@ def run_advisor(
     try:
         selected_backends = validate_backend(target_profile, backends)
     except argparse.ArgumentError as err:
-        raise ConfigurationError(str(err)) from err
+        raise ConfigurationError(err.message) from err
     except ValueError as err:
         raise ConfigurationError(str(err)) from err
     except Exception as err:
@@ -308,6 +312,7 @@ def run_advisor(
         selected_backends=selected_backends,
         backend_options=backend_options_local,
         validation=validation_mode,
+        accept_eula=accept_eula,
     )
 
     if write_output_files:
@@ -364,6 +369,7 @@ class _RunAdvisorInputs:
     selected_backends: list[str]
     backend_options: dict[str, dict[str, Any]]
     validation: ValidationMode
+    accept_eula: bool
 
 
 def _create_api_execution_context(
@@ -417,6 +423,7 @@ def _run_advisor_with_context(
             context=local_context,
             backends=inputs.selected_backends,
             backend_options=inputs.backend_options,
+            accept_eula=inputs.accept_eula,
         )
     handler = cast(WorkflowEventsHandler, local_context.event_handlers[0])
     if handler.output is None:
@@ -768,6 +775,7 @@ def get_advice(
     context: ExecutionContext | None = None,
     backends: list[str] | None = None,
     backend_options: dict[str, dict[str, Any]] | None = None,
+    accept_eula: bool | None = False,
 ) -> None:
     """Get the advice.
 
@@ -790,6 +798,9 @@ def get_advice(
     :param backend_options: Optional dictionary of backend-specific options
            discovered from CLI arguments. Backend parameters are defined in each
            backend's CONFIG_TO_CLI_OPTION and automatically exposed as CLI options.
+    :param accept_eula: Controls EULA acceptance for auto-installed backends.
+           False (default) fails with ConfigurationError if EULA acceptance is required.
+           True accepts EULAs non-interactively. None enables interactive CLI behavior.
 
     Examples:
         NB: Before launching MLIA, the logging functionality should be configured!
@@ -812,13 +823,24 @@ def get_advice(
     if context is None:
         context = ExecutionContext(advice_category=advice_category)
 
+    try:
+        validated_backends = validate_backend(target_profile, backends)
+    except argparse.ArgumentError as err:
+        raise ConfigurationError(err.message) from err
+    except ValueError as err:
+        raise ConfigurationError(str(err)) from err
+    except Exception as err:
+        raise UnsupportedConfigurationError(str(err)) from err
+
+    ensure_backends_installed(validated_backends, accept_eula=accept_eula)
+
     advisor = get_advisor(
         context,
         target_profile,
         model,
         optimization_targets=optimization_targets,
         optimization_profile=optimization_profile,
-        backends=backends,
+        backends=validated_backends,
         backend_options=backend_options,
     )
     advisor.run(context)

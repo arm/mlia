@@ -20,7 +20,11 @@ from mlia.backend.install import (
     InstallationType,
     InstallFromPath,
 )
-from mlia.backend.manager import DefaultInstallationManager, get_available_backends
+from mlia.backend.manager import (
+    DefaultInstallationManager,
+    get_available_backends,
+    get_selectable_backends,
+)
 from mlia.core.common import AdviceCategory
 from mlia.core.errors import ConfigurationError, InternalError
 from mlia.utils.registry import Registry
@@ -969,3 +973,42 @@ def test_get_available_backends_filtering(
 
     result = get_available_backends()
     assert sorted(result) == sorted(expected_result)
+
+
+def test_get_selectable_backends_ignores_installation_state(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test that selectable backends are returned even when not installed."""
+    test_registry: Registry = Registry()
+    test_registry.register(
+        "selectable_backend",
+        BackendConfiguration(
+            supported_advice=[AdviceCategory.COMPATIBILITY],
+            supported_systems=None,
+            backend_type=BackendType.WHEEL,
+            installation=MagicMock(spec=Installation),
+            selectable=True,
+        ),
+    )
+    test_registry.register(
+        "non_selectable_backend",
+        BackendConfiguration(
+            supported_advice=[AdviceCategory.COMPATIBILITY],
+            supported_systems=None,
+            backend_type=BackendType.WHEEL,
+            installation=MagicMock(spec=Installation),
+            selectable=False,
+        ),
+    )
+
+    monkeypatch.setattr(sys.modules["mlia.backend.registry"], "registry", test_registry)
+    monkeypatch.setattr("mlia.backend.manager.backend_registry", test_registry)
+
+    get_installation_manager = MagicMock()
+    monkeypatch.setattr(
+        "mlia.backend.manager.get_installation_manager",
+        get_installation_manager,
+    )
+
+    assert get_selectable_backends() == ["selectable_backend"]
+    get_installation_manager.assert_not_called()
