@@ -217,7 +217,7 @@ def test_run_advisor_capture_with_validation_strict(
 
 @pytest.mark.parametrize(
     "target_profile",
-    ["tosa", "cortex-a", "ethos-u55-256", "neural-technology"],
+    ["tosa", "cortex-a", "ethos-u55-256", "custom-target"],
 )
 def test_run_advisor_capture_smoke_across_targets(
     monkeypatch: pytest.MonkeyPatch,
