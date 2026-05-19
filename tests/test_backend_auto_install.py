@@ -47,8 +47,8 @@ def _setup_registry(monkeypatch: pytest.MonkeyPatch, items: dict[str, Any]) -> N
 
 
 def test_auto_install_non_eula_cli(monkeypatch: pytest.MonkeyPatch) -> None:
-    installation = _install("nx-performance-estimator", installed=False)
-    _setup_registry(monkeypatch, {"nx-performance-estimator": _cfg(installation)})
+    installation = _install("vela", installed=False)
+    _setup_registry(monkeypatch, {"vela": _cfg(installation)})
 
     noninteractive_mgr = MagicMock()
     interactive_mgr = MagicMock()
@@ -58,12 +58,10 @@ def test_auto_install_non_eula_cli(monkeypatch: pytest.MonkeyPatch) -> None:
 
     monkeypatch.setattr(backend_manager, "get_installation_manager", _get_manager)
 
-    backend_manager.ensure_backends_installed(
-        ["nx-performance-estimator"], accept_eula=None
-    )
+    backend_manager.ensure_backends_installed(["vela"], accept_eula=None)
 
     noninteractive_mgr.download_and_install.assert_called_once_with(
-        ["nx-performance-estimator"], eula_agreement=True, force=False
+        ["vela"], eula_agreement=True, force=False
     )
     interactive_mgr.download_and_install.assert_not_called()
 
