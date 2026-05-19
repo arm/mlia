@@ -21,13 +21,13 @@ def test_validate_backend_returns_canonical_backend_ids(
     monkeypatch.setattr(
         command_validators,
         "supported_backends",
-        lambda target: ["corstone-300", "nx-performance-estimator"],
+        lambda target: ["corstone-300", "vela"],
     )
 
     assert command_validators.validate_backend(
         "target-profile",
-        ["Corstone-300", "NXPerformanceEstimator"],
-    ) == ["corstone-300", "nx-performance-estimator"]
+        ["Corstone300", "Vela"],
+    ) == ["corstone-300", "vela"]
 
 
 def test_validate_backend_rejects_unsupported_backend(
