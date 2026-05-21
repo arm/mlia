@@ -44,7 +44,10 @@ Use the core docs for:
 - shared CLI guidance: [docs/source/cli.md](docs/source/cli.md)
 - backend discovery and installation model: [docs/source/backends.md](docs/source/backends.md)
 - output structure and JSON results: [docs/source/metrics.md](docs/source/metrics.md)
-- architecture and repo boundaries: [docs/source/overview.md](docs/source/overview.md)
+- architecture and repo boundaries:
+  [docs/source/overview.md](docs/source/overview.md),
+  [docs/source/high_level_architecture.md](docs/source/high_level_architecture.md),
+  and [docs/source/execution_flow.md](docs/source/execution_flow.md)
 
 Target-specific, backend-specific, and converter-specific detail belongs in the
 plugin repo that owns that functionality.
@@ -153,9 +156,9 @@ If you need `torch.nn.Module` inputs, install the optional extra:
 pip install mlia[torch]
 ```
 
-The Python API follows the same plugin-based architecture as the CLI: the core package
-provides the entry points and shared output structure, while installed plugins
-extend what targets and backends are available.
+The Python API follows the same plugin-based architecture as the CLI: the core
+package provides the entry points and shared output structure, while installed
+plugins extend what targets and backends are available.
 
 ## Development
 

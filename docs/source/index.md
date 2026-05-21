@@ -16,7 +16,9 @@ see the individual plugin repositories.
 ## Contents
 
 - [Overview](overview.md)
+- [High-level Architecture](high_level_architecture.md)
 - [Plugin Architecture](plugin_architecture.md)
+- [End-to-end Execution Flow](execution_flow.md)
 - [CLI](cli.md)
 - [API](api.md)
 - [Backends](backends.md)
