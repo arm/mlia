@@ -11,7 +11,9 @@ from unittest.mock import MagicMock
 
 import pytest
 
+import mlia.core.output_schema as schema
 from mlia.core.output_validation import (
+    JSONSCHEMA_AVAILABLE,
     SchemaValidationError,
     _build_schema_registry,
     collect_validation_errors,
@@ -47,6 +49,50 @@ _CORRECT_DATA = {
     "backends": [{"name": "vela", "version": "3.0.0"}],
     "results": [],
 }
+
+
+def _valid_standardized_output(metric: dict[str, Any]) -> dict[str, Any]:
+    """Build a valid standardized output payload containing one metric."""
+    return {
+        "schema_version": schema.SCHEMA_VERSION,
+        "run_id": "550e8400-e29b-41d4-a716-446655440000",
+        "timestamp": "2025-12-29T10:30:00Z",
+        "tool": {"name": "MLIA", "version": "1.0.0"},
+        "target": {
+            "profile_name": "ethos-u55-256",
+            "target_type": "corstone-300",
+            "components": [{"type": "npu", "family": "ethos-u"}],
+            "configuration": {},
+        },
+        "model": {
+            "name": "model.tflite",
+            "format": "tflite",
+            "hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        },
+        "context": {},
+        "backends": [
+            {"id": "vela", "name": "vela", "version": "3.0.0", "configuration": {}}
+        ],
+        "results": [
+            {
+                "kind": "performance",
+                "status": "ok",
+                "producer": "vela",
+                "metrics": [metric],
+            }
+        ],
+    }
+
+
+def _valid_standardized_output_with_result(
+    result: dict[str, Any],
+) -> dict[str, Any]:
+    """Build a valid standardized output payload containing one result."""
+    output = _valid_standardized_output(
+        {"name": "inference_time", "value": 1.0, "unit": "ms"}
+    )
+    output["results"] = [result]
+    return output
 
 
 def test_load_schema(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -181,6 +227,93 @@ def test_build_schema_registry_success(monkeypatch: pytest.MonkeyPatch) -> None:
 
     assert registry["resources"][0][0] == "output-schema"
     assert registry["resources"][1][0] == "target-schema"
+
+
+def test_loaded_schema_requires_current_schema_version() -> None:
+    """The loaded JSON Schema should require the current schema version."""
+    loaded_schema = load_schema()
+
+    assert loaded_schema["properties"]["schema_version"] == {
+        "type": "string",
+        "const": schema.SCHEMA_VERSION,
+    }
+
+
+@pytest.mark.skipif(not JSONSCHEMA_AVAILABLE, reason="jsonschema is not available")
+def test_jsonschema_accepts_unavailable_metric_entry() -> None:
+    """Schema validation should accept unavailable metric entries."""
+    validate_standardized_output(
+        _valid_standardized_output(
+            {
+                "name": schema.METRIC_NAME_CPU_UTILIZATION,
+                "unit": schema.UNIT_PERCENT,
+                "availability": "unavailable",
+                "reason": "CPU utilization data is not available.",
+            }
+        )
+    )
+
+
+@pytest.mark.skipif(not JSONSCHEMA_AVAILABLE, reason="jsonschema is not available")
+def test_jsonschema_rejects_mismatched_schema_version() -> None:
+    """Schema 1.1.0 should reject payloads that claim another schema version."""
+    output = _valid_standardized_output(
+        {"name": "inference_time", "value": 1.0, "unit": "ms"}
+    )
+    output["schema_version"] = "1.0.0"
+
+    with pytest.raises(SchemaValidationError, match="Schema validation failed"):
+        validate_standardized_output(output)
+
+
+@pytest.mark.skipif(not JSONSCHEMA_AVAILABLE, reason="jsonschema is not available")
+def test_jsonschema_rejects_unavailable_metric_with_fake_value() -> None:
+    """Unavailable metric entries should not contain fabricated values."""
+    with pytest.raises(SchemaValidationError, match="Schema validation failed"):
+        validate_standardized_output(
+            _valid_standardized_output(
+                {
+                    "name": schema.METRIC_NAME_CPU_UTILIZATION,
+                    "value": 0.0,
+                    "unit": schema.UNIT_PERCENT,
+                    "availability": "unavailable",
+                    "reason": "CPU utilization data is not available.",
+                }
+            )
+        )
+
+
+@pytest.mark.skipif(not JSONSCHEMA_AVAILABLE, reason="jsonschema is not available")
+def test_jsonschema_accepts_result_with_breakdown_and_entity() -> None:
+    """Schema validation should accept breakdowns and entities."""
+    validate_standardized_output(
+        _valid_standardized_output_with_result(
+            {
+                "kind": "performance",
+                "status": "ok",
+                "producer": "backend",
+                "metrics": [{"name": "inference_time", "value": 1.0, "unit": "ms"}],
+                "breakdowns": [
+                    {
+                        "scope": "operator",
+                        "name": "CONV_2D",
+                        "location": "model/conv",
+                        "metrics": [
+                            {"name": "npu_cycles", "value": 1000, "unit": "cycles"}
+                        ],
+                    }
+                ],
+                "entities": [
+                    {
+                        "scope": "operator",
+                        "name": "CONV_2D",
+                        "location": "model/conv",
+                        "placement": "NPU",
+                    }
+                ],
+            }
+        )
+    )
 
 
 def test_validate_with_jsonschema_raises_on_collected_errors(

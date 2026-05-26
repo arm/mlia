@@ -158,6 +158,7 @@ test = [
     "pytest~=9.0",
     "pytest-cov~=7.0",
     "flaky~=3.8.1",
+    "jsonschema~=4.26",
     "hatchling>=1.27.0"
 ]
 dev = [
