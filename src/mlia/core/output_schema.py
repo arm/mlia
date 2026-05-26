@@ -13,7 +13,7 @@ from typing import Any
 from uuid import uuid4
 
 # Schema version for standardized output
-SCHEMA_VERSION = "1.0.0"
+SCHEMA_VERSION = "1.1.0"
 
 # Target schema version
 TARGET_SCHEMA_VERSION = "1.0.0"
@@ -95,6 +95,66 @@ class AdviceSeverity(str, Enum):
     INFO = "info"
     WARNING = "warning"
     ERROR = "error"
+
+
+class MetricAvailability(str, Enum):
+    """Metric availability enumeration."""
+
+    UNAVAILABLE = "unavailable"
+
+
+@dataclass(frozen=True)
+class StandardPerformanceMetric:
+    """Definition for a standardized performance metric."""
+
+    name: str
+    unit: str
+    unavailable_reason: str
+
+
+METRIC_NAME_ACCELERATOR_OPERATOR_PERCENTAGE = "accelerator_operator_percentage"
+METRIC_NAME_INFERENCES_PER_SECOND = "inferences_per_second"
+METRIC_NAME_CPU_UTILIZATION = "cpu_utilization"
+METRIC_NAME_TARGET_UTILIZATION = "target_utilization"
+METRIC_NAME_PEAK_ACTIVATION_MEMORY = "peak_activation_memory"
+METRIC_NAME_AVERAGE_MEMORY = "average_memory"
+
+UNIT_PERCENT = "%"
+UNIT_INFERENCES_PER_SECOND = "inferences/s"
+UNIT_BYTES = "bytes"
+
+STANDARD_PERFORMANCE_METRICS = (
+    StandardPerformanceMetric(
+        name=METRIC_NAME_ACCELERATOR_OPERATOR_PERCENTAGE,
+        unit=UNIT_PERCENT,
+        unavailable_reason="Accelerator operator placement data is not available.",
+    ),
+    StandardPerformanceMetric(
+        name=METRIC_NAME_INFERENCES_PER_SECOND,
+        unit=UNIT_INFERENCES_PER_SECOND,
+        unavailable_reason="Inference throughput data is not available.",
+    ),
+    StandardPerformanceMetric(
+        name=METRIC_NAME_CPU_UTILIZATION,
+        unit=UNIT_PERCENT,
+        unavailable_reason="CPU utilization data is not available.",
+    ),
+    StandardPerformanceMetric(
+        name=METRIC_NAME_TARGET_UTILIZATION,
+        unit=UNIT_PERCENT,
+        unavailable_reason="Target utilization data is not available.",
+    ),
+    StandardPerformanceMetric(
+        name=METRIC_NAME_PEAK_ACTIVATION_MEMORY,
+        unit=UNIT_BYTES,
+        unavailable_reason="Peak activation memory data is not available.",
+    ),
+    StandardPerformanceMetric(
+        name=METRIC_NAME_AVERAGE_MEMORY,
+        unit=UNIT_BYTES,
+        unavailable_reason="Average memory data is not available.",
+    ),
+)
 
 
 @dataclass(frozen=True)
@@ -288,21 +348,49 @@ class Metric:
     """Metric information."""
 
     name: str
-    value: float
+    value: float | int | None
     unit: str
     aggregation: str | None = None
     samples: int | None = None
     qualifiers: dict[str, Any] = field(default_factory=dict)
+    availability: MetricAvailability | None = None
+    reason: str | None = None
+
+    def __post_init__(self) -> None:
+        """Validate that the metric matches one of the supported schema shapes."""
+        if self.value is not None:
+            if self.availability is not None or self.reason is not None:
+                raise ValueError(
+                    "Metric cannot combine a numeric value with availability fields."
+                )
+            return
+
+        if self.availability is None:
+            raise ValueError("Metric must include a value or availability.")
+
+        if not self.reason:
+            raise ValueError("Unavailable metrics must include a reason.")
+
+        if self.aggregation is not None or self.samples is not None:
+            raise ValueError(
+                "Unavailable metrics cannot include aggregation or samples."
+            )
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
-        result = {"name": self.name, "value": self.value, "unit": self.unit}
+        result: dict[str, Any] = {"name": self.name, "unit": self.unit}
+        if self.value is not None:
+            result["value"] = self.value
         if self.aggregation is not None:
             result["aggregation"] = self.aggregation
         if self.samples is not None:
             result["samples"] = self.samples
         if self.qualifiers:
             result["qualifiers"] = self.qualifiers
+        if self.availability is not None:
+            result["availability"] = self.availability.value
+        if self.reason is not None:
+            result["reason"] = self.reason
         return result
 
     @classmethod
@@ -310,12 +398,40 @@ class Metric:
         """Create from dictionary."""
         return cls(
             name=data["name"],
-            value=data["value"],
+            value=data.get("value"),
             unit=data["unit"],
             aggregation=data.get("aggregation"),
             samples=data.get("samples"),
             qualifiers=data.get("qualifiers", {}),
+            availability=(
+                MetricAvailability(data["availability"])
+                if "availability" in data
+                else None
+            ),
+            reason=data.get("reason"),
         )
+
+
+def ensure_standard_performance_metrics(metrics: list[Metric]) -> list[Metric]:
+    """Add unavailable entries for standard performance metrics.
+
+    Plugin performance collectors should add the standard metrics they can
+    report, then call this helper to include unavailable entries for the
+    remaining standard metrics.
+    """
+    existing_names = {metric.name for metric in metrics}
+    missing_metrics = [
+        Metric(
+            name=definition.name,
+            value=None,
+            unit=definition.unit,
+            availability=MetricAvailability.UNAVAILABLE,
+            reason=definition.unavailable_reason,
+        )
+        for definition in STANDARD_PERFORMANCE_METRICS
+        if definition.name not in existing_names
+    ]
+    return [*metrics, *missing_metrics]
 
 
 @dataclass(frozen=True)

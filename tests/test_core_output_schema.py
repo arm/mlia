@@ -4,6 +4,7 @@
 
 import tempfile
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -218,12 +219,143 @@ class TestMetric:
             "qualifiers": {"key": "value"},
         }
 
+    def test_unavailable_to_dict(self) -> None:
+        """Test conversion of unavailable metric to dictionary."""
+        metric = schema.Metric(
+            name="metric_name",
+            value=None,
+            unit="metric_unit",
+            availability=schema.MetricAvailability.UNAVAILABLE,
+            reason="Metric is unavailable.",
+        )
+
+        assert metric.to_dict() == {
+            "name": "metric_name",
+            "unit": "metric_unit",
+            "availability": "unavailable",
+            "reason": "Metric is unavailable.",
+        }
+
     def test_from_dict(self) -> None:
         """Test creation from dictionary."""
         data = {"name": "inference_time", "value": 10.5, "unit": "ms"}
         metric = schema.Metric.from_dict(data)
         assert metric.name == "inference_time"
         assert metric.value == 10.5
+
+    def test_unavailable_from_dict(self) -> None:
+        """Test creation of unavailable metric from dictionary."""
+        metric = schema.Metric.from_dict(
+            {
+                "name": schema.METRIC_NAME_CPU_UTILIZATION,
+                "unit": schema.UNIT_PERCENT,
+                "availability": "unavailable",
+                "reason": "CPU utilization data is not available.",
+            }
+        )
+
+        assert metric.name == schema.METRIC_NAME_CPU_UTILIZATION
+        assert metric.value is None
+        assert metric.availability == schema.MetricAvailability.UNAVAILABLE
+        assert metric.reason == "CPU utilization data is not available."
+
+    @pytest.mark.parametrize(
+        ("metric_kwargs", "match"),
+        [
+            (
+                {
+                    "value": 10.5,
+                    "availability": schema.MetricAvailability.UNAVAILABLE,
+                    "reason": "Metric is unavailable.",
+                },
+                "cannot combine",
+            ),
+            ({"value": None}, "must include a value or availability"),
+            (
+                {"value": None, "availability": schema.MetricAvailability.UNAVAILABLE},
+                "must include a reason",
+            ),
+            (
+                {
+                    "value": None,
+                    "availability": schema.MetricAvailability.UNAVAILABLE,
+                    "reason": "Metric is unavailable.",
+                    "aggregation": "sum",
+                },
+                "cannot include aggregation or samples",
+            ),
+        ],
+    )
+    def test_metric_init_rejects_invalid_shapes(
+        self, metric_kwargs: dict[str, Any], match: str
+    ) -> None:
+        """Metric construction should reject shapes not allowed by the schema."""
+        with pytest.raises(ValueError, match=match):
+            schema.Metric(name="metric_name", unit="metric_unit", **metric_kwargs)
+
+
+class TestEnsureStandardPerformanceMetrics:
+    """Test standard performance metric helpers."""
+
+    def test_ensure_standard_performance_metrics_preserves_supplied_metric(
+        self,
+    ) -> None:
+        """Existing metrics should be preserved."""
+        throughput = schema.Metric(
+            name=schema.METRIC_NAME_INFERENCES_PER_SECOND,
+            value=42.0,
+            unit=schema.UNIT_INFERENCES_PER_SECOND,
+        )
+
+        metrics = schema.ensure_standard_performance_metrics([throughput])
+
+        assert metrics[0] == throughput
+        assert metrics[0].to_dict() == {
+            "name": schema.METRIC_NAME_INFERENCES_PER_SECOND,
+            "value": 42.0,
+            "unit": schema.UNIT_INFERENCES_PER_SECOND,
+        }
+
+    def test_ensure_standard_performance_metrics_fills_missing_metrics(
+        self,
+    ) -> None:
+        """Missing standard metrics should be represented as unavailable."""
+        throughput = schema.Metric(
+            name=schema.METRIC_NAME_INFERENCES_PER_SECOND,
+            value=42.0,
+            unit=schema.UNIT_INFERENCES_PER_SECOND,
+        )
+
+        metrics = schema.ensure_standard_performance_metrics([throughput])
+        by_name = {metric.name: metric for metric in metrics}
+
+        assert set(by_name) == {
+            definition.name for definition in schema.STANDARD_PERFORMANCE_METRICS
+        }
+        assert by_name[schema.METRIC_NAME_INFERENCES_PER_SECOND].value == 42.0
+        unavailable_metric = by_name[schema.METRIC_NAME_CPU_UTILIZATION]
+        assert unavailable_metric.value is None
+        assert unavailable_metric.availability == schema.MetricAvailability.UNAVAILABLE
+        assert unavailable_metric.unit == schema.UNIT_PERCENT
+        assert unavailable_metric.reason
+
+    def test_ensure_standard_performance_metrics_does_not_mutate_input(
+        self,
+    ) -> None:
+        """Helper should return a new list without mutating caller state."""
+        metrics = [
+            schema.Metric(
+                name=schema.METRIC_NAME_INFERENCES_PER_SECOND,
+                value=42.0,
+                unit=schema.UNIT_INFERENCES_PER_SECOND,
+            )
+        ]
+
+        filled_metrics = schema.ensure_standard_performance_metrics(metrics)
+
+        assert filled_metrics is not metrics
+        assert len(metrics) == 1
+        assert len(filled_metrics) == len(schema.STANDARD_PERFORMANCE_METRICS)
 
 
 class TestOperatorIdentifier:

@@ -42,7 +42,7 @@ def load_target_schema() -> dict[str, Any]:
     schema_path = (
         Path(__file__).parent.parent
         / "resources"
-        / f"mlia-target-schema-{schema.SCHEMA_VERSION}.json"
+        / f"mlia-target-schema-{schema.TARGET_SCHEMA_VERSION}.json"
     )
     if not schema_path.exists():
         raise FileNotFoundError(f"Schema file not found: {schema_path}")

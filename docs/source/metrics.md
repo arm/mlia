@@ -56,6 +56,40 @@ A simplified example:
 The exact contents of the output depend on the installed plugins, but the
 high-level structure stays stable.
 
+### Metric availability
+
+From schema version `1.1.0`, result metrics can be represented in two ways:
+
+- numeric metrics with `name`, `value`, and `unit`
+- unavailable metric entries with `name`, `unit`, `availability`, and `reason`
+
+For numeric metrics, omitted `availability` means that the value is available.
+Unavailable metric entries do not contain a placeholder `value`.
+
+This explicit availability marker is currently limited to the standardized
+performance fields added for this work: `accelerator_operator_percentage`,
+`inferences_per_second`, `cpu_utilization`, `target_utilization`,
+`peak_activation_memory`, and `average_memory`. It is not a complete availability
+map for every possible consumer field.
+
+Example metric entries:
+
+```json
+[
+  {
+    "name": "inferences_per_second",
+    "value": 4830.9,
+    "unit": "inferences/s"
+  },
+  {
+    "name": "cpu_utilization",
+    "unit": "%",
+    "availability": "unavailable",
+    "reason": "CPU utilization data is not available."
+  }
+]
+```
+
 ## How to read a result
 
 A recommended reading order is:
