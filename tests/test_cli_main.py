@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import sys
 from unittest.mock import MagicMock
 
 import pytest
@@ -11,17 +12,16 @@ import pytest
 import mlia.cli.main as cli_main
 
 
-@pytest.mark.parametrize("argv", [None, []])
 def test_no_arguments_show_help(
     monkeypatch: pytest.MonkeyPatch,
-    argv: list[str] | None,
 ) -> None:
     """Calling a CLI entry point without arguments should show help."""
     parser = MagicMock()
 
     monkeypatch.setattr(cli_main, "init_parser", lambda commands: parser)
+    monkeypatch.setattr(sys, "argv", ["mlia"])
 
-    result = cli_main.init_and_run([], argv)
+    result = cli_main.init_and_run([])
 
     assert result == 2
     parser.print_help.assert_called_once_with()

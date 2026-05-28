@@ -277,14 +277,13 @@ def init_parser(commands: list[CommandInfo]) -> argparse.ArgumentParser:
     return parser
 
 
-def init_and_run(commands: list[CommandInfo], argv: list[str] | None = None) -> int:
+def init_and_run(commands: list[CommandInfo]) -> int:
     """Init parser and run subcommand."""
     parser = init_parser(commands)
-    if not argv:
+    if len(sys.argv) == 1:
         parser.print_help()
         return 2
-
-    args = parser.parse_args(argv)
+    args = parser.parse_args()
 
     return run_command(args)
 
@@ -301,22 +300,22 @@ def copy_profile_file(
     return False
 
 
-def main(argv: list[str] | None = None) -> int:
+def main() -> int:
     """Entry point of the main application."""
     commands = get_commands()
-    return init_and_run(commands, argv)
+    return init_and_run(commands)
 
 
-def backend_main(argv: list[str] | None = None) -> int:
+def backend_main() -> int:
     """Entry point of the backend application."""
     commands = get_backend_commands()
-    return init_and_run(commands, argv)
+    return init_and_run(commands)
 
 
-def target_main(argv: list[str] | None = None) -> int:
+def target_main() -> int:
     """Entry point of the target application."""
     commands = get_target_commands()
-    return init_and_run(commands, argv)
+    return init_and_run(commands)
 
 
 if __name__ == "__main__":  # pragma: no cover
