@@ -280,6 +280,10 @@ def init_parser(commands: list[CommandInfo]) -> argparse.ArgumentParser:
 def init_and_run(commands: list[CommandInfo], argv: list[str] | None = None) -> int:
     """Init parser and run subcommand."""
     parser = init_parser(commands)
+    if not argv:
+        parser.print_help()
+        return 2
+
     args = parser.parse_args(argv)
 
     return run_command(args)
