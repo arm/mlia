@@ -26,3 +26,16 @@ def test_no_arguments_show_help(
     assert result == 2
     parser.print_help.assert_called_once_with()
     parser.parse_args.assert_not_called()
+
+
+def test_incorrect_arguments_show_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Parsing incorrect arguments should show an error."""
+    monkeypatch.setattr(sys, "argv", ["mlia", "bongo"])
+    parser = cli_main.init_parser([])
+
+    with pytest.raises(SystemExit) as exc_info:
+        parser.parse_args()
+
+    assert exc_info.value.code == 2

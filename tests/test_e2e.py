@@ -75,6 +75,22 @@ def test_e2e_no_arguments_show_help(command: str, tmp_path: Path) -> None:
     assert not (tmp_path / "mlia-output").exists()
 
 
+@pytest.mark.parametrize(
+    "command",
+    ["mlia", "mlia-backend", "mlia-target"],
+)
+def test_e2e_incorrect_arguments_show_error(command: str, tmp_path: Path) -> None:
+    result = subprocess.run(  # nosec B603
+        [command, "bongo"],
+        cwd=tmp_path,
+        capture_output=True,
+        check=False,
+        text=True,
+    )
+    assert result.returncode == 2
+    assert "error: argument command: invalid choice: 'bongo'" in result.stderr
+
+
 @mlia_e2e.parametrize(mlia_e2e.E2E_COMPATIBILITY)
 def test_e2e_compatibility(
     case: mlia_e2e.E2ECase,
