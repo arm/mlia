@@ -90,6 +90,16 @@ for details of how to create a pull request.
 Contributions must go through code review on GitHub. Only reviewed contributions
 can go to the main branch of MLIA.
 
+### Reporting bugs
+
+Report bugs by creating GitHub issues. Use the
+[`arm/mlia` issue tracker](https://github.com/arm/mlia/issues) by default,
+especially when the ownership is unclear or the problem spans multiple MLIA
+repos.
+
+Only file an issue in a plugin repository when the bug is obviously and
+specifically confined to that plugin.
+
 ## Developer Certificate of Origin (DCO)
 
 Before the MLIA project accepts your contribution, you need to certify its

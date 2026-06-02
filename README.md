@@ -23,6 +23,7 @@ available in the environment.
 - [Plugin model](#plugin-model)
 - [Quick start](#quick-start)
 - [Python API](#python-api)
+- [Reporting bugs](#reporting-bugs)
 - [Development](#development)
 
 ## Inclusive language commitment
@@ -159,6 +160,15 @@ pip install mlia[torch]
 The Python API follows the same plugin-based architecture as the CLI: the core
 package provides the entry points and shared output structure, while installed
 plugins extend what targets and backends are available.
+
+## Reporting bugs
+
+Report bugs by creating a GitHub issue. Use the
+[`arm/mlia` issue tracker](https://github.com/arm/mlia/issues) by default,
+including when you are not sure which repo owns the problem.
+
+Only file an issue in a plugin repository if the bug is clearly and
+specifically isolated to that plugin.
 
 ## Development
 
