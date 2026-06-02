@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import pytest
 
-from mlia.core.advice_generation import FactBasedAdviceProducer, advice_category
+from mlia.core.advice_generation import Advice, FactBasedAdviceProducer, advice_category
 from mlia.core.common import AdviceCategory, DataItem
 from mlia.core.context import Context
 from mlia.core.output_schema import AdviceCategory as SchemaAdviceCategory
@@ -36,6 +36,23 @@ def test_advice_generation() -> None:
     assert len(advice) == 2
     assert advice[0].message == "Advice for 123"
     assert advice[1].message == "Advice for hello"
+
+
+def test_advice_extension_dict_uses_schema_values() -> None:
+    """Test conversion to legacy extension dictionary uses schema enum values."""
+    advice = Advice(
+        id="0",
+        category=SchemaAdviceCategory.PERFORMANCE,
+        severity=AdviceSeverity.INFO,
+        message="Review the performance metrics.",
+    )
+
+    assert advice.to_extension_dict() == {
+        "id": "0",
+        "category": "performance",
+        "severity": "info",
+        "message": "Review the performance metrics.",
+    }
 
 
 @pytest.mark.parametrize(

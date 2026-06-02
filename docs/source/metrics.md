@@ -35,7 +35,11 @@ Typical top-level JSON fields include:
 - `target`
 - `backends`
 - `results`
-- Optional `extensions.advice`
+- Optional result-level `results[*].advice`
+
+Schema `1.1.0` uses `results[*].advice` for result-level advice. The earlier
+`results[*].advices` spelling was emitted by code but was not part of the
+validated schema contract.
 
 A simplified example:
 
@@ -49,7 +53,21 @@ A simplified example:
   "model": {"path": "model.tflite"},
   "target": {"profile": "<target-profile>"},
   "backends": [{"name": "<backend>"}],
-  "results": []
+  "results": [
+    {
+      "kind": "performance",
+      "status": "ok",
+      "producer": "<backend>",
+      "advice": [
+        {
+          "id": "0",
+          "category": "performance",
+          "severity": "info",
+          "message": "Review the performance metrics."
+        }
+      ]
+    }
+  ]
 }
 ```
 

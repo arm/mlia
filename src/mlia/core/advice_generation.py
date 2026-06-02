@@ -36,8 +36,8 @@ class Advice:
         """
         result: dict[str, Any] = {
             "id": self.id,
-            "category": self.category.value.upper(),
-            "severity": self.severity.value.upper(),
+            "category": self.category.value,
+            "severity": self.severity.value,
             "message": self.message,
         }
         if self.affected_entities:

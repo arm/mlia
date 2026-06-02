@@ -581,8 +581,8 @@ class Advice:
         """Convert to dictionary."""
         result: dict[str, Any] = {
             "id": self.id,
-            "category": self.category.value.upper(),
-            "severity": self.severity.value.upper(),
+            "category": self.category.value,
+            "severity": self.severity.value,
             "message": self.message,
         }
         if self.affected_entities:
@@ -621,7 +621,7 @@ class Result:  # pylint: disable=too-many-instance-attributes
     mode: ModeType | None = None
     checks: list[Check] = field(default_factory=list)
     entities: list[Entity] = field(default_factory=list)
-    advices: list[Advice] = field(default_factory=list)
+    advice: list[Advice] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
@@ -644,8 +644,8 @@ class Result:  # pylint: disable=too-many-instance-attributes
             result["checks"] = [c.to_dict() for c in self.checks]
         if self.entities:
             result["entities"] = [e.to_dict() for e in self.entities]
-        if self.advices:
-            result["advices"] = [a.to_dict() for a in self.advices]
+        if self.advice:
+            result["advice"] = [a.to_dict() for a in self.advice]
         return result
 
     @classmethod
@@ -662,7 +662,7 @@ class Result:  # pylint: disable=too-many-instance-attributes
             mode=ModeType(data["mode"]) if "mode" in data else None,
             checks=[Check.from_dict(c) for c in data.get("checks", [])],
             entities=[Entity.from_dict(e) for e in data.get("entities", [])],
-            advices=[Advice.from_dict(a) for a in data.get("advices", [])],
+            advice=[Advice.from_dict(a) for a in data.get("advice", [])],
         )
 
 

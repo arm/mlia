@@ -13,7 +13,6 @@ import pytest
 
 import mlia.core.output_schema as schema
 from mlia.core.output_validation import (
-    JSONSCHEMA_AVAILABLE,
     SchemaValidationError,
     _build_schema_registry,
     collect_validation_errors,
@@ -239,7 +238,6 @@ def test_loaded_schema_requires_current_schema_version() -> None:
     }
 
 
-@pytest.mark.skipif(not JSONSCHEMA_AVAILABLE, reason="jsonschema is not available")
 def test_jsonschema_accepts_unavailable_metric_entry() -> None:
     """Schema validation should accept unavailable metric entries."""
     validate_standardized_output(
@@ -254,7 +252,6 @@ def test_jsonschema_accepts_unavailable_metric_entry() -> None:
     )
 
 
-@pytest.mark.skipif(not JSONSCHEMA_AVAILABLE, reason="jsonschema is not available")
 def test_jsonschema_rejects_mismatched_schema_version() -> None:
     """Schema 1.1.0 should reject payloads that claim another schema version."""
     output = _valid_standardized_output(
@@ -266,7 +263,6 @@ def test_jsonschema_rejects_mismatched_schema_version() -> None:
         validate_standardized_output(output)
 
 
-@pytest.mark.skipif(not JSONSCHEMA_AVAILABLE, reason="jsonschema is not available")
 def test_jsonschema_rejects_unavailable_metric_with_fake_value() -> None:
     """Unavailable metric entries should not contain fabricated values."""
     with pytest.raises(SchemaValidationError, match="Schema validation failed"):
@@ -283,7 +279,6 @@ def test_jsonschema_rejects_unavailable_metric_with_fake_value() -> None:
         )
 
 
-@pytest.mark.skipif(not JSONSCHEMA_AVAILABLE, reason="jsonschema is not available")
 def test_jsonschema_accepts_result_with_breakdown_and_entity() -> None:
     """Schema validation should accept breakdowns and entities."""
     validate_standardized_output(
@@ -314,6 +309,95 @@ def test_jsonschema_accepts_result_with_breakdown_and_entity() -> None:
             }
         )
     )
+
+
+def test_jsonschema_accepts_result_with_advice() -> None:
+    """Schema validation should accept result-level advice."""
+    validate_standardized_output(
+        _valid_standardized_output_with_result(
+            {
+                "kind": "performance",
+                "status": "ok",
+                "producer": "backend",
+                "advice": [
+                    {
+                        "id": "0",
+                        "category": "performance",
+                        "severity": "info",
+                        "message": "Review the performance metrics.",
+                        "affected_entities": [
+                            {
+                                "scope": "operator",
+                                "name": "CONV_2D",
+                                "location": "model/conv",
+                            }
+                        ],
+                        "details": {"reason": "example"},
+                    }
+                ],
+            }
+        )
+    )
+
+
+def test_jsonschema_rejects_legacy_advices_field() -> None:
+    """Schema validation should reject the legacy advices property."""
+    with pytest.raises(SchemaValidationError, match="Schema validation failed"):
+        validate_standardized_output(
+            _valid_standardized_output_with_result(
+                {
+                    "kind": "performance",
+                    "status": "ok",
+                    "producer": "backend",
+                    "advices": [
+                        {
+                            "id": "0",
+                            "category": "performance",
+                            "severity": "info",
+                            "message": "Review the performance metrics.",
+                        }
+                    ],
+                }
+            )
+        )
+
+
+def test_jsonschema_rejects_uppercase_advice_values() -> None:
+    """Schema validation should reject enum member names in advice JSON."""
+    with pytest.raises(SchemaValidationError, match="Schema validation failed"):
+        validate_standardized_output(
+            _valid_standardized_output_with_result(
+                {
+                    "kind": "performance",
+                    "status": "ok",
+                    "producer": "backend",
+                    "advice": [
+                        {
+                            "id": "0",
+                            "category": "PERFORMANCE",
+                            "severity": "INFO",
+                            "message": "Review the performance metrics.",
+                        }
+                    ],
+                }
+            )
+        )
+
+
+def test_schema_1_0_does_not_define_advice() -> None:
+    """Schema 1.0.0 should remain unchanged for advice fields."""
+    schema_path = (
+        Path(__file__).parents[1]
+        / "src"
+        / "mlia"
+        / "resources"
+        / "mlia-output-schema-1.0.0.json"
+    )
+    schema_1_0 = json.loads(schema_path.read_text(encoding="utf-8"))
+    result_properties = schema_1_0["properties"]["results"]["items"]["properties"]
+
+    assert "advice" not in result_properties
+    assert "advices" not in result_properties
 
 
 def test_validate_with_jsonschema_raises_on_collected_errors(

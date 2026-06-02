@@ -537,6 +537,94 @@ class TestResult:
         assert result.kind == schema.ResultKind.PERFORMANCE
         assert result.status == schema.ResultStatus.OK
 
+    def test_to_dict_with_advice(self) -> None:
+        """Test conversion to dictionary with advice."""
+        result = schema.Result(
+            kind=schema.ResultKind.PERFORMANCE,
+            status=schema.ResultStatus.OK,
+            producer="backend",
+            advice=[
+                schema.Advice(
+                    id="0",
+                    category=schema.AdviceCategory.PERFORMANCE,
+                    severity=schema.AdviceSeverity.INFO,
+                    message="Review the performance metrics.",
+                    affected_entities=[
+                        schema.OperatorIdentifier(
+                            scope=schema.OperatorScope.OPERATOR,
+                            name="CONV_2D",
+                            location="model/conv",
+                        )
+                    ],
+                    details={"reason": "example"},
+                )
+            ],
+        )
+
+        result_dict = result.to_dict()
+
+        assert "advice" in result_dict
+        assert "advices" not in result_dict
+        assert result_dict["advice"] == [
+            {
+                "id": "0",
+                "category": "performance",
+                "severity": "info",
+                "message": "Review the performance metrics.",
+                "affected_entities": [
+                    {
+                        "scope": "operator",
+                        "name": "CONV_2D",
+                        "location": "model/conv",
+                    }
+                ],
+                "details": {"reason": "example"},
+            }
+        ]
+
+    def test_from_dict_with_advice(self) -> None:
+        """Test creation from dictionary with advice."""
+        result = schema.Result.from_dict(
+            {
+                "kind": "performance",
+                "status": "ok",
+                "producer": "backend",
+                "advice": [
+                    {
+                        "id": "0",
+                        "category": "performance",
+                        "severity": "info",
+                        "message": "Review the performance metrics.",
+                    }
+                ],
+            }
+        )
+
+        assert len(result.advice) == 1
+        assert result.advice[0].id == "0"
+        assert result.advice[0].category == schema.AdviceCategory.PERFORMANCE
+        assert result.advice[0].severity == schema.AdviceSeverity.INFO
+
+    def test_from_dict_does_not_parse_legacy_advices_alias(self) -> None:
+        """Test creation from dictionary ignores the legacy advices field."""
+        result = schema.Result.from_dict(
+            {
+                "kind": "performance",
+                "status": "ok",
+                "producer": "backend",
+                "advices": [
+                    {
+                        "id": "0",
+                        "category": "performance",
+                        "severity": "info",
+                        "message": "Review the performance metrics.",
+                    }
+                ],
+            }
+        )
+
+        assert result.advice == []
+
 
 class TestStandardizedOutput:
     """Test StandardizedOutput class."""

@@ -115,7 +115,8 @@
             "enum": ["measured", "simulated", "predicted"]
           },
           "checks": { "type": "array", "items": { "$ref": "#/$defs/check" } },
-          "entities": { "type": "array", "items": { "$ref": "#/$defs/entity" } }
+          "entities": { "type": "array", "items": { "$ref": "#/$defs/entity" } },
+          "advice": { "type": "array", "items": { "$ref": "#/$defs/advice" } }
         },
         "additionalProperties": false
       }
@@ -139,6 +140,32 @@
         },
         "name": { "type": "string" },
         "location": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+
+    "advice": {
+      "type": "object",
+      "required": ["id", "category", "severity", "message"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Opaque identifier for this advice entry."
+        },
+        "category": {
+          "type": "string",
+          "enum": ["compatibility", "performance", "optimization"]
+        },
+        "severity": {
+          "type": "string",
+          "enum": ["info", "warning", "error"]
+        },
+        "message": { "type": "string" },
+        "affected_entities": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/operator_identifier" }
+        },
+        "details": { "type": "object", "additionalProperties": true }
       },
       "additionalProperties": false
     },

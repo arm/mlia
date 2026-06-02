@@ -659,7 +659,10 @@ class TestJSONReporter:
 
         # Add standardized output with results
         reporter.standardized_outputs = [
-            {"schema_version": "1.0.0", "results": [{"kind": "performance"}]}
+            {
+                "schema_version": schema.SCHEMA_VERSION,
+                "results": [{"kind": "performance"}],
+            }
         ]
 
         # Add advice
@@ -678,14 +681,71 @@ class TestJSONReporter:
         call_args = mock_dumps.call_args[0][0]
         assert "results" in call_args
         assert len(call_args["results"]) == 1
-        assert "advices" in call_args["results"][0]
-        advice_list = call_args["results"][0]["advices"]
+        assert "advice" in call_args["results"][0]
+        assert "advices" not in call_args["results"][0]
+        advice_list = call_args["results"][0]["advice"]
         assert len(advice_list) == 1
         assert advice_list[0]["id"] == "0"
         assert advice_list[0]["message"] == "Test advice message"
-        assert advice_list[0]["category"] == "PERFORMANCE"
-        assert advice_list[0]["severity"] == "INFO"
+        assert advice_list[0]["category"] == "performance"
+        assert advice_list[0]["severity"] == "info"
         assert advice_list[0]["details"] == {"key": "value"}
+
+    @patch("builtins.print")
+    @patch("json.dumps")
+    def test_produce_standardized_report_skips_advice_for_schema_1_0(
+        self, mock_dumps: Mock, _mock_print: Mock
+    ) -> None:
+        """Test JSONReporter keeps schema 1.0.0 outputs schema-valid."""
+        reporter = JSONReporter(MagicMock())
+        reporter.standardized_outputs = [
+            {
+                "schema_version": "1.0.0",
+                "results": [{"kind": "performance"}],
+            }
+        ]
+        advice = Advice(
+            id="0",
+            category=SchemaAdviceCategory.PERFORMANCE,
+            severity=AdviceSeverity.INFO,
+            message="Test advice message",
+        )
+        reporter.advice_data = [([advice], MagicMock())]
+
+        reporter._produce_standardized_report()  # pylint: disable=protected-access
+
+        call_args = mock_dumps.call_args[0][0]
+        assert call_args["schema_version"] == "1.0.0"
+        assert "advice" not in call_args["results"][0]
+        assert "advices" not in call_args["results"][0]
+
+    @patch("builtins.print")
+    @patch("json.dumps")
+    def test_produce_standardized_report_with_advice_for_later_schema(
+        self, mock_dumps: Mock, _mock_print: Mock
+    ) -> None:
+        """Test JSONReporter keeps advice after the version that introduced it."""
+        reporter = JSONReporter(MagicMock())
+        reporter.standardized_outputs = [
+            {
+                "schema_version": "1.2.0",
+                "results": [{"kind": "performance"}],
+            }
+        ]
+        advice = Advice(
+            id="0",
+            category=SchemaAdviceCategory.PERFORMANCE,
+            severity=AdviceSeverity.INFO,
+            message="Test advice message",
+        )
+        reporter.advice_data = [([advice], MagicMock())]
+
+        reporter._produce_standardized_report()  # pylint: disable=protected-access
+
+        call_args = mock_dumps.call_args[0][0]
+        assert call_args["schema_version"] == "1.2.0"
+        assert call_args["results"][0]["advice"][0]["message"] == "Test advice message"
+        assert "advices" not in call_args["results"][0]
 
     def test_merge_standardized_outputs(self) -> None:
         """Test merging multiple standardized outputs."""

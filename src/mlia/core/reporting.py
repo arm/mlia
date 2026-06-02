@@ -25,6 +25,32 @@ from mlia.utils.types import is_list_of
 logger = logging.getLogger(__name__)
 
 OUTPUT_FORMATS = ("json",)
+RESULT_ADVICE_SCHEMA_VERSION = "1.1.0"
+
+
+def _schema_version_at_least(version: Any, minimum: str) -> bool:
+    """Return whether a semantic schema version is at least the minimum."""
+    if not isinstance(version, str):
+        return False
+
+    try:
+        parsed_version = tuple(int(part) for part in version.split("."))
+        parsed_minimum = tuple(int(part) for part in minimum.split("."))
+    except ValueError:
+        return False
+
+    if len(parsed_version) != 3 or len(parsed_minimum) != 3:
+        return False
+
+    return parsed_version >= parsed_minimum
+
+
+def _supports_result_advice(output: dict[str, Any]) -> bool:
+    """Return whether the output schema supports result-level advice."""
+    return _schema_version_at_least(
+        output.get("schema_version"),
+        RESULT_ADVICE_SCHEMA_VERSION,
+    )
 
 
 class Report(ABC):
@@ -675,7 +701,11 @@ class JSONReporter(Reporter):
             output = self._merge_standardized_outputs(self.standardized_outputs)
 
         # Add advice to results if available
-        if self.advice_data and isinstance(output, dict):
+        if (
+            self.advice_data
+            and isinstance(output, dict)
+            and _supports_result_advice(output)
+        ):
             advice_list = []
             for advice_items, _ in self.advice_data:
                 for advice in advice_items:
@@ -684,9 +714,9 @@ class JSONReporter(Reporter):
             # Add advice to each result in the output
             if "results" in output:
                 for result in output["results"]:
-                    if "advices" not in result:
-                        result["advices"] = []
-                    result["advices"].extend([a.to_dict() for a in advice_list])
+                    if "advice" not in result:
+                        result["advice"] = []
+                    result["advice"].extend([a.to_dict() for a in advice_list])
 
         return cast(dict[str, Any], output)
 
