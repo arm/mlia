@@ -135,8 +135,8 @@ from mlia import run_advisor
 
 result = run_advisor(
     advice_category="performance",
-    target_profile="<target-profile>",
-    model="model.tflite",
+    target_profile="ethos-u55-256",
+    model=Path("model.tflite"),
 )
 
 print(result["schema_version"])

@@ -41,3 +41,7 @@ class Registry(Generic[T]):
     def names(self) -> list[str]:
         """Sorted list of registered item names."""
         return sorted(list(self.items.keys()))
+
+    def get(self, name: str) -> T | None:
+        """Get a named item from the items dict."""
+        return self.items.get(name)

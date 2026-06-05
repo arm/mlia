@@ -20,7 +20,7 @@ logger = logging.getLogger("mlia")
 TARGET_PLUGIN_GROUP = "mlia.plugin.target"
 BACKEND_PLUGIN_GROUP = "mlia.plugin.backend"
 CLI_PLUGIN_GROUP = "mlia.plugin.cli"
-CONVERTER_PLUGIN_GROUP = "mlia.plugin.converter"
+TRANSFORMER_PLUGIN_GROUP = "mlia.plugin.transformer"
 
 (MLIA_ENTRY_POINT,) = metadata.entry_points(group="console_scripts", name="mlia")
 
@@ -115,6 +115,6 @@ def load_cli_plugins(*args: Any) -> None:
     call_entry_points(CLI_PLUGIN_GROUP, *args)
 
 
-def load_converter_plugins(*args: Any) -> None:
-    """Load all converter plugins by calling their entry points."""
-    call_entry_points(CONVERTER_PLUGIN_GROUP, *args)
+def load_transformer_plugins(*args: Any) -> None:
+    """Load all transformer plugins by calling their entry points."""
+    call_entry_points(TRANSFORMER_PLUGIN_GROUP, *args)

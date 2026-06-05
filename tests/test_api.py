@@ -18,7 +18,6 @@ import pytest
 from mlia.api import (
     ValidationMode,
     _capture_external_output,
-    _export_module_to_pt2,
     _get_api_event_handler,
     _normalize_validation_mode,
     _raise_if_deprecated_output_missing,
@@ -52,6 +51,7 @@ from mlia.core.errors import (
 from mlia.core.handlers import WorkflowEventsHandler
 from mlia.target.config import TargetInfo
 from mlia.target.registry import registry as target_registry
+from mlia.transformers.registry import TransformRequest
 
 
 class _FakeHandler:  # pylint: disable=too-few-public-methods
@@ -852,79 +852,44 @@ def test_resolve_model_for_run_rejects_non_path_without_module() -> None:
 def test_resolve_model_for_run_requires_output_dir_for_module() -> None:
     """Module export requires an output directory."""
     with pytest.raises(InternalError, match="Output directory is required"):
-        _resolve_model_for_run("ignored", cast(Any, object()), (), None)
-
-
-def test_export_module_to_pt2_rejects_missing_torch(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
-    """Export should fail clearly when torch is unavailable."""
-    monkeypatch.setitem(sys.modules, "torch", None)
-
-    with pytest.raises(
-        ConfigurationError, match="torch' package is required when exporting"
-    ):
-        _export_module_to_pt2(cast(Any, object()), (), tmp_path)
-
-
-def test_export_module_to_pt2_wraps_export_failures(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
-    """torch.export failures should map to ConfigurationError."""
-
-    class FakeExport:  # pylint: disable=too-few-public-methods
-        @staticmethod
-        def export(_module: object, args: tuple[object, ...]) -> object:
-            raise RuntimeError("export failed")
-
-    fake_torch = types.SimpleNamespace(export=FakeExport())
-    monkeypatch.setitem(sys.modules, "torch", fake_torch)
-
-    with pytest.raises(ConfigurationError, match="export failed"):
-        _export_module_to_pt2(cast(Any, object()), (), tmp_path)
-
-
-def test_export_module_to_pt2_success(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
-    """Successful exports should write to model.pt2 under the output dir."""
-    saved: dict[str, object] = {}
-
-    class FakeExport:  # pylint: disable=too-few-public-methods
-        @staticmethod
-        def export(_module: object, args: tuple[object, ...]) -> object:
-            saved["args"] = args
-            return "exported-program"
-
-        @staticmethod
-        def save(exported: object, output_path: Path) -> None:
-            saved["exported"] = exported
-            saved["output_path"] = output_path
-
-    fake_torch = types.SimpleNamespace(export=FakeExport())
-    monkeypatch.setitem(sys.modules, "torch", fake_torch)
-
-    output_path = _export_module_to_pt2(cast(Any, object()), (1, 2), tmp_path)
-
-    assert output_path == tmp_path / "model.pt2"
-    assert saved == {
-        "args": (1, 2),
-        "exported": "exported-program",
-        "output_path": tmp_path / "model.pt2",
-    }
+        _resolve_model_for_run(
+            "ignored",
+            cast(Any, object()),
+            {"example_inputs": (), "enable_quantization": False},
+            None,
+        )
 
 
 def test_resolve_model_for_run_exports_module(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """Module inputs should resolve through the PT2 export helper."""
-    monkeypatch.setattr(
-        "mlia.api._export_module_to_pt2",
-        lambda _module, _inputs, output_dir: output_dir / "model.pt2",
-    )
+    """Module inputs should resolve through the PT2 transform request."""
+    captured: dict[str, TransformRequest] = {}
+    module = cast(Any, object())
 
-    assert _resolve_model_for_run("ignored", cast(Any, object()), (), tmp_path) == str(
-        tmp_path / "model.pt2"
+    def fake_transform_model(req: TransformRequest) -> Path:
+        captured["request"] = req
+        return req.output_dir / "model.pt2"
+
+    monkeypatch.setattr("mlia.api.transform_model", fake_transform_model)
+
+    assert _resolve_model_for_run(
+        module,
+        module,
+        {
+            "example_inputs": (),
+            "enable_quantization": False,
+        },
+        tmp_path,
+    ) == str(tmp_path / "model.pt2")
+    assert captured["request"] == TransformRequest(
+        model=module,
+        output_dir=tmp_path,
+        target_format="pt2",
+        transform_options={
+            "example_inputs": (),
+            "enable_quantization": False,
+        },
     )
 
 

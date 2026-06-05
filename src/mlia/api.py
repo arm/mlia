@@ -43,6 +43,7 @@ from mlia.target.registry import (
 from mlia.target.registry import registry as target_registry
 from mlia.target.registry import supported_advice as target_supported_advice
 from mlia.target.registry import supported_backends as target_supported_backends
+from mlia.transformers.registry import TransformRequest, transform_model
 from mlia.utils.filesystem import temp_directory
 from mlia.utils.logging import process_raw_output
 
@@ -92,35 +93,12 @@ def _torch_module_backend_config(target_profile: str) -> tuple[str | None, str]:
     )
 
 
-def _export_module_to_pt2(
-    module: nn.Module, example_inputs: tuple[Any, ...], output_dir: Path
-) -> Path:
-    try:
-        import torch
-    except ImportError as err:
-        raise ConfigurationError(
-            "The 'torch' package is required when exporting nn.Module inputs."
-        ) from err
-
-    output_dir.mkdir(parents=True, exist_ok=True)
-    output_path = output_dir / "model.pt2"
-    try:
-        exported = torch.export.export(module, args=example_inputs)
-        torch.export.save(exported, output_path)
-    except Exception as err:
-        raise ConfigurationError(
-            f"Failed to export torch.nn.Module with torch.export: {err}"
-        ) from err
-
-    return output_path
-
-
 def _validate_module_input(
     model: object,
     example_inputs: tuple[Any, ...] | None,
     enable_quantization: bool,
     target_profile: str,
-) -> tuple[nn.Module | None, tuple[Any, ...] | None]:
+) -> tuple[nn.Module | None, dict[str, Any] | None]:
     if isinstance(model, (str, Path)):
         if enable_quantization:
             raise ConfigurationError(
@@ -148,13 +126,16 @@ def _validate_module_input(
             f"torch.nn.Module inputs are not supported for target '{target}'.",
         )
 
-    return module, example_inputs
+    return module, {
+        "example_inputs": example_inputs,
+        "enable_quantization": enable_quantization,
+    }
 
 
 def _resolve_model_for_run(
-    model: str | Path | nn.Module,
+    model: Path | nn.Module,
     module_input: nn.Module | None,
-    module_example_inputs: tuple[Any, ...] | None,
+    transform_options: dict[str, Any] | None,
     output_dir: Path | None,
 ) -> str:
     if module_input is None:
@@ -165,9 +146,13 @@ def _resolve_model_for_run(
         raise InternalError(
             "Output directory is required to export torch.nn.Module inputs."
         )
-    return os.fspath(
-        _export_module_to_pt2(module_input, module_example_inputs or (), output_dir)
+    req = TransformRequest(
+        model=module_input,
+        output_dir=output_dir,
+        target_format="pt2",
+        transform_options=transform_options or {},
     )
+    return os.fspath(transform_model(req))
 
 
 def _normalize_validation_mode(validation: ValidationMode | str) -> ValidationMode:
@@ -199,7 +184,7 @@ def _resolve_output_base_dir(
 def run_advisor(
     advice_category: str,
     target_profile: str,
-    model: str | Path | nn.Module,
+    model: Path | nn.Module,
     *,
     backends: list[str] | None = None,
     example_inputs: tuple[Any, ...] | None = None,
@@ -272,7 +257,7 @@ def run_advisor(
         raise ConfigurationError(
             "Optimization advice is not supported by run_advisor()."
         )
-    module_input, module_example_inputs = _validate_module_input(
+    module_input, transform_options = _validate_module_input(
         model,
         example_inputs,
         enable_quantization,
@@ -294,7 +279,14 @@ def run_advisor(
         copy.deepcopy(backend_options) if backend_options is not None else {}
     )
     _validate_backend_options(backend_options_local)
-    if module_input is not None and not enable_quantization:
+    if (
+        module_input is not None
+        and transform_options is not None
+        and (
+            "enable_quantization" in transform_options
+            and not transform_options["enable_quantization"]
+        )
+    ):
         backend_name, option_key = _torch_module_backend_config(target_profile)
         if backend_name:
             backend_options_local.setdefault(backend_name, {})[option_key] = False
@@ -305,7 +297,7 @@ def run_advisor(
         advice_category_enum=advice_category_enum,
         model=model,
         module_input=module_input,
-        module_example_inputs=module_example_inputs,
+        transform_options=transform_options,
         logs_dir=logs_dir,
         verbose=verbose,
         target_profile=target_profile,
@@ -360,9 +352,9 @@ def _get_api_event_handler(
 class _RunAdvisorInputs:
     advice_set: set[str]
     advice_category_enum: set[AdviceCategory]
-    model: str | Path | nn.Module
+    model: Path | nn.Module
     module_input: nn.Module | None
-    module_example_inputs: tuple[Any, ...] | None
+    transform_options: dict[str, Any] | None
     logs_dir: str | Path | None
     verbose: bool
     target_profile: str
@@ -411,7 +403,7 @@ def _run_advisor_with_context(
     model_for_run = _resolve_model_for_run(
         inputs.model,
         inputs.module_input,
-        inputs.module_example_inputs,
+        inputs.transform_options,
         local_context.output_dir,
     )
 
