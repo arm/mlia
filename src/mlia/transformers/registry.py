@@ -10,6 +10,7 @@ from typing import Any, Protocol
 
 from mlia.core.errors import ConfigurationError
 from mlia.plugins.plugins import load_transformer_plugins
+from mlia.transformers.error import TransformerNotFoundError
 from mlia.utils.registry import Registry
 
 
@@ -85,7 +86,7 @@ def _get_transformer(
             break
 
     if valid_transformer is None:
-        raise ConfigurationError("Transformer for model is not available.")
+        raise TransformerNotFoundError("Transformer for model is not available.")
 
     return valid_transformer
 

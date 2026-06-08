@@ -9,6 +9,7 @@ from unittest.mock import MagicMock, create_autospec
 import pytest
 
 from mlia.core.errors import ConfigurationError
+from mlia.transformers.error import TransformerNotFoundError
 from mlia.transformers.registry import (
     TransformRequest,
     _get_model_format,
@@ -132,7 +133,7 @@ def test_get_transformer_raises_when_transformer_is_unavailable() -> None:
     registry.register("unsupported_to_fake", unsupported_transformer)
     registry.register("unsupported_to_crungle", unsupported_transformer)
 
-    with pytest.raises(ConfigurationError, match="Transformer for model"):
+    with pytest.raises(TransformerNotFoundError, match="Transformer for model"):
         _get_transformer(registry, object(), "crungle", {})
 
 
@@ -150,7 +151,7 @@ def test_get_transformer_rejects_transformer_with_unsupported_kwargs() -> None:
     registry = Registry[Any]()
     registry.register("supported_to_crungle", transformer)
 
-    with pytest.raises(ConfigurationError, match="Transformer for model"):
+    with pytest.raises(TransformerNotFoundError, match="Transformer for model"):
         _get_transformer(
             registry,
             supported_model,
