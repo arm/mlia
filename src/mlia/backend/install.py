@@ -9,7 +9,7 @@ import os
 import platform
 import tarfile
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from functools import partial
 from pathlib import Path
 from typing import Callable, Iterable, Optional, Union
@@ -107,6 +107,7 @@ class BackendInfo:
     backend_path: Path
     copy_source: bool = True
     settings: dict | None = None
+    supporting_paths: list[tuple[Path, Path]] = field(default_factory=list)
 
 
 PathChecker = Callable[[Path], Optional[BackendInfo]]
@@ -287,6 +288,7 @@ class BackendInstallation(Installation):
                 backend_info.backend_path,
                 self.fvp_dir_name,
                 backend_info.settings,
+                backend_info.supporting_paths,
             )
         else:
             backend_repo.add_backend(
@@ -368,6 +370,29 @@ def _filter_tar_members(
             )
 
 
+def _resolve_supporting_paths(
+    root_path: Path, supporting_subfolders: list[str]
+) -> list[tuple[Path, Path]] | None:
+    """Resolve configured supporting folders under root path."""
+    supporting_paths: list[tuple[Path, Path]] = []
+    root_path = root_path.resolve()
+    for subfolder in supporting_subfolders:
+        relative_path = Path(subfolder)
+        supporting_path = (root_path / relative_path).resolve()
+
+        if relative_path.is_absolute() or not supporting_path.is_dir():
+            return None
+
+        try:
+            normalized_relative_path = supporting_path.relative_to(root_path)
+        except ValueError:
+            return None
+
+        supporting_paths.append((supporting_path, normalized_relative_path))
+
+    return supporting_paths
+
+
 class PackagePathChecker:
     """Package path checker."""
 
@@ -375,11 +400,13 @@ class PackagePathChecker:
         self,
         expected_files: list[str],
         backend_subfolder: str | None = None,
+        supporting_subfolders: list[str] | None = None,
         settings: dict | None = None,
     ) -> None:
         """Init the path checker."""
         self.expected_files = expected_files
         self.backend_subfolder = backend_subfolder
+        self.supporting_subfolders = supporting_subfolders or []
         self.settings = settings
 
     def __call__(self, backend_path: Path) -> BackendInfo | None:
@@ -395,7 +422,17 @@ class PackagePathChecker:
             if subfolder.is_dir():
                 actual_backend_path = subfolder
 
-        return BackendInfo(actual_backend_path, settings=self.settings)
+        supporting_paths = _resolve_supporting_paths(
+            backend_path, self.supporting_subfolders
+        )
+        if supporting_paths is None:
+            return None
+
+        return BackendInfo(
+            actual_backend_path,
+            settings=self.settings,
+            supporting_paths=supporting_paths,
+        )
 
 
 class StaticPathChecker:

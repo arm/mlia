@@ -106,6 +106,7 @@ class BackendRepository:
         backend_path: Path,
         backend_dir_name: str,
         settings: dict | None = None,
+        supporting_paths: list[tuple[Path, Path]] | None = None,
     ) -> None:
         """Copy backend files into repository."""
         repo_backend_path = self._get_backend_path(backend_dir_name)
@@ -114,6 +115,7 @@ class BackendRepository:
             raise RuntimeError(f"Unable to copy backend files for {backend_name}.")
 
         copy_all(backend_path, dest=repo_backend_path)
+        _copy_supporting_folders(repo_backend_path, supporting_paths)
 
         settings = settings or {}
         settings["backend_dir"] = backend_dir_name
@@ -197,3 +199,14 @@ def get_backend_repository(
         else:
             repo_path = Path.home() / ".mlia"
     return BackendRepository(repo_path)
+
+
+def _copy_supporting_folders(
+    repo_backend_path: Path,
+    supporting_paths: list[tuple[Path, Path]] | None,
+) -> None:
+    """Copy supporting folders into backend repository path."""
+    for source_path, relative_path in supporting_paths or []:
+        destination = repo_backend_path / relative_path
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copytree(source_path, destination, dirs_exist_ok=True)
