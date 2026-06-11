@@ -34,10 +34,9 @@ def setup_logging(
            logging system
     :param log_filename: name of the log file in the logs directory
     """
-    mlia_logger, tensorflow_logger, py_warnings_logger = (
-        logging.getLogger(logger_name)
-        for logger_name in ["mlia", "tensorflow", "py.warnings"]
-    )
+    mlia_logger = logging.getLogger("mlia")
+    tensorflow_logger = logging.getLogger("tensorflow")
+    py_warnings_logger = logging.getLogger("py.warnings")
 
     # enable debug output, actual message filtering depends on
     # the provided parameters and being done at the handlers level
@@ -96,7 +95,7 @@ def _get_mlia_handlers(
             file_path=_get_log_file(logs_dir, log_filename),
             log_level=log_level,
             log_format=NoASCIIFormatter(fmt=_FILE_DEBUG_FORMAT),
-            delay=True,
+            delay=False,
         )
 
 
@@ -118,13 +117,13 @@ def _get_tools_handlers(
             file_path=_get_log_file(logs_dir, log_filename),
             log_level=logging.DEBUG,
             log_format=_FILE_DEBUG_FORMAT,
-            delay=True,
+            delay=False,
         )
 
 
 def _get_log_file(logs_dir: str | Path, log_filename: str) -> Path:
     """Get the log file path."""
     logs_dir_path = Path(logs_dir)
-    logs_dir_path.mkdir(exist_ok=True)
+    logs_dir_path.mkdir(parents=True, exist_ok=True)
 
     return logs_dir_path / log_filename

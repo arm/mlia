@@ -4,7 +4,6 @@
 
 from __future__ import annotations
 
-import argparse
 import copy
 import io
 import logging
@@ -14,13 +13,12 @@ from contextlib import ExitStack, contextmanager
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Iterator, cast
+from typing import TYPE_CHECKING, Any, Iterator, TypedDict, cast
 
 from mlia.backend.config import BackendType
 from mlia.backend.manager import ensure_backends_installed, get_installation_manager
 from mlia.backend.registry import registry as backend_registry
 from mlia.cli.command_validators import validate_backend
-from mlia.cli.options import discover_backend_option_specs
 from mlia.core.advisor import InferenceAdvisor
 from mlia.core.common import AdviceCategory
 from mlia.core.context import ExecutionContext
@@ -48,6 +46,27 @@ from mlia.utils.filesystem import temp_directory
 from mlia.utils.logging import process_raw_output
 
 logger = logging.getLogger(__name__)
+
+
+class BackendOptionSpec(TypedDict):
+    """Describe backend option metadata derived from backend CLI mappings."""
+
+    module: str
+    backend: str
+    config_key: str
+    cli_option: str
+    full_cli_option: str
+    dest: str
+    type: type
+    help: str
+
+
+class BackendInfo(TypedDict):
+    """Describe backend installation status."""
+
+    name: str
+    installed: bool
+    could_be_installed: bool
 
 
 class ValidationMode(Enum):
@@ -268,8 +287,8 @@ def run_advisor(
 
     try:
         selected_backends = validate_backend(target_profile, backends)
-    except argparse.ArgumentError as err:
-        raise ConfigurationError(err.message) from err
+    except ConfigurationError:
+        raise
     except ValueError as err:
         raise ConfigurationError(str(err)) from err
     except Exception as err:
@@ -639,14 +658,51 @@ def list_target_profiles() -> dict[str, list[dict[str, object]]]:
     return target_profiles
 
 
-def list_backends() -> list[dict[str, object]]:
-    """List available backends with install status and description.
+def install_backends(
+    names: list[str],
+    path: Path | None = None,
+    accept_eula: bool = False,
+    noninteractive: bool = False,
+    force: bool = False,
+) -> None:
+    """Install backend packages.
 
-    Returns:
-        A list of backend entries with install status and descriptions.
+    Args:
+        names: Backend names to install.
+        path: Optional local backend path. When set, exactly one backend name is
+            required.
+        accept_eula: Whether to accept contained EULAs.
+        noninteractive: Whether to run installer prompts non-interactively.
+        force: Whether to reinstall when the backend is already installed.
+    """
+    manager = get_installation_manager(noninteractive)
+    if path is not None:
+        if len(names) != 1:
+            raise ValueError("Exactly one backend name is required.")
+        manager.install_from(path, names[0], force)
+        return
+
+    manager.download_and_install(names, accept_eula, force)
+
+
+def uninstall_backends(names: list[str]) -> None:
+    """Uninstall backend packages.
+
+    Args:
+        names: Backend names to uninstall.
     """
     manager = get_installation_manager(noninteractive=True)
-    backends: list[dict[str, object]] = []
+    manager.uninstall(names)
+
+
+def list_backends() -> list[BackendInfo]:
+    """List available backends with install status.
+
+    Returns:
+        A list of backend entries with install status information.
+    """
+    manager = get_installation_manager(noninteractive=True)
+    backends: list[BackendInfo] = []
 
     for backend, config in backend_registry.items.items():
         if not config.selectable or not config.supported_advice:
@@ -665,13 +721,34 @@ def list_backends() -> list[dict[str, object]]:
         backends.append(
             {
                 "name": backend,
-                "description": backend_registry.pretty_name(backend),
                 "installed": installed,
                 "could_be_installed": could_be_installed,
             }
         )
 
-    return sorted(backends, key=lambda item: str(item["name"]))
+    return sorted(backends, key=lambda item: item["name"])
+
+
+def discover_backend_option_specs() -> list[BackendOptionSpec]:
+    """Return backend option metadata derived from BackendConfiguration.cli_options."""
+    specs: list[BackendOptionSpec] = []
+    for backend_name, backend_configuration in backend_registry.items.items():
+        module_name = backend_name.replace("-", "_")
+        for config_key, cli_option in backend_configuration.cli_options.items():
+            specs.append(
+                {
+                    "module": module_name,
+                    "backend": backend_name,
+                    "config_key": config_key,
+                    "cli_option": cli_option,
+                    "full_cli_option": (f"--{backend_name}.{cli_option.lstrip('-')}"),
+                    "dest": f"{module_name}_{config_key}",
+                    "type": Path,
+                    "help": f"Overrides the {cli_option} backend option.",
+                }
+            )
+
+    return specs
 
 
 def list_backend_options() -> list[dict[str, object]]:
@@ -789,7 +866,8 @@ def get_advice(
            target. Default settings will be used if None.
     :param backend_options: Optional dictionary of backend-specific options
            discovered from CLI arguments. Backend parameters are defined in each
-           backend's CONFIG_TO_CLI_OPTION and automatically exposed as CLI options.
+           backend's BackendConfiguration.cli_options and automatically exposed
+           as CLI options.
     :param accept_eula: Controls EULA acceptance for auto-installed backends.
            False (default) fails with ConfigurationError if EULA acceptance is required.
            True accepts EULAs non-interactively. None enables interactive CLI behavior.
@@ -817,8 +895,8 @@ def get_advice(
 
     try:
         validated_backends = validate_backend(target_profile, backends)
-    except argparse.ArgumentError as err:
-        raise ConfigurationError(err.message) from err
+    except ConfigurationError:
+        raise
     except ValueError as err:
         raise ConfigurationError(str(err)) from err
     except Exception as err:

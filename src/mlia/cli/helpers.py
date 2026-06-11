@@ -9,8 +9,19 @@ from pathlib import Path
 from shutil import copy
 from typing import Any, cast
 
-from mlia.cli.options import get_target_profile_opts
 from mlia.core.helpers import ActionResolver
+
+
+def _get_target_option_args(target_args: dict[str, Any] | None) -> list[str]:
+    """Return CLI target profile arguments for follow-up command suggestions."""
+    if not target_args:
+        return []
+
+    target_profile = target_args.get("target_profile")
+    if target_profile is None:
+        return []
+
+    return ["--target-profile", str(target_profile)]
 
 
 class CLIActionResolver(ActionResolver):
@@ -54,7 +65,7 @@ class CLIActionResolver(ActionResolver):
         self, separate_target_opts: bool = True
     ) -> tuple[str | None, str]:
         """Get model and target options."""
-        target_opts = " ".join(get_target_profile_opts(self.args))
+        target_opts = " ".join(_get_target_option_args(self.args))
         if separate_target_opts and target_opts:
             target_opts = f" {target_opts}"
 

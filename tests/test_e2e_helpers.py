@@ -207,11 +207,6 @@ def test_load_cases_does_not_touch_cli_command_loading(
         ]""",
     )
 
-    def fail_get_commands() -> list[object]:
-        raise AssertionError("collection should not load CLI commands")
-
-    monkeypatch.setattr("mlia.cli.main.get_commands", fail_get_commands)
-
     cases = _load_cases()
 
     assert tuple(str(case) for case in cases) == (

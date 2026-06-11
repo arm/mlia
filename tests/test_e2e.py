@@ -21,31 +21,21 @@ pytestmark = pytest.mark.e2e
 
 NO_ARGS_HELP_TEXT = {
     "mlia": (
-        "usage:",
-        "ML Inference Advisor",
-        "Supported Targets/Backends:",
-        "-h, --help",
-        "Commands:",
+        "Usage:",
+        "Commands",
         "check",
     ),
     "mlia-backend": (
-        "usage:",
-        "ML Inference Advisor",
-        "Supported Targets/Backends:",
-        "-h, --help",
-        "Commands:",
+        "Usage:",
+        "Commands",
         "install",
         "uninstall",
         "list",
     ),
     "mlia-target": (
-        "usage:",
-        "ML Inference Advisor",
-        "Supported Targets/Backends:",
-        "-h, --help",
-        "Commands:",
+        "Usage:",
+        "Commands",
         "list",
-        "List available target profiles",
     ),
 }
 
@@ -75,6 +65,19 @@ def test_e2e_no_arguments_show_help(command: str, tmp_path: Path) -> None:
     assert not (tmp_path / "mlia-output").exists()
 
 
+def test_e2e_mistyped_arguments_show_suggestion(tmp_path: Path) -> None:
+    """Should show suggestion when called without arguments."""
+    result = subprocess.run(  # nosec B603
+        ["mlia", "backned"],
+        cwd=tmp_path,
+        capture_output=True,
+        check=False,
+        text=True,
+    )
+    assert result.returncode == 2
+    assert "Did you mean 'backend'?" in result.stderr
+
+
 @pytest.mark.parametrize(
     "command",
     ["mlia", "mlia-backend", "mlia-target"],
@@ -88,7 +91,7 @@ def test_e2e_incorrect_arguments_show_error(command: str, tmp_path: Path) -> Non
         text=True,
     )
     assert result.returncode == 2
-    assert "error: argument command: invalid choice: 'bongo'" in result.stderr
+    assert "No such command 'bongo'." in result.stderr
 
 
 @mlia_e2e.parametrize(mlia_e2e.E2E_COMPATIBILITY)

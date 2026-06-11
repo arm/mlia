@@ -4,10 +4,10 @@
 
 from __future__ import annotations
 
-import argparse
 import logging
 import sys
 
+from mlia.core.errors import ConfigurationError
 from mlia.target.registry import default_backends, get_target, supported_backends
 
 logger = logging.getLogger(__name__)
@@ -16,9 +16,9 @@ logger = logging.getLogger(__name__)
 def validate_backend(target_profile: str, backend: list[str] | None) -> list[str]:
     """Validate backend with given target profile.
 
-    This validator checks whether the given target-profile and backend are
+    This validator checks whether the given target profile and backend are
     compatible with each other.
-    It assumes that prior checks where made on the validity of the target-profile.
+    It assumes that prior checks were made on the validity of the target profile.
     """
     target = get_target(target_profile)
 
@@ -32,22 +32,20 @@ def validate_backend(target_profile: str, backend: list[str] | None) -> list[str
     backends = {normalize_string(b): b for b in backend}
 
     incompatible_backends = [b for b in backends if b not in compatible_backends]
-    # Throw an error if any unsupported backends are used
     if incompatible_backends:
-        raise argparse.ArgumentError(
-            None,
+        raise ConfigurationError(
             f"Backend {', '.join(backends[b] for b in incompatible_backends)} "
-            f"not supported with target-profile {target_profile}.",
+            f"not supported with target profile {target_profile}.",
         )
     return [compatible_backends[b] for b in backends]
 
 
-def validate_check_target_profile(target_profile: str, category: set[str]) -> None:
-    """Validate whether advice category is compatible with the provided target_profile.
+def validate_check_target_profile(target_profile: str, category: set[str]) -> bool:
+    """Validate whether the advice category is compatible with the target profile.
 
-    This validator function raises warnings if any desired advice category is not
-    compatible with the selected target profile. If no operation can be
-    performed as a result of the validation, MLIA exits with error code 0.
+    Logs warnings when a requested advice category is incompatible with the
+    selected target profile. Returns ``False`` when no check operation should
+    be performed, allowing the CLI entry point to decide how to exit.
     """
     incompatible_targets_performance: list[str] = ["tosa"]
     incompatible_targets_compatibility: list[str] = []
@@ -56,8 +54,8 @@ def validate_check_target_profile(target_profile: str, category: set[str]) -> No
     try_performance = "performance" in category
     try_compatibility = "compatibility" in category
 
-    # Cross check which of the desired operations can be performed on given
-    # target-profile
+    # Cross-check which of the desired operations can be performed on the given
+    # target profile.
     do_performance = (
         try_performance and target_profile not in incompatible_targets_performance
     )
@@ -67,7 +65,7 @@ def validate_check_target_profile(target_profile: str, category: set[str]) -> No
 
     # Case: desired operations can be performed with given target profile
     if (try_performance == do_performance) and (try_compatibility == do_compatibility):
-        return
+        return True
 
     warning_message = "\nWARNING: "
     # Case: performance operation to be skipped
@@ -87,12 +85,12 @@ def validate_check_target_profile(target_profile: str, category: set[str]) -> No
     # Case: at least one operation will be performed
     if do_compatibility or do_performance:
         logger.warning(warning_message)
-        return
+        return True
 
     # Case: no operation will be performed
     warning_message += " No operation was performed."
     logger.warning(warning_message)
-    sys.exit(0)
+    return False
 
 
 def validate_optimize_target_profile(target_profile: str) -> None:

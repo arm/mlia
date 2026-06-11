@@ -79,6 +79,21 @@ These examples stay intentionally generic. The core repo explains the shared
 command shape, while plugin repos explain the target- or backend-specific
 variants.
 
+## Color output
+
+MLIA enables colored CLI output when writing to an interactive terminal.
+
+To disable colors explicitly for `mlia`, `mlia-target`, and `mlia-backend`, set
+the `NO_COLOR` environment variable to any non-empty value before running the
+command:
+
+```bash
+NO_COLOR=1 mlia check model.tflite --target-profile <target-profile> --performance
+```
+
+Color is also disabled automatically when standard output is not a TTY, such as
+when redirecting output to a file or piping it to another command.
+
 ## Backend-specific options
 
 The CLI can expose backend-specific options depending on which backends are

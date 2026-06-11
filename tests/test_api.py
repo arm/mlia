@@ -4,7 +4,6 @@
 
 from __future__ import annotations
 
-import argparse
 import io
 import sys
 import types
@@ -119,14 +118,8 @@ def test_list_backends_shape() -> None:
     }
     assert {entry["name"] for entry in result} == expected_names
     for entry in result:
-        assert set(entry.keys()) == {
-            "name",
-            "description",
-            "installed",
-            "could_be_installed",
-        }
+        assert set(entry.keys()) == {"name", "installed", "could_be_installed"}
         assert isinstance(entry["name"], str)
-        assert isinstance(entry["description"], str)
         assert isinstance(entry["installed"], bool)
         assert isinstance(entry["could_be_installed"], bool)
 
@@ -598,13 +591,13 @@ def test_run_advisor_rejects_optimization_category(test_tflite_model: Path) -> N
         run_advisor("optimization", "tosa", test_tflite_model)
 
 
-def test_run_advisor_maps_argparse_error(
+def test_run_advisor_preserves_configuration_error(
     monkeypatch: pytest.MonkeyPatch, test_tflite_model: Path
 ) -> None:
-    """Ensure argparse errors map to ConfigurationError."""
+    """Ensure backend configuration errors pass through unchanged."""
 
     def raise_error(*_args: object, **_kwargs: object) -> list[str]:
-        raise argparse.ArgumentError(None, "bad argument")
+        raise ConfigurationError("bad argument")
 
     monkeypatch.setattr("mlia.api.validate_backend", raise_error)
 
@@ -1418,22 +1411,14 @@ def test_list_backends_covers_builtin_and_installation_paths(
             ),
         },
     )
-    monkeypatch.setattr(
-        backend_registry,
-        "pretty_name",
-        lambda name: f"Pretty {name}",
-    )
-
     assert list_backends() == [
         {
             "name": "builtin",
-            "description": "Pretty builtin",
             "installed": True,
             "could_be_installed": True,
         },
         {
             "name": "installable",
-            "description": "Pretty installable",
             "installed": False,
             "could_be_installed": True,
         },

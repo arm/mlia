@@ -29,12 +29,14 @@ __version__ = version("mlia")
 from mlia import backends, target_profiles, targets
 from mlia.api import (
     ValidationMode,
+    install_backends,
     list_backend_options,
     list_backends,
     list_target_profiles,
     list_targets,
     run_advisor,
     supported_backends,
+    uninstall_backends,
 )
 from mlia.core.errors import (
     ConfigurationError,
@@ -45,6 +47,8 @@ from mlia.core.errors import (
 
 __all__ = [
     "backends",
+    "install_backends",
+    "uninstall_backends",
     "list_backend_options",
     "list_backends",
     "list_target_profiles",

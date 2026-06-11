@@ -4,11 +4,10 @@
 
 from __future__ import annotations
 
-import argparse
-
 import pytest
 
 from mlia.cli import command_validators
+from mlia.core.errors import ConfigurationError
 
 
 def test_validate_backend_returns_canonical_backend_ids(
@@ -43,7 +42,7 @@ def test_validate_backend_rejects_unsupported_backend(
         lambda target: ["corstone-300"],
     )
 
-    with pytest.raises(argparse.ArgumentError, match="not supported"):
+    with pytest.raises(ConfigurationError, match="not supported with target profile"):
         command_validators.validate_backend("target-profile", ["unknown"])
 
 
@@ -63,3 +62,31 @@ def test_validate_backend_returns_default_backends(
     assert command_validators.validate_backend("target-profile", None) == [
         "default-backend"
     ]
+
+
+def test_validate_check_target_profile_returns_false_when_nothing_can_run(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Check validation should signal a clean no-op instead of exiting directly."""
+    with caplog.at_level("WARNING"):
+        result = command_validators.validate_check_target_profile(
+            "tosa",
+            {"performance"},
+        )
+
+    assert not result
+    assert "No operation was performed." in caplog.text
+
+
+def test_validate_check_target_profile_returns_true_when_some_checks_remain(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Check validation should keep the command running when work remains."""
+    with caplog.at_level("WARNING"):
+        result = command_validators.validate_check_target_profile(
+            "tosa",
+            {"compatibility", "performance"},
+        )
+
+    assert result
+    assert "Performance checks skipped" in caplog.text
