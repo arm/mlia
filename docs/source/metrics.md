@@ -87,8 +87,8 @@ Unavailable metric entries do not contain a placeholder `value`.
 This explicit availability marker is currently limited to the standardized
 performance fields added for this work: `accelerator_operator_percentage`,
 `inferences_per_second`, `cpu_utilization`, `target_utilization`,
-`peak_activation_memory`, and `average_memory`. It is not a complete availability
-map for every possible consumer field.
+`model_weight_memory`, `peak_activation_memory`, and `average_memory`. It is
+not a complete availability map for every possible consumer field.
 
 Example metric entries:
 

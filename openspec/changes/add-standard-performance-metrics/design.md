@@ -9,6 +9,7 @@ This change is intentionally narrow. It covers the supported fields called out b
 - inference throughput
 - CPU utilization
 - target utilization
+- model weight memory
 - peak activation memory
 - average memory footprint
 
@@ -16,7 +17,7 @@ MLIA already has schema locations for much of the broader requirement summary: a
 
 The implementation should use a metric-by-metric mapping rather than assume every standardized field is new. Existing MLIA metrics that already satisfy a requirement should be documented with their existing names. Genuinely missing fields should be added with standard MLIA metric names and units. Throughput needs particular care because current plugins may already emit throughput-like metrics with backend-specific names.
 
-The Vela/Corstone "all stats" work is related, but it is plugin-owned and should be specified separately in the owning plugin repository. Optional memory-profile fields such as model weight memory also belong to that later plugin-owned stats-completeness work, not this core standard-fields change.
+The Vela/Corstone "all stats" work is related, but it is plugin-owned and should be specified separately in the owning plugin repository. Core owns shared standard performance metric names and unavailable-entry behavior for fields MLIA chooses to cover, including model weight memory. Backend-specific source extraction and all-stats completeness remain plugin-owned.
 
 ## Goals / Non-Goals
 
@@ -50,7 +51,7 @@ Alternative considered: emit a separate consumer-shaped JSON document. That woul
 
 ### Result-level metrics are limited to global values
 
-Accelerator operator percentage, inference throughput, CPU utilization, target utilization, peak activation memory, and average memory footprint are global result-level values and should be emitted under `results[*].metrics`.
+Accelerator operator percentage, inference throughput, CPU utilization, target utilization, model weight memory, peak activation memory, and average memory footprint are global result-level values and should be emitted under `results[*].metrics`.
 
 Accelerator operator percentage is an operator-placement metric, not a measured runtime percentage. The standard MLIA metric name for this field is `accelerator_operator_percentage`. Its mapping documentation should make the placement semantics clear. The requirement context refers to compatibility-style pass, fail, and partial status, which is produced by compatibility analysis rather than performance analysis. Plugins should therefore populate this metric from compatibility/operator-placement data when that data is available, and should not infer it from a performance-only payload.
 
@@ -58,7 +59,9 @@ Operator-level or layer-level values are outside this core change unless they ar
 
 ### Metric semantics are explicit
 
-Inference throughput is derived from suitable latency data when available, but the backend or plugin owns the calculation because it owns the latency semantics. It uses the standard MLIA metric name `inferences_per_second` and unit `inferences/s`. CPU utilization uses the standard MLIA metric name `cpu_utilization`; MLIA must emit it as an availability-aware metric entry when no backend source can provide a supported value. Target utilization uses the standard MLIA metric name `target_utilization` and is calculated from suitable cycle data as `(compute_cycles / total_cycles) * 100 if total_cycles else 0.0`. Peak activation memory uses the standard MLIA metric name `peak_activation_memory` and means the highest activation memory usage during a single inference run. Average memory uses the standard MLIA metric name `average_memory` and means average memory usage over the full measurement window, not peak, allocation total, or instantaneous memory. The field tickets require these memory metrics to be added to result metrics; backends should emit numeric values where they own suitable source data and use explicit unavailable entries only where that source data is absent.
+Inference throughput is derived from suitable latency data when available, but the backend or plugin owns the calculation because it owns the latency semantics. It uses the standard MLIA metric name `inferences_per_second` and unit `inferences/s`. CPU utilization uses the standard MLIA metric name `cpu_utilization`; MLIA must emit it as an availability-aware metric entry when no backend source can provide a supported value. Target utilization uses the standard MLIA metric name `target_utilization` and is calculated from suitable cycle data as `(compute_cycles / total_cycles) * 100 if total_cycles else 0.0`.
+
+Model weight memory uses the standard MLIA metric name `model_weight_memory` and unit `bytes`; plugins own the source-specific mapping and should emit an unavailable entry when no supported source value is available. Peak activation memory uses the standard MLIA metric name `peak_activation_memory` and means the highest activation memory usage during a single inference run. Average memory uses the standard MLIA metric name `average_memory` and means average memory usage over the full measurement window, not peak, allocation total, or instantaneous memory. The field tickets require these memory metrics to be added to result metrics; backends should emit numeric values where they own suitable source data and use explicit unavailable entries only where that source data is absent.
 
 Percentage metrics in this field set use values in the range `0..100` with unit `%`. Backends and plugins should normalize source values into that convention before emitting standardized output.
 
@@ -86,11 +89,12 @@ This mapping is intentionally limited to the fields needed for the current stand
 | Accelerator operator percentage | metric `accelerator_operator_percentage`, unit `%` | Operator-placement metric, not a measured runtime percentage. |
 | CPU utilization | metric `cpu_utilization`, unit `%`, or an unavailable metric entry | Emit `unavailable` unless a backend can provide a real value. |
 | Target utilization | metric `target_utilization`, unit `%` | Generic MLIA metric name for target utilization derived from suitable cycle data. |
+| Model weight memory | metric `model_weight_memory`, unit `bytes`, or an unavailable metric entry | Plugins own backend-specific source selection and extraction. |
 | Peak activation memory | metric `peak_activation_memory`, unit `bytes`, or an unavailable metric entry | Emit numeric values only where the plugin owns suitable source data. |
 | Average memory | metric `average_memory`, unit `bytes`, or an unavailable metric entry | Must mean average memory over the measurement window. |
 | Scoped metric fields without values | availability-aware metric entries with `availability`, `unit`, and `reason` | MLIA must not fabricate values; markers are limited to the current standardized performance field set. |
 
-Fields outside this mapping, including optional memory-profile and memory-traffic statistics, remain outside this core change. Existing backend-specific metrics should be preserved where already emitted, but new or standardized completeness work should be handled by a later plugin-owned statistics-completeness change if required.
+Fields outside this mapping, including backend-specific memory-profile and memory-traffic source statistics, remain outside this core change. Existing backend-specific metrics should be preserved where already emitted, but new or standardized completeness work should be handled by a later plugin-owned statistics-completeness change if required.
 
 ### Missing data is represented in metrics
 

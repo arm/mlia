@@ -333,6 +333,13 @@ class TestEnsureStandardPerformanceMetrics:
             definition.name for definition in schema.STANDARD_PERFORMANCE_METRICS
         }
         assert by_name[schema.METRIC_NAME_INFERENCES_PER_SECOND].value == 42.0
+        model_weight_memory = by_name[schema.METRIC_NAME_MODEL_WEIGHT_MEMORY]
+        assert model_weight_memory.value is None
+        assert model_weight_memory.availability == schema.MetricAvailability.UNAVAILABLE
+        assert model_weight_memory.unit == schema.UNIT_BYTES
+        assert (
+            model_weight_memory.reason == "Model weight memory data is not available."
+        )
         unavailable_metric = by_name[schema.METRIC_NAME_CPU_UTILIZATION]
         assert unavailable_metric.value is None
         assert unavailable_metric.availability == schema.MetricAvailability.UNAVAILABLE

@@ -116,6 +116,7 @@ METRIC_NAME_ACCELERATOR_OPERATOR_PERCENTAGE = "accelerator_operator_percentage"
 METRIC_NAME_INFERENCES_PER_SECOND = "inferences_per_second"
 METRIC_NAME_CPU_UTILIZATION = "cpu_utilization"
 METRIC_NAME_TARGET_UTILIZATION = "target_utilization"
+METRIC_NAME_MODEL_WEIGHT_MEMORY = "model_weight_memory"
 METRIC_NAME_PEAK_ACTIVATION_MEMORY = "peak_activation_memory"
 METRIC_NAME_AVERAGE_MEMORY = "average_memory"
 
@@ -143,6 +144,11 @@ STANDARD_PERFORMANCE_METRICS = (
         name=METRIC_NAME_TARGET_UTILIZATION,
         unit=UNIT_PERCENT,
         unavailable_reason="Target utilization data is not available.",
+    ),
+    StandardPerformanceMetric(
+        name=METRIC_NAME_MODEL_WEIGHT_MEMORY,
+        unit=UNIT_BYTES,
+        unavailable_reason="Model weight memory data is not available.",
     ),
     StandardPerformanceMetric(
         name=METRIC_NAME_PEAK_ACTIVATION_MEMORY,

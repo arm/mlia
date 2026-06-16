@@ -93,6 +93,16 @@ MLIA SHALL define stable MLIA standardized-output names and units for string-key
 - **WHEN** MLIA emits a percentage metric in the standardized performance field set
 - **THEN** the metric value uses the range `0..100` and unit `%`.
 
+#### Scenario: Model weight memory emitted
+
+- **WHEN** model weight memory is available for a single inference run
+- **THEN** MLIA emits `model_weight_memory` as a result-level metric under `results[*].metrics` with unit `bytes`.
+
+#### Scenario: Model weight memory unavailable
+
+- **WHEN** MLIA or the selected backend cannot provide supported model weight memory source data
+- **THEN** MLIA emits `model_weight_memory` as an availability-aware metric entry with unit `bytes` and a reason.
+
 #### Scenario: Peak activation memory emitted
 
 - **WHEN** peak activation memory is available for a single inference run
@@ -201,10 +211,10 @@ MLIA SHALL explicitly represent standardized performance fields that do not have
 - **WHEN** a field is not part of the standardized performance field set for this work
 - **THEN** MLIA does not need to represent that field as part of this change.
 
-#### Scenario: Optional memory-profile stats belong to later plugin work
+#### Scenario: Backend-specific model weight source mapping is plugin-owned
 
-- **WHEN** a field such as `memoryProfile.modelWeightMemory` belongs to Vela/Corstone statistics-completeness work
-- **THEN** MLIA does not need to represent that field as part of this core standard-fields change.
+- **WHEN** a backend maps source data to `model_weight_memory`
+- **THEN** the backend-specific source selection and extraction remain outside the core standard-fields change.
 
 #### Scenario: Non-value marker scope is documented
 
