@@ -116,12 +116,14 @@ METRIC_NAME_ACCELERATOR_OPERATOR_PERCENTAGE = "accelerator_operator_percentage"
 METRIC_NAME_INFERENCES_PER_SECOND = "inferences_per_second"
 METRIC_NAME_CPU_UTILIZATION = "cpu_utilization"
 METRIC_NAME_TARGET_UTILIZATION = "target_utilization"
+METRIC_NAME_INFERENCE_TIME = "inference_time"
 METRIC_NAME_MODEL_WEIGHT_MEMORY = "model_weight_memory"
 METRIC_NAME_PEAK_ACTIVATION_MEMORY = "peak_activation_memory"
 METRIC_NAME_AVERAGE_MEMORY = "average_memory"
 
 UNIT_PERCENT = "%"
 UNIT_INFERENCES_PER_SECOND = "inferences/s"
+UNIT_MILLISECONDS = "ms"
 UNIT_BYTES = "bytes"
 
 STANDARD_PERFORMANCE_METRICS = (
@@ -144,6 +146,11 @@ STANDARD_PERFORMANCE_METRICS = (
         name=METRIC_NAME_TARGET_UTILIZATION,
         unit=UNIT_PERCENT,
         unavailable_reason="Target utilization data is not available.",
+    ),
+    StandardPerformanceMetric(
+        name=METRIC_NAME_INFERENCE_TIME,
+        unit=UNIT_MILLISECONDS,
+        unavailable_reason="Inference latency data is not available.",
     ),
     StandardPerformanceMetric(
         name=METRIC_NAME_MODEL_WEIGHT_MEMORY,
@@ -419,12 +426,23 @@ class Metric:
 
 
 def ensure_standard_performance_metrics(metrics: list[Metric]) -> list[Metric]:
-    """Add unavailable entries for standard performance metrics.
+    """Validate and add unavailable entries for standard performance metrics.
 
     Plugin performance collectors should add the standard metrics they can
     report, then call this helper to include unavailable entries for the
     remaining standard metrics.
     """
+    definitions_by_name = {
+        definition.name: definition for definition in STANDARD_PERFORMANCE_METRICS
+    }
+    for metric in metrics:
+        if definition := definitions_by_name.get(metric.name):
+            if metric.unit != definition.unit:
+                raise ValueError(
+                    f"Standard performance metric '{metric.name}' must use unit "
+                    f"'{definition.unit}', got '{metric.unit}'."
+                )
+
     existing_names = {metric.name for metric in metrics}
     missing_metrics = [
         Metric(

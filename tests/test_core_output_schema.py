@@ -345,6 +345,11 @@ class TestEnsureStandardPerformanceMetrics:
         assert unavailable_metric.availability == schema.MetricAvailability.UNAVAILABLE
         assert unavailable_metric.unit == schema.UNIT_PERCENT
         assert unavailable_metric.reason
+        inference_time = by_name[schema.METRIC_NAME_INFERENCE_TIME]
+        assert inference_time.value is None
+        assert inference_time.availability == schema.MetricAvailability.UNAVAILABLE
+        assert inference_time.unit == schema.UNIT_MILLISECONDS
+        assert inference_time.reason == "Inference latency data is not available."
 
     def test_ensure_standard_performance_metrics_does_not_mutate_input(
         self,
@@ -363,6 +368,25 @@ class TestEnsureStandardPerformanceMetrics:
         assert filled_metrics is not metrics
         assert len(metrics) == 1
         assert len(filled_metrics) == len(schema.STANDARD_PERFORMANCE_METRICS)
+
+    def test_ensure_standard_performance_metrics_rejects_mismatched_unit(
+        self,
+    ) -> None:
+        """Standard metrics should use the unit defined by the shared contract."""
+        metric = schema.Metric(
+            name=schema.METRIC_NAME_INFERENCE_TIME,
+            value=12.5,
+            unit="seconds",
+        )
+
+        with pytest.raises(
+            ValueError,
+            match=(
+                "Standard performance metric 'inference_time' must use unit "
+                "'ms', got 'seconds'."
+            ),
+        ):
+            schema.ensure_standard_performance_metrics([metric])
 
 
 class TestOperatorIdentifier:

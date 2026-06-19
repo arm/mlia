@@ -223,10 +223,11 @@ def _default_backend_installer(argv: Sequence[str]) -> None:
 def _install_backend(backend: str) -> None:
     _default_backend_installer(
         [
-            "mlia-backend",
+            "mlia",
+            "backend",
             "install",
             "--noninteractive",
-            "--i-agree-to-the-contained-eula",
+            "--accept-eula",
             backend,
         ]
     )

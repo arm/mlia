@@ -846,7 +846,7 @@ def test_resolve_model_for_run_requires_output_dir_for_module() -> None:
     """Module export requires an output directory."""
     with pytest.raises(InternalError, match="Output directory is required"):
         _resolve_model_for_run(
-            "ignored",
+            Path("ignored"),
             cast(Any, object()),
             {"example_inputs": (), "enable_quantization": False},
             None,
@@ -862,7 +862,8 @@ def test_resolve_model_for_run_exports_module(
 
     def fake_transform_model(req: TransformRequest) -> Path:
         captured["request"] = req
-        return req.output_dir / "model.pt2"
+        output_dir: Path = req.output_dir
+        return output_dir / "model.pt2"
 
     monkeypatch.setattr("mlia.api.transform_model", fake_transform_model)
 

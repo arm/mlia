@@ -421,7 +421,7 @@ def test_run_case_installs_requested_backends_once(
     commands: list[tuple[str, ...]] = []
 
     def fake_run(argv: list[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
-        if argv[0] == "mlia-backend":
+        if argv[:2] == ["mlia", "backend"]:
             backend_installs.append(tuple(argv))
             return subprocess.CompletedProcess(argv, 0)
         commands.append(tuple(argv))
@@ -436,10 +436,11 @@ def test_run_case_installs_requested_backends_once(
 
     assert backend_installs == [
         (
-            "mlia-backend",
+            "mlia",
+            "backend",
             "install",
             "--noninteractive",
-            "--i-agree-to-the-contained-eula",
+            "--accept-eula",
             "dummy-backend",
         )
     ]
@@ -698,17 +699,19 @@ def test_install_requested_backends_uses_backend_env(
     assert installed == ("backend-a", "backend-b")
     assert commands == [
         [
-            "mlia-backend",
+            "mlia",
+            "backend",
             "install",
             "--noninteractive",
-            "--i-agree-to-the-contained-eula",
+            "--accept-eula",
             "backend-a",
         ],
         [
-            "mlia-backend",
+            "mlia",
+            "backend",
             "install",
             "--noninteractive",
-            "--i-agree-to-the-contained-eula",
+            "--accept-eula",
             "backend-b",
         ],
     ]
@@ -743,10 +746,7 @@ def test_install_requested_backends_streams_install_failure_output(
 
     message = str(exc_info.value)
     captured = capsys.readouterr()
-    assert (
-        "mlia-backend install --noninteractive "
-        "--i-agree-to-the-contained-eula backend-a" in message
-    )
+    assert "mlia backend install --noninteractive --accept-eula backend-a" in message
     assert "return code: 1" in message
     assert "backend install stdout" in message
     assert "backend install stderr" in message
@@ -780,10 +780,11 @@ def test_ensure_backends_available_installs_only_required_backends(
     assert verified == ("backend-b",)
     assert installs == [
         (
-            "mlia-backend",
+            "mlia",
+            "backend",
             "install",
             "--noninteractive",
-            "--i-agree-to-the-contained-eula",
+            "--accept-eula",
             "backend-b",
         )
     ]
@@ -869,10 +870,11 @@ def test_ensure_backends_available_installs_required_backend_without_env(
     assert verified == ("backend-a",)
     assert installs == [
         (
-            "mlia-backend",
+            "mlia",
+            "backend",
             "install",
             "--noninteractive",
-            "--i-agree-to-the-contained-eula",
+            "--accept-eula",
             "backend-a",
         )
     ]
@@ -904,10 +906,11 @@ def test_ensure_backends_available_refreshes_installed_state_after_each_install(
     assert verified == ("backend-a", "backend-b")
     assert installs == [
         (
-            "mlia-backend",
+            "mlia",
+            "backend",
             "install",
             "--noninteractive",
-            "--i-agree-to-the-contained-eula",
+            "--accept-eula",
             "backend-a",
         )
     ]
@@ -937,10 +940,11 @@ def test_ensure_backends_available_rejects_backend_missing_after_install(
 
     assert installs == [
         (
-            "mlia-backend",
+            "mlia",
+            "backend",
             "install",
             "--noninteractive",
-            "--i-agree-to-the-contained-eula",
+            "--accept-eula",
             "backend-a",
         )
     ]
