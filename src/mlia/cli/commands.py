@@ -8,6 +8,7 @@ import logging
 from pathlib import Path
 from typing import Annotated, Any
 
+import click
 import typer
 from rich.console import Console
 from rich.panel import Panel
@@ -15,6 +16,8 @@ from rich.table import Table
 
 from mlia import __version__
 from mlia.api import (
+    BackendOptionSpec,
+    discover_backend_option_specs,
     get_advice,
     install_backends,
     list_backends,
@@ -44,6 +47,52 @@ MLIA_HELP_EPILOG = (
 )
 
 
+def _reshape_backend_options(
+    backend_option_specs: list[BackendOptionSpec],
+    backend_cli_options: dict[str, object],
+) -> dict[str, dict[str, object]]:
+    """Reshape flat CLI backend option values into backend config overrides."""
+    backend_options: dict[str, dict[str, object]] = {}
+    for spec in backend_option_specs:
+        value = backend_cli_options.get(spec["dest"])
+        if value is None:
+            continue
+
+        backend_options.setdefault(spec["backend"], {})[spec["config_key"]] = value
+
+    return backend_options
+
+
+class BackendOptionCommand(typer.core.TyperCommand):
+    """Typer command that adds backend-specific check options."""
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        """Initialize the command with discovered backend-specific options."""
+        self._backend_option_specs = discover_backend_option_specs()
+        params = list(kwargs["params"])
+        params.extend(
+            click.Option(
+                [spec["full_cli_option"], spec["dest"]],
+                default=None,
+                type=spec["type"],
+                help=spec["help"],
+            )
+            for spec in self._backend_option_specs
+        )
+        command_kwargs = {**kwargs, "params": params}
+        super().__init__(*args, **command_kwargs)
+
+    def invoke(self, ctx: click.Context) -> Any:
+        """Collect dynamic backend options before invoking the Typer callback."""
+        backend_options = _reshape_backend_options(
+            self._backend_option_specs, ctx.params
+        )
+        for spec in self._backend_option_specs:
+            ctx.params.pop(spec["dest"], None)
+        ctx.ensure_object(dict)["backend_options"] = backend_options
+        return super().invoke(ctx)
+
+
 def _setup_command_logging(debug: bool) -> None:
     """Set up logging for commands without an execution context."""
     setup_logging(verbose=debug)
@@ -61,6 +110,7 @@ def _create_check_context(
     i_agree_to_the_contained_eula: bool,
     noninteractive: bool,
     debug: bool,
+    backend_options: dict[str, dict[str, object]] | None = None,
 ) -> ExecutionContext:
     """Create an execution context for the live Typer check command."""
     cli_args: dict[str, Any] = {
@@ -73,6 +123,7 @@ def _create_check_context(
         "json": json_output,
         "i_agree_to_the_contained_eula": i_agree_to_the_contained_eula,
         "noninteractive": noninteractive,
+        "backend_options": backend_options or {},
     }
     try:
         execution_context = ExecutionContext(
@@ -380,6 +431,7 @@ def check(
         typer.Option("--noninteractive", help="Run check without interaction"),
     ] = False,
     debug: bool = debug_option(),
+    backend_options: dict[str, dict[str, object]] | None = None,
     ctx: typer.Context | None = None,
 ) -> None:
     """Generate advice for the input model."""
@@ -404,6 +456,7 @@ def check(
         i_agree_to_the_contained_eula=i_agree_to_the_contained_eula,
         noninteractive=noninteractive,
         debug=debug,
+        backend_options=backend_options,
     )
 
     if not validate_check_target_profile(target_profile, category):
@@ -420,11 +473,13 @@ def check(
         else False
         if noninteractive
         else None,
+        backend_options=backend_options,
     )
 
 
 @mlia_app.command(
     "check",
+    cls=BackendOptionCommand,
     help="Generate compatibility/performance advice for a model",
     no_args_is_help=True,
 )
@@ -486,6 +541,10 @@ def check_command(
     debug: bool = debug_option(),
 ) -> None:
     """Typer entry point for the check command."""
+    backend_options = {}
+    if ctx is not None and isinstance(ctx.obj, dict):
+        backend_options = ctx.obj.get("backend_options", {})
+
     check(
         ctx=ctx,
         model=model,
@@ -498,6 +557,7 @@ def check_command(
         i_agree_to_the_contained_eula=i_agree_to_the_contained_eula,
         noninteractive=noninteractive,
         debug=debug,
+        backend_options=backend_options,
     )
 
 

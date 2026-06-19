@@ -86,6 +86,26 @@ def test_check_noninteractive_with_eula_accepts_eula_install(
     assert get_advice.call_args.kwargs["accept_eula"] is True
 
 
+def test_check_passes_backend_options(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    get_advice = MagicMock()
+    backend_options: dict[str, dict[str, object]] = {
+        "bingo-bongo-backend": {"system_config": "backend.toml"}
+    }
+    monkeypatch.setattr(cli_commands, "validate_check_target_profile", MagicMock())
+    monkeypatch.setattr(cli_commands, "get_advice", get_advice)
+    monkeypatch.setattr(cli_commands, "setup_logging", MagicMock())
+
+    cli_commands.check(
+        model="model.tflite",
+        target_profile="ethos-u55-256",
+        backend_options=backend_options,
+    )
+
+    assert get_advice.call_args.kwargs["backend_options"] == backend_options
+
+
 def test_check_passes_cli_context_settings(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:

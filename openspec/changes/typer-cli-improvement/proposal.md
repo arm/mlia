@@ -10,6 +10,8 @@ MLIA's CLI parser and command wiring were split across argparse helpers, command
 - `mlia backend install` replaces the hidden `--i-agree-to-the-contained-eula` flag with the explicit `--accept-eula` option.
 - Add plugin discovery guidance to top-level CLI help.
 - Format backend and target list output to match the Typer-based CLI style.
+- Expose backend-specific options discovered from backend metadata on
+  `mlia check` and forward provided values to advice generation.
 
 ## Structural Changes
 
@@ -17,6 +19,8 @@ MLIA's CLI parser and command wiring were split across argparse helpers, command
 - Replace the argparse command/option registration layer with Typer apps and command functions.
 - Remove the old `CommandInfo`-based CLI command registration path with the argparse layer.
 - Remove the dedicated CLI options module and keep backend option discovery available from the API layer.
+- Connect API backend option discovery to the Typer `check` command through
+  dynamic Click options.
 - Move backend install and uninstall operations into public API functions so the CLI calls the same surface as other callers.
 - Rework CLI context and logging setup around the new Typer command path.
 

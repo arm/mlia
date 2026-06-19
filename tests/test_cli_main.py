@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import re
+from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock
 
@@ -13,6 +14,7 @@ from typer.testing import CliRunner
 
 import mlia.cli.commands as cli_commands
 import mlia.cli.main as cli_main
+from mlia.api import BackendOptionSpec
 
 ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-9;?]*[ -/]*[@-~]")
 
@@ -20,6 +22,20 @@ ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-9;?]*[ -/]*[@-~]")
 def _strip_ansi(value: str) -> str:
     """Remove ANSI escape sequences from captured CLI output."""
     return ANSI_ESCAPE_RE.sub("", value)
+
+
+def _backend_option_spec() -> BackendOptionSpec:
+    """Return backend option metadata for CLI parser tests."""
+    return {
+        "module": "bingo_bongo_backend",
+        "backend": "bingo-bongo-backend",
+        "config_key": "system_config",
+        "cli_option": "--system-config",
+        "full_cli_option": "--bingo-bongo-backend.system-config",
+        "dest": "bingo_bongo_backend_system_config",
+        "type": Path,
+        "help": "Overrides the --system-config backend option.",
+    }
 
 
 @pytest.mark.parametrize(
@@ -136,6 +152,31 @@ def test_check_help_lists_target_profile_option() -> None:
     assert "--target-profile" in help_output
 
 
+def test_check_help_lists_backend_option_metadata(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The check command help should list discovered backend-specific options."""
+    discover_backend_option_specs = MagicMock(return_value=[_backend_option_spec()])
+    monkeypatch.setattr(
+        cli_commands,
+        "discover_backend_option_specs",
+        discover_backend_option_specs,
+    )
+
+    result = CliRunner().invoke(
+        cli_main.mlia_app,
+        ["check", "--help"],
+        terminal_width=120,
+    )
+    help_output = _strip_ansi(result.stdout)
+
+    assert result.exit_code == 0
+    discover_backend_option_specs.assert_called()
+    assert "--bingo-bongo-backend" in help_output
+    assert "Overrides the --system-config" in help_output
+    assert "backend option." in help_output
+
+
 def test_root_help_lists_plugin_discovery_resources() -> None:
     """The root help should point users to plugin discovery resources."""
     result = CliRunner().invoke(
@@ -188,6 +229,45 @@ def test_check_accepts_target_profile_flag(monkeypatch: pytest.MonkeyPatch) -> N
     )
 
     assert result.exit_code == 0
+
+
+def test_check_passes_backend_options_from_discovered_cli_options(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The check command should forward dynamic backend options to the API."""
+    get_advice = MagicMock()
+    discover_backend_option_specs = MagicMock(return_value=[_backend_option_spec()])
+
+    monkeypatch.setattr(
+        cli_commands,
+        "discover_backend_option_specs",
+        discover_backend_option_specs,
+    )
+    monkeypatch.setattr(cli_commands, "get_advice", get_advice)
+    monkeypatch.setattr(
+        cli_commands,
+        "validate_check_target_profile",
+        MagicMock(return_value=True),
+    )
+
+    result = CliRunner().invoke(
+        cli_main.mlia_app,
+        [
+            "check",
+            "model.tflite",
+            "--target-profile",
+            "ethos-u55-256",
+            "--bingo-bongo-backend.system-config",
+            "backend.toml",
+        ],
+    )
+
+    assert result.exit_code == 0
+    discover_backend_option_specs.assert_called()
+    get_advice.assert_called_once()
+    assert get_advice.call_args.kwargs["backend_options"] == {
+        "bingo-bongo-backend": {"system_config": Path("backend.toml")}
+    }
 
 
 def test_check_exits_cleanly_when_validation_skips_all_work(

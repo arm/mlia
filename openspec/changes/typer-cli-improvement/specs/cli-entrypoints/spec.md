@@ -99,3 +99,9 @@ MLIA SHALL define CLI commands through Typer apps and command functions rather t
 #### Scenario: Backend option discovery is requested
 - **WHEN** API callers request backend option metadata
 - **THEN** MLIA discovers backend options without importing the removed CLI options module
+
+#### Scenario: Backend option is provided to check command
+- **GIVEN** a backend declares CLI option metadata
+- **WHEN** a user runs `mlia check` with that backend-specific option
+- **THEN** Typer accepts the option
+- **AND** MLIA forwards the value to advice generation as backend options

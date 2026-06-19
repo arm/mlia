@@ -16,6 +16,7 @@
 - [x] 2.6 Keep backend option discovery available without the removed CLI options module.
 - [x] 2.7 Rework CLI context and logging setup for the Typer command path.
 - [x] 2.8 Format backend and target list output to match the Typer-based CLI style.
+- [x] 2.9 Wire discovered backend options into the Typer `check` command.
 
 ## 3. Tests
 
@@ -24,3 +25,4 @@
 - [x] 3.3 Update API option discovery and logging tests.
 - [x] 3.4 Update affected e2e expectations.
 - [x] 3.5 Run OpenSpec validation for `typer-cli-improvement`.
+- [x] 3.6 Add CLI coverage for dynamic backend option help and forwarding.
