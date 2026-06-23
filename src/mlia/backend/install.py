@@ -419,8 +419,14 @@ class PackagePathChecker:
         if self.backend_subfolder:
             subfolder = backend_path / self.backend_subfolder
 
-            if subfolder.is_dir():
-                actual_backend_path = subfolder
+            if not subfolder.exists() or not subfolder.is_dir():
+                logger.debug(
+                    f"Backend subfolder '{self.backend_subfolder}'"
+                    " not found in archive."
+                )
+                return None
+
+            actual_backend_path = subfolder
 
         supporting_paths = _resolve_supporting_paths(
             backend_path, self.supporting_subfolders

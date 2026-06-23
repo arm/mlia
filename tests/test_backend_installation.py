@@ -8,6 +8,7 @@ import tarfile
 from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -16,8 +17,23 @@ from mlia.backend.install import (
     CompoundPathChecker,
     InstallFromVendorPackage,
     PackagePathChecker,
+    logger,
 )
 from mlia.backend.repo import get_backend_repository
+
+
+@pytest.fixture
+def fake_backend_repository_path(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> Path:
+    repo_path = tmp_path / "repo"
+    repo = get_backend_repository(repo_path)
+    monkeypatch.setattr("mlia.backend.install.get_backend_repository", lambda: repo)
+    monkeypatch.setattr(
+        "mlia.backend.install.temp_directory",
+        lambda: _temporary_directory(tmp_path / "extract"),
+    )
+    return repo_path
 
 
 def _create_tar_with_file(archive_path: Path, filename: str) -> None:
@@ -44,17 +60,11 @@ def _temporary_directory(path: Path) -> Iterator[Path]:
 
 
 def test_install_from_vendor_archive(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    fake_backend_repository_path: Path,
 ) -> None:
     """Install backend when vendored artifacts contain a tar.gz archive."""
-    repo_path = tmp_path / "repo"
-    repo = get_backend_repository(repo_path)
-    monkeypatch.setattr("mlia.backend.install.get_backend_repository", lambda: repo)
-    monkeypatch.setattr(
-        "mlia.backend.install.temp_directory",
-        lambda: _temporary_directory(tmp_path / "extract"),
-    )
-
     vendor_dir = tmp_path / "vendor" / "sample-backend"
     archive_path = vendor_dir / "sample-backend.tar.gz"
     _create_tar_with_file(archive_path, "tool")
@@ -77,23 +87,110 @@ def test_install_from_vendor_archive(
 
     installation.install(InstallFromVendorPackage())
 
-    backend_dir = repo_path / "backends" / "sample-backend"
+    backend_dir = fake_backend_repository_path / "backends" / "sample-backend"
     assert backend_dir.is_dir()
     assert (backend_dir / "tool").is_file()
 
 
-def test_install_from_vendor_archive_uses_backend_subfolder(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+def test_install_from_vendor_archive_backend_subfolder_error(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    fake_backend_repository_path: Path,
 ) -> None:
-    """Install backend files from the configured package subfolder."""
-    repo_path = tmp_path / "repo"
-    repo = get_backend_repository(repo_path)
-    monkeypatch.setattr("mlia.backend.install.get_backend_repository", lambda: repo)
+    """Install backend files fails if backend subfolder does not exist."""
+    vendor_dir = tmp_path / "vendor" / "sample-backend"
+    archive_path = vendor_dir / "sample-backend.tar.gz"
+    source_dir = tmp_path / "archive-source"
+    source_dir.mkdir()
+    manifest_path = source_dir / "manifest.json"
+    manifest_path.write_text("{}", encoding="utf-8")
+
+    archive_path.parent.mkdir(parents=True, exist_ok=True)
+    with tarfile.open(archive_path, "w:gz") as archive:
+        archive.add(manifest_path, arcname="manifest.json")
+
     monkeypatch.setattr(
-        "mlia.backend.install.temp_directory",
-        lambda: _temporary_directory(tmp_path / "extract"),
+        "mlia.backend.install.vendor_artifact_path", lambda _: vendor_dir
+    )
+    logger_debug = MagicMock()
+    monkeypatch.setattr(logger, "debug", logger_debug)
+
+    installation = BackendInstallation(
+        name="sample-backend",
+        description="Sample backend",
+        fvp_dir_name="sample-backend",
+        download_config=None,
+        supported_platforms=["Linux"],
+        path_checker=PackagePathChecker(
+            expected_files=["manifest.json"],
+            backend_subfolder="backend",
+        ),
+        backend_installer=None,
+        dependencies=[],
+        vendor_path="sample-backend",
     )
 
+    with pytest.raises(
+        RuntimeError, match="Unable to resolve backend path from vendor archive"
+    ):
+        installation.install(InstallFromVendorPackage())
+    logger_debug.assert_called_with("Backend subfolder 'backend' not found in archive.")
+
+
+def test_install_from_vendor_archive_backend_subfolder_is_not_dir(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    fake_backend_repository_path: Path,
+) -> None:
+    """Install backend files fails if backend subfolder is not a folder."""
+
+    vendor_dir = tmp_path / "vendor" / "sample-backend"
+    archive_path = vendor_dir / "sample-backend.tar.gz"
+    source_dir = tmp_path / "archive-source"
+    source_dir.mkdir()
+    (source_dir / "backend").write_text("not a directory", encoding="utf-8")
+    manifest_path = source_dir / "manifest.json"
+    manifest_path.write_text("{}", encoding="utf-8")
+
+    archive_path.parent.mkdir(parents=True, exist_ok=True)
+    with tarfile.open(archive_path, "w:gz") as archive:
+        archive.add(manifest_path, arcname="manifest.json")
+        archive.add(source_dir / "backend", arcname="backend")
+
+    monkeypatch.setattr(
+        "mlia.backend.install.vendor_artifact_path", lambda _: vendor_dir
+    )
+    logger_debug = MagicMock()
+    monkeypatch.setattr(logger, "debug", logger_debug)
+
+    installation = BackendInstallation(
+        name="sample-backend",
+        description="Sample backend",
+        fvp_dir_name="sample-backend",
+        download_config=None,
+        supported_platforms=["Linux"],
+        path_checker=PackagePathChecker(
+            expected_files=["manifest.json"],
+            backend_subfolder="backend",
+        ),
+        backend_installer=None,
+        dependencies=[],
+        vendor_path="sample-backend",
+    )
+
+    with pytest.raises(
+        RuntimeError, match="Unable to resolve backend path from vendor archive"
+    ):
+        installation.install(InstallFromVendorPackage())
+    logger_debug.assert_called_with("Backend subfolder 'backend' not found in archive.")
+
+
+def test_install_from_vendor_archive_uses_backend_subfolder(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    fake_backend_repository_path: Path,
+) -> None:
+    """Install backend files from the configured package subfolder."""
     vendor_dir = tmp_path / "vendor" / "sample-backend"
     archive_path = vendor_dir / "sample-backend.tar.gz"
     source_dir = tmp_path / "archive-source"
@@ -130,23 +227,17 @@ def test_install_from_vendor_archive_uses_backend_subfolder(
 
     installation.install(InstallFromVendorPackage())
 
-    installed_backend_dir = repo_path / "backends" / "sample-backend"
+    installed_backend_dir = fake_backend_repository_path / "backends" / "sample-backend"
     assert (installed_backend_dir / "tool").is_file()
     assert not (installed_backend_dir / "manifest.json").exists()
 
 
 def test_install_from_vendor_archive_copies_supporting_subfolder(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    fake_backend_repository_path: Path,
 ) -> None:
     """Install primary backend files with an additional supporting folder."""
-    repo_path = tmp_path / "repo"
-    repo = get_backend_repository(repo_path)
-    monkeypatch.setattr("mlia.backend.install.get_backend_repository", lambda: repo)
-    monkeypatch.setattr(
-        "mlia.backend.install.temp_directory",
-        lambda: _temporary_directory(tmp_path / "extract"),
-    )
-
     source_dir = tmp_path / "archive-source"
     primary_dir = source_dir / "primary"
     supporting_dir = source_dir / "support"
@@ -182,24 +273,18 @@ def test_install_from_vendor_archive_copies_supporting_subfolder(
 
     installation.install(InstallFromVendorPackage())
 
-    installed_backend_dir = repo_path / "backends" / "sample-backend"
+    installed_backend_dir = fake_backend_repository_path / "backends" / "sample-backend"
     assert (installed_backend_dir / "tool").is_file()
     assert (installed_backend_dir / "support" / "runtime.so").is_file()
     assert not (installed_backend_dir / "manifest.json").exists()
 
 
 def test_install_from_vendor_archive_copies_nested_supporting_subfolder(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    fake_backend_repository_path: Path,
 ) -> None:
     """Install a supporting folder with nested contents."""
-    repo_path = tmp_path / "repo"
-    repo = get_backend_repository(repo_path)
-    monkeypatch.setattr("mlia.backend.install.get_backend_repository", lambda: repo)
-    monkeypatch.setattr(
-        "mlia.backend.install.temp_directory",
-        lambda: _temporary_directory(tmp_path / "extract"),
-    )
-
     source_dir = tmp_path / "archive-source"
     primary_dir = source_dir / "primary"
     nested_support_dir = source_dir / "support" / "lib" / "site-packages" / "pkg"
@@ -235,7 +320,7 @@ def test_install_from_vendor_archive_copies_nested_supporting_subfolder(
 
     installation.install(InstallFromVendorPackage())
 
-    installed_backend_dir = repo_path / "backends" / "sample-backend"
+    installed_backend_dir = fake_backend_repository_path / "backends" / "sample-backend"
     assert (installed_backend_dir / "tool").is_file()
     assert (
         installed_backend_dir
@@ -401,7 +486,8 @@ def _make_installation(
 
 
 def test_install_from_vendor_archive_missing_archive(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Fail when no vendor archives are present."""
     repo_path = tmp_path / "repo"
