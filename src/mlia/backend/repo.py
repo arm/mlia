@@ -4,7 +4,7 @@
 
 Backend repository is responsible for managing backends
 (apart from python package based) that have been installed
-via command "mlia-backend".
+via command "mlia backend".
 
 Repository has associated directory (by default ~/.mlia) and
 configuration file (by default ~/.mlia/mlia_config.json). In

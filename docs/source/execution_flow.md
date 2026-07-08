@@ -126,7 +126,7 @@ The CLI handles these categories specially:
 | Failure category | User-visible behavior |
 | --- | --- |
 | Configuration error | Prints the configuration error message directly. |
-| Backend unavailable | Prints `Error: Backend <name> is not available.` Some optional backends also include an installation hint, for example `mlia-backend install "<name>"`. |
+| Backend unavailable | Prints `Error: Backend <name> is not available.` Some optional backends also include an installation hint, for example `mlia backend install "<name>"`. |
 | Interrupted execution | Prints `Execution has been interrupted`. |
 | Internal error | Prints `Internal error: <message>`. |
 | Other exception | Prints `Execution finished with error: <message>`, points to the log directory, and shows a traceback when `--debug` is enabled. |

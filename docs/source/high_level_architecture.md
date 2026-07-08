@@ -19,12 +19,14 @@ Use this page for the static system shape. For plugin loading details, see
 ```mermaid
 graph TD
     user[User] --> mainCli[mlia]
-    user --> backendCli[mlia-backend]
-    user --> targetCli[mlia-target]
     automation[Automation or Python caller] --> api[Python API]
 
     mainCli --> checkCommand[mlia.cli.commands.check]
+    mainCli --> backendCli[mlia backend]
+    mainCli --> targetCli[mlia target]
     mainCli --> cliPlugins[CLI plugin commands]
+    legacyBackend[mlia-backend compatibility wrapper] --> backendCli
+    legacyTarget[mlia-target compatibility wrapper] --> targetCli
     checkCommand --> api
 
     backendCli --> backendCommands[backend install/list/uninstall]
@@ -61,7 +63,7 @@ graph TD
 
 | Layer | Core modules | Responsibility |
 | --- | --- | --- |
-| CLI | `mlia.cli.main`, `mlia.cli.commands`, `mlia.cli.options` | Parse `mlia`, `mlia-backend`, and `mlia-target` commands, create `ExecutionContext`, configure logging and output format, and call command functions. |
+| CLI | `mlia.cli.main`, `mlia.cli.commands`, `mlia.cli.command_validators` | Parse the root `mlia` command, including `check`, `backend`, and `target` command groups; keep legacy `mlia-backend` and `mlia-target` wrappers available with deprecation warnings; create `ExecutionContext` only for commands that need analysis context; configure logging and output format; and call command functions. |
 | Public API | `mlia.api` | Validate inputs, resolve targets and backends, ensure required backends are installed, create advisors, optionally return standardized output. |
 | Registries | `mlia.target.registry`, `mlia.backend.registry`, `mlia.plugins.*` | Load plugin entry points once and expose registered target, backend, converter, and CLI capabilities. |
 | Backend management | `mlia.backend.manager`, `mlia.backend.install`, `mlia.backend.config` | Show backend status, install/uninstall backends, resolve dependencies, and provide backend configuration metadata. |

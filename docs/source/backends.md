@@ -16,13 +16,13 @@ backend catalog and reference detail.
 
 ## Backend management commands
 
-Use `mlia-backend` to inspect and manage installed backends:
+Use `mlia backend` to inspect and manage installed backends:
 
 ```bash
-mlia-backend list
-mlia-backend install <backend>
-mlia-backend uninstall <backend>
-mlia-backend --help
+mlia backend list
+mlia backend install <backend>
+mlia backend uninstall <backend>
+mlia backend --help
 ```
 
 Depending on the backend, installation may be automatic or may require an
@@ -36,7 +36,7 @@ experience when the relevant backend is installed.
 A practical discovery sequence is:
 
 ```bash
-mlia-backend list
+mlia backend list
 mlia check --help
 ```
 
@@ -53,7 +53,7 @@ analysis for a hardware family or platform family.
 ### Dependency backends
 
 Some backends exist mainly to support larger MLIA pipelines by converting models
-or preparing intermediate artifacts. Users may see them in `mlia-backend list`
+or preparing intermediate artifacts. Users may see them in `mlia backend list`
 without needing to reason about them as the primary analysis backend for a run.
 
 ## Where detailed backend docs live now

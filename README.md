@@ -84,8 +84,8 @@ Install only the plugin packages you need, then use the discovery commands to
 see what is available in the current environment:
 
 ```bash
-mlia-target list
-mlia-backend list
+mlia target list
+mlia backend list
 ```
 
 ## Quick start
@@ -105,8 +105,8 @@ mlia check model.tflite --target-profile <target-profile> --performance
 Useful discovery commands:
 
 ```bash
-mlia-target list
-mlia-backend list
+mlia target list
+mlia backend list
 mlia check --help
 ```
 
@@ -119,8 +119,8 @@ mlia check model.tflite --target-profile ./my_target_profile.toml
 If you are new to the plugin-based model, the safest first pattern is:
 
 1. install `mlia` and the plugin packages you actually need
-2. confirm target and backend discovery with `mlia-target list` and
-   `mlia-backend list`
+2. confirm target and backend discovery with `mlia target list` and
+   `mlia backend list`
 3. run one simple `mlia check` command before introducing backend-specific
    options
 

@@ -18,8 +18,8 @@ These CLI docs therefore focus on the shared workflow: discovering available cap
 The most important entry points are:
 
 - Use `mlia` for model analysis and current workflows.
-- Use `mlia-target` for discovering target profiles.
-- Use `mlia-backend` for discovering, installing, and managing backends.
+- Use `mlia target` for discovering target profiles.
+- Use `mlia backend` for discovering, installing, and managing backends.
 
 Together, these commands define the basic MLIA flow: discovery first, then
 analysis.
@@ -30,12 +30,19 @@ If you are in a fresh environment, a practical first sequence is:
 
 ```bash
 mlia --help
-mlia-target list
-mlia-backend list
+mlia target list
+mlia backend list
 ```
 
 That gives you a quick picture of what the environment can actually do before
 you start copying example commands from documentation.
+
+## Legacy entry points
+
+The `mlia-target` and `mlia-backend` scripts remain available as compatibility
+wrappers. They print deprecation warnings and dispatch to the corresponding
+command group. Prefer `mlia target ...` and `mlia backend ...` in new commands,
+documentation, scripts, and examples.
 
 ## Common workflows
 
@@ -48,13 +55,13 @@ mlia --help
 List targets:
 
 ```bash
-mlia-target list
+mlia target list
 ```
 
 List backends:
 
 ```bash
-mlia-backend list
+mlia backend list
 ```
 
 Run a compatibility check:
@@ -83,7 +90,7 @@ variants.
 
 MLIA enables colored CLI output when writing to an interactive terminal.
 
-To disable colors explicitly for `mlia`, `mlia-target`, and `mlia-backend`, set
+To disable colors explicitly for `mlia`, `mlia target`, and `mlia backend`, set
 the `NO_COLOR` environment variable to any non-empty value before running the
 command:
 
@@ -117,7 +124,7 @@ installed into that experience.
 A useful mental model is:
 
 1. `mlia` is the front door.
-2. `mlia-target` and `mlia-backend` help discover available capabilities.
+2. `mlia target` and `mlia backend` help discover available capabilities.
 3. Plugin repos extend what those commands can do.
 4. Plugin docs explain the detailed behaviour once you know which plugin path
    your run is using.

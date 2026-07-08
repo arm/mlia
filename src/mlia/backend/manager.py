@@ -146,7 +146,7 @@ class DefaultInstallationManager(InstallationManager, InstallationFiltersMixin):
         if not candidate_installs:
             logger.info("Unknown backend '%s'.", name)
             logger.info(
-                "Please run command 'mlia-backend list' to get list of "
+                "Please run command 'mlia backend list' to get list of "
                 "supported backend names."
             )
             raise ValueError(f"{err_msg_prefix}: Could not resolve {name} backend.")

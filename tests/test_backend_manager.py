@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import logging
 import sys
 from contextlib import ExitStack as does_not_raise
 from functools import partial
@@ -258,6 +259,20 @@ def test_installation_manager_download_and_install(
         install_mock.uninstall.assert_called_once()
     else:
         install_mock.uninstall.assert_not_called()
+
+
+def test_installation_manager_unknown_backend_logs_current_list_command(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Unknown backend errors should point users at the current list command."""
+    manager = DefaultInstallationManager([_could_be_downloaded_and_installed_mock()])
+
+    with caplog.at_level(logging.INFO, logger="mlia.backend.manager"):
+        with pytest.raises(ValueError, match="Could not resolve"):
+            manager.download_and_install(["unknown"], eula_agreement=True, force=False)
+
+    assert "mlia backend list" in caplog.text
+    assert "mlia-backend list" not in caplog.text
 
 
 @pytest.mark.parametrize("noninteractive", [True, False])

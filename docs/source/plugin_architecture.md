@@ -16,7 +16,8 @@ conversion stacks.
 
 The core `mlia` package provides:
 
-- CLI entry points such as `mlia`, `mlia-target`, and `mlia-backend`
+- The `mlia` CLI, including the `target` and `backend` command groups.
+- Legacy `mlia-target` and `mlia-backend` compatibility wrappers.
 - Plugin discovery and registration.
 - Shared workflow abstractions.
 - Common reporting and output schema logic.
