@@ -41,10 +41,10 @@ The generated site will be written to `.mkdocs/site/`.
 
 The top-level `README.md` remains the main user guide for installation and CLI
 usage. This docs tree explains the core architecture, CLI, output shape, and
-backend-management model.
+backend management model.
 
 ## Relationship to plugins
 
-Plugin packages own the target-specific, backend-specific, and converter-specific
-detail. Keep that material in the plugin repos rather than copying it into the
-core repo.
+Plugin packages own the target-specific, backend-specific, and transformer or
+converter-specific detail. Keep that material in the plugin repos rather than
+copying it into the core repo.

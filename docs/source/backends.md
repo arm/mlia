@@ -7,7 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 
 ## Overview
 
-The core `mlia` repository provides backend discovery and backend-management
+The core `mlia` repository provides backend discovery and backend management
 commands, while many backend implementations now live in split plugin
 repositories.
 

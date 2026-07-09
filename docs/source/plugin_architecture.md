@@ -17,7 +17,6 @@ conversion stacks.
 The core `mlia` package provides:
 
 - The `mlia` CLI, including the `target` and `backend` command groups.
-- Legacy `mlia-target` and `mlia-backend` compatibility wrappers.
 - Plugin discovery and registration.
 - Shared workflow abstractions.
 - Common reporting and output schema logic.
@@ -29,11 +28,11 @@ Plugin packages provide one or more of:
 
 - Target plugins.
 - Backend plugins.
-- Converter plugins.
+- Transformer plugins.
 - Bundled target profiles and backend resources.
 
-Examples include target-focused plugins, backend-focused plugins, and converter
-plugins that extend the larger MLIA workflow.
+Examples include target-focused plugins, backend-focused plugins, and
+transformer plugins that extend the larger MLIA workflow.
 
 See the individual plugin packages for in-depth target-specific,
-backend-specific, and converter-specific documentation.
+backend-specific, and transformer-specific documentation.

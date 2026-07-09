@@ -37,13 +37,6 @@ mlia backend list
 That gives you a quick picture of what the environment can actually do before
 you start copying example commands from documentation.
 
-## Legacy entry points
-
-The `mlia-target` and `mlia-backend` scripts remain available as compatibility
-wrappers. They print deprecation warnings and dispatch to the corresponding
-command group. Prefer `mlia target ...` and `mlia backend ...` in new commands,
-documentation, scripts, and examples.
-
 ## Common workflows
 
 Show top-level help:
@@ -118,7 +111,7 @@ assuming a plugin-specific example applies to your setup.
 ## Plugin relationship
 
 The core repo provides the commands and workflow orchestration. Plugin packages
-provide target plugins, backend plugins, and converter plugins that are
+provide target plugins, backend plugins, and transformer plugins that are
 installed into that experience.
 
 A useful mental model is:

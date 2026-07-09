@@ -25,8 +25,6 @@ graph TD
     mainCli --> backendCli[mlia backend]
     mainCli --> targetCli[mlia target]
     mainCli --> cliPlugins[CLI plugin commands]
-    legacyBackend[mlia-backend compatibility wrapper] --> backendCli
-    legacyTarget[mlia-target compatibility wrapper] --> targetCli
     checkCommand --> api
 
     backendCli --> backendCommands[backend install/list/uninstall]
@@ -63,7 +61,7 @@ graph TD
 
 | Layer | Core modules | Responsibility |
 | --- | --- | --- |
-| CLI | `mlia.cli.main`, `mlia.cli.commands`, `mlia.cli.command_validators` | Parse the root `mlia` command, including `check`, `backend`, and `target` command groups; keep legacy `mlia-backend` and `mlia-target` wrappers available with deprecation warnings; create `ExecutionContext` only for commands that need analysis context; configure logging and output format; and call command functions. |
+| CLI | `mlia.cli.main`, `mlia.cli.commands`, `mlia.cli.command_validators` | Parse the root `mlia` command, including `check`, `backend`, and `target` command groups; create `ExecutionContext` only for commands that need analysis context; configure logging and output format; and call command functions. |
 | Public API | `mlia.api` | Validate inputs, resolve targets and backends, ensure required backends are installed, create advisors, optionally return standardized output. |
 | Registries | `mlia.target.registry`, `mlia.backend.registry`, `mlia.plugins.*` | Load plugin entry points once and expose registered target, backend, converter, and CLI capabilities. |
 | Backend management | `mlia.backend.manager`, `mlia.backend.install`, `mlia.backend.config` | Show backend status, install/uninstall backends, resolve dependencies, and provide backend configuration metadata. |
@@ -76,10 +74,10 @@ graph TD
 The core package should not need target-specific conditionals for every new
 hardware family or converter. Instead:
 
-- target plugins register target metadata and advisor factories
-- backend plugins register backend configuration and installation metadata
-- converter plugins register named converter callables
-- CLI plugins can append commands to the command list
+- Target plugins register target metadata and advisor factories.
+- Backend plugins register backend configuration and installation metadata.
+- Transformer plugins register named model transformation callables.
+- CLI plugins can append commands to the command list.
 
 This keeps core orchestration stable while allowing target, backend, and
-converter packages to evolve independently.
+transformer packages to evolve independently.

@@ -78,10 +78,10 @@ graph LR
     model --> collectors[Data collectors]
     profile --> advisor[Target advisor]
     advisor --> collectors
-    collectors --> maybeConvert{Converter needed?}
-    maybeConvert -->|yes| converter[Converter plugin]
-    converter --> intermediate[Converted/intermediate artifact]
-    maybeConvert -->|no| backendInput[Backend input artifact]
+    collectors --> maybeTransform{Transformation needed?}
+    maybeTransform -->|yes| transformer[Transformer plugin]
+    transformer --> intermediate[Converted/intermediate artifact]
+    maybeTransform -->|no| backendInput[Backend input artifact]
     intermediate --> backendInput
     backendInput --> backend[Backend tool or service]
     backend --> rawResults[Raw backend output]
