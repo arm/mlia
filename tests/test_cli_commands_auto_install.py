@@ -9,9 +9,18 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
+import typer
 
 from mlia.cli import commands as cli_commands
+from mlia.cli.commands import AppContext, mlia_app
 from mlia.core.context import ExecutionContext
+
+
+def _get_app_context() -> typer.Context:
+    return typer.Context(
+        typer.main.get_command(mlia_app),
+        obj=AppContext.build(),
+    )
 
 
 def test_backend_list_does_not_install(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -22,7 +31,7 @@ def test_backend_list_does_not_install(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(cli_commands, "install_backends", install_backends)
     monkeypatch.setattr(cli_commands, "setup_logging", MagicMock())
 
-    cli_commands.backend_list()
+    cli_commands.backend_list(_get_app_context())
 
     install_backends.assert_not_called()
     list_backends.assert_called()
@@ -137,8 +146,8 @@ def test_check_passes_cli_context_settings(
     [
         (cli_commands.backend_install, (["backend"],)),
         (cli_commands.backend_uninstall, (["backend"],)),
-        (cli_commands.backend_list, ()),
-        (cli_commands.target_list, ()),
+        (cli_commands.backend_list, (_get_app_context(),)),
+        (cli_commands.target_list, (_get_app_context(),)),
     ],
 )
 def test_contextless_commands_pass_debug_to_logging(
@@ -157,3 +166,16 @@ def test_contextless_commands_pass_debug_to_logging(
     command(*args, debug=True)
 
     setup_logging.assert_called_once_with(verbose=True)
+
+
+def test_app_context_has_correct_color_styling(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(cli_commands, "color_enabled", MagicMock(return_value=True))
+    ctx = AppContext.build()
+    assert all(
+        "dim" in style
+        for style in (ctx.border_style, ctx.header_style, ctx.title_style)
+    )
+
+    monkeypatch.setattr(cli_commands, "color_enabled", MagicMock(return_value=False))
+    ctx = AppContext.build()
+    assert "dim" not in (ctx.border_style, ctx.header_style, ctx.title_style)
