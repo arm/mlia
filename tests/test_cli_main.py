@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock
 
+import click
 import pytest
 from typer.testing import CliRunner
 
@@ -30,11 +31,31 @@ def _backend_option_spec() -> BackendOptionSpec:
         "module": "bingo_bongo_backend",
         "backend": "bingo-bongo-backend",
         "config_key": "system_config",
-        "cli_option": "--system-config",
-        "full_cli_option": "--bingo-bongo-backend.system-config",
-        "dest": "bingo_bongo_backend_system_config",
-        "type": Path,
-        "help": "Overrides the --system-config backend option.",
+        "click_option": click.Option(
+            [
+                "--bingo-bongo-backend.system-config",
+                "bingo_bongo_backend_system_config",
+            ],
+            default=None,
+            type=Path,
+            help="Overrides the --system-config backend option.",
+        ),
+    }
+
+
+def _typed_backend_option_spec() -> BackendOptionSpec:
+    """Return typed backend option metadata."""
+    optimization_level = click.Option(
+        ["--typed-backend.optimization-level", "typed_backend_optimization_level"],
+        default=None,
+        type=click.Choice(["0", "1", "2"]),
+        help="Set optimization level.",
+    )
+    return {
+        "module": "typed_backend",
+        "backend": "typed-backend",
+        "config_key": "optimization_level",
+        "click_option": optimization_level,
     }
 
 
@@ -264,6 +285,83 @@ def test_check_passes_backend_options_from_discovered_cli_options(
     get_advice.assert_called_once()
     assert get_advice.call_args.kwargs["backend_options"] == {
         "bingo-bongo-backend": {"system_config": Path("backend.toml")}
+    }
+
+
+def test_check_rejects_unnamespaced_backend_click_option(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The check command should reject unnamespaced typed backend options."""
+    get_advice = MagicMock()
+    discover_backend_option_specs = MagicMock(
+        return_value=[_typed_backend_option_spec()]
+    )
+
+    monkeypatch.setattr(
+        cli_commands,
+        "discover_backend_option_specs",
+        discover_backend_option_specs,
+    )
+    monkeypatch.setattr(cli_commands, "get_advice", get_advice)
+    monkeypatch.setattr(
+        cli_commands,
+        "validate_check_target_profile",
+        MagicMock(return_value=True),
+    )
+
+    result = CliRunner().invoke(
+        cli_main.mlia_app,
+        [
+            "check",
+            "model.tflite",
+            "--target-profile",
+            "ethos-u55-256",
+            "--optimization-level",
+            "2",
+        ],
+    )
+
+    assert result.exit_code != 0
+    get_advice.assert_not_called()
+
+
+def test_check_accepts_namespaced_backend_click_option(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The check command should accept namespaced long typed backend options."""
+    get_advice = MagicMock()
+    discover_backend_option_specs = MagicMock(
+        return_value=[_typed_backend_option_spec()]
+    )
+
+    monkeypatch.setattr(
+        cli_commands,
+        "discover_backend_option_specs",
+        discover_backend_option_specs,
+    )
+    monkeypatch.setattr(cli_commands, "get_advice", get_advice)
+    monkeypatch.setattr(
+        cli_commands,
+        "validate_check_target_profile",
+        MagicMock(return_value=True),
+    )
+
+    result = CliRunner().invoke(
+        cli_main.mlia_app,
+        [
+            "check",
+            "model.tflite",
+            "--target-profile",
+            "ethos-u55-256",
+            "--typed-backend.optimization-level",
+            "2",
+        ],
+    )
+
+    assert result.exit_code == 0
+    get_advice.assert_called_once()
+    assert get_advice.call_args.kwargs["backend_options"] == {
+        "typed-backend": {"optimization_level": "2"}
     }
 
 

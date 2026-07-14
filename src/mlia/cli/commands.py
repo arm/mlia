@@ -56,13 +56,21 @@ def _reshape_backend_options(
     """Reshape flat CLI backend option values into backend config overrides."""
     backend_options: dict[str, dict[str, object]] = {}
     for spec in backend_option_specs:
-        value = backend_cli_options.get(spec["dest"])
+        option_name = _backend_option_name(spec["click_option"])
+        value = backend_cli_options.get(option_name)
         if value is None:
             continue
 
         backend_options.setdefault(spec["backend"], {})[spec["config_key"]] = value
 
     return backend_options
+
+
+def _backend_option_name(click_option: click.Option) -> str:
+    """Return the internal Click option name for backend option handling."""
+    if click_option.name:
+        return click_option.name
+    raise ValueError("Backend CLI option must have an internal name.")
 
 
 class BackendOptionCommand(typer.core.TyperCommand):
@@ -72,15 +80,7 @@ class BackendOptionCommand(typer.core.TyperCommand):
         """Initialize the command with discovered backend-specific options."""
         self._backend_option_specs = discover_backend_option_specs()
         params = list(kwargs["params"])
-        params.extend(
-            click.Option(
-                [spec["full_cli_option"], spec["dest"]],
-                default=None,
-                type=spec["type"],
-                help=spec["help"],
-            )
-            for spec in self._backend_option_specs
-        )
+        params.extend(spec["click_option"] for spec in self._backend_option_specs)
         command_kwargs = {**kwargs, "params": params}
         super().__init__(*args, **command_kwargs)
 
@@ -90,7 +90,8 @@ class BackendOptionCommand(typer.core.TyperCommand):
             self._backend_option_specs, ctx.params
         )
         for spec in self._backend_option_specs:
-            ctx.params.pop(spec["dest"], None)
+            option_name = _backend_option_name(spec["click_option"])
+            ctx.params.pop(option_name, None)
         ctx.ensure_object(dict)["backend_options"] = backend_options
         return super().invoke(ctx)
 

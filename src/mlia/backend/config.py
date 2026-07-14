@@ -8,8 +8,12 @@ import platform
 from enum import Enum, auto
 from typing import cast
 
+import click
+
 from mlia.backend.install import Installation
 from mlia.core.common import AdviceCategory
+
+BackendCliOption = str | click.Option
 
 
 class System(Enum):
@@ -62,7 +66,7 @@ class BackendConfiguration:
         backend_type: BackendType,
         installation: Installation | None,
         selectable: bool = True,
-        cli_options: dict[str, str] | None = None,
+        cli_options: dict[str, BackendCliOption] | None = None,
         is_deprecated: bool = False,
         deprecated_message: str | None = None,
     ) -> None:

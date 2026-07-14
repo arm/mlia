@@ -6,12 +6,16 @@ import sys
 import typing
 from dataclasses import dataclass
 from os import PathLike
-from typing import Union
+from typing import Any, Union
 from unittest.mock import MagicMock, call
 
+import click
 import pytest
 
-from mlia.plugins.plugins import call_entry_points, logger
+from mlia.backend.config import BackendConfiguration, BackendType
+from mlia.core.common import AdviceCategory
+from mlia.plugins.plugins import BACKEND_PLUGIN_GROUP, call_entry_points, logger
+from mlia.utils.registry import Registry
 
 if sys.version_info < (3, 10):
     import importlib_metadata as metadata
@@ -91,6 +95,64 @@ class TracebackMatcher:
         if isinstance(other, str):
             return "Traceback (most recent call last):\n" in other
         raise NotImplementedError
+
+
+@pytest.fixture
+def registry() -> Registry[Any]:
+    """Return a registry for plugin loader tests."""
+    return Registry()
+
+
+@pytest.fixture(name="legacy_backend_entrypoint")
+def legacy_backend_entrypoint_fixture(
+    single_external_entrypoint: MockEntrypoints,
+) -> MockEntrypoints:
+    """Create a backend plugin with legacy CLI options."""
+
+    def register_backend(target_registry: Registry[BackendConfiguration]) -> None:
+        target_registry.register(
+            "legacy-backend",
+            BackendConfiguration(
+                supported_advice=[AdviceCategory.PERFORMANCE],
+                supported_systems=None,
+                backend_type=BackendType.CUSTOM,
+                installation=None,
+                cli_options={"system_config": "--system-config"},
+            ),
+        )
+
+    single_external_entrypoint.first_plugin.register.side_effect = register_backend
+
+    return single_external_entrypoint
+
+
+@pytest.fixture(name="typed_backend_entrypoint")
+def typed_backend_entrypoint_fixture(
+    single_external_entrypoint: MockEntrypoints,
+) -> MockEntrypoints:
+    """Create a backend plugin with typed CLI options."""
+
+    def register_backend(target_registry: Registry[BackendConfiguration]) -> None:
+        target_registry.register(
+            "typed-backend",
+            BackendConfiguration(
+                supported_advice=[AdviceCategory.PERFORMANCE],
+                supported_systems=None,
+                backend_type=BackendType.CUSTOM,
+                installation=None,
+                cli_options={
+                    "optimization_level": click.Option(
+                        ["--optimization-level"],
+                        type=click.Choice(["0", "1", "2"]),
+                    )
+                },
+            ),
+        )
+
+    single_external_entrypoint.first_plugin.plugin_interface_version = "0.0.2"
+    single_external_entrypoint.first_plugin.register.side_effect = register_backend
+
+    return single_external_entrypoint
 
 
 @pytest.fixture(autouse=True, name="mock_logging")
@@ -199,10 +261,12 @@ def multiple_entrypoint_fixture(monkeypatch: pytest.MonkeyPatch) -> MockEntrypoi
 
 
 def test_plugin_loader(
-    single_entrypoint: MockEntrypoints, mock_logging: MockLogging
+    single_entrypoint: MockEntrypoints,
+    mock_logging: MockLogging,
+    registry: Registry[str],
 ) -> None:
     """Test loading a single plugin."""
-    call_entry_points("stub.entrypoint", "registry_here")
+    call_entry_points("stub.entrypoint", registry)
     single_entrypoint.metadata_entry_points.assert_called_once_with(
         group="stub.entrypoint"
     )
@@ -216,14 +280,16 @@ def test_plugin_loader(
             ),
         ]
     )
-    single_entrypoint.first_plugin.register.assert_called_once_with("registry_here")
+    single_entrypoint.first_plugin.register.assert_called_once_with(registry)
 
 
 def test_plugin_loader_external(
-    single_external_entrypoint: MockEntrypoints, mock_logging: MockLogging
+    single_external_entrypoint: MockEntrypoints,
+    mock_logging: MockLogging,
+    registry: Registry[str],
 ) -> None:
     """Test loading a plugin external to mlia."""
-    call_entry_points("stub.entrypoint", "registry_here")
+    call_entry_points("stub.entrypoint", registry)
     single_external_entrypoint.metadata_entry_points.assert_called_once_with(
         group="stub.entrypoint"
     )
@@ -238,18 +304,104 @@ def test_plugin_loader_external(
             ),
         ]
     )
-    single_external_entrypoint.first_plugin.register.assert_called_once_with(
-        "registry_here"
-    )
+    single_external_entrypoint.first_plugin.register.assert_called_once_with(registry)
+
+
+def test_plugin_loader_accepts_version_002(
+    single_external_entrypoint: MockEntrypoints,
+    registry: Registry[str],
+) -> None:
+    """Load a plugin that declares the typed backend option interface version."""
+    single_external_entrypoint.first_plugin.plugin_interface_version = "0.0.2"
+
+    call_entry_points("stub.entrypoint", registry)
+
+    single_external_entrypoint.first_plugin.register.assert_called_once_with(registry)
+
+
+def test_backend_plugin_loader_accepts_string_options_for_version_001(
+    legacy_backend_entrypoint: MockEntrypoints,
+    registry: Registry[BackendConfiguration],
+) -> None:
+    """Backend plugin 0.0.1 should load legacy string CLI options."""
+    call_entry_points(BACKEND_PLUGIN_GROUP, registry)
+
+    assert registry.items["legacy-backend"].cli_options == {
+        "system_config": "--system-config"
+    }
+    assert registry.plugin_interface_versions["legacy-backend"] == "0.0.1"
+    legacy_backend_entrypoint.first_plugin.register.assert_called_once_with(registry)
+
+
+def test_backend_plugin_loader_records_backend_plugin_version(
+    typed_backend_entrypoint: MockEntrypoints,
+    registry: Registry[BackendConfiguration],
+) -> None:
+    """Backend plugin loading should record the version for registered backends."""
+    call_entry_points(BACKEND_PLUGIN_GROUP, registry)
+
+    assert registry.plugin_interface_versions["typed-backend"] == "0.0.2"
+    typed_backend_entrypoint.first_plugin.register.assert_called_once_with(registry)
+
+
+def test_backend_plugin_loader_records_backend_plugin_version_on_register_error(
+    single_external_entrypoint: MockEntrypoints,
+    registry: Registry[BackendConfiguration],
+) -> None:
+    """Backend plugin loading should record versions for partial registrations."""
+    single_external_entrypoint.first_plugin.plugin_interface_version = "0.0.2"
+
+    def register_backend(target_registry: Registry[BackendConfiguration]) -> None:
+        target_registry.register(
+            "typed-backend",
+            BackendConfiguration(
+                supported_advice=[AdviceCategory.PERFORMANCE],
+                supported_systems=None,
+                backend_type=BackendType.CUSTOM,
+                installation=None,
+                cli_options={
+                    "optimization_level": click.Option(
+                        ["--optimization-level"],
+                        type=click.Choice(["0", "1", "2"]),
+                    )
+                },
+            ),
+        )
+        raise ValueError("Registration failed.")
+
+    single_external_entrypoint.first_plugin.register.side_effect = register_backend
+
+    call_entry_points(BACKEND_PLUGIN_GROUP, registry)
+
+    assert registry.plugin_interface_versions["typed-backend"] == "0.0.2"
+
+
+def test_plugin_loader_records_plugin_version_for_any_registry(
+    single_external_entrypoint: MockEntrypoints,
+) -> None:
+    """Plugin loading should record the version on generic registries."""
+    registry = Registry[str]()
+    single_external_entrypoint.first_plugin.plugin_interface_version = "0.0.2"
+
+    def register_item(target_registry: Registry[str]) -> None:
+        target_registry.register("plugin-item", "value")
+
+    single_external_entrypoint.first_plugin.register.side_effect = register_item
+
+    call_entry_points("stub.entrypoint", registry)
+
+    assert registry.plugin_interface_versions["plugin-item"] == "0.0.2"
 
 
 def test_plugin_loader_bad_version(
-    single_external_entrypoint: MockEntrypoints, mock_logging: MockLogging
+    single_external_entrypoint: MockEntrypoints,
+    mock_logging: MockLogging,
+    registry: Registry[str],
 ) -> None:
     """Skip plugins that have incompatible plugin interface version."""
     single_external_entrypoint.first_plugin.plugin_interface_version = "5.0.1"
 
-    call_entry_points("stub.entrypoint", "registry_here")
+    call_entry_points("stub.entrypoint", registry)
     single_external_entrypoint.metadata_entry_points.assert_called_once_with(
         group="stub.entrypoint"
     )
@@ -265,12 +417,14 @@ def test_plugin_loader_bad_version(
 
 
 def test_plugin_loader_register_fail(
-    single_external_entrypoint: MockEntrypoints, mock_logging: MockLogging
+    single_external_entrypoint: MockEntrypoints,
+    mock_logging: MockLogging,
+    registry: Registry[str],
 ) -> None:
     """Skip plugins that error on load."""
     single_external_entrypoint.first_plugin.register.side_effect = ValueError
 
-    call_entry_points("stub.entrypoint", "registry_here")
+    call_entry_points("stub.entrypoint", registry)
     single_external_entrypoint.metadata_entry_points.assert_called_once_with(
         group="stub.entrypoint"
     )
@@ -285,16 +439,16 @@ def test_plugin_loader_register_fail(
             call(TracebackMatcher()),
         ]
     )
-    single_external_entrypoint.first_plugin.register.assert_called_once_with(
-        "registry_here"
-    )
+    single_external_entrypoint.first_plugin.register.assert_called_once_with(registry)
 
 
 def test_plugin_loader_many(
-    multiple_entrypoint: MockEntrypoints, mock_logging: MockLogging
+    multiple_entrypoint: MockEntrypoints,
+    mock_logging: MockLogging,
+    registry: Registry[str],
 ) -> None:
     """Load multiple plugins at once."""
-    call_entry_points("stub.entrypoint", "registry_here")
+    call_entry_points("stub.entrypoint", registry)
     multiple_entrypoint.metadata_entry_points.assert_called_once_with(
         group="stub.entrypoint"
     )
@@ -313,17 +467,19 @@ def test_plugin_loader_many(
             ),
         ]
     )
-    multiple_entrypoint.first_plugin.register.assert_called_once_with("registry_here")
-    multiple_entrypoint.second_plugin.register.assert_called_once_with("registry_here")
+    multiple_entrypoint.first_plugin.register.assert_called_once_with(registry)
+    multiple_entrypoint.second_plugin.register.assert_called_once_with(registry)
 
 
 def test_plugin_loader_many_version_mismatch(
-    multiple_entrypoint: MockEntrypoints, mock_logging: MockLogging
+    multiple_entrypoint: MockEntrypoints,
+    mock_logging: MockLogging,
+    registry: Registry[str],
 ) -> None:
     """Skip version mismatch and continue loading."""
     multiple_entrypoint.first_plugin.plugin_interface_version = "5.0.1"
 
-    call_entry_points("stub.entrypoint", "registry_here")
+    call_entry_points("stub.entrypoint", registry)
     multiple_entrypoint.metadata_entry_points.assert_called_once_with(
         group="stub.entrypoint"
     )
@@ -346,16 +502,18 @@ def test_plugin_loader_many_version_mismatch(
         [call("Incompatible version '%s' for plugin '%s'", "5.0.1", "first_plugin")]
     )
     multiple_entrypoint.first_plugin.register.assert_not_called()
-    multiple_entrypoint.second_plugin.register.assert_called_once_with("registry_here")
+    multiple_entrypoint.second_plugin.register.assert_called_once_with(registry)
 
 
 def test_plugin_loader_many_error(
-    multiple_entrypoint: MockEntrypoints, mock_logging: MockLogging
+    multiple_entrypoint: MockEntrypoints,
+    mock_logging: MockLogging,
+    registry: Registry[str],
 ) -> None:
     """Skip plugin error and continue loading."""
     multiple_entrypoint.first_plugin.register.side_effect = ValueError
 
-    call_entry_points("stub.entrypoint", "registry_here")
+    call_entry_points("stub.entrypoint", registry)
     multiple_entrypoint.metadata_entry_points.assert_called_once_with(
         group="stub.entrypoint"
     )
@@ -380,12 +538,14 @@ def test_plugin_loader_many_error(
             call(TracebackMatcher()),
         ]
     )
-    multiple_entrypoint.first_plugin.register.assert_called_once_with("registry_here")
-    multiple_entrypoint.second_plugin.register.assert_called_once_with("registry_here")
+    multiple_entrypoint.first_plugin.register.assert_called_once_with(registry)
+    multiple_entrypoint.second_plugin.register.assert_called_once_with(registry)
 
 
 def test_plugin_loader_incompatible_core_version(
-    monkeypatch: pytest.MonkeyPatch, mock_logging: MockLogging
+    monkeypatch: pytest.MonkeyPatch,
+    mock_logging: MockLogging,
+    registry: Registry[str],
 ) -> None:
     """Skip plugins that require incompatible core versions."""
     entry_point = metadata.EntryPoint(
@@ -409,7 +569,7 @@ def test_plugin_loader_incompatible_core_version(
         metadata, "entry_points", mock_entrypoints.metadata_entry_points
     )
 
-    call_entry_points("stub.entrypoint", "registry_here")
+    call_entry_points("stub.entrypoint", registry)
 
     mock_logging.mock_error.assert_called_once()
     assert "plugin" in mock_logging.mock_error.call_args.args[1]

@@ -21,3 +21,14 @@ def test_registry() -> None:
     assert "other_name" in reg.items
     assert reg.items["other_name"] == "value_2"
     assert reg.names() == ["name", "other_name"]
+
+
+def test_registry_tracks_plugin_interface_version() -> None:
+    """Registry metadata should store plugin interface versions."""
+    reg = Registry[str]()
+
+    assert reg.register("name", "value")
+    reg.plugin_interface_versions["name"] = "0.0.2"
+
+    assert reg.plugin_interface_versions["name"] == "0.0.2"
+    assert reg.items["name"] == "value"

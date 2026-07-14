@@ -15,6 +15,7 @@ class Registry(Generic[T]):
     def __init__(self) -> None:
         """Create an empty registry."""
         self.items: dict[str, T] = {}
+        self.plugin_interface_versions: dict[str, str | None] = {}
         self.pretty_names: dict[str, str] = {}
 
     def __str__(self) -> str:

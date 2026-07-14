@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any, Iterator, cast
 from unittest.mock import MagicMock
 
+import click
 import pytest
 
 from mlia.api import (
@@ -162,11 +163,11 @@ def test_list_backend_options_uses_discovered_metadata(
                 "module": "vela",
                 "backend": "vela",
                 "config_key": "config_file",
-                "cli_option": "--config",
-                "full_cli_option": "--vela.config",
-                "dest": "vela_config_file",
-                "type": int,
-                "help": "Uses the CLI-discovered help text.",
+                "click_option": click.Option(
+                    ["--vela.config", "vela_config_file"],
+                    type=int,
+                    help="Uses the CLI-discovered help text.",
+                ),
             }
         ],
     )
@@ -196,11 +197,11 @@ def test_list_backend_options_skips_unregistered_backend(
                 "module": "missing_backend",
                 "backend": "missing-backend",
                 "config_key": "path",
-                "cli_option": "--path",
-                "full_cli_option": "--missing-backend.path",
-                "dest": "missing_backend_path",
-                "type": Path,
-                "help": "Missing backend option.",
+                "click_option": click.Option(
+                    ["--missing-backend.path", "missing_backend_path"],
+                    type=click.Path(path_type=Path),
+                    help="Missing backend option.",
+                ),
             }
         ],
     )
@@ -1437,61 +1438,61 @@ def test_list_backend_options_type_name_variants(
                 "module": "a",
                 "backend": "backend-a",
                 "config_key": "path",
-                "cli_option": "--path",
-                "full_cli_option": "--backend-a.path",
-                "dest": "path",
-                "type": Path,
-                "help": "path help",
+                "click_option": click.Option(
+                    ["--backend-a.path", "path"],
+                    type=click.Path(path_type=Path),
+                    help="path help",
+                ),
             },
             {
                 "module": "a",
                 "backend": "backend-a",
                 "config_key": "flag",
-                "cli_option": "--flag",
-                "full_cli_option": "--backend-a.flag",
-                "dest": "flag",
-                "type": bool,
-                "help": "flag help",
+                "click_option": click.Option(
+                    ["--backend-a.flag", "flag"],
+                    type=bool,
+                    help="flag help",
+                ),
             },
             {
                 "module": "a",
                 "backend": "backend-a",
                 "config_key": "ratio",
-                "cli_option": "--ratio",
-                "full_cli_option": "--backend-a.ratio",
-                "dest": "ratio",
-                "type": float,
-                "help": "ratio help",
+                "click_option": click.Option(
+                    ["--backend-a.ratio", "ratio"],
+                    type=float,
+                    help="ratio help",
+                ),
             },
             {
                 "module": "a",
                 "backend": "backend-a",
                 "config_key": "name",
-                "cli_option": "--name",
-                "full_cli_option": "--backend-a.name",
-                "dest": "name",
-                "type": str,
-                "help": "name help",
+                "click_option": click.Option(
+                    ["--backend-a.name", "name"],
+                    type=str,
+                    help="name help",
+                ),
             },
             {
                 "module": "a",
                 "backend": "backend-a",
                 "config_key": "fallback",
-                "cli_option": "--fallback",
-                "full_cli_option": "--backend-a.fallback",
-                "dest": "fallback",
-                "type": None,
-                "help": "fallback help",
+                "click_option": click.Option(
+                    ["--backend-a.fallback", "fallback"],
+                    type=str,
+                    help="fallback help",
+                ),
             },
             {
                 "module": "a",
                 "backend": "backend-a",
                 "config_key": "custom",
-                "cli_option": "--custom",
-                "full_cli_option": "--backend-a.custom",
-                "dest": "custom",
-                "type": type("CustomType", (), {}),
-                "help": "custom help",
+                "click_option": click.Option(
+                    ["--backend-a.custom", "custom"],
+                    type=click.Choice(["custom"]),
+                    help="custom help",
+                ),
             },
         ],
     )
@@ -1524,7 +1525,7 @@ def test_list_backend_options_type_name_variants(
                 },
                 {
                     "config_key": "custom",
-                    "type": "CustomType",
+                    "type": "choice",
                     "description": "custom help",
                 },
             ],

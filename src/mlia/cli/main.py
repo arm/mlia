@@ -8,6 +8,7 @@ import typer
 
 from mlia.cli.commands import backend_app, color_enabled, mlia_app, target_app
 from mlia.plugins.plugins import load_cli_plugins as _load_cli_plugins
+from mlia.utils.registry import Registry
 
 DEPRECATED_BACKEND_ENTRY_POINT = (
     "Warning: 'mlia-backend' is deprecated. Use 'mlia backend' instead."
@@ -17,9 +18,9 @@ DEPRECATED_TARGET_ENTRY_POINT = (
 )
 
 
-def load_cli_plugins(*args: object) -> None:
+def load_cli_plugins(registry: Registry[object]) -> None:
     """Keep the legacy plugin loader import path available."""
-    _load_cli_plugins(*args)
+    _load_cli_plugins(registry)
 
 
 def main() -> None:
