@@ -13,9 +13,11 @@ import click
 import pytest
 from typer.testing import CliRunner
 
+import mlia.api as mlia_api
+import mlia.cli.command_validators as command_validators
 import mlia.cli.commands as cli_commands
 import mlia.cli.main as cli_main
-from mlia.api import BackendOptionSpec
+from mlia.backend.options import BackendOptionSpec
 
 ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-9;?]*[ -/]*[@-~]")
 
@@ -234,9 +236,9 @@ def test_check_accepts_updated_flag_names(args: list[str], expected_text: str) -
 
 def test_check_accepts_target_profile_flag(monkeypatch: pytest.MonkeyPatch) -> None:
     """The check command should accept the target profile flag."""
-    monkeypatch.setattr(cli_commands, "get_advice", MagicMock())
+    monkeypatch.setattr(mlia_api, "get_advice", MagicMock())
     monkeypatch.setattr(
-        cli_commands,
+        command_validators,
         "validate_check_target_profile",
         MagicMock(),
     )
@@ -261,9 +263,9 @@ def test_check_passes_backend_options_from_discovered_cli_options(
         "discover_backend_option_specs",
         discover_backend_option_specs,
     )
-    monkeypatch.setattr(cli_commands, "get_advice", get_advice)
+    monkeypatch.setattr(mlia_api, "get_advice", get_advice)
     monkeypatch.setattr(
-        cli_commands,
+        command_validators,
         "validate_check_target_profile",
         MagicMock(return_value=True),
     )
@@ -302,9 +304,9 @@ def test_check_rejects_unnamespaced_backend_click_option(
         "discover_backend_option_specs",
         discover_backend_option_specs,
     )
-    monkeypatch.setattr(cli_commands, "get_advice", get_advice)
+    monkeypatch.setattr(mlia_api, "get_advice", get_advice)
     monkeypatch.setattr(
-        cli_commands,
+        command_validators,
         "validate_check_target_profile",
         MagicMock(return_value=True),
     )
@@ -339,9 +341,9 @@ def test_check_accepts_namespaced_backend_click_option(
         "discover_backend_option_specs",
         discover_backend_option_specs,
     )
-    monkeypatch.setattr(cli_commands, "get_advice", get_advice)
+    monkeypatch.setattr(mlia_api, "get_advice", get_advice)
     monkeypatch.setattr(
-        cli_commands,
+        command_validators,
         "validate_check_target_profile",
         MagicMock(return_value=True),
     )
@@ -371,9 +373,9 @@ def test_check_exits_cleanly_when_validation_skips_all_work(
     """The check command should exit 0 when validation reports no runnable checks."""
     get_advice = MagicMock()
 
-    monkeypatch.setattr(cli_commands, "get_advice", get_advice)
+    monkeypatch.setattr(mlia_api, "get_advice", get_advice)
     monkeypatch.setattr(
-        cli_commands,
+        command_validators,
         "validate_check_target_profile",
         MagicMock(return_value=False),
     )

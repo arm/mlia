@@ -6,14 +6,16 @@ from __future__ import annotations
 
 import platform
 from enum import Enum, auto
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
 import click
 
-from mlia.backend.install import Installation
 from mlia.core.common import AdviceCategory
 
 BackendCliOption = str | click.Option
+
+if TYPE_CHECKING:
+    from mlia.backend.install import Installation
 
 
 class System(Enum):

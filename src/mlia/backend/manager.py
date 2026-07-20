@@ -17,10 +17,15 @@ from mlia.backend.install import (
     InstallFromPath,
     InstallFromVendorPackage,
 )
-from mlia.backend.registry import ensure_backend_plugins_loaded
-from mlia.backend.registry import registry as backend_registry
+from mlia.backend.registry import (
+    ensure_backend_plugins_loaded,
+    get_selectable_backends,
+    registry,
+)
 from mlia.core.errors import ConfigurationError, InternalError
 from mlia.utils.misc import yes
+
+backend_registry = registry
 
 logger = logging.getLogger(__name__)
 
@@ -426,19 +431,11 @@ def get_available_backends() -> list[str]:
     manager = get_installation_manager()
     available_backends = [
         backend
-        for backend, cfg in backend_registry.items.items()
-        if cfg.selectable
-        and (cfg.type == BackendType.BUILTIN or manager.backend_installed(backend))
+        for backend in get_selectable_backends()
+        if backend_registry.items[backend].type == BackendType.BUILTIN
+        or manager.backend_installed(backend)
     ]
     return available_backends
-
-
-def get_selectable_backends() -> list[str]:
-    """Return list of selectable backends regardless of installation state."""
-    ensure_backend_plugins_loaded()
-    return [
-        backend for backend, cfg in backend_registry.items.items() if cfg.selectable
-    ]
 
 
 def ensure_backends_installed(

@@ -18,22 +18,17 @@ from rich.panel import Panel
 from rich.table import Table
 
 from mlia import __version__
-from mlia.api import (
+from mlia.backend.options import (
     BackendOptionSpec,
     discover_backend_option_specs,
-    get_advice,
-    install_backends,
-    list_backends,
-    uninstall_backends,
 )
-from mlia.cli.command_validators import validate_check_target_profile
+from mlia.backend.registry import get_selectable_backends
+from mlia.cli.completion import target_profile_names
 from mlia.cli.helpers import CLIActionResolver
 from mlia.core.context import ExecutionContext
 from mlia.core.logging import setup_logging
 from mlia.plugins.plugins import BACKEND_PLUGIN_GROUP, TARGET_PLUGIN_GROUP
 from mlia.plugins.registry import list_entry_points
-from mlia.target.config import get_builtin_target_profile_path, load_profile
-from mlia.target.registry import profiles_by_target
 from mlia.utils.console import create_section_header
 
 logger = logging.getLogger(__name__)
@@ -94,6 +89,22 @@ class BackendOptionCommand(typer.core.TyperCommand):
             ctx.params.pop(option_name, None)
         ctx.ensure_object(dict)["backend_options"] = backend_options
         return super().invoke(ctx)
+
+
+def complete_backend_names(incomplete: str) -> list[str]:
+    """Complete registered selectable backend names."""
+    return [
+        backend
+        for backend in sorted(get_selectable_backends())
+        if backend.startswith(incomplete)
+    ]
+
+
+def complete_target_profile_names(incomplete: str) -> list[str]:
+    """Complete packaged target profile names."""
+    return [
+        profile for profile in target_profile_names() if profile.startswith(incomplete)
+    ]
 
 
 def _setup_command_logging(debug: bool) -> None:
@@ -233,6 +244,9 @@ def _print_list_table(ctx: AppContext, title: str, table: Table) -> None:
 
 def format_target_info(ctx: AppContext) -> None:
     """List available target profiles."""
+    from mlia.target.config import get_builtin_target_profile_path, load_profile
+    from mlia.target.registry import profiles_by_target
+
     logger.info(CONFIG)
 
     _log_plugin_table(ctx, "Target Plugins", TARGET_PLUGIN_GROUP)
@@ -266,6 +280,8 @@ def format_target_info(ctx: AppContext) -> None:
 
 def format_backend_info(ctx: AppContext) -> None:
     """List available backend plugins and installation status."""
+    from mlia.api import list_backends
+
     logger.info(CONFIG)
     _log_plugin_table(ctx, "Backend Plugins", BACKEND_PLUGIN_GROUP)
 
@@ -422,6 +438,7 @@ def check(
             "--target-profile",
             "-t",
             help="Set the target profile",
+            autocompletion=complete_target_profile_names,
         ),
     ],
     output_dir: Annotated[
@@ -434,6 +451,7 @@ def check(
             "--backend",
             "-b",
             help="Set backend profiles to use for evaluation",
+            autocompletion=complete_backend_names,
         ),
     ] = None,
     performance: Annotated[
@@ -473,6 +491,9 @@ def check(
     ctx: typer.Context | None = None,
 ) -> None:
     """Generate advice for the input model."""
+    from mlia.api import get_advice
+    from mlia.cli.command_validators import validate_check_target_profile
+
     category = set()
     if compatibility:
         category.add("compatibility")
@@ -530,6 +551,7 @@ def check_command(
             "--target-profile",
             "-t",
             help="Set the target profile",
+            autocompletion=complete_target_profile_names,
         ),
     ],
     output_dir: Annotated[
@@ -542,6 +564,7 @@ def check_command(
             "--backend",
             "-b",
             help="Set backend profiles to use for evaluation",
+            autocompletion=complete_backend_names,
         ),
     ] = None,
     performance: Annotated[
@@ -604,6 +627,7 @@ def backend_install(
     names: list[str] = typer.Argument(
         ...,
         help="Backend names to install",
+        autocompletion=complete_backend_names,
     ),
     path: Path | None = typer.Option(
         None,
@@ -628,6 +652,8 @@ def backend_install(
     debug: bool = debug_option(),
 ) -> None:
     """Install backend packages."""
+    from mlia.api import install_backends
+
     _setup_command_logging(debug)
     install_backends(
         names=names,
@@ -643,10 +669,13 @@ def backend_uninstall(
     names: list[str] = typer.Argument(
         ...,
         help="Backend names to uninstall",
+        autocompletion=complete_backend_names,
     ),
     debug: bool = debug_option(),
 ) -> None:
     """Uninstall backend packages."""
+    from mlia.api import uninstall_backends
+
     _setup_command_logging(debug)
     uninstall_backends(names)
 

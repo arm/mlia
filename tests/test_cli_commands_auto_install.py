@@ -11,6 +11,8 @@ from unittest.mock import MagicMock
 import pytest
 import typer
 
+import mlia.api as mlia_api
+import mlia.cli.command_validators as command_validators
 from mlia.cli import commands as cli_commands
 from mlia.cli.commands import AppContext, mlia_app
 from mlia.core.context import ExecutionContext
@@ -27,8 +29,8 @@ def test_backend_list_does_not_install(monkeypatch: pytest.MonkeyPatch) -> None:
     install_backends = MagicMock()
     list_backends = MagicMock()
 
-    monkeypatch.setattr(cli_commands, "list_backends", list_backends)
-    monkeypatch.setattr(cli_commands, "install_backends", install_backends)
+    monkeypatch.setattr(mlia_api, "list_backends", list_backends)
+    monkeypatch.setattr(mlia_api, "install_backends", install_backends)
     monkeypatch.setattr(cli_commands, "setup_logging", MagicMock())
 
     cli_commands.backend_list(_get_app_context())
@@ -41,8 +43,10 @@ def test_check_preserves_interactive_eula_prompt(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     get_advice = MagicMock()
-    monkeypatch.setattr(cli_commands, "validate_check_target_profile", MagicMock())
-    monkeypatch.setattr(cli_commands, "get_advice", get_advice)
+    monkeypatch.setattr(
+        command_validators, "validate_check_target_profile", MagicMock()
+    )
+    monkeypatch.setattr(mlia_api, "get_advice", get_advice)
     monkeypatch.setattr(cli_commands, "setup_logging", MagicMock())
 
     cli_commands.check(
@@ -60,8 +64,10 @@ def test_check_noninteractive_without_eula_rejects_eula_install(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     get_advice = MagicMock()
-    monkeypatch.setattr(cli_commands, "validate_check_target_profile", MagicMock())
-    monkeypatch.setattr(cli_commands, "get_advice", get_advice)
+    monkeypatch.setattr(
+        command_validators, "validate_check_target_profile", MagicMock()
+    )
+    monkeypatch.setattr(mlia_api, "get_advice", get_advice)
     monkeypatch.setattr(cli_commands, "setup_logging", MagicMock())
 
     cli_commands.check(
@@ -79,8 +85,10 @@ def test_check_noninteractive_with_eula_accepts_eula_install(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     get_advice = MagicMock()
-    monkeypatch.setattr(cli_commands, "validate_check_target_profile", MagicMock())
-    monkeypatch.setattr(cli_commands, "get_advice", get_advice)
+    monkeypatch.setattr(
+        command_validators, "validate_check_target_profile", MagicMock()
+    )
+    monkeypatch.setattr(mlia_api, "get_advice", get_advice)
     monkeypatch.setattr(cli_commands, "setup_logging", MagicMock())
 
     cli_commands.check(
@@ -102,8 +110,10 @@ def test_check_passes_backend_options(
     backend_options: dict[str, dict[str, object]] = {
         "bingo-bongo-backend": {"system_config": "backend.toml"}
     }
-    monkeypatch.setattr(cli_commands, "validate_check_target_profile", MagicMock())
-    monkeypatch.setattr(cli_commands, "get_advice", get_advice)
+    monkeypatch.setattr(
+        command_validators, "validate_check_target_profile", MagicMock()
+    )
+    monkeypatch.setattr(mlia_api, "get_advice", get_advice)
     monkeypatch.setattr(cli_commands, "setup_logging", MagicMock())
 
     cli_commands.check(
@@ -121,8 +131,10 @@ def test_check_passes_cli_context_settings(
     get_advice = MagicMock()
     setup_logging = MagicMock()
 
-    monkeypatch.setattr(cli_commands, "validate_check_target_profile", MagicMock())
-    monkeypatch.setattr(cli_commands, "get_advice", get_advice)
+    monkeypatch.setattr(
+        command_validators, "validate_check_target_profile", MagicMock()
+    )
+    monkeypatch.setattr(mlia_api, "get_advice", get_advice)
     monkeypatch.setattr(cli_commands, "setup_logging", setup_logging)
 
     cli_commands.check(
@@ -158,8 +170,8 @@ def test_contextless_commands_pass_debug_to_logging(
     setup_logging = MagicMock()
 
     monkeypatch.setattr(cli_commands, "setup_logging", setup_logging)
-    monkeypatch.setattr(cli_commands, "install_backends", MagicMock())
-    monkeypatch.setattr(cli_commands, "uninstall_backends", MagicMock())
+    monkeypatch.setattr(mlia_api, "install_backends", MagicMock())
+    monkeypatch.setattr(mlia_api, "uninstall_backends", MagicMock())
     monkeypatch.setattr(cli_commands, "format_backend_info", MagicMock())
     monkeypatch.setattr(cli_commands, "format_target_info", MagicMock())
 

@@ -8,6 +8,7 @@ from mlia.utils.registry import Registry
 
 BackendRegistry = Registry[BackendConfiguration]
 
+
 # All supported targets are required to be registered here.
 registry = BackendRegistry()
 
@@ -32,6 +33,11 @@ def get_supported_backends() -> list:
     """Get a list of all backends supported by the backend manager."""
     _ensure_plugins_loaded()
     return sorted(list(registry.items.keys()))
+
+
+def get_selectable_backends() -> list[str]:
+    """Return selectable backend names regardless of installation state."""
+    return [backend for backend, config in registry.items.items() if config.selectable]
 
 
 def get_supported_systems() -> dict:
