@@ -5,21 +5,48 @@ name: CI
 
 on:
   pull_request:
+  workflow_dispatch:
 
 env:
   PYTHON_VERSION: "3.10"
-  UV_DEFAULT_INDEX: ${{ secrets.INTERNAL_PYPI_HOST && format('internal={0}', secrets.INTERNAL_PYPI_HOST) || '' }}
-  UV_INDEX_INTERNAL_USERNAME: ${{ secrets.INTERNAL_PYPI_HOST && secrets.INTERNAL_PYPI_USERNAME || '' }}
-  UV_INDEX_INTERNAL_PASSWORD: ${{ secrets.INTERNAL_PYPI_HOST && secrets.INTERNAL_PYPI_PASSWORD || '' }}
+
+  # Separate uv installations from each other on self-hosten runners
+  # in case they share the working directory
+  UV_CACHE_DIR: ${{ github.workspace }}/.uv-cache-ci-${{ github.run_id }}-${{ github.run_attempt }}
+  UV_PROJECT_ENVIRONMENT: ${{ github.workspace }}/.venv-ci-${{ github.run_id }}-${{ github.run_attempt }}
+  UV_TOOL_DIR: ${{ github.workspace }}/.uv-tools-ci-${{ github.run_id }}-${{ github.run_attempt }}
+  UV_TOOL_BIN_DIR: ${{ github.workspace }}/.uv-bin-ci-${{ github.run_id }}-${{ github.run_attempt }}
+
+  VAULT_COMMON_CI_SECRETS: &vault-common-ci-secrets |
+    kv/data/MLIA/CI?version=${{ vars.VAULT_CI_SECRET_VERSION || '0' }} INTERNAL_PYPI_HOST | INTERNAL_PYPI_HOST ;
+    kv/data/MLIA/CI?version=${{ vars.VAULT_CI_SECRET_VERSION || '0' }} INTERNAL_PYPI_USERNAME | INTERNAL_PYPI_USERNAME ;
+    kv/data/MLIA/CI?version=${{ vars.VAULT_CI_SECRET_VERSION || '0' }} INTERNAL_PYPI_PASSWORD | INTERNAL_PYPI_PASSWORD ;
 
 jobs:
   lint:
     name: Lint
     runs-on: ${{ fromJson(vars.UBUNTU_RUNNER || '["ubuntu-24.04-arm"]') }}
     steps:
+      - name: Import secrets from Vault
+        if: >-
+          ${{ github.event_name == 'workflow_dispatch' ||
+          github.event.pull_request.head.repo.full_name == github.repository }}
+        uses: hashicorp/vault-action@v4
+        with:
+          url: ${{ secrets.VAULT_URL }}
+          method: approle
+          roleId: ${{ secrets.VAULT_ROLE_ID }}
+          secretId: ${{ secrets.VAULT_SECRET_ID }}
+          namespace: iac-expkits/prod
+          secrets: *vault-common-ci-secrets
       - uses: actions/checkout@v4
         with:
           fetch-depth: 2
+      - name: Configure uv package index
+        run: |
+          if [ -n "${INTERNAL_PYPI_HOST:-}" ]; then
+            echo "UV_DEFAULT_INDEX=internal=${INTERNAL_PYPI_HOST}" >> "$GITHUB_ENV"
+          fi
       - uses: astral-sh/setup-uv@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
@@ -35,7 +62,24 @@ jobs:
     name: Build
     runs-on: ${{ fromJson(vars.UBUNTU_RUNNER || '["ubuntu-24.04-arm"]') }}
     steps:
+      - name: Import secrets from Vault
+        if: >-
+          ${{ github.event_name == 'workflow_dispatch' ||
+          github.event.pull_request.head.repo.full_name == github.repository }}
+        uses: hashicorp/vault-action@v4
+        with:
+          url: ${{ secrets.VAULT_URL }}
+          method: approle
+          roleId: ${{ secrets.VAULT_ROLE_ID }}
+          secretId: ${{ secrets.VAULT_SECRET_ID }}
+          namespace: iac-expkits/prod
+          secrets: *vault-common-ci-secrets
       - uses: actions/checkout@v4
+      - name: Configure uv package index
+        run: |
+          if [ -n "${INTERNAL_PYPI_HOST:-}" ]; then
+            echo "UV_DEFAULT_INDEX=internal=${INTERNAL_PYPI_HOST}" >> "$GITHUB_ENV"
+          fi
       - uses: astral-sh/setup-uv@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
