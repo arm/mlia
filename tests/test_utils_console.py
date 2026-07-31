@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import sys
 from typing import Iterable
 
 import pytest
@@ -60,6 +61,32 @@ def test_produce_table_unknown_style() -> None:
         produce_table([["1", "2", "3"]], [], "unknown_style")
 
 
+def test_produce_table_truncates_terminal_output(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Redirected output should not truncate its output"""
+    monkeypatch.setattr(sys.stdout, "isatty", lambda: True)
+
+    value = "x" * 100
+    result = remove_ascii_codes(produce_table([[value]], table_style="no_borders"))
+
+    assert value not in result
+    assert "…" in result
+
+
+def test_produce_table_does_not_truncate_redirected_output(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Redirected output should not truncate its output"""
+    monkeypatch.setattr(sys.stdout, "isatty", lambda: False)
+
+    value = "x" * 100
+    result = remove_ascii_codes(produce_table([[value]], table_style="no_borders"))
+
+    assert value in result
+    assert "…" not in result
+
+
 @pytest.mark.parametrize(
     "value, expected_result",
     [
@@ -82,12 +109,11 @@ def test_apply_style() -> None:
     [
         [
             "Section header",
-            "\n--- Section header -------------------------------"
-            "------------------------------\n",
+            f"\n--- Section header {'-' * 101}\n",
         ],
         [
             "",
-            f"\n{'-' * 80}\n",
+            f"\n{'-' * 120}\n",
         ],
     ],
 )

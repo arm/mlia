@@ -4,6 +4,8 @@
 
 from __future__ import annotations
 
+import shutil
+import sys
 from typing import Iterable
 
 from rich.console import Console, RenderableType
@@ -12,9 +14,12 @@ from rich.text import Text
 
 
 def create_section_header(
-    section_name: str | None = None, length: int = 80, sep: str = "-"
+    section_name: str | None = None, length: int | None = None, sep: str = "-"
 ) -> str:
     """Return section header."""
+    if length is None:
+        length = _output_width()
+
     if not section_name:
         content = sep * length
     else:
@@ -81,13 +86,21 @@ def _get_table(table_style: str) -> Table:
 
 def _convert_to_text(*renderables: RenderableType) -> str:
     """Convert renderable object to text."""
-    console = Console()
+    console = Console(width=_output_width())
     with console.capture() as capture:
         for item in renderables:
             console.print(item)
 
     text = capture.get()
     return text.rstrip()
+
+
+def _output_width() -> int:
+    """Return the width to use rhen rendering console output."""
+    if sys.stdout.isatty():
+        return shutil.get_terminal_size().columns
+
+    return 120
 
 
 def remove_ascii_codes(value: str) -> str:
