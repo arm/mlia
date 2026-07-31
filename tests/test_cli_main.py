@@ -7,7 +7,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 from typing import Any
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import click
 import pytest
@@ -459,3 +459,24 @@ def test_target_main_warns_about_deprecated_entry_point(
     )
     target_app.assert_called_once_with(color=False)
     assert capsys.readouterr().err == ""
+
+
+@pytest.mark.parametrize(
+    "environment, result",
+    [
+        ({}, False),
+        ({"DEBUG": ""}, False),
+        ({"DEBUG": "1"}, True),
+    ],
+)
+def test_debug_option_is_set_from_environment(
+    monkeypatch: pytest.MonkeyPatch,
+    environment: dict[str, str],
+    result: bool,
+) -> None:
+    """
+    The debug Typer option's default value should be set depending on the environment.
+    """
+
+    with patch.dict("os.environ", clear=True, **environment):
+        assert cli_commands.debug_option().default is result

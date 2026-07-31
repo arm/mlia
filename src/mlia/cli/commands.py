@@ -24,6 +24,7 @@ from mlia.backend.options import (
 )
 from mlia.backend.registry import get_selectable_backends
 from mlia.cli.completion import target_profile_names
+from mlia.cli.env import get_environment
 from mlia.cli.helpers import CLIActionResolver
 from mlia.core.context import ExecutionContext
 from mlia.core.logging import setup_logging
@@ -353,8 +354,14 @@ mlia_app.add_typer(
 
 def color_enabled() -> bool:
     """Return whether CLI colors should be enabled."""
-    no_color = os.getenv("NO_COLOR")
-    return not ((no_color is not None and no_color != "") or not sys.stdout.isatty())
+    if not sys.stdout.isatty():
+        return False
+
+    return (
+        os.getenv("NO_COLOR", "") == ""
+        and os.getenv("MLIA_NO_COLOR", "") == ""
+        and os.getenv("TERM", "") != "dumb"
+    )
 
 
 def version_callback(value: bool) -> None:
@@ -367,7 +374,7 @@ def version_callback(value: bool) -> None:
 def debug_option() -> Any:
     """Return the shared debug option declaration."""
     return typer.Option(
-        False,
+        get_environment().get("DEBUG", "") != "",
         "--debug",
         "-d",
         help="Produce verbose output",

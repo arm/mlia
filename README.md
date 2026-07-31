@@ -170,6 +170,27 @@ including when you are not sure which repo owns the problem.
 Only file an issue in a plugin repository if the bug is clearly and
 specifically isolated to that plugin.
 
+## Configuration
+
+MLIA follows common CLI environment variables where they map cleanly to existing
+options:
+
+- `DEBUG`: enable verbose output by default. Passing `--debug` has the same
+  effect.
+- `NO_COLOR`: disable coloured terminal output.
+- `MLIA_NO_COLOR`: disable coloured terminal output for MLIA specifically.
+- `COLUMNS`: set the terminal width used for interactive output. Redirected
+  output is rendered wide so the receiving terminal or tool can wrap it.
+
+MLIA can read environments variables through .env files in parent directories.
+
+When an option is available through more than one source, MLIA applies values
+in this order:
+
+1. Command-line flags.
+2. Environment variables.
+3. Built-in defaults.
+
 ## Development
 
 Install `uv`, then sync dependencies for local development:

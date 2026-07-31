@@ -4,8 +4,10 @@
 
 from __future__ import annotations
 
+import sys
 from collections.abc import Callable
 from pathlib import Path
+from unittest import mock
 from unittest.mock import MagicMock
 
 import pytest
@@ -178,6 +180,33 @@ def test_contextless_commands_pass_debug_to_logging(
     command(*args, debug=True)
 
     setup_logging.assert_called_once_with(verbose=True)
+
+
+@pytest.mark.parametrize(
+    "environment, result",
+    [
+        ({}, True),
+        ({"NO_COLOR": "1"}, False),
+        ({"NO_COLOR": ""}, True),
+        ({"MLIA_NO_COLOR": "1"}, False),
+        ({"MLIA_NO_COLOR": ""}, True),
+        ({"NO_COLOR": "", "MLIA_NO_COLOR": ""}, True),
+        ({"NO_COLOR": "1", "MLIA_NO_COLOR": ""}, False),
+        ({"NO_COLOR": "", "MLIA_NO_COLOR": "1"}, False),
+        ({"NO_COLOR": "1", "MLIA_NO_COLOR": "1"}, False),
+        ({"TERM": ""}, True),
+        ({"TERM": "dumb"}, False),
+    ],
+)
+def test_color_enabled_responds_to_environment_variables(
+    monkeypatch: pytest.MonkeyPatch,
+    environment: dict[str, str],
+    result: bool,
+) -> None:
+    monkeypatch.setattr(sys.stdout, "isatty", lambda: True)
+
+    with mock.patch.dict("os.environ", clear=True, **environment):
+        assert cli_commands.color_enabled() is result
 
 
 def test_app_context_has_correct_color_styling(monkeypatch: pytest.MonkeyPatch) -> None:
