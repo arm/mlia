@@ -172,13 +172,20 @@ specifically isolated to that plugin.
 
 ## Configuration
 
+MLIA supports user level configuration through a TOML file found at
+`~/.config/mlia/config.toml`. The following options are supported at the top
+level only:
+
+- `color` (`bool`): enable/disable colored terminal output.
+- `backend_options` (`dict`): backend options for the running profile.
+
 MLIA follows common CLI environment variables where they map cleanly to existing
 options:
 
 - `DEBUG`: enable verbose output by default. Passing `--debug` has the same
   effect.
-- `NO_COLOR`: disable coloured terminal output.
-- `MLIA_NO_COLOR`: disable coloured terminal output for MLIA specifically.
+- `NO_COLOR`: disable colored terminal output.
+- `MLIA_NO_COLOR`: disable colored terminal output for MLIA specifically.
 - `COLUMNS`: set the terminal width used for interactive output. Redirected
   output is rendered wide so the receiving terminal or tool can wrap it.
 
@@ -188,8 +195,10 @@ When an option is available through more than one source, MLIA applies values
 in this order:
 
 1. Command-line flags.
-2. Environment variables.
-3. Built-in defaults.
+2. The running shell's environment variables.
+3. Project level environment variables.
+4. User-level configuration.
+5. Built-in defaults.
 
 ## Development
 

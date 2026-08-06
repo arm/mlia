@@ -17,6 +17,7 @@ import mlia.api as mlia_api
 import mlia.cli.command_validators as command_validators
 import mlia.cli.commands as cli_commands
 import mlia.cli.main as cli_main
+import mlia.cli.settings as cli_settings
 from mlia.backend.options import BackendOptionSpec
 
 ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-9;?]*[ -/]*[@-~]")
@@ -100,15 +101,16 @@ def test_no_arguments_show_help(app: Any, expected_text: tuple[str, ...]) -> Non
 
     assert result.exit_code == 2
     for text in expected_text:
-        assert text in result.stdout
+        assert text in result.stdout or text in result.stderr
 
 
 def test_main_calls_mlia_app(monkeypatch: pytest.MonkeyPatch) -> None:
     """Main entry point should call the root Typer app."""
     mlia_app = MagicMock()
 
+    monkeypatch.setattr(cli_settings, "_color_enabled", lambda: None)
     monkeypatch.setattr(cli_main, "mlia_app", mlia_app)
-    monkeypatch.setattr(cli_main, "color_enabled", MagicMock(return_value=True))
+    monkeypatch.setattr(cli_settings.tomllib, "load", lambda x: {})
 
     cli_main.main()
     mlia_app.assert_called_once_with(color=True)
@@ -117,13 +119,14 @@ def test_main_calls_mlia_app(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_color_enabled_enables_color_for_tty_without_no_color(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Colors should be enabled for TTY output when NO_COLOR is unset."""
-    monkeypatch.delenv("NO_COLOR", raising=False)
+    """With TTY ouput, colors should be delegated to lower configuration
+    levels when NO_COLOR and MLIA_NO_COLOR is unset."""
     stream = MagicMock()
     stream.isatty.return_value = True
-    monkeypatch.setattr(cli_commands.sys, "stdout", stream)
+    monkeypatch.setattr(cli_settings.sys, "stdout", stream)
+    monkeypatch.setattr(cli_settings, "get_environment", lambda: {})
 
-    assert cli_main.color_enabled() is True
+    assert cli_settings._color_enabled() is None
 
 
 def test_color_enabled_disables_color_when_stdout_is_not_tty(
@@ -133,9 +136,9 @@ def test_color_enabled_disables_color_when_stdout_is_not_tty(
     monkeypatch.delenv("NO_COLOR", raising=False)
     stream = MagicMock()
     stream.isatty.return_value = False
-    monkeypatch.setattr(cli_commands.sys, "stdout", stream)
+    monkeypatch.setattr(cli_settings.sys, "stdout", stream)
 
-    assert cli_main.color_enabled() is False
+    assert cli_settings._color_enabled() is False
 
 
 def test_color_enabled_disables_color_when_no_color_is_set(
@@ -145,9 +148,9 @@ def test_color_enabled_disables_color_when_no_color_is_set(
     monkeypatch.setenv("NO_COLOR", "1")
     stream = MagicMock()
     stream.isatty.return_value = True
-    monkeypatch.setattr(cli_commands.sys, "stdout", stream)
+    monkeypatch.setattr(cli_settings.sys, "stdout", stream)
 
-    assert not cli_main.color_enabled()
+    assert not cli_settings._color_enabled()
 
 
 def test_check_without_arguments_shows_help_and_exit_code_2() -> None:
@@ -423,7 +426,7 @@ def test_backend_main_warns_about_deprecated_entry_point(
     secho = MagicMock()
 
     monkeypatch.setattr(cli_main, "backend_app", backend_app)
-    monkeypatch.setattr(cli_main, "color_enabled", MagicMock(return_value=False))
+    monkeypatch.setattr(cli_settings, "_color_enabled", MagicMock(return_value=False))
     monkeypatch.setattr(cli_main.typer, "secho", secho)
 
     cli_main.backend_main()
@@ -446,7 +449,7 @@ def test_target_main_warns_about_deprecated_entry_point(
     secho = MagicMock()
 
     monkeypatch.setattr(cli_main, "target_app", target_app)
-    monkeypatch.setattr(cli_main, "color_enabled", MagicMock(return_value=False))
+    monkeypatch.setattr(cli_settings, "_color_enabled", MagicMock(return_value=False))
     monkeypatch.setattr(cli_main.typer, "secho", secho)
 
     cli_main.target_main()

@@ -6,7 +6,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from mlia.utils.misc import MetadataError, get_pkg_version, yes
+from mlia.utils.misc import MetadataError, get_pkg_version, merge, yes
 
 
 @pytest.mark.parametrize(
@@ -41,3 +41,10 @@ def test_get_pkg_version_metadata_error(monkeypatch: pytest.MonkeyPatch) -> None
     )
     with pytest.raises(MetadataError):
         get_pkg_version("any name")
+
+
+def test_recursive_dictionary_merge() -> None:
+    a = {"A": {"B": 1, "C": 2}}
+    b = {"A": {"B": 8}}
+
+    assert merge(a, b) == {"A": {"B": 8, "C": 2}}

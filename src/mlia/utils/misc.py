@@ -4,6 +4,7 @@
 
 from importlib import metadata
 from pathlib import Path
+from typing import Any
 
 from mlia.utils.filesystem import sha256
 
@@ -30,3 +31,18 @@ def get_pkg_version(pkg_name: str) -> str:
 def get_file_checksum(input_path: Path) -> str:
     """Retrun the checksum of the input model."""
     return sha256(input_path)
+
+
+def merge(a: dict[Any, Any], b: dict[Any, Any]) -> dict[Any, Any]:
+    """Recursively merges two dictionaries."""
+    out = dict(a)
+    for k in b:
+        if k in out:
+            if isinstance(b[k], dict) and isinstance(out[k], dict):
+                out[k] = merge(out[k], b[k])
+            else:
+                out[k] = b[k]
+        else:
+            out[k] = b[k]
+
+    return out

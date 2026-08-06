@@ -125,8 +125,8 @@ def test_e2e_no_arguments_show_help(
 
     assert result.returncode == 2
     for text in expected_text:
-        assert text in result.stdout
-    assert result.stderr == ""
+        assert text in result.stderr
+    assert result.stdout == ""
     assert not (tmp_path / "mlia-output").exists()
 
 

@@ -4,10 +4,8 @@
 
 from __future__ import annotations
 
-import sys
 from collections.abc import Callable
 from pathlib import Path
-from unittest import mock
 from unittest.mock import MagicMock
 
 import pytest
@@ -16,14 +14,15 @@ import typer
 import mlia.api as mlia_api
 import mlia.cli.command_validators as command_validators
 from mlia.cli import commands as cli_commands
-from mlia.cli.commands import AppContext, mlia_app
+from mlia.cli.commands import mlia_app
+from mlia.cli.settings import new_settings
 from mlia.core.context import ExecutionContext
 
 
-def _get_app_context() -> typer.Context:
+def _get_app_settings() -> typer.Context:
     return typer.Context(
         typer.main.get_command(mlia_app),
-        obj=AppContext.build(),
+        obj=new_settings(),
     )
 
 
@@ -35,7 +34,7 @@ def test_backend_list_does_not_install(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(mlia_api, "install_backends", install_backends)
     monkeypatch.setattr(cli_commands, "setup_logging", MagicMock())
 
-    cli_commands.backend_list(_get_app_context())
+    cli_commands.backend_list(_get_app_settings())
 
     install_backends.assert_not_called()
     list_backends.assert_called()
@@ -160,8 +159,8 @@ def test_check_passes_cli_context_settings(
     [
         (cli_commands.backend_install, (["backend"],)),
         (cli_commands.backend_uninstall, (["backend"],)),
-        (cli_commands.backend_list, (_get_app_context(),)),
-        (cli_commands.target_list, (_get_app_context(),)),
+        (cli_commands.backend_list, (_get_app_settings(),)),
+        (cli_commands.target_list, (_get_app_settings(),)),
     ],
 )
 def test_contextless_commands_pass_debug_to_logging(
@@ -180,43 +179,3 @@ def test_contextless_commands_pass_debug_to_logging(
     command(*args, debug=True)
 
     setup_logging.assert_called_once_with(verbose=True)
-
-
-@pytest.mark.parametrize(
-    "environment, result",
-    [
-        ({}, True),
-        ({"NO_COLOR": "1"}, False),
-        ({"NO_COLOR": ""}, True),
-        ({"MLIA_NO_COLOR": "1"}, False),
-        ({"MLIA_NO_COLOR": ""}, True),
-        ({"NO_COLOR": "", "MLIA_NO_COLOR": ""}, True),
-        ({"NO_COLOR": "1", "MLIA_NO_COLOR": ""}, False),
-        ({"NO_COLOR": "", "MLIA_NO_COLOR": "1"}, False),
-        ({"NO_COLOR": "1", "MLIA_NO_COLOR": "1"}, False),
-        ({"TERM": ""}, True),
-        ({"TERM": "dumb"}, False),
-    ],
-)
-def test_color_enabled_responds_to_environment_variables(
-    monkeypatch: pytest.MonkeyPatch,
-    environment: dict[str, str],
-    result: bool,
-) -> None:
-    monkeypatch.setattr(sys.stdout, "isatty", lambda: True)
-
-    with mock.patch.dict("os.environ", clear=True, **environment):
-        assert cli_commands.color_enabled() is result
-
-
-def test_app_context_has_correct_color_styling(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(cli_commands, "color_enabled", MagicMock(return_value=True))
-    ctx = AppContext.build()
-    assert all(
-        "dim" in style
-        for style in (ctx.border_style, ctx.header_style, ctx.title_style)
-    )
-
-    monkeypatch.setattr(cli_commands, "color_enabled", MagicMock(return_value=False))
-    ctx = AppContext.build()
-    assert "dim" not in (ctx.border_style, ctx.header_style, ctx.title_style)

@@ -5,15 +5,11 @@
 from __future__ import annotations
 
 import logging
-import os
-import sys
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Annotated, Any
 
 import click
 import typer
-from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
@@ -24,10 +20,11 @@ from mlia.backend.options import (
 )
 from mlia.backend.registry import get_selectable_backends
 from mlia.cli.completion import target_profile_names
-from mlia.cli.env import get_environment
 from mlia.cli.helpers import CLIActionResolver
+from mlia.cli.settings import get_environment, new_settings
 from mlia.core.context import ExecutionContext
 from mlia.core.logging import setup_logging
+from mlia.core.settings import ApplicationSettings
 from mlia.plugins.plugins import BACKEND_PLUGIN_GROUP, TARGET_PLUGIN_GROUP
 from mlia.plugins.registry import list_entry_points
 from mlia.utils.console import create_section_header
@@ -88,7 +85,10 @@ class BackendOptionCommand(typer.core.TyperCommand):
         for spec in self._backend_option_specs:
             option_name = _backend_option_name(spec["click_option"])
             ctx.params.pop(option_name, None)
-        ctx.ensure_object(dict)["backend_options"] = backend_options
+        ctx.obj = new_settings(
+            source=ctx.ensure_object(ApplicationSettings),
+            backend_options=backend_options,
+        )
         return super().invoke(ctx)
 
 
@@ -159,18 +159,18 @@ def _create_check_context(
     return execution_context
 
 
-def _log_plugin_table(ctx: AppContext, title: str, group: str) -> None:
+def _log_plugin_table(settings: ApplicationSettings, title: str, group: str) -> None:
     """Log available plugins for a given entry point group."""
     plugins = list_entry_points(group)
     if not plugins:
-        ctx.console.print("[yellow]No plugins found.[/yellow]")
+        settings.console.print("No plugins found.", style="warning")
         return
 
     table = Table(
         box=None,
-        border_style=ctx.border_style,
-        header_style=ctx.header_style,
-        title_style=ctx.title_style,
+        border_style="tbl.border",
+        header_style="tbl.header",
+        title_style="tbl.title",
         show_lines=False,
         expand=True,
     )
@@ -191,7 +191,7 @@ def _log_plugin_table(ctx: AppContext, title: str, group: str) -> None:
     )
     table.add_column(
         "Version",
-        style=ctx.border_style,
+        style="tbl.border",
         no_wrap=True,
     )
 
@@ -203,63 +203,63 @@ def _log_plugin_table(ctx: AppContext, title: str, group: str) -> None:
             plugin.dist_version or "-",
         )
 
-    width = min(LIST_TABLE_WIDTH, ctx.console.size.width)
+    width = min(LIST_TABLE_WIDTH, settings.console.size.width)
 
-    ctx.console.print(
+    settings.console.print(
         Panel(
             table,
             title=title,
             width=width,
-            border_style=ctx.border_style,
+            border_style="tbl.border",
             title_align="left",
         )
     )
 
 
-def _create_list_table(ctx: AppContext) -> Table:
+def _create_list_table(settings: ApplicationSettings) -> Table:
     """Create a CLI list table with the shared list command style."""
     return Table(
         box=None,
-        border_style=ctx.border_style,
-        header_style=ctx.header_style,
-        title_style=ctx.title_style,
+        border_style="tbl.border",
+        header_style="tbl.header",
+        title_style="tbl.title",
         show_lines=False,
         expand=True,
     )
 
 
-def _print_list_table(ctx: AppContext, title: str, table: Table) -> None:
+def _print_list_table(settings: ApplicationSettings, title: str, table: Table) -> None:
     """Print a CLI list table in the shared panel style."""
-    width = min(LIST_TABLE_WIDTH, ctx.console.size.width)
+    width = min(LIST_TABLE_WIDTH, settings.console.size.width)
 
-    ctx.console.print(
+    settings.console.print(
         Panel.fit(
             table,
             width=width,
             title=title,
             title_align="left",
-            border_style=ctx.border_style,
+            border_style="tbl.border",
         )
     )
 
 
-def format_target_info(ctx: AppContext) -> None:
+def format_target_info(settings: ApplicationSettings) -> None:
     """List available target profiles."""
     from mlia.target.config import get_builtin_target_profile_path, load_profile
     from mlia.target.registry import profiles_by_target
 
     logger.info(CONFIG)
 
-    _log_plugin_table(ctx, "Target Plugins", TARGET_PLUGIN_GROUP)
+    _log_plugin_table(settings, "Target Plugins", TARGET_PLUGIN_GROUP)
 
     grouped_profiles = profiles_by_target()
 
     logger.info("Available Target Profiles\n")
 
     for target_type, profile_names in grouped_profiles.items():
-        table = _create_list_table(ctx)
+        table = _create_list_table(settings)
 
-        table.add_column("Profile", style="bold cyan", no_wrap=True)
+        table.add_column("Profile", style="tbl.name", no_wrap=True)
         table.add_column("Description", max_width=(LIST_TABLE_WIDTH // 2))
 
         for profile_name in profile_names:
@@ -276,15 +276,15 @@ def format_target_info(ctx: AppContext) -> None:
             except Exception:
                 table.add_row(profile_name, "-")
 
-        _print_list_table(ctx, f"{target_type.upper()}:", table)
+        _print_list_table(settings, f"{target_type.upper()}:", table)
 
 
-def format_backend_info(ctx: AppContext) -> None:
+def format_backend_info(settings: ApplicationSettings) -> None:
     """List available backend plugins and installation status."""
     from mlia.api import list_backends
 
     logger.info(CONFIG)
-    _log_plugin_table(ctx, "Backend Plugins", BACKEND_PLUGIN_GROUP)
+    _log_plugin_table(settings, "Backend Plugins", BACKEND_PLUGIN_GROUP)
 
     rows = [
         (
@@ -296,25 +296,25 @@ def format_backend_info(ctx: AppContext) -> None:
     ]
 
     if not rows:
-        ctx.console.print(
+        settings.console.print(
             Panel.fit(
                 "No backends found.",
                 title="Backends",
-                border_style=ctx.border_style,
+                border_style="tbl.border",
             )
         )
         return
 
-    table = _create_list_table(ctx)
+    table = _create_list_table(settings)
 
-    table.add_column("Name", style="bold cyan", no_wrap=True)
+    table.add_column("Name", style="tbl.name", no_wrap=True)
     table.add_column("Installed", no_wrap=True)
     table.add_column("Installable", no_wrap=True)
 
     for row in rows:
         table.add_row(*row)
 
-    _print_list_table(ctx, "Backends", table)
+    _print_list_table(settings, "Backends", table)
 
 
 mlia_app = typer.Typer(
@@ -352,18 +352,6 @@ mlia_app.add_typer(
 )
 
 
-def color_enabled() -> bool:
-    """Return whether CLI colors should be enabled."""
-    if not sys.stdout.isatty():
-        return False
-
-    return (
-        os.getenv("NO_COLOR", "") == ""
-        and os.getenv("MLIA_NO_COLOR", "") == ""
-        and os.getenv("TERM", "") != "dumb"
-    )
-
-
 def version_callback(value: bool) -> None:
     """Print the package version and exit when the version flag is set."""
     if value:
@@ -381,34 +369,6 @@ def debug_option() -> Any:
     )
 
 
-@dataclass
-class AppContext:
-    """Context object MLIA Typer app."""
-
-    console: Console
-    use_color: bool
-
-    border_style: str = ""
-    header_style: str = "bold"
-    title_style: str = "bold"
-
-    def __init__(self, console: Console, use_color: bool) -> None:
-        """Construct an AppContext setting the styling fields according to use_color."""
-        self.console = console
-        self.use_color = use_color
-
-        if self.use_color:
-            self.border_style = "dim"
-            self.header_style = "bold dim"
-            self.title_style = "bold dim"
-
-    @classmethod
-    def build(cls) -> AppContext:
-        """Build an AppContext, enabling colors depending on the environment."""
-        color = color_enabled()
-        return cls(Console(no_color=not color), color)
-
-
 @mlia_app.callback()
 def mlia_app_main(
     ctx: typer.Context,
@@ -422,19 +382,22 @@ def mlia_app_main(
     ),
 ) -> None:
     """Configure top-level MLIA CLI callback options."""
-    ctx.obj = AppContext.build()
+    src = ctx.obj if isinstance(ctx.obj, ApplicationSettings) else None
+    ctx.obj = new_settings(source=src)
 
 
 @backend_app.callback()
 def backend_app_main(ctx: typer.Context) -> None:
     """Configure the backend CLI namespace."""
-    ctx.obj = AppContext.build()
+    src = ctx.obj if isinstance(ctx.obj, ApplicationSettings) else None
+    ctx.obj = new_settings(source=src)
 
 
 @target_app.callback()
 def target_app_main(ctx: typer.Context) -> None:
     """Configure the target CLI namespace."""
-    ctx.obj = AppContext.build()
+    src = ctx.obj if isinstance(ctx.obj, ApplicationSettings) else None
+    ctx.obj = new_settings(source=src)
 
 
 def check(
@@ -610,8 +573,8 @@ def check_command(
 ) -> None:
     """Typer entry point for the check command."""
     backend_options = {}
-    if ctx is not None and isinstance(ctx.obj, dict):
-        backend_options = ctx.obj.get("backend_options", {})
+    if ctx is not None and isinstance(ctx.obj, ApplicationSettings):
+        backend_options = ctx.obj.backend_options
 
     check(
         ctx=ctx,
