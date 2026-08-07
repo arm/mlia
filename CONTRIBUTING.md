@@ -34,37 +34,30 @@ First clone the MLIA repository.
     git config user.email your@email.address
 ```
 
-### Git Commit Msg Hook
+### Pre-Commit Checks
 
-Install the git commit msg hook. This automatically adds a Gerrit "Change-Id"
-line to every commit.
+Pre-commit checks help ensure contributions comply with the MLIA coding style
+and project policies. Some checks may reformat files automatically. All checks
+must pass before a contribution can be merged.
+
+Install the development dependencies, including `pre-commit`, with `uv`:
 
 ```bash
-    # Download the commit hook
-    curl -o .git/hooks/commit-msg https://gerrit-review.googlesource.com/tools/hooks/commit-msg
-    # Make it executable
-    chmod +x .git/hooks/commit-msg
+    uv sync --group dev
 ```
 
-### Pre-Commit Tests
-
-To help with the contribution process you can run some tests using the pre-commit
-hooks. These tests ensure that the contributed code is compliant with the MLIA
-coding style. The pre-commit process may reformat your code to make it compliant.
-Code that does not pass these tests cannot be accepted to the main branch of MLIA.
-
-You can install the pre-commit hooks in your MLIA folder like this:
+Optionally install the Git hooks to run the checks automatically before each
+commit:
 
 ```bash
-    pre-commit install
+    uv run pre-commit install
 ```
 
-The pre-commit tests are run on each commit. You can also run them manually
-like this:
+Run all checks manually before opening a pull request. This is the same command
+used by continuous integration:
 
 ```bash
-    pre-commit run --all-files --hook-stage commit
-    pre-commit run --all-files --hook-stage push
+    uv run pre-commit run --all-files
 ```
 
 ### Commit Messages
