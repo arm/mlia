@@ -75,7 +75,6 @@ vcs = "git"
 style = "pep440"
 pattern = "default-unprefixed"
 bump = true
-fallback-version = "0.11.0"
 
 [tool.pytest]
 addopts = [

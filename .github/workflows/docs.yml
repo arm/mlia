@@ -46,6 +46,8 @@ jobs:
           namespace: iac-expkits/prod
           secrets: *vault-common-ci-secrets
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
       - uses: astral-sh/setup-uv@v7
         with:
           python-version: ${{ env.PYTHON_VERSION }}

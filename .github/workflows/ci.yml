@@ -42,7 +42,7 @@ jobs:
           secrets: *vault-common-ci-secrets
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 2
+          fetch-depth: 0
       - uses: astral-sh/setup-uv@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
@@ -72,6 +72,8 @@ jobs:
           namespace: iac-expkits/prod
           secrets: *vault-common-ci-secrets
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: astral-sh/setup-uv@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
@@ -88,6 +90,8 @@ jobs:
     runs-on: ${{ fromJson(vars.UBUNTU_RUNNER || '["ubuntu-24.04-arm"]') }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: astral-sh/setup-uv@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
