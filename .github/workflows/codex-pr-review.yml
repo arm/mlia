@@ -1,0 +1,19 @@
+# SPDX-FileCopyrightText: Copyright 2026, Arm Limited and/or its affiliates.
+# SPDX-License-Identifier: Apache-2.0
+
+name: Codex PR Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+
+jobs:
+  codex-review:
+    if: >-
+      ${{ github.event.action != 'edited' ||
+      github.event.changes.base != null }}
+    uses: Arm-Debug/github-workflow-wizardry/.github/workflows/codex-pr-review.yaml@main
+    with:
+      vault_secret_path: kv/data/MLIA/CI
+      vault_secret_version: ${{ vars.VAULT_CI_SECRET_VERSION || '0' }}
+    secrets: inherit
