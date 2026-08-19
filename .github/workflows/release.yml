@@ -122,6 +122,16 @@ jobs:
           UV_PUBLISH_USERNAME: ${{ secrets.INTERNAL_PYPI_USERNAME || secrets.PUBLISH_PYPI_USERNAME }}
           UV_PUBLISH_PASSWORD: ${{ secrets.INTERNAL_PYPI_PASSWORD || secrets.PUBLISH_PYPI_PASSWORD }}
 
+  publish_docs:
+    name: Publish Documentation
+    if: ${{ github.ref_type == 'tag' }}
+    needs: publish_release
+    uses: ./.github/workflows/docs.yml
+    with:
+      publish: true
+      wheel-artifact: wheel
+    secrets: inherit
+
   sync_to_public_repo:
     needs: build_and_test_wheel
     if: ${{ github.event.repository.private }}
