@@ -59,8 +59,9 @@ class E2ECase:
     args: tuple[str, ...]
 
     def __str__(self) -> str:
-        """Return the full `mlia` command for this case."""
-        return shlex.join(("mlia", self.command, *self.args))
+        """Return the full `mlia` command with platform-neutral display paths."""
+        display_args = tuple(argument.replace("\\", "/") for argument in self.args)
+        return shlex.join(("mlia", self.command, *display_args))
 
 
 @dataclass(frozen=True)

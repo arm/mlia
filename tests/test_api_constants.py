@@ -27,15 +27,15 @@ def test_constants_modules_expose_strings() -> None:
         assert all(isinstance(value, str) and value for value in group)
 
 
-def test_constants_match_current_discovery_outputs() -> None:
-    """Installed discovery outputs should match exported constants exactly."""
+def test_constants_include_current_discovery_outputs() -> None:
+    """Constants include every target and currently available backend."""
     assert set(_values(mlia.targets)) == {entry["target"] for entry in list_targets()}
     assert set(_values(mlia.target_profiles)) == {
         entry["name"]
         for entries in list_target_profiles().values()
         for entry in entries
     }
-    assert set(_values(mlia.backends)) == {entry["name"] for entry in list_backends()}
+    assert {entry["name"] for entry in list_backends()} <= set(_values(mlia.backends))
 
 
 def test_constants_modules_support_dir() -> None:

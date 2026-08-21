@@ -114,7 +114,8 @@ def get_mlia_target_optimization_dir() -> Path:
 @contextmanager
 def temp_file(suffix: str | None = None) -> Generator[Path, None, None]:
     """Create temp file and remove it after."""
-    _, tmp_file = mkstemp(suffix=suffix)
+    file_descriptor, tmp_file = mkstemp(suffix=suffix)
+    os.close(file_descriptor)
 
     try:
         yield Path(tmp_file)

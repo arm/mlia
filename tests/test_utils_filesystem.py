@@ -3,6 +3,7 @@
 """Tests for the filesystem module."""
 
 import contextlib
+import re
 from pathlib import Path
 
 import pytest
@@ -169,5 +170,8 @@ def test_recreate_directory_wrong_path(tmp_path: Path) -> None:
     sample_file = tmp_path / "sample_file.txt"
     sample_file.touch()
 
-    with pytest.raises(ValueError, match=rf"Path {sample_file} is not a directory."):
+    with pytest.raises(
+        ValueError,
+        match=re.escape(f"Path {sample_file} is not a directory."),
+    ):
         recreate_directory(sample_file)

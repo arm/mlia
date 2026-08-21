@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 """Tests for process management functions."""
 
+import sys
 from subprocess import CalledProcessError  # nosec
 from unittest.mock import MagicMock
 
@@ -12,7 +13,7 @@ from mlia.utils.proc import Command, process_command_output
 
 def test_process_command_output() -> None:
     """Test function process_command_output."""
-    command = Command(["echo", "-n", "sample message"])
+    command = Command([sys.executable, "-c", "print('sample message', end='')"])
 
     output_consumer = MagicMock()
     process_command_output(command, [output_consumer])
@@ -23,7 +24,7 @@ def test_process_command_output() -> None:
 def test_process_command_output_subprocess_error() -> None:
     """Test function process_command_output."""
 
-    command = Command(["find", "-h"])
+    command = Command([sys.executable, "-c", "raise SystemExit(1)"])
 
     output_consumer = MagicMock()
     with pytest.raises(CalledProcessError):

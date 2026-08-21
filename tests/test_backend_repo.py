@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -37,7 +38,8 @@ def test_get_backend_repository(
 def test_backend_repository_wrong_directory(tmp_path: Path) -> None:
     """Test that repository instance should throw error for the wrong directory."""
     with pytest.raises(
-        Exception, match=f"Directory {tmp_path} could not be used as MLIA repository."
+        Exception,
+        match=re.escape(f"Directory {tmp_path} could not be used as MLIA repository."),
     ):
         BackendRepository(tmp_path)
 

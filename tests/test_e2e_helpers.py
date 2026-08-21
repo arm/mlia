@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import re
 import subprocess
 from pathlib import Path
 from typing import Any
@@ -170,9 +171,9 @@ def test_load_cases_rejects_missing_artifacts_directory(
 
     with pytest.raises(
         E2EExecutionRuntimeError,
-        match=(
+        match=re.escape(
             "Prepared artifacts directory does not exist or is not a directory: "
-            f"{missing_dir}"
+            f"{missing_dir}."
         ),
     ):
         _load_cases()

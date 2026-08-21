@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import hashlib
+import re
 from contextlib import ExitStack as does_not_raise
 from pathlib import Path
 from typing import Any, Iterable
@@ -147,5 +148,8 @@ def test_download_artifact_unable_to_overwrite(
     existing_file = tmp_path / "artifact_filename"
     existing_file.touch()
 
-    with pytest.raises(FileExistsError, match=f"{existing_file} already exists."):
+    with pytest.raises(
+        FileExistsError,
+        match=re.escape(f"{existing_file} already exists."),
+    ):
         download(existing_file, cfg)

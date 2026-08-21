@@ -4,11 +4,15 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 
 def check_expected_permissions(path: Path, expected_permissions_mask: int) -> None:
-    """Check expected permissions for the provided path."""
+    """Check expected permissions on platforms with POSIX mode semantics."""
+    if os.name == "nt":
+        return
+
     path_mode = path.stat().st_mode
     permissions_mask = path_mode & 0o777
 

@@ -176,6 +176,26 @@ def test_table_representation(with_notes: bool, expected_text_report: str) -> No
     }
 
     text_report = remove_ascii_codes(table.to_plain_text())
+    if "┌" not in text_report:
+        expected_text_report = expected_text_report.translate(
+            {
+                ord("┌"): "+",
+                ord("─"): "-",
+                ord("┬"): "+",
+                ord("┐"): "+",
+                ord("│"): "|",
+                ord("╞"): "+",
+                ord("═"): "=",
+                ord("╪"): "+",
+                ord("╡"): "+",
+                ord("├"): "+",
+                ord("┼"): "+",
+                ord("┤"): "+",
+                ord("└"): "+",
+                ord("┴"): "+",
+                ord("┘"): "+",
+            }
+        )
     assert text_report == expected_text_report
 
 
