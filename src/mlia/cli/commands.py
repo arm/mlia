@@ -5,8 +5,10 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Mapping
+from dataclasses import replace
 from pathlib import Path
-from typing import Annotated, Any
+from typing import Annotated, Any, cast
 
 import click
 import typer
@@ -23,13 +25,19 @@ from mlia.cli.completion import target_profile_names
 from mlia.cli.helpers import CLIActionResolver
 from mlia.cli.settings import get_environment, new_settings
 from mlia.core.context import ExecutionContext
+from mlia.core.errors import ConfigurationError
 from mlia.core.logging import close_configured_handlers, setup_logging
 from mlia.core.output_rendering import (
     standardized_output_to_json,
     standardized_output_to_text,
 )
 from mlia.core.settings import ApplicationSettings
-from mlia.plugins.plugins import BACKEND_PLUGIN_GROUP, TARGET_PLUGIN_GROUP
+from mlia.plugins.analysis import AnalysisPluginRegistry, AnalysisRunResult
+from mlia.plugins.plugins import (
+    BACKEND_PLUGIN_GROUP,
+    TARGET_PLUGIN_GROUP,
+    load_analysis_plugins,
+)
 from mlia.plugins.registry import list_entry_points
 from mlia.utils.console import create_section_header
 
@@ -44,6 +52,8 @@ MLIA_HELP_EPILOG = (
     "  Browse MLIA repositories: "
     "https://github.com/orgs/arm/repositories?q=mlia"
 )
+ANALYSIS_PLUGIN_REGISTRY_META_KEY = "mlia.analysis_plugin_registry"
+ANALYSIS_PLUGIN_ARGS_META_KEY = "mlia.analysis_plugin_args"
 
 
 def _reshape_backend_options(
@@ -53,7 +63,7 @@ def _reshape_backend_options(
     """Reshape flat CLI backend option values into backend config overrides."""
     backend_options: dict[str, dict[str, object]] = {}
     for spec in backend_option_specs:
-        option_name = _backend_option_name(spec["click_option"])
+        option_name = _click_option_name(spec["click_option"])
         value = backend_cli_options.get(option_name)
         if value is None:
             continue
@@ -63,32 +73,49 @@ def _reshape_backend_options(
     return backend_options
 
 
-def _backend_option_name(click_option: click.Option) -> str:
-    """Return the internal Click option name for backend option handling."""
+def _click_option_name(click_option: click.Option) -> str:
+    """Return the internal name of a dynamic Click option."""
     if click_option.name:
         return click_option.name
-    raise ValueError("Backend CLI option must have an internal name.")
+    raise ValueError("Dynamic CLI option must have an internal name.")
 
 
-class BackendOptionCommand(typer.core.TyperCommand):
-    """Typer command that adds backend-specific check options."""
+def _load_analysis_plugin_registry() -> AnalysisPluginRegistry:
+    """Load analysis plugins into a new command-scoped registry."""
+    registry = AnalysisPluginRegistry()
+    load_analysis_plugins(registry)
+    return registry
+
+
+class CheckOptionCommand(typer.core.TyperCommand):
+    """Typer command that adds dynamic options to the check command."""
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
-        """Initialize the command with discovered backend-specific options."""
+        """Initialize the command with backend and analysis-plugin options."""
         self._backend_option_specs = discover_backend_option_specs()
+        self._analysis_plugin_registry = _load_analysis_plugin_registry()
+        self._analysis_plugin_options = self._analysis_plugin_registry.cli_options()
+
         params = list(kwargs["params"])
         params.extend(spec["click_option"] for spec in self._backend_option_specs)
+        params.extend(self._analysis_plugin_options)
         command_kwargs = {**kwargs, "params": params}
         super().__init__(*args, **command_kwargs)
 
     def invoke(self, ctx: click.Context) -> Any:
-        """Collect dynamic backend options before invoking the Typer callback."""
+        """Collect dynamic option values before invoking the Typer callback."""
         backend_options = _reshape_backend_options(
             self._backend_option_specs, ctx.params
         )
         for spec in self._backend_option_specs:
-            option_name = _backend_option_name(spec["click_option"])
-            ctx.params.pop(option_name, None)
+            ctx.params.pop(_click_option_name(spec["click_option"]), None)
+
+        analysis_plugin_args = {
+            _click_option_name(option): ctx.params.pop(_click_option_name(option), None)
+            for option in self._analysis_plugin_options
+        }
+        ctx.meta[ANALYSIS_PLUGIN_REGISTRY_META_KEY] = self._analysis_plugin_registry
+        ctx.meta[ANALYSIS_PLUGIN_ARGS_META_KEY] = analysis_plugin_args
         ctx.obj = new_settings(
             source=ctx.ensure_object(ApplicationSettings),
             backend_options=backend_options,
@@ -115,6 +142,31 @@ def complete_target_profile_names(incomplete: str) -> list[str]:
 def _setup_command_logging(debug: bool) -> None:
     """Set up logging for commands without an execution context."""
     setup_logging(verbose=debug)
+
+
+def run_analysis_plugins(
+    registry: AnalysisPluginRegistry,
+    args: Mapping[str, object],
+    context: ExecutionContext,
+    parameters: dict[str, Any],
+    output: dict[str, object] | None,
+    settings: ApplicationSettings,
+) -> None:
+    """Run enabled post-analysis plugins."""
+    enabled_plugins = registry.enabled_plugins(args)
+    if not enabled_plugins:
+        return
+
+    result = AnalysisRunResult(
+        output=output,
+        context=context,
+        args=args,
+        command_name="check",
+        parameters=parameters,
+    )
+    for plugin in enabled_plugins:
+        logger.debug("Running analysis plugin '%s'", plugin.name)
+        plugin.run(replace(result, settings=settings.for_plugin(plugin.name)))
 
 
 def _create_check_context(
@@ -454,6 +506,9 @@ def check(
     if not category:
         category.add("compatibility")
 
+    if not validate_check_target_profile(target_profile, category):
+        raise typer.Exit(code=0)
+
     execution_context = _create_check_context(
         model=model,
         target_profile=target_profile,
@@ -467,9 +522,6 @@ def check(
         debug=debug,
         backend_options=backend_options,
     )
-
-    if not validate_check_target_profile(target_profile, category):
-        raise typer.Exit(code=0)
 
     output = get_advice(
         target_profile,
@@ -501,7 +553,7 @@ def check(
 
 @mlia_app.command(
     "check",
-    cls=BackendOptionCommand,
+    cls=CheckOptionCommand,
     help="Generate compatibility/performance advice for a model",
     no_args_is_help=True,
 )
@@ -567,9 +619,17 @@ def check_command(
     """Typer entry point for the check command."""
     settings = ctx.obj if isinstance(ctx.obj, ApplicationSettings) else new_settings()
     backend_options = settings.backend_options
+    analysis_plugin_registry = cast(
+        AnalysisPluginRegistry,
+        ctx.meta[ANALYSIS_PLUGIN_REGISTRY_META_KEY],
+    )
+    plugin_args = cast(
+        Mapping[str, object],
+        ctx.meta[ANALYSIS_PLUGIN_ARGS_META_KEY],
+    )
 
     try:
-        context, output, _parameters = check(
+        context, output, parameters = check(
             model=model,
             output_dir=output_dir,
             target_profile=target_profile,
@@ -583,6 +643,18 @@ def check_command(
             backend_options=backend_options,
         )
         emit_standardized_output(settings, context, output)
+        try:
+            run_analysis_plugins(
+                analysis_plugin_registry,
+                plugin_args,
+                context,
+                parameters,
+                output,
+                settings,
+            )
+        except ConfigurationError as err:
+            typer.echo(f"Error: {err}", err=True)
+            raise typer.Exit(code=1) from err
     finally:
         close_configured_handlers()
 

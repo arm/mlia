@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
@@ -19,6 +20,7 @@ import mlia.cli.commands as cli_commands
 import mlia.cli.main as cli_main
 import mlia.cli.settings as cli_settings
 from mlia.backend.options import BackendOptionSpec
+from mlia.plugins.analysis import AnalysisPluginRegistry, AnalysisRunResult
 
 ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-9;?]*[ -/]*[@-~]")
 
@@ -60,6 +62,35 @@ def _typed_backend_option_spec() -> BackendOptionSpec:
         "config_key": "optimization_level",
         "click_option": optimization_level,
     }
+
+
+class DemoAnalysisPlugin:
+    """Analysis plugin used by CLI integration tests."""
+
+    name = "demo"
+
+    def __init__(self) -> None:
+        """Create a plugin with captured results."""
+        self.results: list[AnalysisRunResult] = []
+
+    def cli_options(self) -> list[click.Option]:
+        """Return the demo plugin option."""
+        return [
+            click.Option(
+                ["--demo-analysis"],
+                is_flag=True,
+                default=False,
+                help="Run the demo post-analysis plugin.",
+            )
+        ]
+
+    def enabled(self, args: Mapping[str, object]) -> bool:
+        """Return whether the demo plugin is enabled."""
+        return bool(args.get("demo_analysis"))
+
+    def run(self, result: AnalysisRunResult) -> None:
+        """Capture the analysis run result."""
+        self.results.append(result)
 
 
 @pytest.mark.parametrize(
@@ -401,6 +432,107 @@ def test_check_accepts_namespaced_backend_click_option(
     assert get_advice.call_args.kwargs["backend_options"] == {
         "typed-backend": {"optimization_level": "2"}
     }
+
+
+def test_analysis_plugin_registry_is_scoped_to_each_command(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Each command should load plugins into a fresh registry."""
+    load_plugins = MagicMock()
+    monkeypatch.setattr(cli_commands, "load_analysis_plugins", load_plugins)
+
+    first = cli_commands._load_analysis_plugin_registry()
+    second = cli_commands._load_analysis_plugin_registry()
+
+    assert first is not second
+    assert load_plugins.call_args_list[0].args == (first,)
+    assert load_plugins.call_args_list[1].args == (second,)
+
+
+@pytest.mark.parametrize(
+    "model_and_plugin_args",
+    [
+        ["--demo-analysis", "model.tflite"],
+        ["model.tflite", "--demo-analysis"],
+    ],
+)
+def test_check_runs_enabled_analysis_plugins(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    model_and_plugin_args: list[str],
+) -> None:
+    """The check command should parse plugin options around the model argument."""
+    plugin = DemoAnalysisPlugin()
+    output: dict[str, object] = {"results": []}
+    get_advice = MagicMock(return_value=output)
+    discover_backend_option_specs = MagicMock(
+        return_value=[_typed_backend_option_spec()]
+    )
+
+    monkeypatch.setattr(
+        cli_commands,
+        "discover_backend_option_specs",
+        discover_backend_option_specs,
+    )
+    monkeypatch.setattr(mlia_api, "get_advice", get_advice)
+    monkeypatch.setattr(
+        command_validators,
+        "validate_check_target_profile",
+        MagicMock(return_value=True),
+    )
+    registry = AnalysisPluginRegistry()
+    registry.register(plugin)
+    monkeypatch.setattr(
+        cli_commands,
+        "_load_analysis_plugin_registry",
+        MagicMock(return_value=registry),
+    )
+
+    result = CliRunner().invoke(
+        cli_main.mlia_app,
+        [
+            "check",
+            *model_and_plugin_args,
+            "--target-profile",
+            "ethos-u55-256",
+            "--output-dir",
+            str(tmp_path),
+            "--typed-backend.optimization-level",
+            "2",
+        ],
+    )
+
+    assert result.exit_code == 0
+    get_advice.assert_called_once()
+    assert get_advice.call_args.kwargs["backend_options"] == {
+        "typed-backend": {"optimization_level": "2"}
+    }
+    assert len(plugin.results) == 1
+    assert plugin.results[0].args["demo_analysis"] is True
+    assert plugin.results[0].output == output
+    assert plugin.results[0].parameters["model"] == "model.tflite"
+
+
+def test_check_help_lists_analysis_plugin_options(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The check command help should include analysis-plugin options."""
+    registry = AnalysisPluginRegistry()
+    registry.register(DemoAnalysisPlugin())
+    monkeypatch.setattr(
+        cli_commands,
+        "_load_analysis_plugin_registry",
+        MagicMock(return_value=registry),
+    )
+
+    result = CliRunner().invoke(
+        cli_main.mlia_app,
+        ["check", "--help"],
+        terminal_width=120,
+    )
+
+    assert result.exit_code == 0
+    assert "--demo-analysis" in _strip_ansi(result.stdout)
 
 
 def test_check_exits_cleanly_when_validation_skips_all_work(
