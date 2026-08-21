@@ -5,15 +5,17 @@
 from __future__ import annotations
 
 import json
+import math
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
-from typing import Any
+from types import MappingProxyType
+from typing import Any, Mapping
 from uuid import uuid4
 
 # Schema version for standardized output
-SCHEMA_VERSION = "1.1.0"
+SCHEMA_VERSION = "1.2.0"
 
 # Target schema version
 TARGET_SCHEMA_VERSION = "1.0.0"
@@ -66,11 +68,100 @@ class PlacementType(str, Enum):
     UNKNOWN = "Unknown"
 
 
-class OperatorScope(str, Enum):
-    """Operator scope enumeration."""
+@dataclass(frozen=True)
+class WellKnownEntityKind:
+    """Schema-defined semantic relationships for a well-known entity kind."""
 
-    OPERATOR = "operator"
-    OPERATOR_CHAIN = "operator_chain"
+    id: str  # pylint: disable=invalid-name
+    parent_kinds: tuple[str, ...] = ()
+    child_kinds: tuple[str, ...] = ()
+
+
+ENTITY_KIND_SOURCE_OPERATOR = "source_operator"
+ENTITY_KIND_MODEL = "model"
+ENTITY_KIND_CODE_STACK = "code_stack"
+
+
+def onnx_source_operator_id(node_index: int) -> str:
+    """Return the canonical identity for a top-level ONNX graph node.
+
+    ``node_index`` is the zero-based position in ``ModelProto.graph.node``. ONNX
+    node names are presentation metadata and never contribute to identity.
+    Operations inside ONNX subgraphs and functions are not currently supported;
+    they require a future graph-qualified identity format.
+    """
+    if type(node_index) is not int or node_index < 0:  # pylint: disable=unidiomatic-typecheck
+        raise ValueError("ONNX source node index must be a non-negative integer.")
+    return f"{ENTITY_KIND_SOURCE_OPERATOR}/{node_index}"
+
+
+def pt2_source_operator_id(node_name: str) -> str:
+    """Return the canonical identity for a top-level PT2 operation node.
+
+    ``node_name`` is the exact unique ``torch.fx.Node.name`` in the original
+    top-level ``torch.export.ExportedProgram`` graph. The identity is scoped to
+    the containing result and does not need to remain stable across separate
+    exports. Placeholder, ``get_attr``, and output nodes are not source
+    operations. Operations inside nested graphs are not currently supported;
+    they require a future graph-qualified identity format.
+    """
+    if not isinstance(node_name, str) or not node_name.strip():
+        raise ValueError("PT2 source node name must be a non-empty string.")
+    return f"{ENTITY_KIND_SOURCE_OPERATOR}/{node_name}"
+
+
+def vgf_source_operator_id(segment_index: int, spirv_result_id: int) -> str:
+    """Return the canonical identity for one VGF SPIR-V operation.
+
+    ``segment_index`` is the zero-based VGF model-sequence segment index and
+    ``spirv_result_id`` is the numeric SPIR-V instruction result ID within that
+    segment. Debug names and API labels are presentation/provenance metadata and
+    never contribute to this identity.
+    """
+    if type(segment_index) is not int or segment_index < 0:
+        raise ValueError("VGF segment index must be a non-negative integer.")
+    if type(spirv_result_id) is not int or spirv_result_id < 0:
+        raise ValueError("SPIR-V result ID must be a non-negative integer.")
+    return (
+        f"{ENTITY_KIND_SOURCE_OPERATOR}/segment_{segment_index}/spirv-{spirv_result_id}"
+    )
+
+
+# Entity kind ids with schema-defined semantics. Producers may use these without
+# declaring matching result-level entity_kinds. Other entity kind ids are
+# backend-defined and should be declared in result.entity_kinds when consumers
+# need to understand their hierarchy relationships.
+#
+# A code_stack entity represents one source/debug stack-frame prefix rather than
+# a globally unique function/frame. Its identity includes all ancestor frames
+# plus the current frame, so the same frame reached through different callers is
+# represented by distinct code_stack entities. Parent/child links reconstruct
+# the call tree, and leaf code_stack entities may parent source_operator
+# entities associated with the stack.
+#
+# Well-known code_stack attributes:
+# - file: source/debug file path using forward slash as the separator. The path
+#   may be absolute or relative.
+# - line: 1-based index into the lines of file.
+WELL_KNOWN_ENTITY_KIND_DEFINITIONS: Mapping[str, WellKnownEntityKind] = (
+    MappingProxyType(
+        {
+            ENTITY_KIND_CODE_STACK: WellKnownEntityKind(
+                id=ENTITY_KIND_CODE_STACK,
+                parent_kinds=(ENTITY_KIND_CODE_STACK,),
+                child_kinds=(ENTITY_KIND_CODE_STACK, ENTITY_KIND_SOURCE_OPERATOR),
+            )
+        }
+    )
+)
+
+WELL_KNOWN_ENTITY_KINDS = frozenset(
+    {
+        ENTITY_KIND_SOURCE_OPERATOR,
+        ENTITY_KIND_MODEL,
+        *WELL_KNOWN_ENTITY_KIND_DEFINITIONS,
+    }
+)
 
 
 class CheckStatus(str, Enum):
@@ -372,6 +463,11 @@ class Metric:
     def __post_init__(self) -> None:
         """Validate that the metric matches one of the supported schema shapes."""
         if self.value is not None:
+            # JSON numbers cannot represent NaN or infinities. Reject them at the
+            # schema boundary so producers use an unavailable metric instead of
+            # creating output that permissive Python encoders write as invalid JSON.
+            if not math.isfinite(self.value):
+                raise ValueError("Metric value must be finite.")
             if self.availability is not None or self.reason is not None:
                 raise ValueError(
                     "Metric cannot combine a numeric value with availability fields."
@@ -459,68 +555,31 @@ def ensure_standard_performance_metrics(metrics: list[Metric]) -> list[Metric]:
 
 
 @dataclass(frozen=True)
-class OperatorIdentifier:
-    """Operator identifier."""
-
-    scope: OperatorScope
-    name: str
-    location: str
-    id: str | None = None  # pylint: disable=invalid-name
-
-    def to_dict(self) -> dict[str, Any]:
-        """Convert to dictionary."""
-        result = {
-            "scope": self.scope.value,
-            "name": self.name,
-            "location": self.location,
-        }
-        if self.id is not None:
-            result["id"] = self.id
-        return result
-
-    @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> OperatorIdentifier:
-        """Create from dictionary."""
-        return cls(
-            scope=OperatorScope(data["scope"]),
-            name=data["name"],
-            location=data["location"],
-            id=data.get("id"),
-        )
-
-
-@dataclass(frozen=True)
 class Breakdown:
-    """Breakdown information."""
+    """Breakdown metrics for an entity."""
 
-    scope: OperatorScope
-    name: str
-    location: str
+    entity_id: str
     metrics: list[Metric]
     id: str | None = None  # pylint: disable=invalid-name
     qualifiers: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
-        result = {
-            "scope": self.scope.value,
-            "name": self.name,
-            "location": self.location,
+        result: dict[str, Any] = {
+            "entity_id": self.entity_id,
             "metrics": [m.to_dict() for m in self.metrics],
         }
         if self.id is not None:
             result["id"] = self.id
         if self.qualifiers:
-            result["qualifiers"] = self.qualifiers  # type: ignore[assignment]
+            result["qualifiers"] = self.qualifiers
         return result
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> Breakdown:
         """Create from dictionary."""
         return cls(
-            scope=OperatorScope(data["scope"]),
-            name=data["name"],
-            location=data["location"],
+            entity_id=data["entity_id"],
             metrics=[Metric.from_dict(m) for m in data["metrics"]],
             id=data.get("id"),
             qualifiers=data.get("qualifiers", {}),
@@ -533,11 +592,14 @@ class Check:
 
     id: str  # pylint: disable=invalid-name
     status: CheckStatus
+    entity_id: str | None = None
     details: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
         result = {"id": self.id, "status": self.status.value}
+        if self.entity_id is not None:
+            result["entity_id"] = self.entity_id
         if self.details:
             result["details"] = self.details  # type: ignore[assignment]
         return result
@@ -548,45 +610,107 @@ class Check:
         return cls(
             id=data["id"],
             status=CheckStatus(data["status"]),
+            entity_id=data.get("entity_id"),
             details=data.get("details", {}),
         )
 
 
 @dataclass(frozen=True)
-class Entity:
-    """Entity information."""
+class EntityKind:
+    """Semantic relationship metadata for an entity kind."""
 
-    scope: OperatorScope
-    name: str
-    location: str
-    placement: str
-    id: str | None = None  # pylint: disable=invalid-name
-    attributes: dict[str, Any] = field(default_factory=dict)
+    id: str  # pylint: disable=invalid-name
+    parent_kinds: list[str] = field(default_factory=list)
+    child_kinds: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
-        result = {
-            "scope": self.scope.value,
+        result: dict[str, Any] = {"id": self.id}
+        if self.parent_kinds:
+            result["parent_kinds"] = list(self.parent_kinds)
+        if self.child_kinds:
+            result["child_kinds"] = list(self.child_kinds)
+        return result
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> EntityKind:
+        """Create from dictionary."""
+        return cls(
+            id=data["id"],
+            parent_kinds=list(data.get("parent_kinds", [])),
+            child_kinds=list(data.get("child_kinds", [])),
+        )
+
+
+@dataclass(frozen=True)
+class Entity:
+    """Entity information.
+
+    Entity ids are unique within their containing result. A source_operator id
+    is the complete canonical source-operation identifier and is opaque to
+    generic consumers. For ONNX, the canonical id is
+    ``source_operator/<node_index>``, where ``node_index`` is the zero-based
+    position in the top-level ``ModelProto.graph.node`` list. ONNX node names
+    are presentation-only and never identity. For a PyTorch ExportedProgram in
+    PT2 format, the canonical id is ``source_operator/<fx_node_name>``, using the
+    exact unique ``torch.fx.Node.name`` of an operation in the original top-level
+    exported graph. For VGF, the canonical id is
+    ``source_operator/segment_<segment_index>/spirv-<result_id>``, using the
+    zero-based model-sequence segment index and numeric SPIR-V instruction result
+    ID. Debug names and API labels never contribute to identity. ONNX subgraphs,
+    ONNX functions, and PT2 nested graphs are not currently supported and require
+    a future graph-qualified identity.
+    """
+
+    id: str  # pylint: disable=invalid-name
+    kind: str
+    name: str
+    placement: str | None = None
+    parent_ids: list[str] = field(default_factory=list)
+    child_ids: list[str] = field(default_factory=list)
+    attributes: dict[str, Any] = field(default_factory=dict)
+    stack_trace: str = ""
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert to dictionary."""
+        result: dict[str, Any] = {
+            "id": self.id,
+            "kind": self.kind,
             "name": self.name,
-            "location": self.location,
-            "placement": self.placement,
         }
-        if self.id is not None:
-            result["id"] = self.id
+        if self.placement is not None:
+            result["placement"] = self.placement
+        if self.parent_ids:
+            result["parent_ids"] = self.parent_ids
+        if self.child_ids:
+            result["child_ids"] = self.child_ids
         if self.attributes:
-            result["attributes"] = self.attributes  # type: ignore[assignment]
+            result["attributes"] = self.attributes
+        if self.stack_trace:
+            result["stack_trace"] = self.stack_trace
         return result
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> Entity:
         """Create from dictionary."""
+        if "locations" in data:
+            raise ValueError("Entity uses unsupported field 'locations'.")
+        if "parent_id" in data:
+            raise ValueError("Entity uses unsupported legacy field 'parent_id'.")
+        if "scope" in data:
+            raise ValueError("Entity uses unsupported legacy field 'scope'.")
+        if "subgraph_kind" in data:
+            raise ValueError("Entity uses unsupported legacy field 'subgraph_kind'.")
+
         return cls(
-            scope=OperatorScope(data["scope"]),
+            id=data["id"],
+            kind=data["kind"],
             name=data["name"],
-            location=data["location"],
-            placement=data["placement"],
-            id=data.get("id"),
+            placement=data.get("placement"),
+            parent_ids=list(data.get("parent_ids", [])),
+            child_ids=list(data.get("child_ids", [])),
             attributes=data.get("attributes", {}),
+            stack_trace=data.get("stack_trace", ""),
         )
 
 
@@ -598,7 +722,7 @@ class Advice:
     category: AdviceCategory
     severity: AdviceSeverity
     message: str
-    affected_entities: list[OperatorIdentifier] = field(default_factory=list)
+    affected_entity_ids: list[str] = field(default_factory=list)
     details: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
@@ -609,8 +733,8 @@ class Advice:
             "severity": self.severity.value,
             "message": self.message,
         }
-        if self.affected_entities:
-            result["affected_entities"] = [e.to_dict() for e in self.affected_entities]
+        if self.affected_entity_ids:
+            result["affected_entity_ids"] = self.affected_entity_ids
         if self.details:
             result["details"] = self.details
         return result
@@ -623,10 +747,7 @@ class Advice:
             category=AdviceCategory(data["category"]),
             severity=AdviceSeverity(data["severity"]),
             message=data["message"],
-            affected_entities=[
-                OperatorIdentifier.from_dict(e)
-                for e in data.get("affected_entities", [])
-            ],
+            affected_entity_ids=list(data.get("affected_entity_ids", [])),
             details=data.get("details", {}),
         )
 
@@ -645,6 +766,7 @@ class Result:  # pylint: disable=too-many-instance-attributes
     mode: ModeType | None = None
     checks: list[Check] = field(default_factory=list)
     entities: list[Entity] = field(default_factory=list)
+    entity_kinds: list[EntityKind] = field(default_factory=list)
     advice: list[Advice] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
@@ -668,6 +790,8 @@ class Result:  # pylint: disable=too-many-instance-attributes
             result["checks"] = [c.to_dict() for c in self.checks]
         if self.entities:
             result["entities"] = [e.to_dict() for e in self.entities]
+        if self.entity_kinds:
+            result["entity_kinds"] = [k.to_dict() for k in self.entity_kinds]
         if self.advice:
             result["advice"] = [a.to_dict() for a in self.advice]
         return result
@@ -686,6 +810,9 @@ class Result:  # pylint: disable=too-many-instance-attributes
             mode=ModeType(data["mode"]) if "mode" in data else None,
             checks=[Check.from_dict(c) for c in data.get("checks", [])],
             entities=[Entity.from_dict(e) for e in data.get("entities", [])],
+            entity_kinds=[
+                EntityKind.from_dict(k) for k in data.get("entity_kinds", [])
+            ],
             advice=[Advice.from_dict(a) for a in data.get("advice", [])],
         )
 

@@ -1,0 +1,322 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.arm.com/mlia/output-schema-1.2.0.json",
+  "title": "MLIA Unified Output Schema (v1.2.0)",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "run_id",
+    "timestamp",
+    "tool",
+    "target",
+    "model",
+    "context",
+    "backends",
+    "results"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1.2.0"
+    },
+    "run_id": { "type": "string", "format": "uuid" },
+    "timestamp": { "type": "string", "format": "date-time" },
+
+    "tool": {
+      "type": "object",
+      "required": ["name", "version"],
+      "properties": {
+        "name": { "type": "string" },
+        "version": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+
+    "backends": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "version", "configuration"],
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "version": { "type": "string" },
+          "impl": { "type": "object" },
+          "configuration": {
+            "type": "object",
+            "description": "Backend configuration or options."
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+
+    "target": {
+      "$ref": "https://schemas.arm.com/mlia/target-1.0.0.json"
+    },
+
+    "model": {
+      "type": "object",
+      "required": ["name", "format", "hash"],
+      "properties": {
+        "name": { "type": "string" },
+        "format": {
+          "type": "string",
+          "description": "Model file format",
+          "examples": ["tflite", "onnx", "vgf", "tosa"]
+        },
+        "hash": {
+          "type": "string",
+          "pattern": "^[A-Fa-f0-9]{64}$",
+          "description": "SHA-256 hash of the model file."
+        },
+        "size_bytes": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+
+    "context": {
+      "type": "object",
+      "properties": {
+        "runtime_configuration": { "type": "object" },
+        "git": {
+          "type": "object",
+          "properties": { "mlia_commit": { "type": "string" } },
+          "additionalProperties": false
+        },
+        "notes": { "type": "string" },
+        "cli_arguments": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "results": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["kind", "status", "producer"],
+        "properties": {
+          "kind": { "enum": ["compatibility", "performance"] },
+          "producer": { "type": "string" },
+          "status": {
+            "type": "string",
+            "enum": ["ok", "partial", "incompatible", "failed", "skipped"]
+          },
+          "warnings": { "type": "array", "items": { "type": "string" } },
+          "errors": { "type": "array", "items": { "type": "string" } },
+          "metrics": { "type": "array", "items": { "$ref": "#/$defs/metric" } },
+          "breakdowns": { "type": "array", "items": { "$ref": "#/$defs/breakdown" } },
+          "mode": {
+            "type": "string",
+            "enum": ["measured", "simulated", "predicted"]
+          },
+          "checks": { "type": "array", "items": { "$ref": "#/$defs/check" } },
+          "entities": { "type": "array", "items": { "$ref": "#/$defs/entity" } },
+          "entity_kinds": { "type": "array", "items": { "$ref": "#/$defs/entity_kind" } },
+          "advice": { "type": "array", "items": { "$ref": "#/$defs/advice" } }
+        },
+        "additionalProperties": false
+      }
+    },
+
+    "extensions": { "type": "object", "additionalProperties": true }
+  },
+
+  "$defs": {
+    "advice": {
+      "type": "object",
+      "required": ["id", "category", "severity", "message"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Opaque identifier for this advice entry."
+        },
+        "category": {
+          "type": "string",
+          "enum": ["compatibility", "performance", "optimization"]
+        },
+        "severity": {
+          "type": "string",
+          "enum": ["info", "warning", "error"]
+        },
+        "message": { "type": "string" },
+        "affected_entity_ids": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": [],
+          "description": "Entity IDs affected by this advice. Every ID must resolve within this same result; matching IDs in other results are unrelated."
+        },
+        "details": { "type": "object", "additionalProperties": true }
+      },
+      "additionalProperties": false
+    },
+
+    "qualifiers_common": {
+      "type": "object",
+      "description": "Lightweight context qualifiers; only shared keys constrained.",
+      "properties": {
+        "placement": {
+          "type": "string",
+          "enum": ["NPU", "NX", "CPU", "GPU", "DSP", "Unknown"]
+        },
+        "phase": {
+          "type": "string",
+          "enum": ["before", "after"]
+        }
+      },
+      "patternProperties": {
+        "^[a-zA-Z_][a-zA-Z0-9_\\-]*$": {
+          "type": ["string", "number", "boolean", "array", "object"]
+        }
+      },
+      "additionalProperties": true
+    },
+
+    "metric": {
+      "oneOf": [
+        { "$ref": "#/$defs/numeric_metric" },
+        { "$ref": "#/$defs/unavailable_metric" }
+      ]
+    },
+
+    "numeric_metric": {
+      "type": "object",
+      "required": ["name", "value", "unit"],
+      "properties": {
+        "name": { "type": "string" },
+        "value": { "type": "number" },
+        "unit": { "type": "string" },
+        "aggregation": { "type": "string" },
+        "samples": { "type": "integer" },
+        "qualifiers": { "$ref": "#/$defs/qualifiers_common" }
+      },
+      "additionalProperties": false
+    },
+
+    "unavailable_metric": {
+      "type": "object",
+      "required": ["name", "unit", "availability", "reason"],
+      "properties": {
+        "name": { "type": "string" },
+        "unit": { "type": "string" },
+        "availability": { "const": "unavailable" },
+        "reason": { "type": "string", "minLength": 1 },
+        "qualifiers": { "$ref": "#/$defs/qualifiers_common" }
+      },
+      "additionalProperties": false
+    },
+
+    "breakdown": {
+      "type": "object",
+      "required": ["entity_id", "metrics"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Optional backend/producerspecific identifier for this record. Opaque to consumers."
+        },
+        "entity_id": {
+          "type": "string",
+          "description": "Identifier of the entity that owns these metrics. It must resolve to an entity in this same result; an entity with the same ID in another result does not satisfy this reference."
+        },
+        "metrics": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/metric" }
+        },
+        "qualifiers": { "$ref": "#/$defs/qualifiers_common", "default": {} }
+      },
+      "additionalProperties": false
+    },
+
+    "check": {
+      "type": "object",
+      "required": ["id", "status"],
+      "properties": {
+        "id": { "type": "string" },
+        "status": { "enum": ["pass", "fail", "partial"] },
+        "entity_id": {
+          "type": ["string", "null"],
+          "description": "Optional reference to an entity in this same result only."
+        },
+        "details": { "type": "object", "default": {} }
+      },
+      "additionalProperties": false
+    },
+
+    "entity_kind": {
+      "type": "object",
+      "required": ["id"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "\\S",
+          "description": "Non-empty backend-defined semantic entity kind identifier. Well-known kind ids source_operator, model, and code_stack are defined by this schema and must not be redeclared. A code_stack entity represents one source/debug stack-frame prefix rather than a globally unique function/frame: its identity includes all ancestor frames plus the current frame, so the same frame reached through different callers is represented by distinct code_stack entities. Parent/child links reconstruct the call tree, and leaf code_stack entities may parent source_operator entities associated with the stack."
+        },
+        "parent_kinds": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "\\S" },
+          "uniqueItems": true,
+          "default": [],
+          "description": "Optional non-empty semantic parent kind identifiers. These values must refer to well-known kinds or backend-defined entity_kind ids declared in this result."
+        },
+        "child_kinds": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "\\S" },
+          "uniqueItems": true,
+          "default": [],
+          "description": "Optional non-empty semantic child kind identifiers. These values must refer to well-known kinds or backend-defined entity_kind ids declared in this result."
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "entity": {
+      "type": "object",
+      "required": ["id", "kind", "name"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Required stable entity identifier used by breakdowns, checks, advice, and relationships in the containing result. IDs are unique across all entity kinds within that result, but may be repeated in separate results. Every result is self-contained: references resolve only to entities in that same result. Consumers combining results must preserve result scope and must not assume an ID is output-global."
+        },
+        "kind": {
+          "type": "string",
+          "pattern": "\\S",
+          "description": "Semantic entity kind identifier. Well-known kind source_operator represents exactly one source-model operation. Its complete canonical id is source_operator/<canonical-source-operation-reference>; examples include source_operator/operator/7, source_operator/subgraph/1/operator/7, and source_operator/segment_0/spirv-429. Known canonical references are: TFLite operator/<operator_index>, or subgraph/<subgraph_index>/operator/<operator_index> when needed; TOSA the serialized operation location or a deterministic operation reference; PyTorch ExportedProgram/PT2 <fx_node_name>, producing source_operator/<fx_node_name>, where <fx_node_name> is the exact unique torch.fx.Node.name of an operation in the original top-level exported graph; placeholder, get_attr, and output nodes are excluded, and nested graphs require a future graph-qualified identity; ExecuTorch/PTE a stable execution-plan/operator or delegate source reference; VGF/SPIR-V segment_<segment_index>/spirv-<result_id>; and ONNX <node_index>, producing source_operator/<node_index>, where <node_index> is the zero-based position in the top-level ModelProto.graph.node list. ONNX node names are presentation-only and never identity. ONNX subgraphs and functions are not currently supported and require a future graph-qualified identity format. Consumers must treat the entire id as an opaque identifier and must not derive a source reference by splitting or stripping it. Non-source entities express membership through parent_ids and child_ids rather than copied descendant source references. Well-known kind model applies to the entire source model. Well-known kind code_stack represents one source/debug stack-frame prefix rather than a globally unique function/frame. Backend-defined kind ids are declared using result-level entity_kinds."
+        },
+        "name": { "type": "string" },
+        "placement": {
+          "type": ["string", "null"],
+          "description": "Optional execution placement."
+        },
+        "parent_ids": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": [],
+          "description": "Optional parent entity identifiers, each resolving within this same result. Multiple parents represent DAG relationships, for example an operator that belongs to both a backend subgraph and a source nn_module. Producers should omit this field when empty."
+        },
+        "child_ids": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": [],
+          "description": "Optional child entity identifiers, each resolving within this same result. Relationships define grouping and membership; consumers discover descendant source operators by traversing them rather than by parsing IDs or reading copied locations."
+        },
+        "attributes": {
+          "type": "object",
+          "default": {},
+          "description": "Optional backend- or kind-specific entity attributes. Well-known code_stack attributes include file, a source/debug file path using forward slash as the separator that may be absolute or relative, and line, a 1-based index into the lines of file."
+        },
+        "stack_trace": {
+          "type": "string",
+          "default": "",
+          "description": "Optional source/debug stack trace or provenance text associated with this entity."
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+
+  "additionalProperties": false
+}

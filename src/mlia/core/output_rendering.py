@@ -103,6 +103,7 @@ def _result_section(index: int, result: dict[str, Any]) -> str:
     _append(rows, "Producer", result.get("producer"))
     _append(rows, "Mode", result.get("mode"))
     lines = [title, produce_table(rows, table_style="nested") if rows else ""]
+    entities_by_id = _entities_by_id(result.get("entities"))
     for key in ("warnings", "errors"):
         values = result.get(key)
         if isinstance(values, list) and values:
@@ -113,13 +114,13 @@ def _result_section(index: int, result: dict[str, Any]) -> str:
     entities = _entities_table(result.get("entities"))
     if entities:
         lines.append("Entities:\n" + entities)
-    breakdowns = _breakdowns_table(result.get("breakdowns"))
+    breakdowns = _breakdowns_table(result.get("breakdowns"), entities_by_id)
     if breakdowns:
         lines.append("Breakdowns:\n" + breakdowns)
-    checks = _checks_table(result.get("checks"))
+    checks = _checks_table(result.get("checks"), entities_by_id)
     if checks:
         lines.append("Checks:\n" + checks)
-    advice = _advice_block(result.get("advice"))
+    advice = _advice_block(result.get("advice"), entities_by_id)
     if advice:
         lines.append("Advice:\n" + advice)
     return "\n".join(line for line in lines if line)
@@ -151,20 +152,22 @@ def _entities_table(entities: object) -> str | None:
             rows.append(
                 (
                     str(entity.get("name") or "-"),
-                    str(entity.get("scope") or "-"),
-                    str(entity.get("location") or "-"),
+                    str(entity.get("kind") or "-"),
+                    str(entity.get("id") or "-"),
                     str(entity.get("placement") or "-"),
                 )
             )
     if not rows:
         return None
-    table = produce_table(rows, headers=["Name", "Scope", "Location", "Placement"])
+    table = produce_table(rows, headers=["Name", "Kind", "ID", "Placement"])
     if truncated:
         table += f"\nShowing 20 of {len(entities)} entities."
     return table
 
 
-def _breakdowns_table(breakdowns: object) -> str | None:
+def _breakdowns_table(
+    breakdowns: object, entities_by_id: dict[str, dict[str, Any]]
+) -> str | None:
     if not isinstance(breakdowns, list) or not breakdowns:
         return None
     rows = []
@@ -172,6 +175,7 @@ def _breakdowns_table(breakdowns: object) -> str | None:
     for breakdown in breakdowns[:20]:
         if not isinstance(breakdown, dict):
             continue
+        entity = entities_by_id.get(str(breakdown.get("entity_id") or ""), {})
         metrics = breakdown.get("metrics")
         metric_text = ""
         if isinstance(metrics, list):
@@ -185,37 +189,48 @@ def _breakdowns_table(breakdowns: object) -> str | None:
             )
         rows.append(
             (
-                str(breakdown.get("name") or "-"),
-                str(breakdown.get("scope") or "-"),
-                str(breakdown.get("location") or "-"),
+                _entity_name(breakdown.get("entity_id"), entity),
+                str(entity.get("kind") or "-"),
+                str(breakdown.get("entity_id") or "-"),
                 metric_text or "-",
             )
         )
     if not rows:
         return None
-    table = produce_table(rows, headers=["Name", "Scope", "Location", "Metrics"])
+    table = produce_table(rows, headers=["Name", "Kind", "ID", "Metrics"])
     if truncated:
         table += f"\nShowing 20 of {len(breakdowns)} breakdowns."
     return table
 
 
-def _checks_table(checks: object) -> str | None:
+def _checks_table(
+    checks: object, entities_by_id: dict[str, dict[str, Any]]
+) -> str | None:
     if not isinstance(checks, list) or not checks:
         return None
     rows = []
     truncated = len(checks) > 20
     for check in checks[:20]:
         if isinstance(check, dict):
-            rows.append((str(check.get("id") or "-"), str(check.get("status") or "-")))
+            entity = entities_by_id.get(str(check.get("entity_id") or ""), {})
+            rows.append(
+                (
+                    str(check.get("id") or "-"),
+                    str(check.get("status") or "-"),
+                    _entity_name(check.get("entity_id"), entity),
+                )
+            )
     if not rows:
         return None
-    table = produce_table(rows, headers=["Check", "Status"])
+    table = produce_table(rows, headers=["Check", "Status", "Entity"])
     if truncated:
         table += f"\nShowing 20 of {len(checks)} checks."
     return table
 
 
-def _advice_block(advice: object) -> str | None:
+def _advice_block(
+    advice: object, entities_by_id: dict[str, dict[str, Any]]
+) -> str | None:
     if not isinstance(advice, list) or not advice:
         return None
     rows = []
@@ -226,14 +241,44 @@ def _advice_block(advice: object) -> str | None:
                     str(item.get("severity") or "info"),
                     str(item.get("category") or "-"),
                     str(item.get("message") or ""),
+                    _entity_names(item.get("affected_entity_ids"), entities_by_id),
                 )
             )
     return (
         produce_table(
-            rows, headers=["Severity", "Category", "Message"], table_style="no_borders"
+            rows,
+            headers=["Severity", "Category", "Message", "Entities"],
+            table_style="no_borders",
         )
         if rows
         else None
+    )
+
+
+def _entities_by_id(entities: object) -> dict[str, dict[str, Any]]:
+    if not isinstance(entities, list):
+        return {}
+    return {
+        str(entity["id"]): entity
+        for entity in entities
+        if isinstance(entity, dict) and isinstance(entity.get("id"), str)
+    }
+
+
+def _entity_name(entity_id: object, entity: dict[str, Any]) -> str:
+    if entity.get("name"):
+        return str(entity["name"])
+    if entity_id:
+        return str(entity_id)
+    return "-"
+
+
+def _entity_names(entity_ids: object, entities_by_id: dict[str, dict[str, Any]]) -> str:
+    if not isinstance(entity_ids, list) or not entity_ids:
+        return "-"
+    return ", ".join(
+        _entity_name(entity_id, entities_by_id.get(str(entity_id), {}))
+        for entity_id in entity_ids
     )
 
 

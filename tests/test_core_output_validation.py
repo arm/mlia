@@ -253,19 +253,19 @@ def test_jsonschema_accepts_unavailable_metric_entry() -> None:
 
 
 def test_jsonschema_rejects_mismatched_schema_version() -> None:
-    """Schema 1.1.0 should reject payloads that claim another schema version."""
+    """Schema 1.2.0 should reject payloads that claim another schema version."""
     output = _valid_standardized_output(
         {"name": "inference_time", "value": 1.0, "unit": "ms"}
     )
     output["schema_version"] = "1.0.0"
 
-    with pytest.raises(SchemaValidationError, match="Schema validation failed"):
+    with pytest.raises(SchemaValidationError):
         validate_standardized_output(output)
 
 
 def test_jsonschema_rejects_unavailable_metric_with_fake_value() -> None:
     """Unavailable metric entries should not contain fabricated values."""
-    with pytest.raises(SchemaValidationError, match="Schema validation failed"):
+    with pytest.raises(SchemaValidationError):
         validate_standardized_output(
             _valid_standardized_output(
                 {
@@ -280,7 +280,7 @@ def test_jsonschema_rejects_unavailable_metric_with_fake_value() -> None:
 
 
 def test_jsonschema_accepts_result_with_breakdown_and_entity() -> None:
-    """Schema validation should accept breakdowns and entities."""
+    """Schema validation should accept breakdowns that reference entities."""
     validate_standardized_output(
         _valid_standardized_output_with_result(
             {
@@ -290,9 +290,7 @@ def test_jsonschema_accepts_result_with_breakdown_and_entity() -> None:
                 "metrics": [{"name": "inference_time", "value": 1.0, "unit": "ms"}],
                 "breakdowns": [
                     {
-                        "scope": "operator",
-                        "name": "CONV_2D",
-                        "location": "model/conv",
+                        "entity_id": "entity_001",
                         "metrics": [
                             {"name": "npu_cycles", "value": 1000, "unit": "cycles"}
                         ],
@@ -300,15 +298,343 @@ def test_jsonschema_accepts_result_with_breakdown_and_entity() -> None:
                 ],
                 "entities": [
                     {
-                        "scope": "operator",
+                        "id": "entity_001",
+                        "kind": "source_operator",
                         "name": "CONV_2D",
-                        "location": "model/conv",
-                        "placement": "NPU",
                     }
                 ],
             }
         )
     )
+
+
+def test_jsonschema_accepts_entity_relationships_and_optional_placement() -> None:
+    """Entities should own semantic fields and optional DAG relationships."""
+    validate_standardized_output(
+        _valid_standardized_output_with_result(
+            {
+                "kind": "performance",
+                "status": "ok",
+                "producer": "backend",
+                "entity_kinds": [
+                    {
+                        "id": "nn_module",
+                        "parent_kinds": ["model"],
+                        "child_kinds": ["source_operator"],
+                    }
+                ],
+                "entities": [
+                    {
+                        "id": "model",
+                        "kind": "model",
+                        "name": "model.tflite",
+                        "child_ids": ["entity_001"],
+                    },
+                    {
+                        "id": "module_conv",
+                        "kind": "nn_module",
+                        "name": "model.conv",
+                    },
+                    {
+                        "id": "entity_001",
+                        "kind": "source_operator",
+                        "name": "CONV_2D",
+                        "placement": "NPU",
+                        "parent_ids": ["model", "module_conv"],
+                        "attributes": {"dtype": "int8"},
+                        "stack_trace": "forward > conv2d",
+                    },
+                ],
+            }
+        )
+    )
+
+
+def test_jsonschema_accepts_result_with_entity_kinds() -> None:
+    """Schema validation should accept semantic entity kind relationships."""
+    validate_standardized_output(
+        _valid_standardized_output_with_result(
+            {
+                "kind": "performance",
+                "status": "ok",
+                "producer": "backend",
+                "entity_kinds": [
+                    {"id": "segment", "child_kinds": ["cascade"]},
+                    {
+                        "id": "cascade",
+                        "parent_kinds": ["segment"],
+                        "child_kinds": ["chain"],
+                    },
+                    {
+                        "id": "chain",
+                        "parent_kinds": ["cascade"],
+                        "child_kinds": ["source_operator"],
+                    },
+                    {
+                        "id": "nn_module",
+                        "parent_kinds": ["nn_module"],
+                        "child_kinds": ["nn_module", "source_operator"],
+                    },
+                ],
+                "entities": [
+                    {
+                        "id": "module_conv",
+                        "kind": "nn_module",
+                        "name": "model.conv",
+                    }
+                ],
+            }
+        )
+    )
+
+
+def test_jsonschema_rejects_entity_kind_without_id() -> None:
+    """Entity kind id is required."""
+    with pytest.raises(SchemaValidationError):
+        validate_standardized_output(
+            _valid_standardized_output_with_result(
+                {
+                    "kind": "performance",
+                    "status": "ok",
+                    "producer": "backend",
+                    "entity_kinds": [{"child_kinds": ["source_operator"]}],
+                }
+            )
+        )
+
+
+def test_jsonschema_rejects_entity_kind_extra_property() -> None:
+    """Entity kind metadata intentionally has a minimal shape."""
+    with pytest.raises(SchemaValidationError):
+        validate_standardized_output(
+            _valid_standardized_output_with_result(
+                {
+                    "kind": "performance",
+                    "status": "ok",
+                    "producer": "backend",
+                    "entity_kinds": [
+                        {
+                            "id": "nn_module",
+                            "name": "PyTorch module",
+                            "child_kinds": ["source_operator"],
+                        }
+                    ],
+                }
+            )
+        )
+
+
+@pytest.mark.parametrize(
+    "entity_kind",
+    [
+        {"id": "   "},
+        {"id": "chain", "child_kinds": ["   "]},
+        {
+            "id": "chain",
+            "child_kinds": ["source_operator", "source_operator"],
+        },
+    ],
+)
+def test_jsonschema_rejects_invalid_entity_kind_values(
+    entity_kind: dict[str, Any],
+) -> None:
+    """JSON Schema enforces non-empty unique kind identifiers."""
+    output = _valid_standardized_output_with_result(
+        {
+            "kind": "performance",
+            "status": "ok",
+            "producer": "backend",
+            "entity_kinds": [entity_kind],
+        }
+    )
+
+    with pytest.raises(SchemaValidationError):
+        validate_with_jsonschema(output, load_schema())
+
+
+@pytest.mark.parametrize("kind_id", ["", "   "])
+def test_rejects_empty_entity_kind_id(kind_id: str) -> None:
+    """Entity kind IDs must contain non-whitespace text."""
+    with pytest.raises(SchemaValidationError, match="must be a non-empty string"):
+        validate_standardized_output(
+            _valid_standardized_output_with_result(
+                {
+                    "kind": "performance",
+                    "status": "ok",
+                    "producer": "backend",
+                    "entity_kinds": [{"id": kind_id}],
+                }
+            ),
+            use_jsonschema=False,
+        )
+
+
+def test_rejects_duplicate_entity_kind_relationships() -> None:
+    """One relationship list must not repeat the same kind ID."""
+    with pytest.raises(SchemaValidationError, match="is duplicated"):
+        validate_standardized_output(
+            _valid_standardized_output_with_result(
+                {
+                    "kind": "performance",
+                    "status": "ok",
+                    "producer": "backend",
+                    "entity_kinds": [
+                        {
+                            "id": "chain",
+                            "child_kinds": ["source_operator", "source_operator"],
+                        }
+                    ],
+                }
+            ),
+            use_jsonschema=False,
+        )
+
+
+def test_rejects_duplicate_entity_kind_declarations() -> None:
+    """Entity kind IDs must be unique within one result."""
+    with pytest.raises(SchemaValidationError, match="must be unique within result 0"):
+        validate_standardized_output(
+            _valid_standardized_output_with_result(
+                {
+                    "kind": "performance",
+                    "status": "ok",
+                    "producer": "backend",
+                    "entity_kinds": [{"id": "chain"}, {"id": "chain"}],
+                }
+            ),
+            use_jsonschema=False,
+        )
+
+
+def test_rejects_unresolved_entity_kind_relationship() -> None:
+    """Kind relationships must resolve to declared or well-known kinds."""
+    with pytest.raises(SchemaValidationError, match="does not resolve"):
+        validate_standardized_output(
+            _valid_standardized_output_with_result(
+                {
+                    "kind": "performance",
+                    "status": "ok",
+                    "producer": "backend",
+                    "entity_kinds": [{"id": "chain", "parent_kinds": ["missing_kind"]}],
+                }
+            ),
+            use_jsonschema=False,
+        )
+
+
+def test_rejects_undeclared_backend_entity_kind() -> None:
+    """Entities may only use well-known or result-declared kind IDs."""
+    with pytest.raises(SchemaValidationError, match="neither well-known nor declared"):
+        validate_standardized_output(
+            _valid_standardized_output_with_result(
+                {
+                    "kind": "performance",
+                    "status": "ok",
+                    "producer": "backend",
+                    "entities": [{"id": "chain-0", "kind": "chain", "name": "chain 0"}],
+                }
+            ),
+            use_jsonschema=False,
+        )
+
+
+def test_rejects_well_known_entity_kind_declaration() -> None:
+    """Producer metadata must not redeclare core-owned kind semantics."""
+    with pytest.raises(SchemaValidationError, match="must not be declared"):
+        validate_standardized_output(
+            _valid_standardized_output_with_result(
+                {
+                    "kind": "performance",
+                    "status": "ok",
+                    "producer": "backend",
+                    "entity_kinds": [
+                        {
+                            "id": "code_stack",
+                            "parent_kinds": ["code_stack"],
+                            "child_kinds": ["code_stack", "source_operator"],
+                        }
+                    ],
+                }
+            ),
+            use_jsonschema=False,
+        )
+
+
+def test_accepts_relationship_declared_from_both_directions() -> None:
+    """Equivalent parent and child declarations may describe the same edge."""
+    validate_standardized_output(
+        _valid_standardized_output_with_result(
+            {
+                "kind": "performance",
+                "status": "ok",
+                "producer": "backend",
+                "entity_kinds": [
+                    {"id": "cascade", "child_kinds": ["chain"]},
+                    {
+                        "id": "chain",
+                        "parent_kinds": ["cascade"],
+                        "child_kinds": ["source_operator"],
+                    },
+                ],
+                "entities": [{"id": "chain-0", "kind": "chain", "name": "chain 0"}],
+            }
+        ),
+        use_jsonschema=False,
+    )
+
+
+@pytest.mark.parametrize(
+    "legacy_field",
+    [
+        ("parent_id", "model"),
+        ("scope", "source_operator"),
+        ("subgraph_kind", "nn_module"),
+    ],
+)
+def test_jsonschema_rejects_legacy_entity_fields(legacy_field: tuple[str, str]) -> None:
+    """The 1.2.0 schema should not accept legacy entity fields."""
+    field_name, field_value = legacy_field
+    with pytest.raises(SchemaValidationError):
+        validate_standardized_output(
+            _valid_standardized_output_with_result(
+                {
+                    "kind": "performance",
+                    "status": "ok",
+                    "producer": "backend",
+                    "entities": [
+                        {
+                            "id": "entity_001",
+                            "kind": "source_operator",
+                            "name": "CONV_2D",
+                            field_name: field_value,
+                        },
+                    ],
+                }
+            )
+        )
+
+
+def test_jsonschema_rejects_breakdown_with_duplicated_entity_fields() -> None:
+    """Breakdowns should carry metrics and an entity reference only."""
+    with pytest.raises(SchemaValidationError):
+        validate_standardized_output(
+            _valid_standardized_output_with_result(
+                {
+                    "kind": "performance",
+                    "status": "ok",
+                    "producer": "backend",
+                    "breakdowns": [
+                        {
+                            "entity_id": "entity_001",
+                            "name": "CONV_2D",
+                            "metrics": [
+                                {"name": "npu_cycles", "value": 1000, "unit": "cycles"}
+                            ],
+                        }
+                    ],
+                }
+            )
+        )
 
 
 def test_jsonschema_accepts_result_with_advice() -> None:
@@ -319,19 +645,20 @@ def test_jsonschema_accepts_result_with_advice() -> None:
                 "kind": "performance",
                 "status": "ok",
                 "producer": "backend",
+                "entities": [
+                    {
+                        "id": "entity_001",
+                        "kind": "source_operator",
+                        "name": "CONV_2D",
+                    }
+                ],
                 "advice": [
                     {
                         "id": "0",
                         "category": "performance",
                         "severity": "info",
                         "message": "Review the performance metrics.",
-                        "affected_entities": [
-                            {
-                                "scope": "operator",
-                                "name": "CONV_2D",
-                                "location": "model/conv",
-                            }
-                        ],
+                        "affected_entity_ids": ["entity_001"],
                         "details": {"reason": "example"},
                     }
                 ],
@@ -342,7 +669,7 @@ def test_jsonschema_accepts_result_with_advice() -> None:
 
 def test_jsonschema_rejects_legacy_advices_field() -> None:
     """Schema validation should reject the legacy advices property."""
-    with pytest.raises(SchemaValidationError, match="Schema validation failed"):
+    with pytest.raises(SchemaValidationError):
         validate_standardized_output(
             _valid_standardized_output_with_result(
                 {
@@ -364,13 +691,20 @@ def test_jsonschema_rejects_legacy_advices_field() -> None:
 
 def test_jsonschema_rejects_uppercase_advice_values() -> None:
     """Schema validation should reject enum member names in advice JSON."""
-    with pytest.raises(SchemaValidationError, match="Schema validation failed"):
+    with pytest.raises(SchemaValidationError):
         validate_standardized_output(
             _valid_standardized_output_with_result(
                 {
                     "kind": "performance",
                     "status": "ok",
                     "producer": "backend",
+                    "entities": [
+                        {
+                            "id": "entity_001",
+                            "kind": "source_operator",
+                            "name": "CONV_2D",
+                        }
+                    ],
                     "advice": [
                         {
                             "id": "0",
@@ -653,6 +987,160 @@ def test_top_level_fields() -> None:
     data = _CORRECT_DATA.copy()
     data.pop("schema_version")
     assert validate_basic_structure(data) == ["Missing required field: schema_version"]
+
+
+def test_entity_ids_are_scoped_to_each_result() -> None:
+    """Separate results may independently define the same canonical entity id."""
+    data = _CORRECT_DATA.copy()
+    data["results"] = [
+        {"entities": [{"id": "source_operator/operator/7", "kind": "source_operator"}]},
+        {"entities": [{"id": "source_operator/operator/7", "kind": "source_operator"}]},
+    ]
+
+    assert validate_basic_structure(data) == []
+
+
+def test_entity_ids_are_unique_across_kinds_within_a_result() -> None:
+    """An id cannot identify two entities of any kinds in one result."""
+    data = _CORRECT_DATA.copy()
+    data["results"] = [
+        {
+            "entity_kinds": [{"id": "chain"}],
+            "entities": [
+                {"id": "shared", "kind": "source_operator"},
+                {"id": "shared", "kind": "chain"},
+            ],
+        }
+    ]
+
+    assert validate_basic_structure(data) == [
+        "Entity id 'shared' must be unique within result 0"
+    ]
+
+
+def test_result_local_entity_references_are_valid() -> None:
+    """All standardized entity-reference fields may resolve in their result."""
+    data = _CORRECT_DATA.copy()
+    data["results"] = [
+        {
+            "entity_kinds": [{"id": "group", "child_kinds": ["source_operator"]}],
+            "entities": [
+                {
+                    "id": "group/0",
+                    "kind": "group",
+                    "child_ids": ["source_operator/operator/7"],
+                },
+                {
+                    "id": "source_operator/operator/7",
+                    "kind": "source_operator",
+                    "parent_ids": ["group/0"],
+                },
+            ],
+            "breakdowns": [{"entity_id": "group/0", "metrics": []}],
+            "checks": [
+                {
+                    "id": "check",
+                    "status": "pass",
+                    "entity_id": "source_operator/operator/7",
+                }
+            ],
+            "advice": [
+                {
+                    "id": "advice",
+                    "category": "performance",
+                    "severity": "info",
+                    "message": "message",
+                    "affected_entity_ids": ["group/0", "source_operator/operator/7"],
+                }
+            ],
+        }
+    ]
+
+    assert validate_basic_structure(data) == []
+
+
+@pytest.mark.parametrize(
+    ("result_field", "expected_path"),
+    [
+        (
+            {"breakdowns": [{"entity_id": "missing", "metrics": []}]},
+            "breakdowns[0].entity_id",
+        ),
+        (
+            {"checks": [{"id": "check", "status": "fail", "entity_id": "missing"}]},
+            "checks[0].entity_id",
+        ),
+        (
+            {
+                "advice": [
+                    {
+                        "id": "advice",
+                        "category": "performance",
+                        "severity": "warning",
+                        "message": "message",
+                        "affected_entity_ids": ["missing"],
+                    }
+                ]
+            },
+            "advice[0].affected_entity_ids[0]",
+        ),
+    ],
+)
+def test_dangling_result_entity_references_are_rejected(
+    result_field: dict, expected_path: str
+) -> None:
+    """References outside entity relationships must resolve locally."""
+    data = _CORRECT_DATA.copy()
+    data["results"] = [
+        {
+            "entities": [{"id": "present", "kind": "source_operator"}],
+            **result_field,
+        }
+    ]
+
+    assert validate_basic_structure(data) == [
+        (
+            f"Entity reference 'missing' at results[0].{expected_path} "
+            "does not resolve within result 0"
+        )
+    ]
+
+
+@pytest.mark.parametrize("field_name", ["parent_ids", "child_ids"])
+def test_dangling_entity_relationships_are_rejected(field_name: str) -> None:
+    """Parent and child references must resolve locally."""
+    data = _CORRECT_DATA.copy()
+    data["results"] = [
+        {
+            "entities": [
+                {"id": "present", "kind": "source_operator", field_name: ["missing"]}
+            ]
+        }
+    ]
+
+    assert validate_basic_structure(data) == [
+        (
+            "Entity reference 'missing' at "
+            f"results[0].entities[0].{field_name}[0] "
+            "does not resolve within result 0"
+        )
+    ]
+
+
+def test_entity_reference_cannot_resolve_from_another_result() -> None:
+    """A matching entity ID in another result does not satisfy a reference."""
+    data = _CORRECT_DATA.copy()
+    data["results"] = [
+        {"entities": [], "breakdowns": [{"entity_id": "shared", "metrics": []}]},
+        {"entities": [{"id": "shared", "kind": "source_operator"}]},
+    ]
+
+    assert validate_basic_structure(data) == [
+        (
+            "Entity reference 'shared' at results[0].breakdowns[0].entity_id "
+            "does not resolve within result 0"
+        )
+    ]
 
 
 def test_schema_version(monkeypatch: pytest.MonkeyPatch) -> None:

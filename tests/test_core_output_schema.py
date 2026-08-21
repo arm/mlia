@@ -4,7 +4,7 @@
 
 import tempfile
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import pytest
 
@@ -259,6 +259,12 @@ class TestMetric:
         assert metric.availability == schema.MetricAvailability.UNAVAILABLE
         assert metric.reason == "CPU utilization data is not available."
 
+    @pytest.mark.parametrize("value", [float("nan"), float("inf"), float("-inf")])
+    def test_init_rejects_non_finite_values(self, value: float) -> None:
+        """Metric values must be representable as strict JSON numbers."""
+        with pytest.raises(ValueError, match="must be finite"):
+            schema.Metric(name="metric_name", value=value, unit="metric_unit")
+
     @pytest.mark.parametrize(
         ("metric_kwargs", "match"),
         [
@@ -389,81 +395,45 @@ class TestEnsureStandardPerformanceMetrics:
             schema.ensure_standard_performance_metrics([metric])
 
 
-class TestOperatorIdentifier:
-    """Test OperatorIdentifier class."""
-
-    def test_to_dict(self) -> None:
-        """Test conversion to dictionary."""
-        operator_id = schema.OperatorIdentifier(
-            scope=schema.OperatorScope.OPERATOR,
-            name="CONV_2D",
-            location="layer_0",
-            id="op_001",
-        )
-        result = operator_id.to_dict()
-        assert result["scope"] == "operator"
-        assert result["name"] == "CONV_2D"
-        assert result["location"] == "layer_0"
-        assert result["id"] == "op_001"
-
-    def test_from_dict(self) -> None:
-        """Test creation from dictionary."""
-        data = {
-            "scope": "operator",
-            "name": "CONV_2D",
-            "location": "layer_0",
-            "id": "op_001",
-        }
-        operator_id = schema.OperatorIdentifier.from_dict(data)
-        assert operator_id.scope == schema.OperatorScope.OPERATOR
-        assert operator_id.name == "CONV_2D"
-        assert operator_id.location == "layer_0"
-        assert operator_id.id == "op_001"
-
-
 class TestBreakdown:
     """Test Breakdown class."""
 
     def test_to_dict(self) -> None:
         """Test conversion to dictionary."""
         breakdown = schema.Breakdown(
-            scope=schema.OperatorScope.OPERATOR,
-            name="CONV_2D",
-            location="layer_0",
+            entity_id="entity_001",
             metrics=[
                 schema.Metric(name="cycles", value=1000, unit="cycles"),
                 schema.Metric(name="energy", value=50.5, unit="mJ"),
             ],
-            id="op_001",
+            id="breakdown_001",
             qualifiers={"device": "npu", "precision": "int8"},
         )
         result = breakdown.to_dict()
-        assert result["scope"] == "operator"
-        assert result["name"] == "CONV_2D"
-        assert result["location"] == "layer_0"
+        assert result["entity_id"] == "entity_001"
         assert len(result["metrics"]) == 2
-        assert result["id"] == "op_001"
+        assert result["id"] == "breakdown_001"
         assert result["qualifiers"] == {"device": "npu", "precision": "int8"}
+        assert "scope" not in result
+        assert "name" not in result
+        assert "locations" not in result
+        assert "subgraph_kind" not in result
 
     def test_from_dict(self) -> None:
         """Test creation from dictionary."""
         data = {
-            "scope": "operator",
-            "name": "CONV_2D",
-            "location": "layer_0",
+            "entity_id": "entity_001",
             "metrics": [
                 {"name": "cycles", "value": 1000, "unit": "cycles"},
                 {"name": "energy", "value": 50.5, "unit": "mJ"},
             ],
-            "id": "op_001",
+            "id": "breakdown_001",
             "qualifiers": {"device": "npu", "precision": "int8"},
         }
         breakdown = schema.Breakdown.from_dict(data)
-        assert breakdown.scope == schema.OperatorScope.OPERATOR
-        assert breakdown.name == "CONV_2D"
-        assert breakdown.location == "layer_0"
+        assert breakdown.entity_id == "entity_001"
         assert len(breakdown.metrics) == 2
-        assert breakdown.id == "op_001"
+        assert breakdown.id == "breakdown_001"
         assert breakdown.qualifiers == {"device": "npu", "precision": "int8"}
 
 
@@ -475,11 +445,13 @@ class TestCheck:
         check = schema.Check(
             id="compatibility_check",
             status=schema.CheckStatus.PASS,
+            entity_id="entity_001",
             details={"message": "All operators supported", "count": 42},
         )
         result = check.to_dict()
         assert result["id"] == "compatibility_check"
         assert result["status"] == "pass"
+        assert result["entity_id"] == "entity_001"
         assert result["details"] == {"message": "All operators supported", "count": 42}
 
     def test_from_dict(self) -> None:
@@ -487,12 +459,139 @@ class TestCheck:
         data = {
             "id": "compatibility_check",
             "status": "pass",
+            "entity_id": "entity_001",
             "details": {"message": "All operators supported", "count": 42},
         }
         check = schema.Check.from_dict(data)
         assert check.id == "compatibility_check"
         assert check.status == schema.CheckStatus.PASS
+        assert check.entity_id == "entity_001"
         assert check.details == {"message": "All operators supported", "count": 42}
+
+
+class TestEntityKind:
+    """Test EntityKind class."""
+
+    def test_well_known_entity_kinds(self) -> None:
+        """Well-known entity kinds should include schema-defined kind ids."""
+        assert schema.ENTITY_KIND_CODE_STACK == "code_stack"
+        assert schema.WELL_KNOWN_ENTITY_KINDS == frozenset(
+            {
+                schema.ENTITY_KIND_SOURCE_OPERATOR,
+                schema.ENTITY_KIND_MODEL,
+                schema.ENTITY_KIND_CODE_STACK,
+            }
+        )
+
+    def test_well_known_entity_kind_definitions(self) -> None:
+        """Well-known hierarchy relationships should be centrally defined."""
+        assert schema.WELL_KNOWN_ENTITY_KIND_DEFINITIONS == {
+            schema.ENTITY_KIND_CODE_STACK: schema.WellKnownEntityKind(
+                id=schema.ENTITY_KIND_CODE_STACK,
+                parent_kinds=(schema.ENTITY_KIND_CODE_STACK,),
+                child_kinds=(
+                    schema.ENTITY_KIND_CODE_STACK,
+                    schema.ENTITY_KIND_SOURCE_OPERATOR,
+                ),
+            )
+        }
+
+    def test_to_dict(self) -> None:
+        """Test conversion to dictionary."""
+        entity_kind = schema.EntityKind(
+            id="nn_module",
+            parent_kinds=["nn_module"],
+            child_kinds=["nn_module", "source_operator"],
+        )
+
+        assert entity_kind.to_dict() == {
+            "id": "nn_module",
+            "parent_kinds": ["nn_module"],
+            "child_kinds": ["nn_module", "source_operator"],
+        }
+
+    def test_to_dict_omits_empty_relationships(self) -> None:
+        """Empty parent and child kind lists should be omitted."""
+        assert schema.EntityKind(id="segment").to_dict() == {"id": "segment"}
+
+    def test_to_dict_copies_relationship_lists(self) -> None:
+        """Dictionary callers should not mutate the entity kind instance."""
+        entity_kind = schema.EntityKind(id="segment", child_kinds=["cascade"])
+        result = entity_kind.to_dict()
+
+        result["child_kinds"].append("chain")
+
+        assert entity_kind.child_kinds == ["cascade"]
+
+    def test_from_dict(self) -> None:
+        """Test creation from dictionary."""
+        entity_kind = schema.EntityKind.from_dict(
+            {
+                "id": "chain",
+                "parent_kinds": ["cascade"],
+                "child_kinds": ["source_operator"],
+            }
+        )
+
+        assert entity_kind.id == "chain"
+        assert entity_kind.parent_kinds == ["cascade"]
+        assert entity_kind.child_kinds == ["source_operator"]
+
+
+class TestOnnxSourceOperatorId:
+    """Test canonical ONNX source-operator identity construction."""
+
+    def test_uses_zero_based_top_level_node_index(self) -> None:
+        """ONNX identity is independent of any presentation name."""
+        assert schema.onnx_source_operator_id(0) == "source_operator/0"
+        assert schema.onnx_source_operator_id(17) == "source_operator/17"
+
+    @pytest.mark.parametrize("node_index", [-1, True, 1.5, "1"])
+    def test_rejects_invalid_node_index(self, node_index: object) -> None:
+        """Only non-negative integer top-level node positions are valid."""
+        with pytest.raises(ValueError, match="non-negative integer"):
+            schema.onnx_source_operator_id(node_index)  # type: ignore[arg-type]
+
+
+class TestPt2SourceOperatorId:
+    """Test canonical PT2 source-operator identity construction."""
+
+    def test_uses_top_level_fx_node_name(self) -> None:
+        """PT2 identity uses the exact operation node name from the export."""
+        assert schema.pt2_source_operator_id("conv2d") == "source_operator/conv2d"
+        assert schema.pt2_source_operator_id("conv2d_1") == "source_operator/conv2d_1"
+
+    @pytest.mark.parametrize("node_name", ["", "   ", True, 1, None])
+    def test_rejects_invalid_node_name(self, node_name: object) -> None:
+        """Only non-empty FX node-name strings are valid."""
+        with pytest.raises(ValueError, match="non-empty string"):
+            schema.pt2_source_operator_id(node_name)  # type: ignore[arg-type]
+
+
+class TestVgfSourceOperatorId:
+    """Test canonical VGF source-operator identity construction."""
+
+    def test_uses_segment_and_spirv_result_id(self) -> None:
+        """VGF identity uses structural numeric coordinates only."""
+        assert schema.vgf_source_operator_id(0, 437) == (
+            "source_operator/segment_0/spirv-437"
+        )
+        assert schema.vgf_source_operator_id(7, 0) == (
+            "source_operator/segment_7/spirv-0"
+        )
+
+    @pytest.mark.parametrize(
+        ("segment_index", "result_id"),
+        [(-1, 0), (True, 0), ("0", 0), (0, -1), (0, True), (0, "1")],
+    )
+    def test_rejects_invalid_coordinates(
+        self, segment_index: object, result_id: object
+    ) -> None:
+        """VGF coordinates must be non-negative integers."""
+        with pytest.raises(ValueError, match="non-negative integer"):
+            schema.vgf_source_operator_id(
+                cast(int, segment_index), cast(int, result_id)
+            )
 
 
 class TestEntity:
@@ -501,38 +600,77 @@ class TestEntity:
     def test_to_dict(self) -> None:
         """Test conversion to dictionary."""
         entity = schema.Entity(
-            scope=schema.OperatorScope.OPERATOR,
-            name="CONV_2D",
-            location="layer_0",
+            id="chain_001",
+            kind="chain",
+            name="chain_0",
             placement="npu",
-            id="entity_001",
+            parent_ids=["model", "module_conv"],
+            child_ids=["layer_0", "layer_1"],
             attributes={"dtype": "int8", "kernel_size": [3, 3]},
+            stack_trace="forward > conv2d",
         )
         result = entity.to_dict()
-        assert result["scope"] == "operator"
-        assert result["name"] == "CONV_2D"
-        assert result["location"] == "layer_0"
+        assert result["id"] == "chain_001"
+        assert result["kind"] == "chain"
+        assert result["name"] == "chain_0"
+        assert "locations" not in result
         assert result["placement"] == "npu"
-        assert result["id"] == "entity_001"
+        assert result["parent_ids"] == ["model", "module_conv"]
+        assert result["child_ids"] == ["layer_0", "layer_1"]
         assert result["attributes"] == {"dtype": "int8", "kernel_size": [3, 3]}
+        assert result["stack_trace"] == "forward > conv2d"
+
+    def test_to_dict_omits_optional_empty_values(self) -> None:
+        """Test optional entity fields are omitted when empty."""
+        entity = schema.Entity(
+            id="entity_001",
+            kind=schema.ENTITY_KIND_SOURCE_OPERATOR,
+            name="CONV_2D",
+        )
+
+        assert entity.to_dict() == {
+            "id": "entity_001",
+            "kind": "source_operator",
+            "name": "CONV_2D",
+        }
 
     def test_from_dict(self) -> None:
         """Test creation from dictionary."""
         data = {
-            "scope": "operator",
-            "name": "CONV_2D",
-            "location": "layer_0",
+            "id": "chain_001",
+            "kind": "chain",
+            "name": "chain_0",
             "placement": "npu",
-            "id": "entity_001",
+            "parent_ids": ["model", "module_conv"],
+            "child_ids": ["layer_0", "layer_1"],
             "attributes": {"dtype": "int8", "kernel_size": [3, 3]},
+            "stack_trace": "forward > conv2d",
         }
         entity = schema.Entity.from_dict(data)
-        assert entity.scope == schema.OperatorScope.OPERATOR
-        assert entity.name == "CONV_2D"
-        assert entity.location == "layer_0"
+        assert entity.id == "chain_001"
+        assert entity.kind == "chain"
+        assert entity.name == "chain_0"
+        assert not hasattr(entity, "locations")
         assert entity.placement == "npu"
-        assert entity.id == "entity_001"
+        assert entity.parent_ids == ["model", "module_conv"]
+        assert entity.child_ids == ["layer_0", "layer_1"]
         assert entity.attributes == {"dtype": "int8", "kernel_size": [3, 3]}
+        assert entity.stack_trace == "forward > conv2d"
+
+    @pytest.mark.parametrize(
+        "legacy_field", ["locations", "parent_id", "scope", "subgraph_kind"]
+    )
+    def test_from_dict_rejects_legacy_entity_fields(self, legacy_field: str) -> None:
+        """Legacy entity identity fields are not accepted by schema model parsing."""
+        with pytest.raises(ValueError, match=legacy_field):
+            schema.Entity.from_dict(
+                {
+                    "id": "chain_001",
+                    "kind": "chain",
+                    "name": "chain_0",
+                    legacy_field: "legacy_value",
+                }
+            )
 
 
 class TestResult:
@@ -555,6 +693,58 @@ class TestResult:
         assert result_dict["warnings"] == ["warning"]
         assert result_dict["errors"] == ["error"]
         assert len(result_dict["metrics"]) == 1
+
+    def test_to_dict_with_entity_kinds(self) -> None:
+        """Test conversion to dictionary with entity kind metadata."""
+        result = schema.Result(
+            kind=schema.ResultKind.PERFORMANCE,
+            status=schema.ResultStatus.OK,
+            producer="backend",
+            entity_kinds=[
+                schema.EntityKind(id="segment", child_kinds=["cascade"]),
+                schema.EntityKind(
+                    id="nn_module",
+                    parent_kinds=["nn_module"],
+                    child_kinds=["nn_module", "source_operator"],
+                ),
+            ],
+        )
+
+        assert result.to_dict()["entity_kinds"] == [
+            {"id": "segment", "child_kinds": ["cascade"]},
+            {
+                "id": "nn_module",
+                "parent_kinds": ["nn_module"],
+                "child_kinds": ["nn_module", "source_operator"],
+            },
+        ]
+
+    def test_from_dict_with_entity_kinds(self) -> None:
+        """Test creation from dictionary with entity kind metadata."""
+        result = schema.Result.from_dict(
+            {
+                "kind": "performance",
+                "status": "ok",
+                "producer": "backend",
+                "entity_kinds": [
+                    {"id": "segment", "child_kinds": ["cascade"]},
+                    {
+                        "id": "chain",
+                        "parent_kinds": ["cascade"],
+                        "child_kinds": ["source_operator"],
+                    },
+                ],
+            }
+        )
+
+        assert result.entity_kinds == [
+            schema.EntityKind(id="segment", child_kinds=["cascade"]),
+            schema.EntityKind(
+                id="chain",
+                parent_kinds=["cascade"],
+                child_kinds=["source_operator"],
+            ),
+        ]
 
     def test_from_dict(self) -> None:
         """Test creation from dictionary."""
@@ -580,13 +770,7 @@ class TestResult:
                     category=schema.AdviceCategory.PERFORMANCE,
                     severity=schema.AdviceSeverity.INFO,
                     message="Review the performance metrics.",
-                    affected_entities=[
-                        schema.OperatorIdentifier(
-                            scope=schema.OperatorScope.OPERATOR,
-                            name="CONV_2D",
-                            location="model/conv",
-                        )
-                    ],
+                    affected_entity_ids=["entity_001"],
                     details={"reason": "example"},
                 )
             ],
@@ -602,13 +786,7 @@ class TestResult:
                 "category": "performance",
                 "severity": "info",
                 "message": "Review the performance metrics.",
-                "affected_entities": [
-                    {
-                        "scope": "operator",
-                        "name": "CONV_2D",
-                        "location": "model/conv",
-                    }
-                ],
+                "affected_entity_ids": ["entity_001"],
                 "details": {"reason": "example"},
             }
         ]
@@ -626,6 +804,7 @@ class TestResult:
                         "category": "performance",
                         "severity": "info",
                         "message": "Review the performance metrics.",
+                        "affected_entity_ids": ["entity_001"],
                     }
                 ],
             }
@@ -635,6 +814,7 @@ class TestResult:
         assert result.advice[0].id == "0"
         assert result.advice[0].category == schema.AdviceCategory.PERFORMANCE
         assert result.advice[0].severity == schema.AdviceSeverity.INFO
+        assert result.advice[0].affected_entity_ids == ["entity_001"]
 
     def test_from_dict_does_not_parse_legacy_advices_alias(self) -> None:
         """Test creation from dictionary ignores the legacy advices field."""

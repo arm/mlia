@@ -13,7 +13,7 @@ from mlia.core.common import AdviceCategory, DataItem
 from mlia.core.mixins import ContextMixin
 from mlia.core.output_schema import Advice as SchemaAdvice
 from mlia.core.output_schema import AdviceCategory as SchemaAdviceCategory
-from mlia.core.output_schema import AdviceSeverity, OperatorIdentifier
+from mlia.core.output_schema import AdviceSeverity
 
 
 @dataclass
@@ -24,7 +24,7 @@ class Advice:
     category: SchemaAdviceCategory
     severity: AdviceSeverity
     message: str
-    affected_entities: list[OperatorIdentifier] = field(default_factory=list)
+    affected_entity_ids: list[str] = field(default_factory=list)
     details: dict[str, Any] = field(default_factory=dict)
 
     def to_extension_dict(self) -> dict[str, Any]:
@@ -39,8 +39,8 @@ class Advice:
             "severity": self.severity.value,
             "message": self.message,
         }
-        if self.affected_entities:
-            result["affected_entities"] = [e.to_dict() for e in self.affected_entities]
+        if self.affected_entity_ids:
+            result["affected_entity_ids"] = self.affected_entity_ids
         if self.details:
             result["details"] = self.details
         return result
@@ -56,7 +56,7 @@ class Advice:
             category=self.category,
             severity=self.severity,
             message=self.message,
-            affected_entities=self.affected_entities,
+            affected_entity_ids=self.affected_entity_ids,
             details=self.details,
         )
 
@@ -113,7 +113,7 @@ class FactBasedAdviceProducer(ContextAwareAdviceProducer):
         message: str,
         category: SchemaAdviceCategory,
         severity: AdviceSeverity = AdviceSeverity.INFO,
-        affected_entities: list[OperatorIdentifier] | None = None,
+        affected_entity_ids: list[str] | None = None,
         details: dict[str, Any] | None = None,
     ) -> None:
         """Add advice.
@@ -122,7 +122,7 @@ class FactBasedAdviceProducer(ContextAwareAdviceProducer):
             message: Advice message
             category: Advice category
             severity: Advice severity (default: INFO)
-            affected_entities: List of affected entities
+            affected_entity_ids: Entity IDs affected by this advice
             details: Additional details
         """
         advice = Advice(
@@ -130,7 +130,7 @@ class FactBasedAdviceProducer(ContextAwareAdviceProducer):
             category=category,
             severity=severity,
             message=message,
-            affected_entities=affected_entities or [],
+            affected_entity_ids=affected_entity_ids or [],
             details=details or {},
         )
         self.advice.append(advice)

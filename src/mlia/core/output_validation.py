@@ -317,11 +317,217 @@ def _validate_backends(data: dict[str, Any], errors: list[str]) -> None:
             errors.append("Field 'backends' must have at least one item")
 
 
+def _validate_entity_reference(
+    reference: object,
+    *,
+    field_path: str,
+    result_index: int,
+    entity_ids: set[str],
+    errors: list[str],
+) -> None:
+    """Validate one entity reference against its containing result."""
+    if isinstance(reference, str) and reference not in entity_ids:
+        errors.append(
+            f"Entity reference '{reference}' at results[{result_index}].{field_path} "
+            f"does not resolve within result {result_index}"
+        )
+
+
+def _validate_entity_kind_list(
+    value: object,
+    *,
+    field_path: str,
+    errors: list[str],
+) -> list[str]:
+    """Validate one parent_kinds or child_kinds list."""
+    if value is None:
+        return []
+    if not isinstance(value, list):
+        errors.append(f"Field '{field_path}' must be an array")
+        return []
+
+    kind_ids: list[str] = []
+    seen: set[str] = set()
+    for index, kind_id in enumerate(value):
+        item_path = f"{field_path}[{index}]"
+        if not isinstance(kind_id, str):
+            errors.append(f"Field '{item_path}' must be a string")
+            continue
+        if not kind_id.strip():
+            errors.append(f"Field '{item_path}' must be a non-empty string")
+            continue
+        if kind_id in seen:
+            errors.append(f"Entity kind id '{kind_id}' is duplicated in {field_path}")
+            continue
+        seen.add(kind_id)
+        kind_ids.append(kind_id)
+    return kind_ids
+
+
+def _validate_entity_kinds(
+    result: dict[str, Any], result_index: int, errors: list[str]
+) -> set[str]:
+    """Validate result-local entity kind declarations and relationships."""
+    values = result.get("entity_kinds", [])
+    if not isinstance(values, list):
+        errors.append(f"Field 'results[{result_index}].entity_kinds' must be an array")
+        return set()
+
+    declarations: list[tuple[int, str | None, list[str], list[str]]] = []
+    declared_kind_ids: set[str] = set()
+    for kind_index, item in enumerate(values):
+        item_path = f"results[{result_index}].entity_kinds[{kind_index}]"
+        if not isinstance(item, dict):
+            errors.append(f"Field '{item_path}' must be an object")
+            continue
+
+        raw_kind_id = item.get("id")
+        kind_id: str | None = None
+        if not isinstance(raw_kind_id, str):
+            errors.append(f"Field '{item_path}.id' must be a string")
+        elif not raw_kind_id.strip():
+            errors.append(f"Field '{item_path}.id' must be a non-empty string")
+        else:
+            kind_id = raw_kind_id
+            if kind_id in schema.WELL_KNOWN_ENTITY_KINDS:
+                errors.append(
+                    f"Well-known entity kind '{kind_id}' must not be declared at "
+                    f"{item_path}"
+                )
+            if kind_id in declared_kind_ids:
+                errors.append(
+                    f"Entity kind id '{kind_id}' must be unique within result "
+                    f"{result_index}"
+                )
+            declared_kind_ids.add(kind_id)
+
+        parent_kinds = _validate_entity_kind_list(
+            item.get("parent_kinds"),
+            field_path=f"{item_path}.parent_kinds",
+            errors=errors,
+        )
+        child_kinds = _validate_entity_kind_list(
+            item.get("child_kinds"),
+            field_path=f"{item_path}.child_kinds",
+            errors=errors,
+        )
+        declarations.append((kind_index, kind_id, parent_kinds, child_kinds))
+
+    backend_kind_ids = declared_kind_ids - schema.WELL_KNOWN_ENTITY_KINDS
+    valid_kind_ids = backend_kind_ids | schema.WELL_KNOWN_ENTITY_KINDS
+    for kind_index, _kind_id, parent_kinds, child_kinds in declarations:
+        for field_name, references in (
+            ("parent_kinds", parent_kinds),
+            ("child_kinds", child_kinds),
+        ):
+            for reference_index, reference in enumerate(references):
+                if reference not in valid_kind_ids:
+                    errors.append(
+                        f"Entity kind reference '{reference}' at "
+                        f"results[{result_index}].entity_kinds[{kind_index}]."
+                        f"{field_name}[{reference_index}] does not resolve to a "
+                        "well-known or declared entity kind in this result"
+                    )
+    return backend_kind_ids
+
+
 def _validate_results(data: dict[str, Any], errors: list[str]) -> None:
-    """Validate results field."""
-    if "results" in data:
-        if not isinstance(data["results"], list):
-            errors.append("Field 'results' must be an array")
+    """Validate result-local entity kinds, IDs, and references."""
+    if "results" not in data:
+        return
+    if not isinstance(data["results"], list):
+        errors.append("Field 'results' must be an array")
+        return
+
+    for result_index, result in enumerate(data["results"]):
+        if not isinstance(result, dict):
+            continue
+        backend_kind_ids = _validate_entity_kinds(result, result_index, errors)
+        valid_entity_kind_ids = backend_kind_ids | schema.WELL_KNOWN_ENTITY_KINDS
+
+        entities = result.get("entities", [])
+        if not isinstance(entities, list):
+            errors.append(f"Field 'results[{result_index}].entities' must be an array")
+            continue
+        seen_entity_ids: set[str] = set()
+        duplicate_entity_ids: set[str] = set()
+        for entity_index, entity in enumerate(entities):
+            if not isinstance(entity, dict):
+                errors.append(
+                    f"Field 'results[{result_index}].entities[{entity_index}]' "
+                    "must be an object"
+                )
+                continue
+            entity_id = entity.get("id")
+            if isinstance(entity_id, str):
+                if entity_id in seen_entity_ids:
+                    duplicate_entity_ids.add(entity_id)
+                seen_entity_ids.add(entity_id)
+
+            entity_kind = entity.get("kind")
+            entity_kind_path = f"results[{result_index}].entities[{entity_index}].kind"
+            if not isinstance(entity_kind, str):
+                errors.append(f"Field '{entity_kind_path}' must be a string")
+            elif not entity_kind.strip():
+                errors.append(f"Field '{entity_kind_path}' must be a non-empty string")
+            elif entity_kind not in valid_entity_kind_ids:
+                errors.append(
+                    f"Entity kind '{entity_kind}' at {entity_kind_path} is neither "
+                    "well-known nor declared within this result"
+                )
+
+        for entity_id in sorted(duplicate_entity_ids):
+            errors.append(
+                f"Entity id '{entity_id}' must be unique within result {result_index}"
+            )
+
+        for breakdown_index, breakdown in enumerate(result.get("breakdowns", [])):
+            if isinstance(breakdown, dict):
+                _validate_entity_reference(
+                    breakdown.get("entity_id"),
+                    field_path=f"breakdowns[{breakdown_index}].entity_id",
+                    result_index=result_index,
+                    entity_ids=seen_entity_ids,
+                    errors=errors,
+                )
+        for check_index, check in enumerate(result.get("checks", [])):
+            if isinstance(check, dict) and check.get("entity_id") is not None:
+                _validate_entity_reference(
+                    check.get("entity_id"),
+                    field_path=f"checks[{check_index}].entity_id",
+                    result_index=result_index,
+                    entity_ids=seen_entity_ids,
+                    errors=errors,
+                )
+        for advice_index, advice in enumerate(result.get("advice", [])):
+            if not isinstance(advice, dict):
+                continue
+            for reference_index, reference in enumerate(
+                advice.get("affected_entity_ids", [])
+            ):
+                _validate_entity_reference(
+                    reference,
+                    field_path=(
+                        f"advice[{advice_index}].affected_entity_ids[{reference_index}]"
+                    ),
+                    result_index=result_index,
+                    entity_ids=seen_entity_ids,
+                    errors=errors,
+                )
+        for entity_index, entity in enumerate(entities):
+            if not isinstance(entity, dict):
+                continue
+            for field_name in ("parent_ids", "child_ids"):
+                for reference_index, reference in enumerate(entity.get(field_name, [])):
+                    _validate_entity_reference(
+                        reference,
+                        field_path=(
+                            f"entities[{entity_index}].{field_name}[{reference_index}]"
+                        ),
+                        result_index=result_index,
+                        entity_ids=seen_entity_ids,
+                        errors=errors,
+                    )
 
 
 def validate_basic_structure(data: dict[str, Any]) -> list[str]:
