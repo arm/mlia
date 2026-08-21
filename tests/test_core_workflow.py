@@ -2,46 +2,19 @@
 # SPDX-License-Identifier: Apache-2.0
 """Tests for module workflow."""
 
-from dataclasses import dataclass
-from unittest.mock import MagicMock, call
+from unittest.mock import MagicMock
 
-from mlia.core.advice_generation import Advice, AdviceEvent, ContextAwareAdviceProducer
+import pytest
+
 from mlia.core.context import ExecutionContext
 from mlia.core.data_analysis import ContextAwareDataAnalyzer
 from mlia.core.data_collection import ContextAwareDataCollector
 from mlia.core.errors import FunctionalityNotSupportedError
-from mlia.core.events import (
-    AdviceStageFinishedEvent,
-    AdviceStageStartedEvent,
-    AnalyzedDataEvent,
-    CollectedDataEvent,
-    DataAnalysisStageFinishedEvent,
-    DataAnalysisStageStartedEvent,
-    DataCollectionStageFinishedEvent,
-    DataCollectionStageStartedEvent,
-    DataCollectorSkippedEvent,
-    DefaultEventPublisher,
-    Event,
-    EventHandler,
-    ExecutionFailedEvent,
-    ExecutionFinishedEvent,
-    ExecutionStartedEvent,
-)
-from mlia.core.output_schema import AdviceCategory as SchemaAdviceCategory
-from mlia.core.output_schema import AdviceSeverity
 from mlia.core.workflow import DefaultWorkflowExecutor
-
-
-@dataclass
-class SampleEvent(Event):
-    """Sample event."""
-
-    msg: str
 
 
 def test_workflow_executor(tmpdir: str) -> None:
     """Test workflow executor."""
-    handler_mock = MagicMock(spec=EventHandler)
     data_collector_mock = MagicMock(spec=ContextAwareDataCollector)
     data_collector_mock.collect_data.return_value = 42
 
@@ -49,7 +22,6 @@ def test_workflow_executor(tmpdir: str) -> None:
     data_collector_mock_no_value.collect_data.return_value = None
 
     data_collector_mock_skipped = MagicMock(spec=ContextAwareDataCollector)
-    data_collector_mock_skipped.name.return_value = "skipped_collector"
     data_collector_mock_skipped.collect_data.side_effect = (
         FunctionalityNotSupportedError("Error!", "Error!")
     )
@@ -57,29 +29,7 @@ def test_workflow_executor(tmpdir: str) -> None:
     data_analyzer_mock = MagicMock(spec=ContextAwareDataAnalyzer)
     data_analyzer_mock.get_analyzed_data.return_value = ["Really good number!"]
 
-    advice_producer_mock1 = MagicMock(spec=ContextAwareAdviceProducer)
-    advice_producer_mock1.get_advice.return_value = Advice(
-        id="0",
-        category=SchemaAdviceCategory.COMPATIBILITY,
-        severity=AdviceSeverity.INFO,
-        message="All good!",
-    )
-
-    advice_producer_mock2 = MagicMock(spec=ContextAwareAdviceProducer)
-    advice_producer_mock2.get_advice.return_value = [
-        Advice(
-            id="0",
-            category=SchemaAdviceCategory.COMPATIBILITY,
-            severity=AdviceSeverity.INFO,
-            message="Good advice!",
-        )
-    ]
-
-    context = ExecutionContext(
-        output_dir=tmpdir,
-        event_handlers=[handler_mock],
-        event_publisher=DefaultEventPublisher(),
-    )
+    context = ExecutionContext(output_dir=tmpdir)
 
     executor = DefaultWorkflowExecutor(
         context,
@@ -89,11 +39,6 @@ def test_workflow_executor(tmpdir: str) -> None:
             data_collector_mock_skipped,
         ],
         [data_analyzer_mock],
-        [
-            advice_producer_mock1,
-            advice_producer_mock2,
-        ],
-        [SampleEvent("Hello from advisor!")],
     )
 
     executor.run()
@@ -101,96 +46,56 @@ def test_workflow_executor(tmpdir: str) -> None:
     data_collector_mock.collect_data.assert_called_once()
     data_collector_mock_no_value.collect_data.assert_called_once()
     data_collector_mock_skipped.collect_data.assert_called_once()
-
     data_analyzer_mock.analyze_data.assert_called_once_with(42)
-
-    advice_producer_mock1.produce_advice.assert_called_once_with("Really good number!")
-    advice_producer_mock1.get_advice.assert_called_once()
-
-    advice_producer_mock2.produce_advice.called_once_with("Really good number!")
-    advice_producer_mock2.get_advice.assert_called_once()
-
-    expected_mock_calls = [
-        call(ExecutionStartedEvent()),
-        call(SampleEvent("Hello from advisor!")),
-        call(DataCollectionStageStartedEvent()),
-        call(CollectedDataEvent(data_item=42)),
-        call(DataCollectorSkippedEvent("skipped_collector", "Error!: Error!")),
-        call(DataCollectionStageFinishedEvent()),
-        call(DataAnalysisStageStartedEvent()),
-        call(AnalyzedDataEvent(data_item="Really good number!")),
-        call(DataAnalysisStageFinishedEvent()),
-        call(AdviceStageStartedEvent()),
-        call(
-            AdviceEvent(
-                advice=Advice(
-                    id="0",
-                    category=SchemaAdviceCategory.COMPATIBILITY,
-                    severity=AdviceSeverity.INFO,
-                    message="All good!",
-                )
-            )
-        ),
-        call(
-            AdviceEvent(
-                advice=Advice(
-                    id="0",
-                    category=SchemaAdviceCategory.COMPATIBILITY,
-                    severity=AdviceSeverity.INFO,
-                    message="Good advice!",
-                )
-            )
-        ),
-        call(AdviceStageFinishedEvent()),
-        call(ExecutionFinishedEvent()),
-    ]
-
-    for expected_call, actual_call in zip(
-        expected_mock_calls, handler_mock.handle_event.mock_calls
-    ):
-        expected_event = expected_call.args[0]
-        actual_event = actual_call.args[0]
-
-        assert actual_event.compare_without_id(expected_event)
 
 
 def test_workflow_executor_failed(tmpdir: str) -> None:
-    """Test scenario when one of the components raises exception."""
-    handler_mock = MagicMock(spec=EventHandler)
-
-    context = ExecutionContext(
-        output_dir=tmpdir,
-        event_handlers=[handler_mock],
-        event_publisher=DefaultEventPublisher(),
-    )
-
-    collection_exception = Exception("Collection failed")
-
+    """Workflow failures should propagate to callers."""
+    context = ExecutionContext(output_dir=tmpdir)
     data_collector_mock = MagicMock(spec=ContextAwareDataCollector)
-    data_collector_mock.collect_data.side_effect = collection_exception
+    data_collector_mock.collect_data.side_effect = RuntimeError("Collection failed")
 
-    executor = DefaultWorkflowExecutor(context, [data_collector_mock], [], [])
-    executor.run()
+    executor = DefaultWorkflowExecutor(context, [data_collector_mock], [])
 
-    expected_mock_calls = [
-        call(ExecutionStartedEvent()),
-        call(DataCollectionStageStartedEvent()),
-        call(ExecutionFailedEvent(collection_exception)),
+    with pytest.raises(RuntimeError, match="Collection failed"):
+        executor.run()
+
+
+def test_workflow_executor_preserves_result_local_advice(tmpdir: str) -> None:
+    """Complete backend results should retain only their own advice."""
+    first_item = MagicMock()
+    first_item.standardized_output = {
+        "schema_version": "1.1.0",
+        "results": [
+            {
+                "kind": "compatibility",
+                "advice": [{"id": "compatibility", "message": "Compatibility"}],
+            }
+        ],
+        "backends": [],
+    }
+    second_item = MagicMock()
+    second_item.standardized_output = {
+        "schema_version": "1.1.0",
+        "results": [
+            {
+                "kind": "performance",
+                "advice": [{"id": "performance", "message": "Performance"}],
+            }
+        ],
+        "backends": [],
+    }
+    first_collector = MagicMock(spec=ContextAwareDataCollector)
+    first_collector.collect_data.return_value = first_item
+    second_collector = MagicMock(spec=ContextAwareDataCollector)
+    second_collector.collect_data.return_value = second_item
+    context = ExecutionContext(output_dir=tmpdir)
+    executor = DefaultWorkflowExecutor(context, [first_collector, second_collector], [])
+
+    output = executor.run()
+
+    assert output is not None
+    assert output["results"] == [
+        first_item.standardized_output["results"][0],
+        second_item.standardized_output["results"][0],
     ]
-
-    for expected_call, actual_call in zip(
-        expected_mock_calls, handler_mock.handle_event.mock_calls
-    ):
-        expected_event = expected_call.args[0]
-        actual_event = actual_call.args[0]
-
-        if isinstance(actual_event, ExecutionFailedEvent):
-            # seems that dataclass comparison doesn't work well
-            # for the exceptions
-            actual_exception = actual_event.err
-            expected_exception = expected_event.err
-
-            assert actual_exception == expected_exception
-            continue
-
-        assert actual_event.compare_without_id(expected_event)

@@ -34,7 +34,6 @@ from mlia.core.errors import (
     InternalError,
     UnsupportedConfigurationError,
 )
-from mlia.core.handlers import WorkflowEventsHandler
 from mlia.core.logging import close_configured_handlers, setup_logging
 from mlia.core.output_validation import collect_validation_errors
 from mlia.target.config import get_builtin_target_profile_path, load_profile
@@ -361,29 +360,6 @@ def _configured_api_logging(
         close_configured_handlers()
 
 
-def _get_api_event_handler(
-    target: str, output_dir: Path | None
-) -> WorkflowEventsHandler:
-    """Resolve API handler for target.
-
-    Handlers returned from the target registry for API execution must be
-    configured in collect-only mode so standardized JSON output is built in
-    memory without invoking text report generation paths.
-    """
-    target_info = target_registry.items.get(target)
-    if target_info is None or target_info.event_handler_factory is None:
-        raise ConfigurationError(
-            f"No API event handler is registered for target '{target}'."
-        )
-    handler = target_info.event_handler_factory(output_dir)
-    if not handler.collect_only:
-        raise ConfigurationError(
-            f"API event handler for target '{target}' must be created with "
-            "collect_only=True."
-        )
-    return handler
-
-
 @dataclass(frozen=True)
 class _RunAdvisorInputs:
     advice_set: set[str]
@@ -411,7 +387,6 @@ def _create_api_execution_context(
             advice_category=advice_category,
             output_format="json",
             output_dir=output_base_dir,
-            event_publisher=existing_context.event_publisher,
             action_resolver=existing_context.action_resolver,
         )
     return ExecutionContext(
@@ -425,13 +400,6 @@ def _run_advisor_with_context(
     local_context: ExecutionContext,
     inputs: _RunAdvisorInputs,
 ) -> dict[str, object]:
-    target = get_target(inputs.target_profile)
-    local_context.event_handlers = [
-        _get_api_event_handler(target, local_context.output_dir),
-    ]
-    if not local_context.event_handlers:
-        raise InternalError("No event handlers configured for API execution.")
-
     model_for_run = _resolve_model_for_run(
         inputs.model,
         inputs.module_input,
@@ -440,7 +408,7 @@ def _run_advisor_with_context(
     )
 
     with _capture_external_output():
-        get_advice(
+        output = get_advice(
             target_profile=inputs.target_profile,
             model=model_for_run,
             category=inputs.advice_set,
@@ -449,8 +417,7 @@ def _run_advisor_with_context(
             backend_options=inputs.backend_options,
             accept_eula=inputs.accept_eula,
         )
-    handler = cast(WorkflowEventsHandler, local_context.event_handlers[0])
-    if handler.output is None:
+    if output is None:
         _raise_if_deprecated_output_missing(
             inputs.selected_backends, inputs.target_profile
         )
@@ -459,10 +426,10 @@ def _run_advisor_with_context(
             f"'{inputs.target_profile}' with backends {inputs.selected_backends}."
         )
     if inputs.module_input is not None:
-        _override_model_name_for_module(handler.output, inputs.module_input)
-    _strip_cli_arguments(handler.output)
+        _override_model_name_for_module(output, inputs.module_input)
+    _strip_cli_arguments(output)
     if inputs.validation != ValidationMode.OFF:
-        errors = collect_validation_errors(handler.output)
+        errors = collect_validation_errors(output)
         if errors:
             logger.debug(
                 "Schema validation failed for target-profile '%s' with backends %s: %s",
@@ -490,7 +457,7 @@ def _run_advisor_with_context(
                     f"{inputs.selected_backends}: {len(errors)} issue(s)."
                 )
                 raise InternalError(summary) from None
-    return handler.output
+    return output
 
 
 @contextmanager
@@ -827,7 +794,7 @@ def get_advice(
     backends: list[str] | None = None,
     backend_options: dict[str, dict[str, Any]] | None = None,
     accept_eula: bool | None = False,
-) -> None:
+) -> dict[str, object] | None:
     """Get the advice.
 
     This function represents an entry point to the library API.
@@ -895,7 +862,7 @@ def get_advice(
         backends=validated_backends,
         backend_options=backend_options,
     )
-    advisor.run(context)
+    return advisor.run(context)
 
 
 def get_advisor(

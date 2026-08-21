@@ -10,7 +10,6 @@ from functools import wraps
 from typing import Any, Callable
 
 from mlia.core.common import AdviceCategory, DataItem
-from mlia.core.events import SystemEvent
 from mlia.core.mixins import ContextMixin
 from mlia.core.output_schema import Advice as SchemaAdvice
 from mlia.core.output_schema import AdviceCategory as SchemaAdviceCategory
@@ -60,18 +59,6 @@ class Advice:
             affected_entities=self.affected_entities,
             details=self.details,
         )
-
-
-@dataclass
-class AdviceEvent(SystemEvent):
-    """Advice event.
-
-    This event is published for every produced advice.
-
-    :param advice: Advice instance
-    """
-
-    advice: Advice
 
 
 class AdviceProducer(ABC):

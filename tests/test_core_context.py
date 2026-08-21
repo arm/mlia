@@ -11,7 +11,6 @@ import pytest
 from mlia.core.common import AdviceCategory
 from mlia.core.context import ExecutionContext
 from mlia.core.errors import ConfigurationError
-from mlia.core.events import DefaultEventPublisher
 from mlia.utils.filesystem import USER_ONLY_PERM_MASK, working_directory
 from tests.utils.common import check_expected_permissions
 
@@ -49,15 +48,12 @@ def test_execution_context_category_enabled(
 
 def test_execution_context(tmp_path: Path) -> None:
     """Test execution context."""
-    publisher = DefaultEventPublisher()
     category = {AdviceCategory.COMPATIBILITY}
 
     context = ExecutionContext(
         advice_category=category,
         config_parameters={"param": "value"},
         output_dir=tmp_path / "output",
-        event_handlers=[],
-        event_publisher=publisher,
         verbose=True,
         logs_dir="logs_directory",
         output_format="json",
@@ -68,8 +64,6 @@ def test_execution_context(tmp_path: Path) -> None:
             advice_category=category,
             config_parameters={"param": "value"},
             output_dir=tmp_path / "cannot" / "create" / "dir",
-            event_handlers=[],
-            event_publisher=publisher,
             verbose=True,
             logs_dir="logs_directory",
             output_format="json",
@@ -83,8 +77,6 @@ def test_execution_context(tmp_path: Path) -> None:
 
     assert context.advice_category == category
     assert context.config_parameters == {"param": "value"}
-    assert context.event_handlers == []
-    assert context.event_publisher == publisher
     assert context.logs_path == output_dir / "logs_directory"
     expected_model_path = output_dir / "sample.model"
     assert context.get_model_path("sample.model") == expected_model_path
@@ -108,10 +100,6 @@ def test_execution_context_with_default_params(tmp_path: Path) -> None:
 
     assert context_with_default_params.advice_category == {AdviceCategory.COMPATIBILITY}
     assert context_with_default_params.config_parameters is None
-    assert context_with_default_params.event_handlers is None
-    assert isinstance(
-        context_with_default_params.event_publisher, DefaultEventPublisher
-    )
 
     output_dir = context_with_default_params.output_dir
     assert output_dir == working_dir.joinpath("mlia-output")

@@ -18,7 +18,6 @@ import pytest
 from mlia.api import (
     ValidationMode,
     _capture_external_output,
-    _get_api_event_handler,
     _normalize_validation_mode,
     _raise_if_deprecated_output_missing,
     _require_torch_module,
@@ -48,29 +47,18 @@ from mlia.core.errors import (
     InternalError,
     UnsupportedConfigurationError,
 )
-from mlia.core.handlers import WorkflowEventsHandler
 from mlia.target.config import TargetInfo
 from mlia.target.registry import registry as target_registry
 from mlia.transformers.registry import TransformRequest
 
-
-class _FakeHandler:  # pylint: disable=too-few-public-methods
-    """Minimal workflow handler stub."""
-
-    collect_only = True
-    output: dict[str, object] = {"schema_version": "1.0.0", "results": []}
+_FAKE_OUTPUT: dict[str, object] = {"schema_version": "1.0.0", "results": []}
 
 
 def _patch_common_run_advisor_dependencies(
     monkeypatch: pytest.MonkeyPatch,
-    handler: object | None = None,
 ) -> None:
     monkeypatch.setattr("mlia.api.validate_backend", lambda _tp, _b: [])
     monkeypatch.setattr("mlia.api.get_target", lambda target_profile: target_profile)
-    monkeypatch.setattr(
-        "mlia.api._get_api_event_handler",
-        lambda _target, _output_dir: handler or _FakeHandler(),
-    )
 
 
 def test_list_targets_shape() -> None:
@@ -243,8 +231,10 @@ def test_run_advisor_validation_strict_raises(
     class FakeHandler:  # pylint: disable=too-few-public-methods
         output = {"invalid": "schema"}
 
-    _patch_common_run_advisor_dependencies(monkeypatch, handler=FakeHandler())
-    monkeypatch.setattr("mlia.api.get_advice", lambda *args, **kwargs: None)
+    _patch_common_run_advisor_dependencies(monkeypatch)
+    monkeypatch.setattr(
+        "mlia.api.get_advice", lambda *args, **kwargs: FakeHandler.output
+    )
     monkeypatch.setattr(
         "mlia.api.collect_validation_errors", lambda _data: ["invalid schema"]
     )
@@ -268,8 +258,10 @@ def test_run_advisor_validation_warn_logs(
     class FakeHandler:  # pylint: disable=too-few-public-methods
         output = {"invalid": "schema"}
 
-    _patch_common_run_advisor_dependencies(monkeypatch, handler=FakeHandler())
-    monkeypatch.setattr("mlia.api.get_advice", lambda *args, **kwargs: None)
+    _patch_common_run_advisor_dependencies(monkeypatch)
+    monkeypatch.setattr(
+        "mlia.api.get_advice", lambda *args, **kwargs: FakeHandler.output
+    )
     monkeypatch.setattr(
         "mlia.api.collect_validation_errors", lambda _data: ["invalid schema"]
     )
@@ -295,8 +287,10 @@ def test_run_advisor_validation_off_skips(
     class FakeHandler:  # pylint: disable=too-few-public-methods
         output = {"invalid": "schema"}
 
-    _patch_common_run_advisor_dependencies(monkeypatch, handler=FakeHandler())
-    monkeypatch.setattr("mlia.api.get_advice", lambda *args, **kwargs: None)
+    _patch_common_run_advisor_dependencies(monkeypatch)
+    monkeypatch.setattr(
+        "mlia.api.get_advice", lambda *args, **kwargs: FakeHandler.output
+    )
     validate_mock = MagicMock(return_value=[])
     monkeypatch.setattr("mlia.api.collect_validation_errors", validate_mock)
 
@@ -323,20 +317,18 @@ def test_run_advisor_happy_path_uses_temp_dir(
         captured["temp_dir"] = path
         yield path
 
-    def fake_get_handler(_target: str, output_dir: Path | None) -> _FakeHandler:
-        assert output_dir is not None
-        captured["output_dir"] = output_dir
-        return _FakeHandler()
+    def fake_get_advice(*_args: object, **kwargs: object) -> dict[str, object]:
+        captured["output_dir"] = cast(ExecutionContext, kwargs["context"]).output_dir
+        return _FAKE_OUTPUT
 
     monkeypatch.setattr("mlia.api.temp_directory", fake_temp_dir)
     _patch_common_run_advisor_dependencies(monkeypatch)
-    monkeypatch.setattr("mlia.api._get_api_event_handler", fake_get_handler)
-    monkeypatch.setattr("mlia.api.get_advice", lambda *args, **kwargs: None)
+    monkeypatch.setattr("mlia.api.get_advice", fake_get_advice)
     monkeypatch.setattr("mlia.api.collect_validation_errors", lambda _data: [])
 
     output = run_advisor("compatibility", "tosa", test_tflite_model)
 
-    assert output == {"schema_version": "1.0.0", "results": []}
+    assert output == _FAKE_OUTPUT
     assert captured["output_dir"] == captured["temp_dir"] / "mlia-output"
 
 
@@ -346,15 +338,13 @@ def test_run_advisor_happy_path_resolves_output_dir(
     """Ensure run_advisor resolves relative output_dir when write_output_files."""
     captured: dict[str, Path] = {}
 
-    def fake_get_handler(_target: str, output_dir: Path | None) -> _FakeHandler:
-        assert output_dir is not None
-        captured["output_dir"] = output_dir
-        return _FakeHandler()
+    def fake_get_advice(*_args: object, **kwargs: object) -> dict[str, object]:
+        captured["output_dir"] = cast(ExecutionContext, kwargs["context"]).output_dir
+        return _FAKE_OUTPUT
 
     monkeypatch.chdir(tmp_path)
     _patch_common_run_advisor_dependencies(monkeypatch)
-    monkeypatch.setattr("mlia.api._get_api_event_handler", fake_get_handler)
-    monkeypatch.setattr("mlia.api.get_advice", lambda *args, **kwargs: None)
+    monkeypatch.setattr("mlia.api.get_advice", fake_get_advice)
     monkeypatch.setattr("mlia.api.collect_validation_errors", lambda _data: [])
 
     output = run_advisor(
@@ -365,7 +355,7 @@ def test_run_advisor_happy_path_resolves_output_dir(
         output_dir="out",
     )
 
-    assert output == {"schema_version": "1.0.0", "results": []}
+    assert output == _FAKE_OUTPUT
     assert captured["output_dir"] == (tmp_path / "out").resolve() / "mlia-output"
 
 
@@ -375,8 +365,9 @@ def test_run_advisor_coerces_model_path(
     """Ensure run_advisor coerces Path model inputs to str."""
     captured: dict[str, object] = {}
 
-    def fake_get_advice(*_args: object, **kwargs: object) -> None:
+    def fake_get_advice(*_args: object, **kwargs: object) -> dict[str, object]:
         captured["model"] = kwargs["model"]
+        return _FAKE_OUTPUT
 
     _patch_common_run_advisor_dependencies(monkeypatch)
     monkeypatch.setattr("mlia.api.get_advice", fake_get_advice)
@@ -400,8 +391,9 @@ def test_run_advisor_uses_existing_context(
     captured: dict[str, ExecutionContext] = {}
     context = ExecutionContext(output_dir=tmp_path / "existing")
 
-    def capture_context(*_args: object, **kwargs: object) -> None:
+    def capture_context(*_args: object, **kwargs: object) -> dict[str, object]:
         captured["context"] = cast(ExecutionContext, kwargs["context"])
+        return _FAKE_OUTPUT
 
     _patch_common_run_advisor_dependencies(monkeypatch)
     monkeypatch.setattr("mlia.api.get_advice", capture_context)
@@ -419,7 +411,6 @@ def test_run_advisor_uses_existing_context(
     assert captured["context"] is not context
     assert captured["context"].advice_category == {AdviceCategory.COMPATIBILITY}
     assert captured["context"].output_dir == (tmp_path / "api-out" / "mlia-output")
-    assert captured["context"].event_publisher is context.event_publisher
     assert captured["context"].action_resolver is context.action_resolver
     assert context.output_dir == tmp_path / "existing" / "mlia-output"
 
@@ -438,8 +429,9 @@ def test_run_advisor_existing_context_does_not_override_temp_dir(
         captured["temp_dir"] = path
         yield path
 
-    def capture_context(*_args: object, **kwargs: object) -> None:
+    def capture_context(*_args: object, **kwargs: object) -> dict[str, object]:
         captured["context"] = kwargs["context"]
+        return _FAKE_OUTPUT
 
     monkeypatch.setattr("mlia.api.temp_directory", fake_temp_dir)
     _patch_common_run_advisor_dependencies(monkeypatch)
@@ -452,30 +444,6 @@ def test_run_advisor_existing_context_does_not_override_temp_dir(
     assert local_context is not context
     assert local_context.output_dir == cast(Path, captured["temp_dir"]) / "mlia-output"
     assert context.output_dir == tmp_path / "existing" / "mlia-output"
-
-
-def test_run_advisor_ignores_existing_context_event_handlers(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, test_tflite_model: Path
-) -> None:
-    """Existing context event handlers should not affect API execution."""
-
-    class EmptyHandlerContext(ExecutionContext):
-        @property
-        def event_handlers(self) -> list | None:
-            return []
-
-        @event_handlers.setter
-        def event_handlers(self, _handlers: list) -> None:
-            return
-
-    context = EmptyHandlerContext(output_dir=tmp_path)
-    _patch_common_run_advisor_dependencies(monkeypatch)
-    monkeypatch.setattr("mlia.api.get_advice", lambda *args, **kwargs: None)
-    monkeypatch.setattr("mlia.api.collect_validation_errors", lambda _data: [])
-
-    output = run_advisor("compatibility", "tosa", test_tflite_model, context=context)
-
-    assert output == {"schema_version": "1.0.0", "results": []}
 
 
 def test_run_advisor_temp_dir_failure(
@@ -497,7 +465,7 @@ def test_run_advisor_temp_dir_failure(
 
     monkeypatch.setattr("mlia.api.temp_directory", fail_temp_dir)
     _patch_common_run_advisor_dependencies(monkeypatch)
-    monkeypatch.setattr("mlia.api.get_advice", lambda *args, **kwargs: None)
+    monkeypatch.setattr("mlia.api.get_advice", lambda *args, **kwargs: _FAKE_OUTPUT)
     monkeypatch.setattr("mlia.api.collect_validation_errors", lambda _data: [])
 
     with pytest.raises(InternalError, match="temporary output directory"):
@@ -508,9 +476,6 @@ def test_run_advisor_rejects_missing_output(
     monkeypatch: pytest.MonkeyPatch, test_tflite_model: Path
 ) -> None:
     """Ensure run_advisor rejects missing standardized output."""
-
-    class FakeHandler:  # pylint: disable=too-few-public-methods
-        output = None
 
     monkeypatch.setattr("mlia.api.validate_backend", lambda _tp, _b: ["legacy-backend"])
     monkeypatch.setitem(
@@ -526,10 +491,6 @@ def test_run_advisor_rejects_missing_output(
         ),
     )
     monkeypatch.setattr("mlia.api.get_target", lambda target_profile: target_profile)
-    monkeypatch.setattr(
-        "mlia.api._get_api_event_handler",
-        lambda _target, _output_dir: FakeHandler(),
-    )
     monkeypatch.setattr("mlia.api.get_advice", lambda *args, **kwargs: None)
 
     with pytest.raises(FunctionalityNotSupportedError, match="Deprecated backend"):
@@ -544,7 +505,7 @@ def test_run_advisor_missing_output_non_deprecated(
     class FakeHandler:  # pylint: disable=too-few-public-methods
         output = None
 
-    _patch_common_run_advisor_dependencies(monkeypatch, handler=FakeHandler())
+    _patch_common_run_advisor_dependencies(monkeypatch)
     monkeypatch.setattr("mlia.api.get_advice", lambda *args, **kwargs: None)
 
     with pytest.raises(InternalError, match="Standardized output is missing"):
@@ -563,8 +524,10 @@ def test_run_advisor_strips_cli_arguments(
             "context": {"cli_arguments": ["run.py", "model.tflite"]},
         }
 
-    _patch_common_run_advisor_dependencies(monkeypatch, handler=FakeHandler())
-    monkeypatch.setattr("mlia.api.get_advice", lambda *args, **kwargs: None)
+    _patch_common_run_advisor_dependencies(monkeypatch)
+    monkeypatch.setattr(
+        "mlia.api.get_advice", lambda *args, **kwargs: FakeHandler.output
+    )
     monkeypatch.setattr("mlia.api.collect_validation_errors", lambda _data: [])
 
     output = run_advisor("compatibility", "tosa", test_tflite_model)
@@ -634,21 +597,6 @@ def test_run_advisor_maps_generic_error(
 
     with pytest.raises(UnsupportedConfigurationError, match="boom"):
         run_advisor("compatibility", "tosa", test_tflite_model)
-
-
-def test_get_api_event_handler_missing_factory(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Ensure missing event handler factory raises ConfigurationError."""
-    missing = TargetInfo(
-        supported_backends=[],
-        default_backends=[],
-        advisor_factory_func=MagicMock(),
-        target_profile_cls=cast(Any, MagicMock()),
-        event_handler_factory=None,
-    )
-    monkeypatch.setitem(target_registry.items, "missing-target", missing)
-
-    with pytest.raises(ConfigurationError, match="No API event handler is registered"):
-        _get_api_event_handler("missing-target", None)
 
 
 def test_list_target_profiles_fallback_on_load_failure(
@@ -925,17 +873,15 @@ def test_run_advisor_sets_module_backend_option_when_quantization_disabled(
     )
     monkeypatch.setattr("mlia.api.validate_backend", lambda _tp, _b: ["backend-a"])
     monkeypatch.setattr(
-        "mlia.api._get_api_event_handler", lambda _target, _output_dir: _FakeHandler()
-    )
-    monkeypatch.setattr(
         "mlia.api._resolve_model_for_run", lambda *_args, **_kwargs: "model.pt2"
     )
     monkeypatch.setattr("mlia.api.collect_validation_errors", lambda _data: [])
 
     captured: dict[str, object] = {}
 
-    def fake_get_advice(*_args: object, **kwargs: object) -> None:
+    def fake_get_advice(*_args: object, **kwargs: object) -> dict[str, object]:
         captured["backend_options"] = kwargs["backend_options"]
+        return _FAKE_OUTPUT
 
     monkeypatch.setattr("mlia.api.get_advice", fake_get_advice)
 
@@ -948,7 +894,7 @@ def test_run_advisor_sets_module_backend_option_when_quantization_disabled(
         output_dir=tmp_path,
     )
 
-    assert output == _FakeHandler.output
+    assert output == _FAKE_OUTPUT
     assert captured["backend_options"] == {"backend-a": {"enable_quantization": False}}
 
 
@@ -1057,54 +1003,6 @@ def test_get_advisor_resolves_optimization_profile(
     )
 
 
-def test_get_api_event_handler_success(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Registered API event handler factories should be returned."""
-    handler = _FakeHandler()
-    handler.collect_only = True
-    monkeypatch.setitem(
-        target_registry.items,
-        "ok-target",
-        TargetInfo(
-            supported_backends=[],
-            default_backends=[],
-            advisor_factory_func=MagicMock(),
-            target_profile_cls=cast(Any, MagicMock()),
-            event_handler_factory=lambda _output_dir: cast(
-                WorkflowEventsHandler, handler
-            ),
-        ),
-    )
-
-    assert _get_api_event_handler("ok-target", None) is handler
-
-
-def test_get_api_event_handler_requires_collect_only(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """API handlers must be configured for collect-only execution."""
-    handler = _FakeHandler()
-    handler.collect_only = False
-    monkeypatch.setitem(
-        target_registry.items,
-        "bad-target",
-        TargetInfo(
-            supported_backends=[],
-            default_backends=[],
-            advisor_factory_func=MagicMock(),
-            target_profile_cls=cast(Any, MagicMock()),
-            event_handler_factory=lambda _output_dir: cast(
-                WorkflowEventsHandler, handler
-            ),
-        ),
-    )
-
-    with pytest.raises(
-        ConfigurationError,
-        match="must be created with collect_only=True",
-    ):
-        _get_api_event_handler("bad-target", None)
-
-
 def test_run_advisor_closes_configured_logging_when_logs_dir_provided(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
@@ -1114,7 +1012,7 @@ def test_run_advisor_closes_configured_logging_when_logs_dir_provided(
     setup_logging = MagicMock()
     close_handlers = MagicMock()
     _patch_common_run_advisor_dependencies(monkeypatch)
-    monkeypatch.setattr("mlia.api.get_advice", lambda *args, **kwargs: None)
+    monkeypatch.setattr("mlia.api.get_advice", lambda *args, **kwargs: _FAKE_OUTPUT)
     monkeypatch.setattr("mlia.api.collect_validation_errors", lambda _data: [])
     monkeypatch.setattr("mlia.api.setup_logging", setup_logging)
     monkeypatch.setattr("mlia.api.close_configured_handlers", close_handlers)
@@ -1166,7 +1064,7 @@ def test_run_advisor_preserves_caller_logging_without_logs_dir(
     setup_logging = MagicMock()
     close_handlers = MagicMock()
     _patch_common_run_advisor_dependencies(monkeypatch)
-    monkeypatch.setattr("mlia.api.get_advice", lambda *args, **kwargs: None)
+    monkeypatch.setattr("mlia.api.get_advice", lambda *args, **kwargs: _FAKE_OUTPUT)
     monkeypatch.setattr("mlia.api.collect_validation_errors", lambda _data: [])
     monkeypatch.setattr("mlia.api.setup_logging", setup_logging)
     monkeypatch.setattr("mlia.api.close_configured_handlers", close_handlers)
@@ -1184,7 +1082,7 @@ def test_run_advisor_releases_log_file_after_return(
 ) -> None:
     """The API log file should be removable immediately after a run."""
     _patch_common_run_advisor_dependencies(monkeypatch)
-    monkeypatch.setattr("mlia.api.get_advice", lambda *args, **kwargs: None)
+    monkeypatch.setattr("mlia.api.get_advice", lambda *args, **kwargs: _FAKE_OUTPUT)
     monkeypatch.setattr("mlia.api.collect_validation_errors", lambda _data: [])
     logs_dir = tmp_path / "logs"
 

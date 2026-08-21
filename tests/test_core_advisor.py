@@ -7,12 +7,10 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from mlia.core.advice_generation import AdviceProducer
 from mlia.core.advisor import DefaultInferenceAdvisor, InferenceAdvisor
 from mlia.core.context import Context
 from mlia.core.data_analysis import DataAnalyzer
 from mlia.core.data_collection import DataCollector
-from mlia.core.events import Event
 from mlia.core.workflow import DefaultWorkflowExecutor, WorkflowExecutor
 
 
@@ -62,9 +60,7 @@ def test_default_inference_advisor(test_tflite_model: Path) -> None:
     }
 
     data_collector_mock = MagicMock(spec=DataCollector)
-    advice_producer_mock = MagicMock(spec=AdviceProducer)
     data_analyzer_mock = MagicMock(spec=DataAnalyzer)
-    event_mock = MagicMock(spec=Event)
 
     class MyDefaultInferenceAdvisor(DefaultInferenceAdvisor):
         """Sample DefaultInferenceAdvisor."""
@@ -82,14 +78,6 @@ def test_default_inference_advisor(test_tflite_model: Path) -> None:
             """Return list of the data analyzers."""
             return [data_analyzer_mock]
 
-        def get_producers(self, context: Context) -> list[AdviceProducer]:
-            """Return list of the advice producers."""
-            return [advice_producer_mock]
-
-        def get_events(self, context: Context) -> list[Event]:
-            """Return list of the startup events."""
-            return [event_mock]
-
         def get_pattern_analyzers(self, _context: Context) -> list:
             """Return list of the pattern analyzers."""
             return []
@@ -100,7 +88,6 @@ def test_default_inference_advisor(test_tflite_model: Path) -> None:
     assert workflow_executor.context == context_mock
     assert workflow_executor.collectors == [data_collector_mock]
     assert workflow_executor.analyzers == [data_analyzer_mock]
-    assert workflow_executor.producers == [advice_producer_mock]
 
     assert advisor.get_string_parameter(context_mock, "param") == "value"
     assert advisor.get_model(context_mock) == test_tflite_model

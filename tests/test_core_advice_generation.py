@@ -82,9 +82,7 @@ def test_advice_category_decorator(
             )
 
     producer = SampleAdviceProducer()
-    sample_context.update(
-        advice_category=category, event_handlers=[], config_parameters={}
-    )
+    sample_context.update(advice_category=category, config_parameters={})
     producer.set_context(sample_context)
 
     producer.produce_advice("some_data")

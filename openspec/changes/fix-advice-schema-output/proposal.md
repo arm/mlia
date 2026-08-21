@@ -31,7 +31,7 @@ This is the right point to fix the wire contract because schema `1.1.0` is where
 - `src/mlia/resources/mlia-output-schema-1.1.0.json`
 - Core advice and result serialization/parsing in `mlia.core.output_schema`.
 - Advice JSON formatting in `mlia.core.advice_generation`.
-- Advice merging in `mlia.core.reporting.JSONReporter`.
+- Advice merging in the canonical standardized-output collection path.
 - JSON Schema validation tests and core reporter/schema unit tests.
 - Standardized output documentation that currently refers to `extensions.advice`.
 - Follow-up plugin repository changes will be needed where plugin-specific output writers or tests still expect `advices`.

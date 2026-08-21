@@ -36,7 +36,6 @@ class TestParameterResolverMixin:
 
                 self.context.update(
                     advice_category={AdviceCategory.COMPATIBILITY},
-                    event_handlers=[],
                     config_parameters={"section": {"param": 123}},
                 )
 
@@ -83,7 +82,6 @@ class TestParameterResolverMixin:
                 self.context = sample_context
                 self.context.update(
                     advice_category={AdviceCategory.COMPATIBILITY},
-                    event_handlers=[],
                     config_parameters={"section": ["param"]},
                 )
 

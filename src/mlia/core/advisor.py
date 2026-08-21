@@ -9,12 +9,10 @@ from abc import abstractmethod
 from pathlib import Path
 from typing import cast
 
-from mlia.core.advice_generation import AdviceProducer
 from mlia.core.common import NamedEntity
 from mlia.core.context import Context
 from mlia.core.data_analysis import DataAnalyzer, PatternAnalyzer
 from mlia.core.data_collection import DataCollector
-from mlia.core.events import Event
 from mlia.core.mixins import ParameterResolverMixin
 from mlia.core.workflow import DefaultWorkflowExecutor, WorkflowExecutor
 
@@ -26,10 +24,10 @@ class InferenceAdvisor(NamedEntity):
     def configure(self, context: Context) -> WorkflowExecutor:
         """Configure advisor execution."""
 
-    def run(self, context: Context) -> None:
-        """Run inference advisor."""
+    def run(self, context: Context) -> dict[str, object] | None:
+        """Run inference advisor and return canonical standardized output, if any."""
         executor = self.configure(context)
-        executor.run()
+        return executor.run()
 
 
 class DefaultInferenceAdvisor(InferenceAdvisor, ParameterResolverMixin):
@@ -41,8 +39,6 @@ class DefaultInferenceAdvisor(InferenceAdvisor, ParameterResolverMixin):
             context,
             self.get_collectors(context),
             self.get_analyzers(context),
-            self.get_producers(context),
-            self.get_events(context),
             self.get_pattern_analyzers(context),
         )
 
@@ -53,14 +49,6 @@ class DefaultInferenceAdvisor(InferenceAdvisor, ParameterResolverMixin):
     @abstractmethod
     def get_analyzers(self, context: Context) -> list[DataAnalyzer]:
         """Return list of the data analyzers."""
-
-    @abstractmethod
-    def get_producers(self, context: Context) -> list[AdviceProducer]:
-        """Return list of the advice producers."""
-
-    @abstractmethod
-    def get_events(self, context: Context) -> list[Event]:
-        """Return list of the startup events."""
 
     @abstractmethod
     def get_pattern_analyzers(self, context: Context) -> list[PatternAnalyzer]:

@@ -12,7 +12,7 @@
 - [x] 2.2 Rename the result-level schema model field from `advices` to `advice`.
 - [x] 2.3 Update result serialization to emit `advice` instead of `advices`.
 - [x] 2.4 Update result parsing to read `advice` without accepting `advices` as a legacy alias.
-- [x] 2.5 Update `JSONReporter` advice merging to append advice under `results[*].advice`.
+- [x] 2.5 Update standardized-output advice merging to append advice under `results[*].advice`.
 - [x] 2.6 Remove or update any remaining core references to the legacy advice output field.
 - [x] 2.7 Keep unrelated advice category and capability terminology, such as `supported_advice`, unchanged.
 

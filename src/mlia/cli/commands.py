@@ -24,6 +24,10 @@ from mlia.cli.helpers import CLIActionResolver
 from mlia.cli.settings import get_environment, new_settings
 from mlia.core.context import ExecutionContext
 from mlia.core.logging import close_configured_handlers, setup_logging
+from mlia.core.output_rendering import (
+    standardized_output_to_json,
+    standardized_output_to_text,
+)
 from mlia.core.settings import ApplicationSettings
 from mlia.plugins.plugins import BACKEND_PLUGIN_GROUP, TARGET_PLUGIN_GROUP
 from mlia.plugins.registry import list_entry_points
@@ -157,6 +161,21 @@ def _create_check_context(
         execution_context.output_format,
     )
     return execution_context
+
+
+def emit_standardized_output(
+    settings: ApplicationSettings,
+    context: ExecutionContext,
+    output: dict[str, object] | None,
+) -> None:
+    """Emit command output from the canonical standardized output object."""
+    if output is None:
+        return
+    if context.output_format == "json":
+        text = standardized_output_to_json(output)
+    else:
+        text = standardized_output_to_text(output)
+    settings.console.out(text, highlight=False)
 
 
 def _log_plugin_table(settings: ApplicationSettings, title: str, group: str) -> None:
@@ -401,66 +420,19 @@ def target_app_main(ctx: typer.Context) -> None:
 
 
 def check(
-    model: Annotated[str, typer.Argument(help="Model to check")],
-    target_profile: Annotated[
-        str,
-        typer.Option(
-            "--target-profile",
-            "-t",
-            help="Set the target profile",
-            autocompletion=complete_target_profile_names,
-        ),
-    ],
-    output_dir: Annotated[
-        Path | None,
-        typer.Option("--output-dir", help="Set an output directory"),
-    ] = None,
-    backend: Annotated[
-        list[str] | None,
-        typer.Option(
-            "--backend",
-            "-b",
-            help="Set backend profiles to use for evaluation",
-            autocompletion=complete_backend_names,
-        ),
-    ] = None,
-    performance: Annotated[
-        bool,
-        typer.Option(
-            "--performance",
-            help="Estimate the performance of the model",
-        ),
-    ] = False,
-    compatibility: Annotated[
-        bool,
-        typer.Option(
-            "--compatibility",
-            help="Perform compatibility checks (default)",
-        ),
-    ] = False,
-    json_output: Annotated[
-        bool,
-        typer.Option(
-            "--json",
-            help="Output results in a JSON format",
-        ),
-    ] = False,
-    i_agree_to_the_contained_eula: Annotated[
-        bool,
-        typer.Option(
-            "--i-agree-to-the-contained-eula",
-            help="Agree to the contained EULA",
-        ),
-    ] = False,
-    noninteractive: Annotated[
-        bool,
-        typer.Option("--noninteractive", help="Run check without interaction"),
-    ] = False,
-    debug: bool = debug_option(),
+    model: str,
+    target_profile: str,
+    output_dir: Path | None = None,
+    backend: list[str] | None = None,
+    performance: bool = False,
+    compatibility: bool = False,
+    json_output: bool = False,
+    i_agree_to_the_contained_eula: bool = False,
+    noninteractive: bool = False,
+    debug: bool = False,
     backend_options: dict[str, dict[str, object]] | None = None,
-    ctx: typer.Context | None = None,
-) -> None:
-    """Generate advice for the input model."""
+) -> tuple[ExecutionContext, dict[str, object] | None, dict[str, Any]]:
+    """Generate advice for the input model and return canonical output."""
     from mlia.api import get_advice
     from mlia.cli.command_validators import validate_check_target_profile
 
@@ -491,7 +463,7 @@ def check(
     if not validate_check_target_profile(target_profile, category):
         raise typer.Exit(code=0)
 
-    get_advice(
+    output = get_advice(
         target_profile,
         model,
         category,
@@ -504,6 +476,19 @@ def check(
         else None,
         backend_options=backend_options,
     )
+    parameters: dict[str, Any] = {
+        "model": model,
+        "target_profile": target_profile,
+        "output_dir": output_dir,
+        "backend": backend,
+        "performance": performance,
+        "compatibility": compatibility,
+        "json_output": json_output,
+        "i_agree_to_the_contained_eula": i_agree_to_the_contained_eula,
+        "noninteractive": noninteractive,
+        "debug": debug,
+    }
+    return execution_context, output, parameters
 
 
 @mlia_app.command(
@@ -572,13 +557,11 @@ def check_command(
     debug: bool = debug_option(),
 ) -> None:
     """Typer entry point for the check command."""
-    backend_options = {}
-    if ctx is not None and isinstance(ctx.obj, ApplicationSettings):
-        backend_options = ctx.obj.backend_options
+    settings = ctx.obj if isinstance(ctx.obj, ApplicationSettings) else new_settings()
+    backend_options = settings.backend_options
 
     try:
-        check(
-            ctx=ctx,
+        context, output, _parameters = check(
             model=model,
             output_dir=output_dir,
             target_profile=target_profile,
@@ -591,6 +574,7 @@ def check_command(
             debug=debug,
             backend_options=backend_options,
         )
+        emit_standardized_output(settings, context, output)
     finally:
         close_configured_handlers()
 

@@ -153,6 +153,22 @@ def test_color_enabled_disables_color_when_no_color_is_set(
     assert not cli_settings._color_enabled()
 
 
+def test_emit_standardized_output_uses_application_console(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Standardized output should use the configured application console."""
+    settings = MagicMock()
+    context = MagicMock(output_format="plain_text")
+    output: dict[str, object] = {"result": "[literal]"}
+    render = MagicMock(return_value="[literal]")
+    monkeypatch.setattr(cli_commands, "standardized_output_to_text", render)
+
+    cli_commands.emit_standardized_output(settings, context, output)
+
+    render.assert_called_once_with(output)
+    settings.console.out.assert_called_once_with("[literal]", highlight=False)
+
+
 def test_check_without_arguments_shows_help_and_exit_code_2() -> None:
     """The check command should show help and exit with status 2 when empty."""
     result = CliRunner().invoke(cli_main.mlia_app, ["check"], terminal_width=120)

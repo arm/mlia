@@ -14,7 +14,6 @@ from typing import Any, Callable, TypeVar, cast
 from mlia.backend.registry import registry as backend_registry
 from mlia.core.advisor import InferenceAdvisor
 from mlia.core.common import AdviceCategory
-from mlia.core.handlers import WorkflowEventsHandler
 from mlia.utils.filesystem import (
     get_mlia_resource_dirs,
     get_mlia_target_optimization_dir,
@@ -191,7 +190,6 @@ class TargetInfo:
     default_backends: list[str]
     advisor_factory_func: Callable[..., InferenceAdvisor]
     target_profile_cls: type[TargetProfile]
-    event_handler_factory: Callable[[Path | None], WorkflowEventsHandler] | None = None
     supports_torch_module: bool = False
     torch_module_backend: str | None = None
     torch_module_quantization_option: str = "enable_quantization"

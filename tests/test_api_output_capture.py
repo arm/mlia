@@ -15,20 +15,11 @@ import pytest
 from mlia.api import ValidationMode, run_advisor
 from mlia.core.errors import InternalError
 
-
-class _FakeHandler:
-    """Minimal workflow handler stub for API capture tests."""
-
-    output = {"schema_version": "1.0.0", "results": []}
+_OUTPUT: dict[str, object] = {"schema_version": "1.0.0", "results": []}
 
 
 def _patch_common_api_dependencies(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr("mlia.api.validate_backend", lambda _tp, _b: [])
-    monkeypatch.setattr("mlia.api.get_target", lambda target_profile: target_profile)
-    monkeypatch.setattr(
-        "mlia.api._get_api_event_handler",
-        lambda _target, _output_dir: _FakeHandler(),
-    )
 
 
 def test_run_advisor_captures_subprocess_stdio(
@@ -39,7 +30,7 @@ def test_run_advisor_captures_subprocess_stdio(
 ) -> None:
     """API mode captures child process stdout/stderr and reroutes to logger."""
 
-    def fake_get_advice(*_args: object, **_kwargs: object) -> None:
+    def fake_get_advice(*_args: object, **_kwargs: object) -> dict[str, object]:
         subprocess.run(  # nosec B603
             [
                 sys.executable,
@@ -52,6 +43,7 @@ def test_run_advisor_captures_subprocess_stdio(
             ],
             check=True,
         )
+        return _OUTPUT
 
     _patch_common_api_dependencies(monkeypatch)
     monkeypatch.setattr("mlia.api.get_advice", fake_get_advice)
@@ -76,8 +68,9 @@ def test_run_advisor_capture_window_is_scoped_to_get_advice(
 ) -> None:
     """Only output produced during get_advice is captured by API wrapper."""
 
-    def fake_get_advice(*_args: object, **_kwargs: object) -> None:
+    def fake_get_advice(*_args: object, **_kwargs: object) -> dict[str, object]:
         os.write(1, b"inside-capture\n")
+        return _OUTPUT
 
     _patch_common_api_dependencies(monkeypatch)
     monkeypatch.setattr("mlia.api.get_advice", fake_get_advice)
@@ -104,9 +97,10 @@ def test_run_advisor_capture_handles_partial_and_multiline_writes(
 ) -> None:
     """Partial writes are combined and multiline output is preserved in logs."""
 
-    def fake_get_advice(*_args: object, **_kwargs: object) -> None:
+    def fake_get_advice(*_args: object, **_kwargs: object) -> dict[str, object]:
         os.write(1, b"line-part-a ")
         os.write(1, b"line-part-b\nline-two\n")
+        return _OUTPUT
 
     _patch_common_api_dependencies(monkeypatch)
     monkeypatch.setattr("mlia.api.get_advice", fake_get_advice)
@@ -136,8 +130,9 @@ def test_run_advisor_capture_works_without_logs_dir(
         nonlocal setup_logging_called
         setup_logging_called = True
 
-    def fake_get_advice(*_args: object, **_kwargs: object) -> None:
+    def fake_get_advice(*_args: object, **_kwargs: object) -> dict[str, object]:
         os.write(2, b"external-no-logs-dir\n")
+        return _OUTPUT
 
     _patch_common_api_dependencies(monkeypatch)
     monkeypatch.setattr("mlia.api.setup_logging", fake_setup_logging)
@@ -160,8 +155,9 @@ def test_run_advisor_capture_with_validation_warn(
 ) -> None:
     """Capture remains active when validation warns but does not raise."""
 
-    def fake_get_advice(*_args: object, **_kwargs: object) -> None:
+    def fake_get_advice(*_args: object, **_kwargs: object) -> dict[str, object]:
         os.write(2, b"warn-validation-capture\n")
+        return _OUTPUT
 
     _patch_common_api_dependencies(monkeypatch)
     monkeypatch.setattr("mlia.api.get_advice", fake_get_advice)
@@ -176,7 +172,7 @@ def test_run_advisor_capture_with_validation_warn(
     )
     captured = capfd.readouterr()
 
-    assert output == _FakeHandler.output
+    assert output == _OUTPUT
     assert captured.out == ""
     assert captured.err == ""
     messages = [record.message for record in caplog.records]
@@ -192,8 +188,9 @@ def test_run_advisor_capture_with_validation_strict(
 ) -> None:
     """Capture remains active when strict validation raises InternalError."""
 
-    def fake_get_advice(*_args: object, **_kwargs: object) -> None:
+    def fake_get_advice(*_args: object, **_kwargs: object) -> dict[str, object]:
         os.write(1, b"strict-validation-capture\n")
+        return _OUTPUT
 
     _patch_common_api_dependencies(monkeypatch)
     monkeypatch.setattr("mlia.api.get_advice", fake_get_advice)
@@ -226,10 +223,11 @@ def test_run_advisor_capture_smoke_across_targets(
     caplog: pytest.LogCaptureFixture,
     target_profile: str,
 ) -> None:
-    """Capture behavior is stable across target-profile API handler selection."""
+    """Capture behavior is stable across target profiles."""
 
-    def fake_get_advice(*_args: object, **_kwargs: object) -> None:
+    def fake_get_advice(*_args: object, **_kwargs: object) -> dict[str, object]:
         os.write(2, f"external-line-{target_profile}\n".encode())
+        return _OUTPUT
 
     _patch_common_api_dependencies(monkeypatch)
     monkeypatch.setattr("mlia.api.get_advice", fake_get_advice)
