@@ -1105,17 +1105,19 @@ def test_get_api_event_handler_requires_collect_only(
         _get_api_event_handler("bad-target", None)
 
 
-def test_run_advisor_calls_setup_logging_when_logs_dir_provided(
+def test_run_advisor_closes_configured_logging_when_logs_dir_provided(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
     test_tflite_model: Path,
 ) -> None:
-    """Providing logs_dir should configure API file logging."""
+    """Providing logs_dir should configure and release API file logging."""
     setup_logging = MagicMock()
+    close_handlers = MagicMock()
     _patch_common_run_advisor_dependencies(monkeypatch)
     monkeypatch.setattr("mlia.api.get_advice", lambda *args, **kwargs: None)
     monkeypatch.setattr("mlia.api.collect_validation_errors", lambda _data: [])
     monkeypatch.setattr("mlia.api.setup_logging", setup_logging)
+    monkeypatch.setattr("mlia.api.close_configured_handlers", close_handlers)
 
     run_advisor(
         "compatibility",
@@ -1125,6 +1127,77 @@ def test_run_advisor_calls_setup_logging_when_logs_dir_provided(
     )
 
     setup_logging.assert_called_once()
+    close_handlers.assert_called_once_with()
+
+
+def test_run_advisor_closes_configured_logging_after_failure(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    test_tflite_model: Path,
+) -> None:
+    """API-owned logging should be released when analysis raises."""
+    setup_logging = MagicMock()
+    close_handlers = MagicMock()
+    _patch_common_run_advisor_dependencies(monkeypatch)
+    monkeypatch.setattr(
+        "mlia.api.get_advice",
+        MagicMock(side_effect=RuntimeError("analysis failed")),
+    )
+    monkeypatch.setattr("mlia.api.setup_logging", setup_logging)
+    monkeypatch.setattr("mlia.api.close_configured_handlers", close_handlers)
+
+    with pytest.raises(RuntimeError, match="analysis failed"):
+        run_advisor(
+            "compatibility",
+            "tosa",
+            test_tflite_model,
+            logs_dir=tmp_path / "logs",
+        )
+
+    setup_logging.assert_called_once()
+    close_handlers.assert_called_once_with()
+
+
+def test_run_advisor_preserves_caller_logging_without_logs_dir(
+    monkeypatch: pytest.MonkeyPatch,
+    test_tflite_model: Path,
+) -> None:
+    """API calls without logs_dir should not change caller-owned logging."""
+    setup_logging = MagicMock()
+    close_handlers = MagicMock()
+    _patch_common_run_advisor_dependencies(monkeypatch)
+    monkeypatch.setattr("mlia.api.get_advice", lambda *args, **kwargs: None)
+    monkeypatch.setattr("mlia.api.collect_validation_errors", lambda _data: [])
+    monkeypatch.setattr("mlia.api.setup_logging", setup_logging)
+    monkeypatch.setattr("mlia.api.close_configured_handlers", close_handlers)
+
+    run_advisor("compatibility", "tosa", test_tflite_model)
+
+    setup_logging.assert_not_called()
+    close_handlers.assert_not_called()
+
+
+def test_run_advisor_releases_log_file_after_return(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    test_tflite_model: Path,
+) -> None:
+    """The API log file should be removable immediately after a run."""
+    _patch_common_run_advisor_dependencies(monkeypatch)
+    monkeypatch.setattr("mlia.api.get_advice", lambda *args, **kwargs: None)
+    monkeypatch.setattr("mlia.api.collect_validation_errors", lambda _data: [])
+    logs_dir = tmp_path / "logs"
+
+    run_advisor(
+        "compatibility",
+        "tosa",
+        test_tflite_model,
+        logs_dir=logs_dir,
+    )
+
+    log_file = logs_dir / "mlia.log"
+    log_file.unlink()
+    assert not log_file.exists()
 
 
 def test_capture_external_output_ignores_unsupported_stream(

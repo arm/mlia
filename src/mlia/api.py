@@ -35,7 +35,7 @@ from mlia.core.errors import (
     UnsupportedConfigurationError,
 )
 from mlia.core.handlers import WorkflowEventsHandler
-from mlia.core.logging import setup_logging
+from mlia.core.logging import close_configured_handlers, setup_logging
 from mlia.core.output_validation import collect_validation_errors
 from mlia.target.config import get_builtin_target_profile_path, load_profile
 from mlia.target.registry import (
@@ -325,22 +325,40 @@ def run_advisor(
         accept_eula=accept_eula,
     )
 
-    if write_output_files:
-        local_context = _create_api_execution_context(
-            output_base, context, advice_category_enum
-        )
-        return _run_advisor_with_context(local_context, inputs)
-
-    try:
-        with temp_directory(suffix="mlia-api") as temp_base:
+    with _configured_api_logging(inputs.logs_dir, inputs.verbose):
+        if write_output_files:
             local_context = _create_api_execution_context(
-                temp_base, context, advice_category_enum
+                output_base, context, advice_category_enum
             )
             return _run_advisor_with_context(local_context, inputs)
-    except OSError as err:
-        raise InternalError(
-            f"Unable to create temporary output directory: {err}."
-        ) from err
+
+        try:
+            with temp_directory(suffix="mlia-api") as temp_base:
+                local_context = _create_api_execution_context(
+                    temp_base, context, advice_category_enum
+                )
+                return _run_advisor_with_context(local_context, inputs)
+        except OSError as err:
+            raise InternalError(
+                f"Unable to create temporary output directory: {err}."
+            ) from err
+
+
+@contextmanager
+def _configured_api_logging(
+    logs_dir: str | Path | None, verbose: bool
+) -> Iterator[None]:
+    """Configure and release logging owned by one API invocation."""
+    logs_path = _resolve_logs_dir(logs_dir)
+    if logs_path is None:
+        yield
+        return
+
+    setup_logging(logs_path, verbose=verbose, output_format="json")
+    try:
+        yield
+    finally:
+        close_configured_handlers()
 
 
 def _get_api_event_handler(
@@ -407,10 +425,6 @@ def _run_advisor_with_context(
     local_context: ExecutionContext,
     inputs: _RunAdvisorInputs,
 ) -> dict[str, object]:
-    logs_path = _resolve_logs_dir(inputs.logs_dir)
-    if logs_path is not None:
-        setup_logging(logs_path, verbose=inputs.verbose, output_format="json")
-
     target = get_target(inputs.target_profile)
     local_context.event_handlers = [
         _get_api_event_handler(target, local_context.output_dir),

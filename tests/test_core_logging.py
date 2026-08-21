@@ -100,6 +100,21 @@ def test_setup_logging(
     check_log_assertions(logs_dir_path, expected_log_file_content)
 
 
+def test_setup_logging_closes_replaced_file_handlers(tmp_path: Path) -> None:
+    """Reconfiguring logging releases files owned by the previous setup."""
+    first_logs = tmp_path / "first"
+    second_logs = tmp_path / "second"
+
+    setup_logging(first_logs, verbose=False, output_format="json")
+    first_file = first_logs / "mlia.log"
+    assert first_file.is_file()
+
+    setup_logging(second_logs, verbose=False, output_format="json")
+
+    first_file.unlink()
+    assert not first_file.exists()
+
+
 def check_log_assertions(
     logs_dir_path: Path | None, expected_log_file_content: str
 ) -> None:

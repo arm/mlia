@@ -10,10 +10,47 @@ from pathlib import Path
 from typing import Iterable
 
 from mlia.core.typing import OutputFormat
-from mlia.utils.logging import NoASCIIFormatter, attach_handlers, create_log_handler
+from mlia.utils.logging import NoASCIIFormatter, create_log_handler
 
 _CONSOLE_DEBUG_FORMAT = "%(name)s - %(levelname)s - %(message)s"
 _FILE_DEBUG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+_CONFIGURED_HANDLERS: dict[logging.Logger, list[logging.Handler]] = {}
+
+
+def _replace_configured_handlers(
+    handlers: Iterable[logging.Handler], loggers: Iterable[logging.Logger]
+) -> None:
+    """Replace and close handlers installed by previous MLIA configuration."""
+    new_handlers = list(handlers)
+    target_loggers = list(loggers)
+    previous_handlers = {
+        handler
+        for logger in target_loggers
+        for handler in _CONFIGURED_HANDLERS.get(logger, [])
+    }
+    for logger in target_loggers:
+        for handler in _CONFIGURED_HANDLERS.get(logger, []):
+            logger.removeHandler(handler)
+    for handler in previous_handlers:
+        handler.close()
+
+    for logger in target_loggers:
+        for handler in new_handlers:
+            logger.addHandler(handler)
+        _CONFIGURED_HANDLERS[logger] = new_handlers
+
+
+def close_configured_handlers() -> None:
+    """Remove and close every handler installed by MLIA configuration."""
+    configured_handlers = {
+        handler for handlers in _CONFIGURED_HANDLERS.values() for handler in handlers
+    }
+    for logger, handlers in _CONFIGURED_HANDLERS.items():
+        for handler in handlers:
+            logger.removeHandler(handler)
+    for handler in configured_handlers:
+        handler.close()
+    _CONFIGURED_HANDLERS.clear()
 
 
 def setup_logging(
@@ -44,10 +81,13 @@ def setup_logging(
         logger.setLevel(logging.DEBUG)
 
     mlia_handlers = _get_mlia_handlers(logs_dir, log_filename, verbose, output_format)
-    attach_handlers(mlia_handlers, [mlia_logger])
+    _replace_configured_handlers(mlia_handlers, [mlia_logger])
 
     tools_handlers = _get_tools_handlers(logs_dir, log_filename, verbose)
-    attach_handlers(tools_handlers, [tensorflow_logger, py_warnings_logger])
+    _replace_configured_handlers(
+        tools_handlers,
+        [tensorflow_logger, py_warnings_logger],
+    )
 
 
 def _get_mlia_handlers(

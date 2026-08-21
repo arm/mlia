@@ -23,7 +23,7 @@ from mlia.cli.completion import target_profile_names
 from mlia.cli.helpers import CLIActionResolver
 from mlia.cli.settings import get_environment, new_settings
 from mlia.core.context import ExecutionContext
-from mlia.core.logging import setup_logging
+from mlia.core.logging import close_configured_handlers, setup_logging
 from mlia.core.settings import ApplicationSettings
 from mlia.plugins.plugins import BACKEND_PLUGIN_GROUP, TARGET_PLUGIN_GROUP
 from mlia.plugins.registry import list_entry_points
@@ -576,20 +576,23 @@ def check_command(
     if ctx is not None and isinstance(ctx.obj, ApplicationSettings):
         backend_options = ctx.obj.backend_options
 
-    check(
-        ctx=ctx,
-        model=model,
-        output_dir=output_dir,
-        target_profile=target_profile,
-        backend=backend,
-        performance=performance,
-        compatibility=compatibility,
-        json_output=json_output,
-        i_agree_to_the_contained_eula=i_agree_to_the_contained_eula,
-        noninteractive=noninteractive,
-        debug=debug,
-        backend_options=backend_options,
-    )
+    try:
+        check(
+            ctx=ctx,
+            model=model,
+            output_dir=output_dir,
+            target_profile=target_profile,
+            backend=backend,
+            performance=performance,
+            compatibility=compatibility,
+            json_output=json_output,
+            i_agree_to_the_contained_eula=i_agree_to_the_contained_eula,
+            noninteractive=noninteractive,
+            debug=debug,
+            backend_options=backend_options,
+        )
+    finally:
+        close_configured_handlers()
 
 
 @backend_app.command("install")
