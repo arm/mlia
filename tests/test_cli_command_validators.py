@@ -64,6 +64,24 @@ def test_validate_backend_returns_default_backends(
     ]
 
 
+@pytest.mark.parametrize(
+    "input_string, expected_output",
+    [
+        ("", ""),
+        ("lowercase", "lowercase"),
+        ("UPPERCASE", "uppercase"),
+        ("VELA", "vela"),
+        ("check-no-hyphens", "checknohyphens"),
+        ("MixedCase-With-Hyphens", "mixedcasewithhyphens"),
+        ("corstone-310", "corstone310"),
+        ("---multiple---hyphens---", "multiplehyphens"),
+    ],
+)
+def test_normalize_string(input_string: str, expected_output: str) -> None:
+    """Test normalize_string function with various inputs."""
+    assert command_validators.normalize_string(input_string) == expected_output
+
+
 def test_validate_check_target_profile_returns_false_when_nothing_can_run(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
