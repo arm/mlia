@@ -175,7 +175,15 @@ def emit_standardized_output(
         text = standardized_output_to_json(output)
     else:
         text = standardized_output_to_text(output)
-    settings.console.out(text, highlight=False)
+    settings.console.out(
+        _replace_unencodable_characters(text, settings.console.encoding),
+        highlight=False,
+    )
+
+
+def _replace_unencodable_characters(text: str, encoding: str) -> str:
+    """Replace characters unsupported by the configured console encoding."""
+    return text.encode(encoding, errors="replace").decode(encoding)
 
 
 def _log_plugin_table(settings: ApplicationSettings, title: str, group: str) -> None:

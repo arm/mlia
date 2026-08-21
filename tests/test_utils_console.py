@@ -9,6 +9,7 @@ from typing import Iterable
 
 import pytest
 
+import mlia.utils.console as console_utils
 from mlia.utils.console import (
     apply_style,
     create_section_header,
@@ -48,11 +49,36 @@ from mlia.utils.console import (
     ],
 )
 def test_produce_table(
-    rows: Iterable, headers: list[str] | None, table_style: str, expected_result: str
+    monkeypatch: pytest.MonkeyPatch,
+    rows: Iterable,
+    headers: list[str] | None,
+    table_style: str,
+    expected_result: str,
 ) -> None:
     """Test produce_table function."""
+    monkeypatch.setattr(console_utils, "_supports_unicode_output", lambda: True)
     result = produce_table(rows, headers, table_style)
     assert remove_ascii_codes(result) == expected_result
+
+
+def test_produce_table_falls_back_to_ascii(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Default tables should remain encodable on legacy terminals."""
+    monkeypatch.setattr(console_utils, "_supports_unicode_output", lambda: False)
+
+    result = produce_table([["1"]], ["Column"])
+
+    assert (
+        remove_ascii_codes(result)
+        == """
++--------+
+| Column |
++========+
+| 1      |
++--------+
+""".strip()
+    )
 
 
 def test_produce_table_unknown_style() -> None:

@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import locale
 import shutil
 import sys
 from typing import Iterable
@@ -62,13 +63,32 @@ def produce_table(
     return _convert_to_text(table)
 
 
+def _supports_unicode_output() -> bool:
+    """Return whether the active output encoding supports table borders."""
+    encoding = (
+        getattr(sys.__stdout__, "encoding", None)
+        or getattr(sys.stdout, "encoding", None)
+        or locale.getpreferredencoding(False)
+        or "utf-8"
+    )
+    try:
+        "┌─┬┐├┼┤└┴┘│╞═╡".encode(encoding)
+    except (LookupError, UnicodeEncodeError):
+        return False
+    return True
+
+
 def _get_table(table_style: str) -> Table:
     """Get Table instance for the provided style."""
     if table_style == "default":
         return Table(
             show_header=False,
             show_lines=True,
-            box=box.SQUARE_DOUBLE_HEAD,
+            box=(
+                box.SQUARE_DOUBLE_HEAD
+                if _supports_unicode_output()
+                else box.ASCII_DOUBLE_HEAD
+            ),
         )
 
     if table_style == "nested":

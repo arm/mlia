@@ -158,6 +158,7 @@ def test_emit_standardized_output_uses_application_console(
 ) -> None:
     """Standardized output should use the configured application console."""
     settings = MagicMock()
+    settings.console.encoding = "utf-8"
     context = MagicMock(output_format="plain_text")
     output: dict[str, object] = {"result": "[literal]"}
     render = MagicMock(return_value="[literal]")
@@ -167,6 +168,22 @@ def test_emit_standardized_output_uses_application_console(
 
     render.assert_called_once_with(output)
     settings.console.out.assert_called_once_with("[literal]", highlight=False)
+
+
+def test_emit_standardized_output_replaces_unencodable_characters(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """CLI text output should respect the configured console encoding."""
+    settings = MagicMock()
+    settings.console.encoding = "cp1252"
+    context = MagicMock(output_format="plain_text")
+    output: dict[str, object] = {"result": "table"}
+    render = MagicMock(return_value="┌─┐ café")
+    monkeypatch.setattr(cli_commands, "standardized_output_to_text", render)
+
+    cli_commands.emit_standardized_output(settings, context, output)
+
+    settings.console.out.assert_called_once_with("??? café", highlight=False)
 
 
 def test_check_without_arguments_shows_help_and_exit_code_2() -> None:
