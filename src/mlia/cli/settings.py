@@ -16,7 +16,11 @@ from rich.console import Console
 from rich.theme import Theme
 
 from mlia.core.errors import ConfigurationError
-from mlia.core.settings import ApplicationSettings
+from mlia.core.settings import (
+    ApplicationSettings,
+    FilteringSettings,
+    parse_filtering_settings,
+)
 from mlia.utils.misc import merge
 
 try:
@@ -60,7 +64,9 @@ NO_COLOR = Theme(
 )
 
 _CONFIG_PATH = user_config_path("mlia", appauthor="arm") / "config.toml"
-_TOP_LEVEL_KEYS = frozenset({"core", "plugins", "color", "backend_options"})
+_TOP_LEVEL_KEYS = frozenset(
+    {"core", "filtering", "plugins", "color", "backend_options"}
+)
 
 
 def get_environment() -> dict[str, str | None]:
@@ -74,12 +80,14 @@ def new_settings(
     color: bool | None = None,
     backend_options: dict[str, Any] = {},
     core_settings: dict[str, Any] = {},
+    filtering: FilteringSettings | None = None,
     plugin_settings: dict[str, dict[str, Any]] = {},
 ) -> ApplicationSettings:
     """Build an ApplicationSettings object reading from the config file."""
     color_: bool = False
     backend_options_: dict[str, Any] = {}
     core_: dict[str, Any] = {}
+    filtering_ = FilteringSettings()
     plugins_: dict[str, dict[str, Any]] = {}
 
     config = _read_config() if source is None else _to_toml_verifier(source)
@@ -96,15 +104,24 @@ def new_settings(
 
     core_ = merge(config.get(dict, "core", {}), core_settings)
 
+    filtering_ = (
+        filtering
+        if filtering is not None
+        else source.filtering
+        if source is not None
+        else parse_filtering_settings(config.get(dict, "filtering", {}))
+    )
+
     plugins_ = merge(config.get(dict, "plugins", {}), plugin_settings)
 
     theme = STANDARD if color_ else NO_COLOR
     return ApplicationSettings(
-        Console(no_color=not color_, theme=theme),
-        color_,
-        backend_options_,
-        core_,
-        plugins_,
+        console=Console(no_color=not color_, theme=theme),
+        color=color_,
+        backend_options=backend_options_,
+        core_settings=core_,
+        filtering=filtering_,
+        plugin_settings=plugins_,
     )
 
 

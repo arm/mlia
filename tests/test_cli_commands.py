@@ -149,4 +149,5 @@ def test_check_category_combinations(
         backends=None,
         accept_eula=None,
         backend_options=None,
+        settings=None,
     )

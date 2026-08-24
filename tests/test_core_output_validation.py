@@ -328,19 +328,20 @@ def test_jsonschema_accepts_entity_relationships_and_optional_placement() -> Non
                         "id": "model",
                         "kind": "model",
                         "name": "model.tflite",
-                        "child_ids": ["entity_001"],
+                        "child_ids": ["module_conv"],
                     },
                     {
                         "id": "module_conv",
                         "kind": "nn_module",
                         "name": "model.conv",
+                        "child_ids": ["entity_001"],
                     },
                     {
                         "id": "entity_001",
                         "kind": "source_operator",
                         "name": "CONV_2D",
                         "placement": "NPU",
-                        "parent_ids": ["model", "module_conv"],
+                        "parent_ids": ["module_conv"],
                         "attributes": {"dtype": "int8"},
                         "stack_trace": "forward > conv2d",
                     },
@@ -576,7 +577,80 @@ def test_accepts_relationship_declared_from_both_directions() -> None:
                         "child_kinds": ["source_operator"],
                     },
                 ],
-                "entities": [{"id": "chain-0", "kind": "chain", "name": "chain 0"}],
+                "entities": [
+                    {
+                        "id": "cascade-0",
+                        "kind": "cascade",
+                        "name": "cascade 0",
+                        "child_ids": ["chain-0"],
+                    },
+                    {
+                        "id": "chain-0",
+                        "kind": "chain",
+                        "name": "chain 0",
+                        "child_ids": ["source-0"],
+                    },
+                    {
+                        "id": "source-0",
+                        "kind": "source_operator",
+                        "name": "source 0",
+                    },
+                ],
+            }
+        ),
+        use_jsonschema=False,
+    )
+
+
+def test_rejects_entity_edge_without_declared_kind_relationship() -> None:
+    """Every actual graph edge must have declared or well-known kind semantics."""
+    output = _valid_standardized_output_with_result(
+        {
+            "kind": "performance",
+            "status": "ok",
+            "producer": "backend",
+            "entity_kinds": [{"id": "chain"}],
+            "entities": [
+                {
+                    "id": "chain-0",
+                    "kind": "chain",
+                    "name": "chain 0",
+                    "child_ids": ["source-0"],
+                },
+                {
+                    "id": "source-0",
+                    "kind": "source_operator",
+                    "name": "source 0",
+                },
+            ],
+        }
+    )
+
+    with pytest.raises(SchemaValidationError, match="not covered"):
+        validate_standardized_output(output, use_jsonschema=False)
+
+
+def test_accepts_well_known_entity_kind_relationship() -> None:
+    """Schema-owned hierarchy edges do not require result-local declarations."""
+    validate_standardized_output(
+        _valid_standardized_output_with_result(
+            {
+                "kind": "performance",
+                "status": "ok",
+                "producer": "backend",
+                "entities": [
+                    {
+                        "id": "stack-0",
+                        "kind": "code_stack",
+                        "name": "model.py:1",
+                        "child_ids": ["source-0"],
+                    },
+                    {
+                        "id": "source-0",
+                        "kind": "source_operator",
+                        "name": "source 0",
+                    },
+                ],
             }
         ),
         use_jsonschema=False,
@@ -1099,10 +1173,8 @@ def test_dangling_result_entity_references_are_rejected(
     ]
 
     assert validate_basic_structure(data) == [
-        (
-            f"Entity reference 'missing' at results[0].{expected_path} "
-            "does not resolve within result 0"
-        )
+        f"Entity reference 'missing' at results[0].{expected_path} does not "
+        "resolve within result 0"
     ]
 
 
@@ -1119,11 +1191,8 @@ def test_dangling_entity_relationships_are_rejected(field_name: str) -> None:
     ]
 
     assert validate_basic_structure(data) == [
-        (
-            "Entity reference 'missing' at "
-            f"results[0].entities[0].{field_name}[0] "
-            "does not resolve within result 0"
-        )
+        f"Entity reference 'missing' at results[0].entities[0].{field_name}[0] "
+        "does not resolve within result 0"
     ]
 
 
@@ -1136,10 +1205,8 @@ def test_entity_reference_cannot_resolve_from_another_result() -> None:
     ]
 
     assert validate_basic_structure(data) == [
-        (
-            "Entity reference 'shared' at results[0].breakdowns[0].entity_id "
-            "does not resolve within result 0"
-        )
+        "Entity reference 'shared' at results[0].breakdowns[0].entity_id does "
+        "not resolve within result 0"
     ]
 
 
@@ -1411,3 +1478,95 @@ def test_validate_output_file(
     validate_standardized_output_mock.assert_called_once_with(
         {"key": "val"}, use_jsonschema=use_jsonschema
     )
+
+
+@pytest.mark.parametrize(
+    "entities",
+    [
+        [
+            {"id": "a", "kind": "source_operator", "child_ids": ["b"]},
+            {"id": "b", "kind": "source_operator", "child_ids": ["a"]},
+        ],
+        [
+            {"id": "a", "kind": "source_operator", "parent_ids": ["b"]},
+            {"id": "b", "kind": "source_operator", "parent_ids": ["a"]},
+        ],
+        [
+            {
+                "id": "a",
+                "kind": "source_operator",
+                "parent_ids": ["b"],
+                "child_ids": ["b"],
+            },
+            {"id": "b", "kind": "source_operator"},
+        ],
+        [{"id": "self", "kind": "source_operator", "child_ids": ["self"]}],
+    ],
+    ids=["child-only", "parent-only", "mixed", "self-cycle"],
+)
+def test_entity_graph_cycles_are_basic_schema_errors(
+    entities: list[dict[str, Any]],
+) -> None:
+    """Every relationship spelling must reject directed cycles."""
+    data = _CORRECT_DATA.copy()
+    data["results"] = [{"entities": entities}]
+
+    errors = validate_basic_structure(data)
+
+    assert len(errors) == 1
+    assert errors[0].startswith("Entity graph in result 0 contains a directed cycle:")
+
+    with pytest.raises(SchemaValidationError, match="directed cycle"):
+        validate_standardized_output(data, use_jsonschema=False)
+
+
+def test_entity_graph_reports_duplicate_and_unresolved_relationships_together() -> None:
+    """Identity and reference failures use normal result validation diagnostics."""
+    data = _CORRECT_DATA.copy()
+    data["results"] = [
+        {
+            "entities": [
+                {"id": "duplicate", "kind": "source_operator"},
+                {"id": "duplicate", "kind": "source_operator"},
+                {
+                    "id": "present",
+                    "kind": "source_operator",
+                    "parent_ids": ["missing-parent"],
+                    "child_ids": ["missing-child"],
+                },
+            ]
+        }
+    ]
+
+    assert validate_basic_structure(data) == [
+        "Entity id 'duplicate' must be unique within result 0",
+        "Entity reference 'missing-parent' at "
+        "results[0].entities[2].parent_ids[0] does not resolve within result 0",
+        "Entity reference 'missing-child' at "
+        "results[0].entities[2].child_ids[0] does not resolve within result 0",
+    ]
+
+
+def test_entity_graph_accepts_valid_multi_parent_dag_without_reciprocals() -> None:
+    """Parent and child declarations normalize into one valid multi-parent DAG."""
+    data = _CORRECT_DATA.copy()
+    data["results"] = [
+        {
+            "entities": [
+                {
+                    "id": "left",
+                    "kind": "code_stack",
+                    "child_ids": ["leaf"],
+                },
+                {"id": "right", "kind": "code_stack"},
+                {
+                    "id": "leaf",
+                    "kind": "source_operator",
+                    "parent_ids": ["right"],
+                },
+            ]
+        }
+    ]
+
+    assert validate_basic_structure(data) == []
+    validate_standardized_output(data, use_jsonschema=False)

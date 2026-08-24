@@ -219,6 +219,37 @@ class TestMetric:
             "qualifiers": {"key": "value"},
         }
 
+    def test_well_known_aggregation_type_to_dict(self) -> None:
+        """Well-known aggregation types should serialize as schema strings."""
+        assert {aggregation.value for aggregation in schema.AggregationType} == {
+            "sum",
+            "max",
+            "min",
+            "mean",
+        }
+        metric = schema.Metric(
+            name="cycles",
+            value=10,
+            unit="cycles",
+            aggregation=schema.AggregationType.MAX,
+        )
+
+        assert metric.to_dict()["aggregation"] == "max"
+
+    def test_from_dict_preserves_unknown_aggregation_string(self) -> None:
+        """Unknown aggregation policies should remain forward compatible."""
+        metric = schema.Metric.from_dict(
+            {
+                "name": "cycles",
+                "value": 10,
+                "unit": "cycles",
+                "aggregation": "future-policy",
+            }
+        )
+
+        assert metric.aggregation == "future-policy"
+        assert metric.to_dict()["aggregation"] == "future-policy"
+
     def test_unavailable_to_dict(self) -> None:
         """Test conversion of unavailable metric to dictionary."""
         metric = schema.Metric(
@@ -475,25 +506,34 @@ class TestEntityKind:
     def test_well_known_entity_kinds(self) -> None:
         """Well-known entity kinds should include schema-defined kind ids."""
         assert schema.ENTITY_KIND_CODE_STACK == "code_stack"
+        assert schema.ENTITY_KIND_CODE_LINE == "code_line"
         assert schema.WELL_KNOWN_ENTITY_KINDS == frozenset(
             {
                 schema.ENTITY_KIND_SOURCE_OPERATOR,
                 schema.ENTITY_KIND_MODEL,
                 schema.ENTITY_KIND_CODE_STACK,
+                schema.ENTITY_KIND_CODE_LINE,
             }
         )
 
     def test_well_known_entity_kind_definitions(self) -> None:
         """Well-known hierarchy relationships should be centrally defined."""
         assert schema.WELL_KNOWN_ENTITY_KIND_DEFINITIONS == {
+            schema.ENTITY_KIND_CODE_LINE: schema.WellKnownEntityKind(
+                id=schema.ENTITY_KIND_CODE_LINE,
+                child_kinds=(schema.ENTITY_KIND_CODE_STACK,),
+            ),
             schema.ENTITY_KIND_CODE_STACK: schema.WellKnownEntityKind(
                 id=schema.ENTITY_KIND_CODE_STACK,
-                parent_kinds=(schema.ENTITY_KIND_CODE_STACK,),
+                parent_kinds=(
+                    schema.ENTITY_KIND_CODE_LINE,
+                    schema.ENTITY_KIND_CODE_STACK,
+                ),
                 child_kinds=(
                     schema.ENTITY_KIND_CODE_STACK,
                     schema.ENTITY_KIND_SOURCE_OPERATOR,
                 ),
-            )
+            ),
         }
 
     def test_to_dict(self) -> None:

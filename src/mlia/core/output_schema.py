@@ -80,6 +80,7 @@ class WellKnownEntityKind:
 ENTITY_KIND_SOURCE_OPERATOR = "source_operator"
 ENTITY_KIND_MODEL = "model"
 ENTITY_KIND_CODE_STACK = "code_stack"
+ENTITY_KIND_CODE_LINE = "code_line"
 
 
 def onnx_source_operator_id(node_index: int) -> str:
@@ -127,10 +128,11 @@ def vgf_source_operator_id(segment_index: int, spirv_result_id: int) -> str:
     )
 
 
-# Entity kind ids with schema-defined semantics. Producers may use these without
-# declaring matching result-level entity_kinds. Other entity kind ids are
-# backend-defined and should be declared in result.entity_kinds when consumers
-# need to understand their hierarchy relationships.
+# Entity kind ids with schema-defined semantics do not require matching
+# result-level entity_kinds declarations. Backends may produce source_operator,
+# model, and code_stack entities; code_line is derived centrally by core output
+# postprocessing. Other entity kind ids are backend-defined and should be declared
+# in result.entity_kinds when consumers need to understand their relationships.
 #
 # A code_stack entity represents one source/debug stack-frame prefix rather than
 # a globally unique function/frame. Its identity includes all ancestor frames
@@ -139,18 +141,26 @@ def vgf_source_operator_id(segment_index: int, spirv_result_id: int) -> str:
 # the call tree, and leaf code_stack entities may parent source_operator
 # entities associated with the stack.
 #
-# Well-known code_stack attributes:
+# A code_line entity represents one exact source/debug file and 1-based line
+# number within a result, independent of call-stack ancestry. Core derives these
+# entities from retained code_stack entities during output postprocessing.
+#
+# Well-known code_stack and code_line attributes:
 # - file: source/debug file path using forward slash as the separator. The path
 #   may be absolute or relative.
 # - line: 1-based index into the lines of file.
 WELL_KNOWN_ENTITY_KIND_DEFINITIONS: Mapping[str, WellKnownEntityKind] = (
     MappingProxyType(
         {
+            ENTITY_KIND_CODE_LINE: WellKnownEntityKind(
+                id=ENTITY_KIND_CODE_LINE,
+                child_kinds=(ENTITY_KIND_CODE_STACK,),
+            ),
             ENTITY_KIND_CODE_STACK: WellKnownEntityKind(
                 id=ENTITY_KIND_CODE_STACK,
-                parent_kinds=(ENTITY_KIND_CODE_STACK,),
+                parent_kinds=(ENTITY_KIND_CODE_LINE, ENTITY_KIND_CODE_STACK),
                 child_kinds=(ENTITY_KIND_CODE_STACK, ENTITY_KIND_SOURCE_OPERATOR),
-            )
+            ),
         }
     )
 )
@@ -192,6 +202,19 @@ class MetricAvailability(str, Enum):
     """Metric availability enumeration."""
 
     UNAVAILABLE = "unavailable"
+
+
+class AggregationType(str, Enum):
+    """Well-known metric aggregation types.
+
+    Metric producers may still use other string values for forward-compatible
+    aggregation policies that are not yet defined by this schema version.
+    """
+
+    SUM = "sum"
+    MAX = "max"
+    MIN = "min"
+    MEAN = "mean"
 
 
 @dataclass(frozen=True)
@@ -454,7 +477,7 @@ class Metric:
     name: str
     value: float | int | None
     unit: str
-    aggregation: str | None = None
+    aggregation: AggregationType | str | None = None
     samples: int | None = None
     qualifiers: dict[str, Any] = field(default_factory=dict)
     availability: MetricAvailability | None = None
@@ -491,7 +514,11 @@ class Metric:
         if self.value is not None:
             result["value"] = self.value
         if self.aggregation is not None:
-            result["aggregation"] = self.aggregation
+            result["aggregation"] = (
+                self.aggregation.value
+                if isinstance(self.aggregation, AggregationType)
+                else self.aggregation
+            )
         if self.samples is not None:
             result["samples"] = self.samples
         if self.qualifiers:
@@ -505,11 +532,18 @@ class Metric:
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> Metric:
         """Create from dictionary."""
+        aggregation = data.get("aggregation")
+        if aggregation is not None:
+            try:
+                aggregation = AggregationType(aggregation)
+            except ValueError:
+                # Unknown strings remain valid for forward compatibility.
+                pass
         return cls(
             name=data["name"],
             value=data.get("value"),
             unit=data["unit"],
-            aggregation=data.get("aggregation"),
+            aggregation=aggregation,
             samples=data.get("samples"),
             qualifiers=data.get("qualifiers", {}),
             availability=(

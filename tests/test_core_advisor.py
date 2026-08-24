@@ -11,12 +11,20 @@ from mlia.core.advisor import DefaultInferenceAdvisor, InferenceAdvisor
 from mlia.core.context import Context
 from mlia.core.data_analysis import DataAnalyzer
 from mlia.core.data_collection import DataCollector
+from mlia.core.settings import ApplicationSettings, FilteringSettings
 from mlia.core.workflow import DefaultWorkflowExecutor, WorkflowExecutor
 
 
-def test_inference_advisor_run() -> None:
-    """Test running sample inference advisor."""
+def test_inference_advisor_run(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The advisor should postprocess its authoritative output exactly once."""
+    raw_output: dict[str, object] = {"results": []}
+    processed_output: dict[str, object] = {"processed": True}
     executor_mock = MagicMock(spec=WorkflowExecutor)
+    executor_mock.run.return_value = raw_output
+    postprocess = MagicMock(return_value=processed_output)
+    monkeypatch.setattr(
+        "mlia.core.advisor.postprocess_standardized_output", postprocess
+    )
     context_mock = MagicMock(spec=Context)
 
     class SampleAdvisor(InferenceAdvisor):
@@ -41,9 +49,11 @@ def test_inference_advisor_run() -> None:
             return executor_mock
 
     advisor = SampleAdvisor()
-    advisor.run(context_mock)
+    settings = ApplicationSettings(filtering=FilteringSettings(collapse=()))
 
-    executor_mock.run.assert_called_once()
+    assert advisor.run(context_mock, settings) == processed_output
+    executor_mock.run.assert_called_once_with()
+    postprocess.assert_called_once_with(raw_output, settings)
 
 
 def test_default_inference_advisor(test_tflite_model: Path) -> None:

@@ -491,6 +491,7 @@ def check(
     noninteractive: bool = False,
     debug: bool = False,
     backend_options: dict[str, dict[str, object]] | None = None,
+    settings: ApplicationSettings | None = None,
 ) -> tuple[ExecutionContext, dict[str, object] | None, dict[str, Any]]:
     """Generate advice for the input model and return canonical output."""
     from mlia.api import get_advice
@@ -535,6 +536,7 @@ def check(
         if noninteractive
         else None,
         backend_options=backend_options,
+        settings=settings,
     )
     parameters: dict[str, Any] = {
         "model": model,
@@ -641,6 +643,7 @@ def check_command(
             noninteractive=noninteractive,
             debug=debug,
             backend_options=backend_options,
+            settings=settings,
         )
         emit_standardized_output(settings, context, output)
         try:

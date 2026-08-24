@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, cast
 import click
 
 from mlia.core.common import AdviceCategory
+from mlia.core.settings import CollapseRule
 
 BackendCliOption = str | click.Option
 
@@ -71,6 +72,7 @@ class BackendConfiguration:
         cli_options: dict[str, BackendCliOption] | None = None,
         is_deprecated: bool = False,
         deprecated_message: str | None = None,
+        default_collapse_rules: tuple[CollapseRule, ...] = (),
     ) -> None:
         """Set up basic information about the backend."""
         self.supported_advice = supported_advice
@@ -81,6 +83,7 @@ class BackendConfiguration:
         self.cli_options = cli_options or {}
         self.is_deprecated = is_deprecated
         self.deprecated_message = deprecated_message
+        self.default_collapse_rules = default_collapse_rules
 
     def __str__(self) -> str:
         """List supported advice."""
@@ -97,6 +100,7 @@ class BackendConfiguration:
                 and self.cli_options == other.cli_options
                 and self.is_deprecated == other.is_deprecated
                 and self.deprecated_message == other.deprecated_message
+                and self.default_collapse_rules == other.default_collapse_rules
             )
         raise NotImplementedError
 

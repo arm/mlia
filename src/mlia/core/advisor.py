@@ -14,6 +14,8 @@ from mlia.core.context import Context
 from mlia.core.data_analysis import DataAnalyzer, PatternAnalyzer
 from mlia.core.data_collection import DataCollector
 from mlia.core.mixins import ParameterResolverMixin
+from mlia.core.output_postprocessing import postprocess_standardized_output
+from mlia.core.settings import ApplicationSettings
 from mlia.core.workflow import DefaultWorkflowExecutor, WorkflowExecutor
 
 
@@ -24,10 +26,17 @@ class InferenceAdvisor(NamedEntity):
     def configure(self, context: Context) -> WorkflowExecutor:
         """Configure advisor execution."""
 
-    def run(self, context: Context) -> dict[str, object] | None:
-        """Run inference advisor and return canonical standardized output, if any."""
+    def run(
+        self, context: Context, settings: ApplicationSettings | None = None
+    ) -> dict[str, object] | None:
+        """Run the advisor and postprocess its authoritative standardized output."""
         executor = self.configure(context)
-        return executor.run()
+        output = executor.run()
+        if output is None:
+            return None
+        return postprocess_standardized_output(
+            output, settings or ApplicationSettings()
+        )
 
 
 class DefaultInferenceAdvisor(InferenceAdvisor, ParameterResolverMixin):

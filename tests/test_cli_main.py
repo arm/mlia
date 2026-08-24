@@ -20,6 +20,7 @@ import mlia.cli.commands as cli_commands
 import mlia.cli.main as cli_main
 import mlia.cli.settings as cli_settings
 from mlia.backend.options import BackendOptionSpec
+from mlia.core.settings import ApplicationSettings
 from mlia.plugins.analysis import AnalysisPluginRegistry, AnalysisRunResult
 
 ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-9;?]*[ -/]*[@-~]")
@@ -432,6 +433,7 @@ def test_check_accepts_namespaced_backend_click_option(
     assert get_advice.call_args.kwargs["backend_options"] == {
         "typed-backend": {"optimization_level": "2"}
     }
+    assert isinstance(get_advice.call_args.kwargs["settings"], ApplicationSettings)
 
 
 def test_analysis_plugin_registry_is_scoped_to_each_command(
@@ -468,6 +470,12 @@ def test_check_runs_enabled_analysis_plugins(
     discover_backend_option_specs = MagicMock(
         return_value=[_typed_backend_option_spec()]
     )
+    config = tmp_path / "config.toml"
+    config.write_text(
+        "[filtering]\ncollapse = []\n\n[plugins.demo]\nenabled = true\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(cli_settings, "_CONFIG_PATH", config)
 
     monkeypatch.setattr(
         cli_commands,
@@ -507,9 +515,13 @@ def test_check_runs_enabled_analysis_plugins(
     assert get_advice.call_args.kwargs["backend_options"] == {
         "typed-backend": {"optimization_level": "2"}
     }
+    settings = get_advice.call_args.kwargs["settings"]
+    assert isinstance(settings, ApplicationSettings)
+    assert settings.filtering.collapse == ()
     assert len(plugin.results) == 1
     assert plugin.results[0].args["demo_analysis"] is True
-    assert plugin.results[0].output == output
+    assert plugin.results[0].settings == {"enabled": True}
+    assert plugin.results[0].output is output
     assert plugin.results[0].parameters["model"] == "model.tflite"
 
 

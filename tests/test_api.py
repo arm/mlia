@@ -39,14 +39,18 @@ from mlia.api import (
 )
 from mlia.backend.config import BackendConfiguration, BackendType
 from mlia.backend.registry import registry as backend_registry
+from mlia.core.advisor import InferenceAdvisor
 from mlia.core.common import AdviceCategory
-from mlia.core.context import ExecutionContext
+from mlia.core.context import Context, ExecutionContext
 from mlia.core.errors import (
     ConfigurationError,
     FunctionalityNotSupportedError,
     InternalError,
     UnsupportedConfigurationError,
 )
+from mlia.core.output_validation import SchemaValidationError
+from mlia.core.settings import ApplicationSettings
+from mlia.core.workflow import WorkflowExecutor
 from mlia.target.config import TargetInfo
 from mlia.target.registry import registry as target_registry
 from mlia.transformers.registry import TransformRequest
@@ -304,6 +308,86 @@ def test_run_advisor_validation_off_skips(
     validate_mock.assert_not_called()
 
 
+@pytest.mark.parametrize("validation", [ValidationMode.WARN, ValidationMode.OFF])
+def test_run_advisor_rejects_invalid_backend_graph_before_optional_validation(
+    validation: ValidationMode,
+    monkeypatch: pytest.MonkeyPatch,
+    test_tflite_model: Path,
+) -> None:
+    """Warn/off modes cannot let collapse hide an invalid backend graph."""
+    invalid_output: dict[str, object] = {
+        "schema_version": "1.0.0",
+        "run_id": "550e8400-e29b-41d4-a716-446655440000",
+        "timestamp": "2026-07-24T12:00:00Z",
+        "tool": {"name": "MLIA", "version": "1.0.0"},
+        "target": {
+            "profile_name": "test",
+            "target_type": "test",
+            "components": ["test"],
+            "configuration": {},
+        },
+        "model": {
+            "name": "model.tflite",
+            "format": "tflite",
+            "hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        },
+        "context": {},
+        "backends": [{"name": "test", "version": "1.0.0"}],
+        "results": [
+            {
+                "kind": "performance",
+                "status": "ok",
+                "producer": "test",
+                "entities": [
+                    {
+                        "id": "collapsed",
+                        "kind": "code_stack",
+                        "name": "collapsed",
+                        "attributes": {"file": "venv/site-packages/torch/module.py"},
+                        "child_ids": ["missing"],
+                    }
+                ],
+            }
+        ],
+    }
+
+    class InvalidExecutor(WorkflowExecutor):
+        def run(self) -> dict[str, object]:
+            return invalid_output
+
+    class InvalidAdvisor(InferenceAdvisor):
+        @classmethod
+        def name(cls) -> str:
+            return "invalid"
+
+        @classmethod
+        def description(cls) -> str:
+            return "Invalid advisor"
+
+        @classmethod
+        def info(cls) -> None:
+            return None
+
+        def configure(self, _context: Context) -> WorkflowExecutor:
+            return InvalidExecutor()
+
+    _patch_common_run_advisor_dependencies(monkeypatch)
+    monkeypatch.setattr(
+        "mlia.api.get_advisor", lambda *_args, **_kwargs: InvalidAdvisor()
+    )
+    monkeypatch.setattr(
+        "mlia.api.ensure_backends_installed", lambda *_args, **_kwargs: None
+    )
+
+    with pytest.raises(SchemaValidationError, match="does not resolve"):
+        run_advisor(
+            "compatibility",
+            "tosa",
+            test_tflite_model,
+            validation=validation,
+        )
+
+
 def test_run_advisor_happy_path_uses_temp_dir(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path, test_tflite_model: Path
 ) -> None:
@@ -330,6 +414,29 @@ def test_run_advisor_happy_path_uses_temp_dir(
 
     assert output == _FAKE_OUTPUT
     assert captured["output_dir"] == captured["temp_dir"] / "mlia-output"
+
+
+def test_run_advisor_passes_default_application_settings(
+    monkeypatch: pytest.MonkeyPatch,
+    test_tflite_model: Path,
+) -> None:
+    """The API should use one resolved default settings object for processing."""
+    settings = ApplicationSettings()
+    settings_factory = MagicMock(return_value=settings)
+    captured: dict[str, object] = {}
+
+    def fake_get_advice(*_args: object, **kwargs: object) -> dict[str, object]:
+        captured["settings"] = kwargs["settings"]
+        return _FAKE_OUTPUT
+
+    _patch_common_run_advisor_dependencies(monkeypatch)
+    monkeypatch.setattr("mlia.api.ApplicationSettings", settings_factory)
+    monkeypatch.setattr("mlia.api.get_advice", fake_get_advice)
+    monkeypatch.setattr("mlia.api.collect_validation_errors", lambda _data: [])
+
+    assert run_advisor("compatibility", "tosa", test_tflite_model) == _FAKE_OUTPUT
+    settings_factory.assert_called_once_with()
+    assert captured["settings"] is settings
 
 
 def test_run_advisor_happy_path_resolves_output_dir(
@@ -904,6 +1011,7 @@ def test_get_advice_updates_context_and_runs_advisor(
     """get_advice should resolve the category and run the advisor."""
     advisor = MagicMock()
     context = ExecutionContext()
+    settings = ApplicationSettings()
     monkeypatch.setattr("mlia.api.get_advisor", lambda *args, **kwargs: advisor)
     monkeypatch.setattr(
         "mlia.api.validate_backend",
@@ -922,11 +1030,14 @@ def test_get_advice_updates_context_and_runs_advisor(
         context=context,
         backends=["backend-a"],
         backend_options={"backend-a": {"flag": True}},
+        settings=settings,
     )
 
     assert context.advice_category == {AdviceCategory.COMPATIBILITY}
     ensure_backends_installed.assert_called_once_with(["backend-a"], accept_eula=False)
-    advisor.run.assert_called_once_with(context)
+    advisor.run.assert_called_once()
+    assert advisor.run.call_args.args[0] is context
+    assert advisor.run.call_args.args[1] is settings
 
 
 def test_get_advice_creates_context_when_missing(
@@ -935,6 +1046,8 @@ def test_get_advice_creates_context_when_missing(
     """get_advice should create an execution context when one is not provided."""
     advisor = MagicMock()
     captured: dict[str, object] = {}
+    default_settings = ApplicationSettings()
+    monkeypatch.setattr("mlia.api.ApplicationSettings", lambda: default_settings)
     monkeypatch.setattr(
         "mlia.api.validate_backend",
         lambda *_args, **_kwargs: ["backend-a"],
@@ -958,7 +1071,9 @@ def test_get_advice_creates_context_when_missing(
     context = cast(ExecutionContext, captured["context"])
     assert context.advice_category == {AdviceCategory.COMPATIBILITY}
     ensure_backends_installed.assert_called_once_with(["backend-a"], accept_eula=None)
-    advisor.run.assert_called_once_with(context)
+    advisor.run.assert_called_once()
+    assert advisor.run.call_args.args[0] is context
+    assert advisor.run.call_args.args[1] is default_settings
 
 
 def test_get_advisor_resolves_optimization_profile(

@@ -10,6 +10,12 @@ from pathlib import Path
 from typing import Any
 
 import mlia.core.output_schema as schema
+from mlia.core.entity_graph import (
+    EntityGraph,
+    EntityGraphDeclaration,
+    EntityGraphValidationError,
+    validate_entity_graph,
+)
 
 try:
     import jsonschema
@@ -364,14 +370,74 @@ def _validate_entity_kind_list(
     return kind_ids
 
 
+def _well_known_entity_kind_edges() -> set[tuple[str, str]]:
+    """Return every relationship owned by the standardized schema."""
+    edges = {
+        (definition.id, child_kind)
+        for definition in schema.WELL_KNOWN_ENTITY_KIND_DEFINITIONS.values()
+        for child_kind in definition.child_kinds
+    }
+    edges.update(
+        (parent_kind, definition.id)
+        for definition in schema.WELL_KNOWN_ENTITY_KIND_DEFINITIONS.values()
+        for parent_kind in definition.parent_kinds
+    )
+    return edges
+
+
+def _entity_kind_relationship_errors(
+    graph: EntityGraph,
+    entity_kinds_by_id: dict[str, str],
+    allowed_edges: set[tuple[str, str]],
+    result_index: int | None = None,
+) -> list[str]:
+    """Return actual entity edges missing from the effective kind declarations."""
+    prefix = f"Result {result_index} " if result_index is not None else "Result "
+    return [
+        (
+            f"{prefix}entity relationship '{parent_id}' ({parent_kind}) -> "
+            f"'{child_id}' ({child_kind}) is not covered by a declared or "
+            "well-known entity kind relationship"
+        )
+        for parent_id in graph.topological_order
+        for child_id in sorted(graph.children[parent_id])
+        if (parent_kind := entity_kinds_by_id.get(parent_id)) is not None
+        and (child_kind := entity_kinds_by_id.get(child_id)) is not None
+        and (parent_kind, child_kind) not in allowed_edges
+    ]
+
+
+def validate_result_entity_kind_relationships(
+    result: schema.Result, graph: EntityGraph
+) -> None:
+    """Require every normalized entity edge to have declared kind semantics."""
+    allowed_edges = _well_known_entity_kind_edges()
+    for entity_kind in result.entity_kinds:
+        allowed_edges.update(
+            (entity_kind.id, child_kind) for child_kind in entity_kind.child_kinds
+        )
+        allowed_edges.update(
+            (parent_kind, entity_kind.id) for parent_kind in entity_kind.parent_kinds
+        )
+    errors = _entity_kind_relationship_errors(
+        graph,
+        {entity.id: entity.kind for entity in result.entities},
+        allowed_edges,
+    )
+    if errors:
+        raise SchemaValidationError(
+            "Entity kind relationship validation failed:\n  - " + "\n  - ".join(errors)
+        )
+
+
 def _validate_entity_kinds(
     result: dict[str, Any], result_index: int, errors: list[str]
-) -> set[str]:
+) -> tuple[set[str], set[tuple[str, str]]]:
     """Validate result-local entity kind declarations and relationships."""
     values = result.get("entity_kinds", [])
     if not isinstance(values, list):
         errors.append(f"Field 'results[{result_index}].entity_kinds' must be an array")
-        return set()
+        return set(), _well_known_entity_kind_edges()
 
     declarations: list[tuple[int, str | None, list[str], list[str]]] = []
     declared_kind_ids: set[str] = set()
@@ -428,11 +494,25 @@ def _validate_entity_kinds(
                         f"{field_name}[{reference_index}] does not resolve to a "
                         "well-known or declared entity kind in this result"
                     )
-    return backend_kind_ids
+    allowed_edges = _well_known_entity_kind_edges()
+    for _kind_index, kind_id, parent_kinds, child_kinds in declarations:
+        if kind_id is None or kind_id not in valid_kind_ids:
+            continue
+        allowed_edges.update(
+            (kind_id, child_kind)
+            for child_kind in child_kinds
+            if child_kind in valid_kind_ids
+        )
+        allowed_edges.update(
+            (parent_kind, kind_id)
+            for parent_kind in parent_kinds
+            if parent_kind in valid_kind_ids
+        )
+    return backend_kind_ids, allowed_edges
 
 
 def _validate_results(data: dict[str, Any], errors: list[str]) -> None:
-    """Validate result-local entity kinds, IDs, and references."""
+    """Validate result-local entity kinds, references, and normalized DAGs."""
     if "results" not in data:
         return
     if not isinstance(data["results"], list):
@@ -442,15 +522,19 @@ def _validate_results(data: dict[str, Any], errors: list[str]) -> None:
     for result_index, result in enumerate(data["results"]):
         if not isinstance(result, dict):
             continue
-        backend_kind_ids = _validate_entity_kinds(result, result_index, errors)
+        backend_kind_ids, allowed_kind_edges = _validate_entity_kinds(
+            result, result_index, errors
+        )
         valid_entity_kind_ids = backend_kind_ids | schema.WELL_KNOWN_ENTITY_KINDS
 
         entities = result.get("entities", [])
         if not isinstance(entities, list):
             errors.append(f"Field 'results[{result_index}].entities' must be an array")
             continue
+
         seen_entity_ids: set[str] = set()
-        duplicate_entity_ids: set[str] = set()
+        entity_kinds_by_id: dict[str, str] = {}
+        graph_declarations: list[EntityGraphDeclaration] = []
         for entity_index, entity in enumerate(entities):
             if not isinstance(entity, dict):
                 errors.append(
@@ -458,11 +542,32 @@ def _validate_results(data: dict[str, Any], errors: list[str]) -> None:
                     "must be an object"
                 )
                 continue
+
             entity_id = entity.get("id")
             if isinstance(entity_id, str):
-                if entity_id in seen_entity_ids:
-                    duplicate_entity_ids.add(entity_id)
                 seen_entity_ids.add(entity_id)
+                raw_parent_ids = entity.get("parent_ids", [])
+                raw_child_ids = entity.get("child_ids", [])
+                graph_declarations.append(
+                    EntityGraphDeclaration(
+                        id=entity_id,
+                        parent_ids=(
+                            tuple(
+                                item for item in raw_parent_ids if isinstance(item, str)
+                            )
+                            if isinstance(raw_parent_ids, list)
+                            else ()
+                        ),
+                        child_ids=(
+                            tuple(
+                                item for item in raw_child_ids if isinstance(item, str)
+                            )
+                            if isinstance(raw_child_ids, list)
+                            else ()
+                        ),
+                        source_index=entity_index,
+                    )
+                )
 
             entity_kind = entity.get("kind")
             entity_kind_path = f"results[{result_index}].entities[{entity_index}].kind"
@@ -475,10 +580,21 @@ def _validate_results(data: dict[str, Any], errors: list[str]) -> None:
                     f"Entity kind '{entity_kind}' at {entity_kind_path} is neither "
                     "well-known nor declared within this result"
                 )
+            elif isinstance(entity_id, str):
+                entity_kinds_by_id[entity_id] = entity_kind
 
-        for entity_id in sorted(duplicate_entity_ids):
-            errors.append(
-                f"Entity id '{entity_id}' must be unique within result {result_index}"
+        try:
+            graph = validate_entity_graph(graph_declarations)
+        except EntityGraphValidationError as err:
+            errors.extend(issue.message(result_index) for issue in err.issues)
+        else:
+            errors.extend(
+                _entity_kind_relationship_errors(
+                    graph,
+                    entity_kinds_by_id,
+                    allowed_kind_edges,
+                    result_index,
+                )
             )
 
         for breakdown_index, breakdown in enumerate(result.get("breakdowns", [])):
@@ -514,20 +630,6 @@ def _validate_results(data: dict[str, Any], errors: list[str]) -> None:
                     entity_ids=seen_entity_ids,
                     errors=errors,
                 )
-        for entity_index, entity in enumerate(entities):
-            if not isinstance(entity, dict):
-                continue
-            for field_name in ("parent_ids", "child_ids"):
-                for reference_index, reference in enumerate(entity.get(field_name, [])):
-                    _validate_entity_reference(
-                        reference,
-                        field_path=(
-                            f"entities[{entity_index}].{field_name}[{reference_index}]"
-                        ),
-                        result_index=result_index,
-                        entity_ids=seen_entity_ids,
-                        errors=errors,
-                    )
 
 
 def validate_basic_structure(data: dict[str, Any]) -> list[str]:

@@ -36,6 +36,7 @@ from mlia.core.errors import (
 )
 from mlia.core.logging import close_configured_handlers, setup_logging
 from mlia.core.output_validation import collect_validation_errors
+from mlia.core.settings import ApplicationSettings
 from mlia.target.config import get_builtin_target_profile_path, load_profile
 from mlia.target.registry import (
     get_optimization_profile,
@@ -247,10 +248,11 @@ def run_advisor(
             directory, output format, and event handlers are still owned by
             run_advisor().
         backend_options: Optional per-backend configuration overrides.
-        validation: Schema validation mode. Use ValidationMode.STRICT (raise),
-            ValidationMode.WARN (log and return output), or ValidationMode.OFF
-            (skip validation). Default is ValidationMode.WARN.
-
+        validation: Additional JSON Schema validation mode. Core always performs
+            required basic and entity-graph validation before delivering output.
+            Use ValidationMode.STRICT to raise for additional schema issues,
+            ValidationMode.WARN to log and return output, or ValidationMode.OFF
+            to skip the additional validation. Default is ValidationMode.WARN.
     Returns:
         Standardized output as a JSON-compatible dict.
 
@@ -268,6 +270,7 @@ def run_advisor(
         - CLI behavior is unchanged by this API path.
     """
     validation_mode = _normalize_validation_mode(validation)
+    settings = ApplicationSettings()
     advice_set = {advice_category}
     advice_category_enum = AdviceCategory.from_string(advice_set)
     if AdviceCategory.OPTIMIZATION in advice_category_enum:
@@ -322,6 +325,7 @@ def run_advisor(
         backend_options=backend_options_local,
         validation=validation_mode,
         accept_eula=accept_eula,
+        settings=settings,
     )
 
     with _configured_api_logging(inputs.logs_dir, inputs.verbose):
@@ -374,6 +378,7 @@ class _RunAdvisorInputs:
     backend_options: dict[str, dict[str, Any]]
     validation: ValidationMode
     accept_eula: bool
+    settings: ApplicationSettings
 
 
 def _create_api_execution_context(
@@ -416,6 +421,7 @@ def _run_advisor_with_context(
             backends=inputs.selected_backends,
             backend_options=inputs.backend_options,
             accept_eula=inputs.accept_eula,
+            settings=inputs.settings,
         )
     if output is None:
         _raise_if_deprecated_output_missing(
@@ -794,6 +800,7 @@ def get_advice(
     backends: list[str] | None = None,
     backend_options: dict[str, dict[str, Any]] | None = None,
     accept_eula: bool | None = False,
+    settings: ApplicationSettings | None = None,
 ) -> dict[str, object] | None:
     """Get the advice.
 
@@ -820,6 +827,8 @@ def get_advice(
     :param accept_eula: Controls EULA acceptance for auto-installed backends.
            False (default) fails with ConfigurationError if EULA acceptance is required.
            True accepts EULAs non-interactively. None enables interactive CLI behavior.
+    :param settings: Resolved MLIA application settings. Defaults are used when
+           omitted.
 
     Examples:
         NB: Before launching MLIA, the logging functionality should be configured!
@@ -862,7 +871,7 @@ def get_advice(
         backends=validated_backends,
         backend_options=backend_options,
     )
-    return advisor.run(context)
+    return advisor.run(context, settings or ApplicationSettings())
 
 
 def get_advisor(
