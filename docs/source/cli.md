@@ -75,9 +75,33 @@ Request JSON output:
 mlia check model.tflite --target-profile <target-profile> --performance --json
 ```
 
-These examples stay intentionally generic. The core repo explains the shared
-command shape, while plugin repos explain the target- or backend-specific
-variants.
+Use measured profiling data alongside a source model:
+
+```bash
+mlia check model.tflite --target-profile <target-profile> --performance \
+  --profiling-data <profiling-data-path> --json --out-dir <report-dir>
+```
+
+The model is optional when the profiling data can be analyzed independently:
+
+```bash
+mlia check --target-profile <target-profile> --performance \
+  --profiling-data <profiling-data-path>
+```
+
+`--profiling-data` changes the source of the analysis facts; it does not start a
+separate reporting workflow. The selected target advisor still produces normal
+standardized output, which is rendered and passed to post-analysis plugins in
+the same way as model-only analysis.
+
+`--profiling-data` is repeatable and MLIA preserves the supplied order. Core
+passes profiling inputs to the selected backend as a list even when only one
+path is supplied. Each path may be a file or directory; the selected backend
+defines which forms and contents it accepts. Backends advertise whether they can
+consume profiling data. Use `--backend` to select one explicitly. When it is omitted,
+MLIA selects the target's unique profiling-capable backend. MLIA reports an
+error if none is installed, if several require explicit selection, or if an
+estimator-only backend is requested.
 
 ## Color output
 

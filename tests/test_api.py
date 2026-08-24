@@ -76,12 +76,23 @@ def test_list_targets_shape() -> None:
             "target",
             "pretty_name",
             "profiles",
+            "backends",
             "supported_backends",
             "supported_advice",
         }
         assert entry["target"] in registry_targets
         assert isinstance(entry["pretty_name"], str)
         assert isinstance(entry["profiles"], list)
+        assert isinstance(entry["backends"], list)
+        for backend in entry["backends"]:
+            assert set(backend) == {
+                "name",
+                "pretty_name",
+                "default",
+                "selectable",
+                "capabilities",
+            }
+            assert set(backend["capabilities"]) == {"estimation", "profiling"}
         assert isinstance(entry["supported_backends"], list)
         assert isinstance(entry["supported_advice"], list)
 
@@ -489,6 +500,63 @@ def test_run_advisor_coerces_model_path(
     )
 
     assert isinstance(captured["model"], str)
+
+
+def test_run_advisor_accepts_profiling_data_without_model(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """The high-level API should forward measured input without a model."""
+    captured: dict[str, object] = {}
+    validate_backend_mock = MagicMock(return_value=["profiler"])
+
+    def fake_get_advice(*_args: object, **kwargs: object) -> dict[str, object]:
+        captured.update(kwargs)
+        return _FAKE_OUTPUT
+
+    monkeypatch.setattr("mlia.api.validate_backend", validate_backend_mock)
+    monkeypatch.setattr("mlia.api.get_advice", fake_get_advice)
+    monkeypatch.setattr("mlia.api.collect_validation_errors", lambda _data: [])
+
+    output = run_advisor(
+        "performance",
+        "profile",
+        profiling_data=tmp_path,
+    )
+
+    assert output == _FAKE_OUTPUT
+    validate_backend_mock.assert_called_once_with("profile", None, profiling_data=True)
+    assert captured["model"] is None
+    assert captured["profiling_data"] == [tmp_path]
+    assert captured["backends"] == ["profiler"]
+
+
+def test_run_advisor_preserves_ordered_profiling_data_paths(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """The high-level API should normalize every profiling input to Path."""
+    first = tmp_path / "first"
+    second = tmp_path / "second"
+    first.mkdir()
+    second.mkdir()
+    captured: dict[str, object] = {}
+    monkeypatch.setattr(
+        "mlia.api.validate_backend", MagicMock(return_value=["profiler"])
+    )
+    monkeypatch.setattr(
+        "mlia.api.get_advice",
+        lambda *_args, **kwargs: captured.update(kwargs) or _FAKE_OUTPUT,
+    )
+    monkeypatch.setattr("mlia.api.collect_validation_errors", lambda _data: [])
+
+    run_advisor(
+        "performance",
+        "profile",
+        profiling_data=[str(first), second],
+    )
+
+    assert captured["profiling_data"] == [first, second]
 
 
 def test_run_advisor_uses_existing_context(
@@ -1076,6 +1144,51 @@ def test_get_advice_creates_context_when_missing(
     assert advisor.run.call_args.args[1] is default_settings
 
 
+def test_get_advice_routes_profiling_data_to_target_advisor(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Measured input should use normal backend selection and advisor execution."""
+    advisor = MagicMock()
+    get_advisor_mock = MagicMock(return_value=advisor)
+    validate_backend_mock = MagicMock(return_value=["profiler"])
+    monkeypatch.setattr("mlia.api.get_advisor", get_advisor_mock)
+    monkeypatch.setattr("mlia.api.validate_backend", validate_backend_mock)
+    monkeypatch.setattr("mlia.api.ensure_backends_installed", MagicMock())
+
+    profiling_data = tmp_path / "profile.json"
+    profiling_data.write_text("{}", encoding="utf-8")
+
+    get_advice(
+        "profile",
+        None,
+        {"performance"},
+        profiling_data=profiling_data,
+    )
+
+    validate_backend_mock.assert_called_once_with("profile", None, profiling_data=True)
+    get_advisor_mock.assert_called_once()
+    assert isinstance(get_advisor_mock.call_args.args[0], ExecutionContext)
+    assert get_advisor_mock.call_args.args[1:] == ("profile", None)
+    assert get_advisor_mock.call_args.kwargs["backends"] == ["profiler"]
+    assert get_advisor_mock.call_args.kwargs["profiling_data"] == [profiling_data]
+    advisor.run.assert_called_once()
+
+
+def test_get_advice_rejects_missing_profiling_data_path(tmp_path: Path) -> None:
+    """A profiling data path must identify an existing file or directory."""
+    missing = tmp_path / "missing-profile.json"
+
+    with pytest.raises(ConfigurationError, match="does not exist"):
+        get_advice("profile", None, {"performance"}, profiling_data=missing)
+
+
+def test_get_advice_requires_model_or_profiling_data() -> None:
+    """An analysis request without either input should fail immediately."""
+    with pytest.raises(ConfigurationError, match="model or profiling data"):
+        get_advice("profile", None, {"performance"})
+
+
 def test_get_advisor_resolves_optimization_profile(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -1420,6 +1533,40 @@ def test_list_targets_success_with_mocked_registry(
     monkeypatch.setattr(target_registry, "names", lambda: ["target-a"])
     monkeypatch.setattr(target_registry, "pretty_name", lambda _name: "Pretty Target")
     monkeypatch.setattr(
+        target_registry,
+        "items",
+        {
+            "target-a": TargetInfo(
+                supported_backends=["backend-a", "backend-b"],
+                default_backends=["backend-a"],
+                advisor_factory_func=MagicMock(),
+                target_profile_cls=MagicMock(),
+            )
+        },
+    )
+    monkeypatch.setattr(
+        backend_registry,
+        "items",
+        {
+            "backend-a": BackendConfiguration(
+                supported_advice=[AdviceCategory.COMPATIBILITY],
+                supported_systems=None,
+                backend_type=BackendType.BUILTIN,
+                installation=None,
+            ),
+            "backend-b": BackendConfiguration(
+                supported_advice=[AdviceCategory.OPTIMIZATION],
+                supported_systems=None,
+                backend_type=BackendType.BUILTIN,
+                installation=None,
+                supports_estimation=False,
+                supports_profiling_data=True,
+                selectable=False,
+            ),
+        },
+    )
+    monkeypatch.setattr(backend_registry, "pretty_name", lambda name: f"Pretty {name}")
+    monkeypatch.setattr(
         "mlia.api.target_supported_advice",
         lambda _target: [AdviceCategory.OPTIMIZATION, AdviceCategory.COMPATIBILITY],
     )
@@ -1433,6 +1580,28 @@ def test_list_targets_success_with_mocked_registry(
             "target": "target-a",
             "pretty_name": "Pretty Target",
             "profiles": ["profile-a"],
+            "backends": [
+                {
+                    "name": "backend-a",
+                    "pretty_name": "Pretty backend-a",
+                    "default": True,
+                    "selectable": True,
+                    "capabilities": {
+                        "estimation": ["compatibility"],
+                        "profiling": [],
+                    },
+                },
+                {
+                    "name": "backend-b",
+                    "pretty_name": "Pretty backend-b",
+                    "default": False,
+                    "selectable": False,
+                    "capabilities": {
+                        "estimation": [],
+                        "profiling": ["optimization"],
+                    },
+                },
+            ],
             "supported_backends": ["backend-a", "backend-b"],
             "supported_advice": ["compatibility", "optimization"],
         }

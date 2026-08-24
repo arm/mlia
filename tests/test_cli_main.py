@@ -240,6 +240,27 @@ def test_check_help_lists_target_profile_option() -> None:
     assert "--target-profile" in help_output
 
 
+def test_check_help_lists_profiling_data_option(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The check command help should list measured profiling input."""
+    monkeypatch.setattr(
+        cli_commands,
+        "discover_backend_option_specs",
+        MagicMock(return_value=[]),
+    )
+    result = CliRunner().invoke(
+        cli_main.mlia_app,
+        ["check", "--help"],
+        terminal_width=120,
+    )
+    help_output = _strip_ansi(result.stdout)
+
+    assert result.exit_code == 0
+    assert "--profiling-data" in help_output
+    assert "--out-dir" in help_output
+
+
 def test_check_help_lists_backend_option_metadata(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -285,11 +306,16 @@ def test_root_help_lists_plugin_discovery_resources() -> None:
     ("args", "expected_text"),
     [
         (
-            ["check", "--compatibility"],
+            ["check", "--target-profile", "tosa", "--compatibility"],
             "Missing argument 'MODEL'",
         ),
         (
-            ["check", "--i-agree-to-the-contained-eula"],
+            [
+                "check",
+                "--target-profile",
+                "tosa",
+                "--i-agree-to-the-contained-eula",
+            ],
             "Missing argument 'MODEL'",
         ),
     ],
@@ -545,6 +571,98 @@ def test_check_help_lists_analysis_plugin_options(
 
     assert result.exit_code == 0
     assert "--demo-analysis" in _strip_ansi(result.stdout)
+
+
+def test_check_routes_profiling_data_through_standard_workflow(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Profiling input should use get_advice and enabled analysis plugins."""
+    plugin = DemoAnalysisPlugin()
+    output: dict[str, object] = {"results": []}
+    get_advice = MagicMock(return_value=output)
+    config = tmp_path / "config.toml"
+    config.write_text("[plugins.demo]\nenabled = true\n", encoding="utf-8")
+    monkeypatch.setattr(cli_settings, "_CONFIG_PATH", config)
+
+    monkeypatch.setattr(mlia_api, "get_advice", get_advice)
+    monkeypatch.setattr(
+        command_validators,
+        "validate_check_target_profile",
+        MagicMock(return_value=True),
+    )
+    registry = AnalysisPluginRegistry()
+    registry.register(plugin)
+    monkeypatch.setattr(
+        cli_commands,
+        "_load_analysis_plugin_registry",
+        MagicMock(return_value=registry),
+    )
+
+    result = CliRunner().invoke(
+        cli_main.mlia_app,
+        [
+            "check",
+            "--target-profile",
+            "ethos-u55-256",
+            "--performance",
+            "--profiling-data",
+            str(tmp_path),
+            "--output-dir",
+            str(tmp_path),
+            "--demo-analysis",
+        ],
+    )
+
+    assert result.exit_code == 0
+    get_advice.assert_called_once()
+    assert get_advice.call_args.args[:3] == (
+        "ethos-u55-256",
+        None,
+        {"performance"},
+    )
+    assert get_advice.call_args.kwargs["profiling_data"] == [tmp_path]
+    assert len(plugin.results) == 1
+    assert plugin.results[0].args["demo_analysis"] is True
+    assert plugin.results[0].output is output
+    assert plugin.results[0].parameters["model"] is None
+    assert plugin.results[0].parameters["profiling_data"] == [tmp_path]
+
+
+def test_check_accepts_repeated_profiling_data_in_order(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Repeated profiling options should reach the API as an ordered list."""
+    get_advice = MagicMock(return_value={"results": []})
+    first = tmp_path / "first"
+    second = tmp_path / "second"
+    first.mkdir()
+    second.mkdir()
+    monkeypatch.setattr(mlia_api, "get_advice", get_advice)
+    monkeypatch.setattr(
+        command_validators,
+        "validate_check_target_profile",
+        MagicMock(return_value=True),
+    )
+
+    result = CliRunner().invoke(
+        cli_main.mlia_app,
+        [
+            "check",
+            "model.vgf",
+            "--target-profile",
+            "ethos-u55-256",
+            "--performance",
+            "--profiling-data",
+            str(first),
+            "--profiling-data",
+            str(second),
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert get_advice.call_args.kwargs["profiling_data"] == [first, second]
 
 
 def test_check_exits_cleanly_when_validation_skips_all_work(

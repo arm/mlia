@@ -6,7 +6,23 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from mlia.utils.misc import MetadataError, get_pkg_version, merge, yes
+from mlia.utils.misc import MetadataError, get_pkg_version, merge, summarize_list, yes
+
+
+def test_summarize_list() -> None:
+    """Bound list summaries and report omitted item counts."""
+    assert summarize_list([]) == ""
+    assert summarize_list(["a", "b"]) == "a, b"
+    assert summarize_list(range(7)) == "0, 1, 2, 3, 4, ... (2 more omitted)"
+    assert summarize_list(range(4), limit=2, separator="; ") == (
+        "0; 1; ... (2 more omitted)"
+    )
+
+
+def test_summarize_list_rejects_nonpositive_limit() -> None:
+    """A summary must always permit at least one visible item."""
+    with pytest.raises(ValueError, match="must be positive"):
+        summarize_list(["item"], limit=0)
 
 
 @pytest.mark.parametrize(

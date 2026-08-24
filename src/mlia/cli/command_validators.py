@@ -7,37 +7,79 @@ from __future__ import annotations
 import logging
 import sys
 
+from mlia.backend.registry import registry as backend_registry
 from mlia.core.errors import ConfigurationError
 from mlia.target.registry import default_backends, get_target, supported_backends
 
 logger = logging.getLogger(__name__)
 
 
-def validate_backend(target_profile: str, backend: list[str] | None) -> list[str]:
-    """Validate backend with given target profile.
-
-    This validator checks whether the given target profile and backend are
-    compatible with each other.
-    It assumes that prior checks were made on the validity of the target profile.
-    """
+def validate_backend(
+    target_profile: str,
+    backend: list[str] | None,
+    *,
+    profiling_data: bool = False,
+) -> list[str]:
+    """Validate and select backends for a target profile and input source."""
     target = get_target(target_profile)
-
-    if not backend:
+    if not backend and not profiling_data:
         return default_backends(target)
 
+    target_backends = supported_backends(target)
     compatible_backends = {
         normalize_string(canonical_backend): canonical_backend
-        for canonical_backend in supported_backends(target)
+        for canonical_backend in target_backends
     }
-    backends = {normalize_string(b): b for b in backend}
 
-    incompatible_backends = [b for b in backends if b not in compatible_backends]
-    if incompatible_backends:
+    if backend:
+        backends = {normalize_string(name): name for name in backend}
+        incompatible_backends = [
+            name for name in backends if name not in compatible_backends
+        ]
+        if incompatible_backends:
+            incompatible_names = ", ".join(
+                backends[name] for name in incompatible_backends
+            )
+            raise ConfigurationError(
+                f"Backend {incompatible_names} not supported with target profile "
+                f"{target_profile}.",
+            )
+        selected = [compatible_backends[name] for name in backends]
+        if not profiling_data:
+            return selected
+        if len(selected) != 1:
+            raise ConfigurationError(
+                "--profiling-data requires exactly one --backend value."
+            )
+        backend_name = selected[0]
+        if not backend_registry.items[backend_name].supports_profiling_data:
+            raise ConfigurationError(
+                f"Backend '{backend_name}' does not support profiling data."
+            )
+        return selected
+
+    profiling_backends = [
+        name
+        for name in target_backends
+        if name in backend_registry.items
+        and backend_registry.items[name].supports_profiling_data
+    ]
+    default_profiling_backends = [
+        name for name in default_backends(target) if name in profiling_backends
+    ]
+    candidates = default_profiling_backends or profiling_backends
+    if not candidates:
         raise ConfigurationError(
-            f"Backend {', '.join(backends[b] for b in incompatible_backends)} "
-            f"not supported with target profile {target_profile}.",
+            f"Target profile '{target_profile}' has no installed backend that "
+            "supports profiling data."
         )
-    return [compatible_backends[b] for b in backends]
+    if len(candidates) > 1:
+        raise ConfigurationError(
+            "Multiple backends support profiling data for target profile "
+            f"'{target_profile}': {', '.join(sorted(candidates))}. Select one "
+            "with --backend."
+        )
+    return candidates
 
 
 def validate_check_target_profile(target_profile: str, category: set[str]) -> bool:

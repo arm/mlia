@@ -145,6 +145,7 @@ def test_check_category_combinations(
         "ethos-u55-256",
         str(test_tflite_model),
         expected_category,
+        profiling_data=None,
         context=execution_context,
         backends=None,
         accept_eula=None,

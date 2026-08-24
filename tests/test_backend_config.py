@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 """Tests for the backend config module."""
 
-from mlia.backend.config import BackendConfiguration, BackendType, System
+from mlia.backend.config import AnalysisMode, BackendConfiguration, BackendType, System
 from mlia.core.common import AdviceCategory
 
 UNSUPPORTED_SYSTEM = next(sys for sys in System if not sys.is_compatible())
@@ -28,10 +28,16 @@ def test_backend_config() -> None:
     assert cfg.supported_advice == [AdviceCategory.COMPATIBILITY]
     assert cfg.supported_systems == [System.CURRENT]
     assert cfg.type == BackendType.CUSTOM
+    assert cfg.supported_analysis(AnalysisMode.ESTIMATION) == [
+        AdviceCategory.COMPATIBILITY
+    ]
+    assert cfg.supported_analysis(AnalysisMode.PROFILING) == []
     assert str(cfg)
     assert cfg.is_supported()
     assert cfg.is_supported(advice=AdviceCategory.COMPATIBILITY)
     assert not cfg.is_supported(advice=AdviceCategory.PERFORMANCE)
+    assert cfg.is_supported(mode=AnalysisMode.ESTIMATION)
+    assert not cfg.is_supported(mode=AnalysisMode.PROFILING)
     assert cfg.is_supported(check_system=True)
     assert cfg.is_supported(check_system=False)
     cfg.supported_systems = None

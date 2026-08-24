@@ -45,7 +45,12 @@ def test_check_accepts_eula_flag() -> None:
     """The check command parser should accept the EULA flag name."""
     result = CliRunner().invoke(
         cli_main.mlia_app,
-        ["check", "--i-agree-to-the-contained-eula"],
+        [
+            "check",
+            "--target-profile",
+            "tosa",
+            "--i-agree-to-the-contained-eula",
+        ],
         terminal_width=120,
     )
 

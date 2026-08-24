@@ -13,11 +13,11 @@ from contextlib import ExitStack, contextmanager
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Iterator, TypedDict, cast
+from typing import TYPE_CHECKING, Any, Iterator, Sequence, TypedDict, cast
 
 import click
 
-from mlia.backend.config import BackendType
+from mlia.backend.config import AnalysisMode, BackendType
 from mlia.backend.manager import ensure_backends_installed, get_installation_manager
 from mlia.backend.options import (
     BackendOptionSpec,
@@ -111,12 +111,50 @@ def _torch_module_backend_config(target_profile: str) -> tuple[str | None, str]:
     )
 
 
+def _validate_analysis_inputs(
+    model: object | None,
+    profiling_data: str | Path | Sequence[str | Path] | None,
+) -> list[Path] | None:
+    """Validate model/profiling input presence and normalize data paths."""
+    if profiling_data is None:
+        if model is None:
+            raise ConfigurationError("A model or profiling data path is required.")
+        return None
+
+    raw_paths = (
+        [profiling_data]
+        if isinstance(profiling_data, (str, Path))
+        else list(profiling_data)
+    )
+    if not raw_paths:
+        raise ConfigurationError("At least one profiling data path is required.")
+
+    profiling_data_paths = [Path(path).expanduser() for path in raw_paths]
+    for profiling_data_path in profiling_data_paths:
+        if not profiling_data_path.exists():
+            raise ConfigurationError(
+                f"Profiling data path '{profiling_data_path}' does not exist."
+            )
+        if not (profiling_data_path.is_file() or profiling_data_path.is_dir()):
+            raise ConfigurationError(
+                f"Profiling data path '{profiling_data_path}' is not a file "
+                "or directory."
+            )
+    return profiling_data_paths
+
+
 def _validate_module_input(
-    model: object,
+    model: object | None,
     example_inputs: tuple[Any, ...] | None,
     enable_quantization: bool,
     target_profile: str,
 ) -> tuple[nn.Module | None, dict[str, Any] | None]:
+    if model is None:
+        if enable_quantization:
+            raise ConfigurationError(
+                "enable_quantization requires a torch.nn.Module input."
+            )
+        return None, None
     if isinstance(model, (str, Path)):
         if enable_quantization:
             raise ConfigurationError(
@@ -151,12 +189,14 @@ def _validate_module_input(
 
 
 def _resolve_model_for_run(
-    model: Path | nn.Module,
+    model: Path | nn.Module | None,
     module_input: nn.Module | None,
     transform_options: dict[str, Any] | None,
     output_dir: Path | None,
-) -> str:
+) -> str | None:
     if module_input is None:
+        if model is None:
+            return None
         if not isinstance(model, (str, Path)):
             raise InternalError("Expected model path when module input is absent.")
         return os.fspath(model)
@@ -202,8 +242,9 @@ def _resolve_output_base_dir(
 def run_advisor(
     advice_category: str,
     target_profile: str,
-    model: Path | nn.Module,
+    model: Path | nn.Module | None = None,
     *,
+    profiling_data: str | Path | Sequence[str | Path] | None = None,
     backends: list[str] | None = None,
     example_inputs: tuple[Any, ...] | None = None,
     enable_quantization: bool = False,
@@ -226,10 +267,11 @@ def run_advisor(
     Args:
         advice_category: Compatibility or performance advice category string.
         target_profile: Target profile name or path.
-        model: Model path or torch.nn.Module input. For torch.nn.Module inputs,
-            MLIA exports a temporary .pt2 artifact for analysis; the standardized
-            output reports `model.format` as "pt2" and `model.hash` for that
-            exported artifact.
+        model: Optional model path or torch.nn.Module input. For torch.nn.Module
+            inputs, MLIA exports a temporary .pt2 artifact for analysis. The model
+            may be omitted when profiling_data is provided.
+        profiling_data: Optional measured profiling data path or ordered sequence of
+            paths. It is passed through the target advisor workflow as a list.
         backends: Optional list of backend names. Defaults to CLI behavior.
         example_inputs: Required for torch.nn.Module inputs.
         enable_quantization: Only valid for torch.nn.Module inputs.
@@ -270,6 +312,7 @@ def run_advisor(
         - CLI behavior is unchanged by this API path.
     """
     validation_mode = _normalize_validation_mode(validation)
+    profiling_data_path = _validate_analysis_inputs(model, profiling_data)
     settings = ApplicationSettings()
     advice_set = {advice_category}
     advice_category_enum = AdviceCategory.from_string(advice_set)
@@ -287,7 +330,11 @@ def run_advisor(
     output_base = _resolve_output_base_dir(write_output_files, output_dir)
 
     try:
-        selected_backends = validate_backend(target_profile, backends)
+        selected_backends = (
+            validate_backend(target_profile, backends, profiling_data=True)
+            if profiling_data_path is not None
+            else validate_backend(target_profile, backends)
+        )
     except ConfigurationError:
         raise
     except ValueError as err:
@@ -316,6 +363,7 @@ def run_advisor(
         advice_set=advice_set,
         advice_category_enum=advice_category_enum,
         model=model,
+        profiling_data=profiling_data_path,
         module_input=module_input,
         transform_options=transform_options,
         logs_dir=logs_dir,
@@ -368,7 +416,8 @@ def _configured_api_logging(
 class _RunAdvisorInputs:
     advice_set: set[str]
     advice_category_enum: set[AdviceCategory]
-    model: Path | nn.Module
+    model: Path | nn.Module | None
+    profiling_data: list[Path] | None
     module_input: nn.Module | None
     transform_options: dict[str, Any] | None
     logs_dir: str | Path | None
@@ -417,6 +466,7 @@ def _run_advisor_with_context(
             target_profile=inputs.target_profile,
             model=model_for_run,
             category=inputs.advice_set,
+            profiling_data=inputs.profiling_data,
             context=local_context,
             backends=inputs.selected_backends,
             backend_options=inputs.backend_options,
@@ -579,11 +629,11 @@ def _raise_if_deprecated_output_missing(
 
 
 def list_targets() -> list[dict[str, object]]:
-    """List available targets with supported advice/backends and profiles.
+    """List targets, profiles, backends and mode-specific capabilities.
 
     Returns:
-        A list of target entries with names, profiles, supported backends, and
-        supported advice categories.
+        A list of target entries with their profiles, backend hierarchy and
+        supported analysis categories for estimation and profiling modes.
     """
     targets: list[dict[str, object]] = []
     profiles = profiles_by_target()
@@ -599,12 +649,35 @@ def list_targets() -> list[dict[str, object]]:
         supported_advice = [
             str(advice.name).lower() for advice in advice_order if advice in supported
         ]
+        target_info = target_registry.items[target]
+        supported_backend_names = sorted(target_supported_backends(target))
+        backends = []
+        for backend_name in supported_backend_names:
+            config = backend_registry.items[backend_name]
+            capabilities = {
+                mode.value: [
+                    str(advice.name).lower()
+                    for advice in advice_order
+                    if advice in config.supported_analysis(mode)
+                ]
+                for mode in AnalysisMode
+            }
+            backends.append(
+                {
+                    "name": backend_name,
+                    "pretty_name": backend_registry.pretty_name(backend_name),
+                    "default": backend_name in target_info.default_backends,
+                    "selectable": config.selectable,
+                    "capabilities": capabilities,
+                }
+            )
         targets.append(
             {
                 "target": target,
                 "pretty_name": target_registry.pretty_name(target),
                 "profiles": profiles.get(target, []),
-                "supported_backends": sorted(target_supported_backends(target)),
+                "backends": backends,
+                "supported_backends": supported_backend_names,
                 "supported_advice": supported_advice,
             }
         )
@@ -792,12 +865,13 @@ def supported_backends(target_profile: str | Path) -> list[str]:
 
 def get_advice(
     target_profile: str,
-    model: str | Path | nn.Module,
+    model: str | Path | nn.Module | None,
     category: set[str],
     optimization_profile: str | None = None,
     optimization_targets: list[dict[str, Any]] | None = None,
     context: ExecutionContext | None = None,
     backends: list[str] | None = None,
+    profiling_data: str | Path | Sequence[str | Path] | None = None,
     backend_options: dict[str, dict[str, Any]] | None = None,
     accept_eula: bool | None = False,
     settings: ApplicationSettings | None = None,
@@ -820,6 +894,8 @@ def get_advice(
            could be used for advanced use cases
     :param backends: A list of backends that should be used for the given
            target. Default settings will be used if None.
+    :param profiling_data: Optional measured profiling data path or ordered sequence
+           of paths. It is passed to the selected target advisor as a list.
     :param backend_options: Optional dictionary of backend-specific options
            discovered from CLI arguments. Backend parameters are defined in each
            backend's BackendConfiguration.cli_options and automatically exposed
@@ -843,6 +919,7 @@ def get_advice(
         >>> get_advice("ethos-u55-256", "path/to/the/model", {"performance"})
 
     """
+    profiling_data_path = _validate_analysis_inputs(model, profiling_data)
     advice_category = AdviceCategory.from_string(category)
 
     if context is not None:
@@ -852,7 +929,11 @@ def get_advice(
         context = ExecutionContext(advice_category=advice_category)
 
     try:
-        validated_backends = validate_backend(target_profile, backends)
+        validated_backends = (
+            validate_backend(target_profile, backends, profiling_data=True)
+            if profiling_data_path is not None
+            else validate_backend(target_profile, backends)
+        )
     except ConfigurationError:
         raise
     except ValueError as err:
@@ -869,6 +950,7 @@ def get_advice(
         optimization_targets=optimization_targets,
         optimization_profile=optimization_profile,
         backends=validated_backends,
+        profiling_data=profiling_data_path,
         backend_options=backend_options,
     )
     return advisor.run(context, settings or ApplicationSettings())
@@ -877,7 +959,7 @@ def get_advice(
 def get_advisor(
     context: ExecutionContext,
     target_profile: str | Path,
-    model: str | Path | nn.Module,
+    model: str | Path | nn.Module | None,
     **extra_args: Any,
 ) -> InferenceAdvisor:
     """Find appropriate advisor for the target."""
@@ -885,6 +967,8 @@ def get_advisor(
         extra_args["optimization_profile"] = get_optimization_profile(
             extra_args["optimization_profile"]
         )
+    if extra_args.get("profiling_data") is None:
+        extra_args.pop("profiling_data", None)
     target = profile(target_profile).target
     factory_function = target_registry.items[target].advisor_factory_func
     return factory_function(

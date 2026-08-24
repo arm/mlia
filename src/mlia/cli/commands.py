@@ -171,11 +171,12 @@ def run_analysis_plugins(
 
 def _create_check_context(
     *,
-    model: str,
+    model: str | None,
     target_profile: str,
     backend: list[str] | None,
     performance: bool,
     compatibility: bool,
+    profiling_data: list[Path] | None,
     output_dir: Path | None,
     json_output: bool,
     i_agree_to_the_contained_eula: bool,
@@ -190,6 +191,7 @@ def _create_check_context(
         "backend": backend,
         "performance": performance,
         "compatibility": compatibility,
+        "profiling_data": profiling_data,
         "output_dir": output_dir,
         "json": json_output,
         "i_agree_to_the_contained_eula": i_agree_to_the_contained_eula,
@@ -480,12 +482,13 @@ def target_app_main(ctx: typer.Context) -> None:
 
 
 def check(
-    model: str,
+    model: str | None,
     target_profile: str,
     output_dir: Path | None = None,
     backend: list[str] | None = None,
     performance: bool = False,
     compatibility: bool = False,
+    profiling_data: list[Path] | None = None,
     json_output: bool = False,
     i_agree_to_the_contained_eula: bool = False,
     noninteractive: bool = False,
@@ -496,6 +499,10 @@ def check(
     """Generate advice for the input model and return canonical output."""
     from mlia.api import get_advice
     from mlia.cli.command_validators import validate_check_target_profile
+
+    if model is None and profiling_data is None:
+        typer.echo("Missing argument 'MODEL'", err=True)
+        raise typer.Exit(code=2)
 
     category = set()
     if compatibility:
@@ -516,6 +523,7 @@ def check(
         backend=backend,
         performance=performance,
         compatibility=compatibility,
+        profiling_data=profiling_data,
         output_dir=output_dir,
         json_output=json_output,
         i_agree_to_the_contained_eula=i_agree_to_the_contained_eula,
@@ -528,6 +536,7 @@ def check(
         target_profile,
         model,
         category,
+        profiling_data=profiling_data,
         context=execution_context,
         backends=backend,
         accept_eula=True
@@ -545,6 +554,7 @@ def check(
         "backend": backend,
         "performance": performance,
         "compatibility": compatibility,
+        "profiling_data": profiling_data,
         "json_output": json_output,
         "i_agree_to_the_contained_eula": i_agree_to_the_contained_eula,
         "noninteractive": noninteractive,
@@ -561,7 +571,6 @@ def check(
 )
 def check_command(
     ctx: typer.Context,
-    model: Annotated[str, typer.Argument(help="Model to check")],
     target_profile: Annotated[
         str,
         typer.Option(
@@ -571,9 +580,10 @@ def check_command(
             autocompletion=complete_target_profile_names,
         ),
     ],
+    model: Annotated[str | None, typer.Argument(help="Model to check")] = None,
     output_dir: Annotated[
         Path | None,
-        typer.Option("--output-dir", help="Set an output directory"),
+        typer.Option("--output-dir", "--out-dir", help="Set an output directory"),
     ] = None,
     backend: Annotated[
         list[str] | None,
@@ -598,6 +608,16 @@ def check_command(
             help="Perform compatibility checks (default)",
         ),
     ] = False,
+    profiling_data: Annotated[
+        list[Path] | None,
+        typer.Option(
+            "--profiling-data",
+            help=(
+                "Use measured profiling data as an input source; repeat for "
+                "ordered inputs"
+            ),
+        ),
+    ] = None,
     json_output: Annotated[
         bool,
         typer.Option(
@@ -638,6 +658,7 @@ def check_command(
             backend=backend,
             performance=performance,
             compatibility=compatibility,
+            profiling_data=profiling_data,
             json_output=json_output,
             i_agree_to_the_contained_eula=i_agree_to_the_contained_eula,
             noninteractive=noninteractive,

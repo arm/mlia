@@ -59,6 +59,13 @@ class BackendType(Enum):
     CUSTOM = auto()
 
 
+class AnalysisMode(Enum):
+    """Define the supported source of analysis data."""
+
+    ESTIMATION = "estimation"
+    PROFILING = "profiling"
+
+
 class BackendConfiguration:
     """Base class for backend configurations."""
 
@@ -72,6 +79,8 @@ class BackendConfiguration:
         cli_options: dict[str, BackendCliOption] | None = None,
         is_deprecated: bool = False,
         deprecated_message: str | None = None,
+        supports_estimation: bool = True,
+        supports_profiling_data: bool = False,
         default_collapse_rules: tuple[CollapseRule, ...] = (),
     ) -> None:
         """Set up basic information about the backend."""
@@ -83,6 +92,8 @@ class BackendConfiguration:
         self.cli_options = cli_options or {}
         self.is_deprecated = is_deprecated
         self.deprecated_message = deprecated_message
+        self.supports_estimation = supports_estimation
+        self.supports_profiling_data = supports_profiling_data
         self.default_collapse_rules = default_collapse_rules
 
     def __str__(self) -> str:
@@ -100,18 +111,36 @@ class BackendConfiguration:
                 and self.cli_options == other.cli_options
                 and self.is_deprecated == other.is_deprecated
                 and self.deprecated_message == other.deprecated_message
+                and self.supports_estimation == other.supports_estimation
+                and self.supports_profiling_data == other.supports_profiling_data
                 and self.default_collapse_rules == other.default_collapse_rules
             )
         raise NotImplementedError
 
+    def supported_analysis(self, mode: AnalysisMode) -> list[AdviceCategory]:
+        """Return advice categories supported for an analysis mode."""
+        supports_mode = (
+            self.supports_estimation
+            if mode == AnalysisMode.ESTIMATION
+            else self.supports_profiling_data
+        )
+        return list(self.supported_advice) if supports_mode else []
+
     def is_supported(
-        self, advice: AdviceCategory | None = None, check_system: bool = False
+        self,
+        advice: AdviceCategory | None = None,
+        check_system: bool = False,
+        mode: AnalysisMode | None = None,
     ) -> bool:
-        """Check backend supports the current system and advice."""
+        """Check backend supports the current system, mode and advice."""
         is_system_supported = (
             not self.supported_systems
             or not check_system
             or any(sys.is_compatible() for sys in self.supported_systems)
         )
-        is_advice_supported = advice is None or advice in self.supported_advice
-        return is_system_supported and is_advice_supported
+        supported_advice = (
+            self.supported_advice if mode is None else self.supported_analysis(mode)
+        )
+        is_mode_supported = mode is None or bool(supported_advice)
+        is_advice_supported = advice is None or advice in supported_advice
+        return is_system_supported and is_mode_supported and is_advice_supported

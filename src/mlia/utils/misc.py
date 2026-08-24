@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 """Various util functions."""
 
+from collections.abc import Iterable
 from importlib import metadata
 from pathlib import Path
 from typing import Any
@@ -11,6 +12,20 @@ from mlia.utils.filesystem import sha256
 
 class MetadataError(Exception):
     """Metadata error."""
+
+
+def summarize_list(
+    values: Iterable[object], *, limit: int = 5, separator: str = ", "
+) -> str:
+    """Format a bounded list and report how many values were omitted."""
+    if limit < 1:
+        raise ValueError("List summary limit must be positive.")
+    items = [str(value) for value in values]
+    visible = separator.join(items[:limit])
+    omitted = len(items) - limit
+    if omitted > 0:
+        return f"{visible}{separator}... ({omitted} more omitted)"
+    return visible
 
 
 def yes(prompt: str) -> bool:

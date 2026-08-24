@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import pytest
 
+from mlia.backend.config import BackendConfiguration, BackendType
 from mlia.cli import command_validators
 from mlia.core.errors import ConfigurationError
 
@@ -80,6 +81,87 @@ def test_validate_backend_returns_default_backends(
 def test_normalize_string(input_string: str, expected_output: str) -> None:
     """Test normalize_string function with various inputs."""
     assert command_validators.normalize_string(input_string) == expected_output
+
+
+def test_validate_backend_selects_unique_profiling_capable_backend(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Profiling input should select the unique capable backend."""
+    monkeypatch.setattr(command_validators, "get_target", lambda _profile: "target")
+    monkeypatch.setattr(
+        command_validators,
+        "supported_backends",
+        lambda _target: ["estimator", "profiler"],
+    )
+    monkeypatch.setattr(command_validators, "default_backends", lambda _target: [])
+    monkeypatch.setattr(
+        command_validators.backend_registry,
+        "items",
+        {
+            "estimator": BackendConfiguration([], None, BackendType.BUILTIN, None),
+            "profiler": BackendConfiguration(
+                [],
+                None,
+                BackendType.BUILTIN,
+                None,
+                supports_profiling_data=True,
+            ),
+        },
+    )
+
+    assert command_validators.validate_backend(
+        "target-profile", None, profiling_data=True
+    ) == ["profiler"]
+
+
+def test_validate_backend_rejects_profiling_backend_ambiguity(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Multiple profiling-capable backends should require explicit selection."""
+    monkeypatch.setattr(command_validators, "get_target", lambda _profile: "target")
+    monkeypatch.setattr(
+        command_validators, "supported_backends", lambda _target: ["one", "two"]
+    )
+    monkeypatch.setattr(command_validators, "default_backends", lambda _target: [])
+    monkeypatch.setattr(
+        command_validators.backend_registry,
+        "items",
+        {
+            name: BackendConfiguration(
+                [],
+                None,
+                BackendType.BUILTIN,
+                None,
+                supports_profiling_data=True,
+            )
+            for name in ("one", "two")
+        },
+    )
+
+    with pytest.raises(ConfigurationError, match="Multiple backends"):
+        command_validators.validate_backend("target-profile", None, profiling_data=True)
+
+
+def test_validate_backend_rejects_estimator_for_profiling_data(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """An explicitly selected estimator must not consume measured data."""
+    monkeypatch.setattr(command_validators, "get_target", lambda _profile: "target")
+    monkeypatch.setattr(
+        command_validators,
+        "supported_backends",
+        lambda _target: ["estimator"],
+    )
+    monkeypatch.setattr(
+        command_validators.backend_registry,
+        "items",
+        {"estimator": BackendConfiguration([], None, BackendType.BUILTIN, None)},
+    )
+
+    with pytest.raises(ConfigurationError, match="does not support profiling data"):
+        command_validators.validate_backend(
+            "target-profile", ["estimator"], profiling_data=True
+        )
 
 
 def test_validate_check_target_profile_returns_false_when_nothing_can_run(
