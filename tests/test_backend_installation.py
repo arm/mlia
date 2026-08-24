@@ -17,6 +17,7 @@ from mlia.backend.install import (
     CompoundPathChecker,
     InstallFromVendorPackage,
     PackagePathChecker,
+    _filter_tar_members,
     logger,
 )
 from mlia.backend.repo import get_backend_repository
@@ -57,6 +58,21 @@ def _create_tar_from_directory(archive_path: Path, source_dir: Path) -> None:
 def _temporary_directory(path: Path) -> Iterator[Path]:
     path.mkdir(parents=True, exist_ok=True)
     yield path
+
+
+def test_archive_filter_accepts_destination_with_symlinked_parent(
+    tmp_path: Path,
+) -> None:
+    """Resolved destination aliases should not reject safe archive members."""
+    real_parent = tmp_path / "real"
+    real_parent.mkdir()
+    alias_parent = tmp_path / "alias"
+    alias_parent.symlink_to(real_parent, target_is_directory=True)
+    destination = alias_parent / "dist"
+    destination.mkdir()
+    member = tarfile.TarInfo("tool")
+
+    assert list(_filter_tar_members([member], destination)) == [member]
 
 
 def test_install_from_vendor_archive(

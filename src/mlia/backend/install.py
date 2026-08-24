@@ -346,7 +346,7 @@ def _filter_tar_members(
 
     def check_in_dir(path: Path) -> None:
         abs_path = (dst_dir / path).resolve()
-        abs_path.relative_to(dst_dir)
+        abs_path.relative_to(dst_dir.resolve())
 
     for member in members:
         try:
