@@ -33,7 +33,6 @@ COMMON_PATTERNS = (
     r".*Target information.*",
     r".*Model Analysis.*",
     r".*Model Analysis Results.*",
-    r".*Advice Generation.*",
 )
 
 COMPATIBILITY_PATTERNS = (r".*Operators(?: statistics)?:.*",)
