@@ -217,6 +217,9 @@ uv run pytest --no-success-flaky-report tests/
 uv build
 ```
 
+Wheel builds include a CycloneDX SBOM in the wheel's
+`mlia-<version>.dist-info/sboms/` directory.
+
 ## Getting support
 
 In case you need support or want to report an issue, give us feedback or simply
