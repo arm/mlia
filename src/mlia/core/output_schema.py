@@ -96,6 +96,21 @@ def onnx_source_operator_id(node_index: int) -> str:
     return f"{ENTITY_KIND_SOURCE_OPERATOR}/{node_index}"
 
 
+def tosa_source_operator_id(operator_id: int) -> str:
+    """Return the canonical identity for one directly checked TOSA operation.
+
+    ``operator_id`` is the parser-provided numeric operation identity. For a TOSA
+    flatbuffer it is assigned by deterministic region/block/operator traversal;
+    for TOSA-MLIR it is the numeric operation/result ID parsed from the SSA result.
+    Location and debug metadata never contribute to identity. The identity is
+    scoped to the containing result and is not guaranteed to remain stable across
+    separate flatbuffer serializations or TOSA-MLIR conversions.
+    """
+    if type(operator_id) is not int or operator_id < 0:  # pylint: disable=unidiomatic-typecheck
+        raise ValueError("TOSA source operator ID must be a non-negative integer.")
+    return f"{ENTITY_KIND_SOURCE_OPERATOR}/{operator_id}"
+
+
 def pt2_source_operator_id(node_name: str) -> str:
     """Return the canonical identity for a top-level PT2 operation node.
 

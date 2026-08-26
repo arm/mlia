@@ -593,6 +593,21 @@ class TestOnnxSourceOperatorId:
             schema.onnx_source_operator_id(node_index)  # type: ignore[arg-type]
 
 
+class TestTosaSourceOperatorId:
+    """Test canonical direct-TOSA source-operator identity construction."""
+
+    def test_uses_parser_numeric_operator_id(self) -> None:
+        """TOSA identity uses the parser's exact numeric operation identity."""
+        assert schema.tosa_source_operator_id(0) == "source_operator/0"
+        assert schema.tosa_source_operator_id(97) == "source_operator/97"
+
+    @pytest.mark.parametrize("operator_id", [-1, True, 1.5, "1", None])
+    def test_rejects_invalid_operator_id(self, operator_id: object) -> None:
+        """Only exact non-negative integer operation identities are valid."""
+        with pytest.raises(ValueError, match="non-negative integer"):
+            schema.tosa_source_operator_id(operator_id)  # type: ignore[arg-type]
+
+
 class TestPt2SourceOperatorId:
     """Test canonical PT2 source-operator identity construction."""
 
