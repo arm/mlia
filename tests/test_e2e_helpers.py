@@ -574,6 +574,101 @@ def test_run_case_runs_command_once(
     assert result.returncode == 0
 
 
+def test_run_case_stages_structured_capture_root_recursively(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A structured-capture root should be staged with its complete hierarchy."""
+    prepared_root = tmp_path / "prepared"
+    capture_root = prepared_root / "e2e_config" / "profiling" / "capture"
+    capture_files = {
+        Path("capture.json"): b"capture metadata",
+        Path("pipeline_000000/pipeline.json"): b"pipeline metadata",
+        Path("pipeline_000000/debug_database.bin"): b"debug database",
+        Path("pipeline_000000/neural_statistics_info.bin"): b"statistics info",
+        Path("pipeline_000000/shader_module_0.spv"): b"spir-v module",
+        Path("pipeline_000000/session_000000/session.json"): b"session metadata",
+        Path(
+            "pipeline_000000/session_000000/dispatch_000000/dispatch.json"
+        ): b"dispatch metadata",
+        Path(
+            "pipeline_000000/session_000000/dispatch_000000/statistics_mode1.bin"
+        ): b"dispatch statistics",
+    }
+    for relative_path, contents in capture_files.items():
+        source = capture_root / relative_path
+        source.parent.mkdir(parents=True, exist_ok=True)
+        source.write_bytes(contents)
+
+    case = E2ECase(
+        command="check",
+        args=(
+            "--performance",
+            "--target-profile",
+            "neural-technology",
+            "--backend",
+            "neural-technology-profiling-data",
+            "--profiling-data",
+            "e2e_config/profiling/capture",
+        ),
+    )
+    run_mock = MagicMock(return_value=subprocess.CompletedProcess(["mlia", "check"], 0))
+
+    monkeypatch.setattr(subprocess, "run", run_mock)
+    monkeypatch.setenv("MLIA_E2E_ARTIFACTS", str(prepared_root))
+
+    workdir = tmp_path / "workdir-structured-capture"
+    run_case(case, workdir=workdir)
+
+    staged_root = workdir / "e2e_config" / "profiling" / "capture"
+    assert {
+        path.relative_to(staged_root): path.read_bytes()
+        for path in staged_root.rglob("*")
+        if path.is_file()
+    } == capture_files
+    assert run_mock.call_args.args[0] == ["mlia", "check", *case.args]
+
+
+def test_run_case_stages_existing_directories_and_ignores_missing_tokens(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Stage existing files and directories while ignoring missing tokens."""
+    prepared_root = tmp_path / "prepared"
+    model = prepared_root / "e2e_config" / "model.h5"
+    directory = prepared_root / "profiling-data"
+    model.parent.mkdir(parents=True)
+    directory.mkdir()
+    model.write_text("model")
+    (directory / "capture.json").write_text("capture")
+
+    case = E2ECase(
+        command="check",
+        args=(
+            "--compatibility",
+            "profiling-data",
+            "missing-token",
+            "e2e_config/model.h5",
+        ),
+    )
+    run_mock = MagicMock(return_value=subprocess.CompletedProcess(["mlia", "check"], 0))
+
+    monkeypatch.setattr(subprocess, "run", run_mock)
+    monkeypatch.setenv("MLIA_E2E_ARTIFACTS", str(prepared_root))
+
+    workdir = tmp_path / "workdir-filtering"
+    run_case(case, workdir=workdir)
+
+    assert (workdir / "e2e_config" / "model.h5").read_text() == "model"
+    assert (workdir / "profiling-data" / "capture.json").read_text() == "capture"
+    assert run_mock.call_args.args[0] == [
+        "mlia",
+        "check",
+        "--compatibility",
+        "profiling-data",
+        "missing-token",
+        "e2e_config/model.h5",
+    ]
+
+
 def test_run_case_preserves_explicit_columns(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

@@ -166,21 +166,24 @@ def _stage_prepared_artifacts(
 
     for artifact_path in artifact_paths:
         source = _resolve_prepared_artifact_path(prepared_root_resolved, artifact_path)
-        if not source.is_file():
+        if not source.exists():
             raise E2EExecutionRuntimeError(
                 f"Prepared artifact does not exist: {artifact_path}."
             )
-        destination = (
-            workdir_resolved / source.relative_to(prepared_root_resolved)
-        ).resolve()
+        destination = (workdir_resolved / artifact_path).resolve()
         try:
             destination.relative_to(workdir_resolved)
         except ValueError as exc:
             raise E2EExecutionRuntimeError(
                 f"Prepared artifact path escapes work directory: {artifact_path}."
             ) from exc
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(source, destination)
+
+        if source.is_file():
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(source, destination)
+            continue
+
+        shutil.copytree(source, destination, dirs_exist_ok=True)
 
 
 def emit_e2e_results(result: subprocess.CompletedProcess[str]) -> None:
@@ -466,7 +469,7 @@ def _artifact_paths(args: Sequence[str], prepared_root: Path) -> tuple[str, ...]
             continue
 
         source = _resolve_prepared_artifact_path(prepared_root_resolved, argument)
-        if not source.is_file():
+        if not source.exists():
             continue
 
         artifact_paths.append(str(source.relative_to(prepared_root_resolved)))
