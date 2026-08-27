@@ -12,9 +12,13 @@ from unittest.mock import ANY, MagicMock, call
 
 import pytest
 
+from mlia.core.output_rendering import standardized_output_to_text
 from mlia.testing.e2e import (
+    COMMON_PATTERNS,
+    COMPATIBILITY_PATTERNS,
     MLIA_E2E_SHARD_COUNT,
     MLIA_E2E_SHARD_INDEX,
+    PERFORMANCE_PATTERNS,
     E2ECase,
     E2EExecutionRuntimeError,
     _load_artifacts_dir,
@@ -32,6 +36,44 @@ from mlia.testing.e2e import (
 def _clear_backend_install_cache() -> None:
     """Keep e2e helper cache state isolated between tests."""
     install_requested_backends.cache_clear()
+
+
+@pytest.mark.parametrize(
+    ("result", "patterns"),
+    [
+        pytest.param(
+            {"kind": "compatibility", "status": "ok", "producer": "backend"},
+            (*COMMON_PATTERNS, *COMPATIBILITY_PATTERNS),
+            id="compatibility",
+        ),
+        pytest.param(
+            {
+                "kind": "performance",
+                "status": "ok",
+                "producer": "backend",
+                "metrics": [{"name": "latency", "value": 1, "unit": "ms"}],
+            },
+            (*COMMON_PATTERNS, *PERFORMANCE_PATTERNS),
+            id="performance",
+        ),
+    ],
+)
+def test_shared_patterns_match_standardized_output(
+    result: dict[str, object], patterns: tuple[str, ...]
+) -> None:
+    """Shared e2e patterns should match target-neutral standardized output."""
+    output = standardized_output_to_text(
+        {
+            "target": {
+                "profile_name": "test-profile",
+                "target_type": "test-target",
+            },
+            "results": [result],
+        }
+    )
+
+    for pattern in patterns:
+        assert re.search(pattern, output), f"Pattern: {pattern}\n\n{output}"
 
 
 def test_case_str_renders_full_mlia_command() -> None:

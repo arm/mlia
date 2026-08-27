@@ -30,17 +30,15 @@ E2E_PERFORMANCE = "performance"
 
 COMMON_PATTERNS = (
     r".*ML Inference Advisor started.*",
-    r".*Target information.*",
-    r".*Model Analysis.*",
+    r".*Target information:.*",
     r".*Model Analysis Results.*",
 )
 
-COMPATIBILITY_PATTERNS = (r".*Operators(?: statistics)?:.*",)
+COMPATIBILITY_PATTERNS = (r".*Result \d+: Compatibility.*",)
 
 PERFORMANCE_PATTERNS = (
-    r".*Performance metrics:.*",
-    r"│ Metric[ ]+│ Value[ ]+│ Unit[ ]+│.*",
-    r".*IMPORTANT: The performance figures above refer to NPU only.*",
+    r".*Result \d+: Performance.*",
+    r".*Metrics:.*",
 )
 
 F = TypeVar("F", bound=Callable[..., object])
