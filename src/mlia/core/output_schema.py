@@ -83,6 +83,25 @@ ENTITY_KIND_CODE_STACK = "code_stack"
 ENTITY_KIND_CODE_LINE = "code_line"
 
 
+def tflite_source_operator_id(operator_index: int, subgraph_index: int = 0) -> str:
+    """Return the canonical identity for a TFLite source operation.
+
+    ``operator_index`` is the zero-based position in the containing TFLite
+    subgraph's operator list. The main graph at index zero omits its subgraph
+    coordinate; operations in nested subgraphs include both structural indexes.
+    """
+    if type(operator_index) is not int or operator_index < 0:
+        raise ValueError("TFLite operator index must be a non-negative integer.")
+    if type(subgraph_index) is not int or subgraph_index < 0:
+        raise ValueError("TFLite subgraph index must be a non-negative integer.")
+    if subgraph_index == 0:
+        return f"{ENTITY_KIND_SOURCE_OPERATOR}/operator/{operator_index}"
+    return (
+        f"{ENTITY_KIND_SOURCE_OPERATOR}/subgraph/{subgraph_index}"
+        f"/operator/{operator_index}"
+    )
+
+
 def onnx_source_operator_id(node_index: int) -> str:
     """Return the canonical identity for a top-level ONNX graph node.
 
@@ -697,7 +716,10 @@ class Entity:
 
     Entity ids are unique within their containing result. A source_operator id
     is the complete canonical source-operation identifier and is opaque to
-    generic consumers. For ONNX, the canonical id is
+    generic consumers. For TFLite, the canonical id is
+    ``source_operator/operator/<operator_index>`` for the main graph or
+    ``source_operator/subgraph/<subgraph_index>/operator/<operator_index>`` for
+    a nested subgraph. For ONNX, the canonical id is
     ``source_operator/<node_index>``, where ``node_index`` is the zero-based
     position in the top-level ``ModelProto.graph.node`` list. ONNX node names
     are presentation-only and never identity. For a PyTorch ExportedProgram in

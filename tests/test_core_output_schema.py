@@ -578,6 +578,38 @@ class TestEntityKind:
         assert entity_kind.child_kinds == ["source_operator"]
 
 
+class TestTfliteSourceOperatorId:
+    """Test canonical TFLite source-operator identity construction."""
+
+    def test_uses_main_graph_operator_index(self) -> None:
+        """Main graph identity uses the operator's zero-based position."""
+        assert schema.tflite_source_operator_id(0) == "source_operator/operator/0"
+        assert schema.tflite_source_operator_id(17) == "source_operator/operator/17"
+
+    def test_qualifies_nested_operator_with_subgraph_index(self) -> None:
+        """Nested graph identity includes both structural indexes."""
+        assert schema.tflite_source_operator_id(7, subgraph_index=1) == (
+            "source_operator/subgraph/1/operator/7"
+        )
+        assert schema.tflite_source_operator_id(0, subgraph_index=0) == (
+            "source_operator/operator/0"
+        )
+
+    @pytest.mark.parametrize("operator_index", [-1, True, 1.5, "1", None])
+    def test_rejects_invalid_operator_index(self, operator_index: object) -> None:
+        """Operator positions must be exact non-negative integers."""
+        with pytest.raises(ValueError, match="operator index.*non-negative integer"):
+            schema.tflite_source_operator_id(operator_index)  # type: ignore[arg-type]
+
+    @pytest.mark.parametrize("subgraph_index", [-1, True, 1.5, "1"])
+    def test_rejects_invalid_subgraph_index(self, subgraph_index: object) -> None:
+        """Subgraph positions must be exact non-negative integers."""
+        with pytest.raises(ValueError, match="subgraph index.*non-negative integer"):
+            schema.tflite_source_operator_id(
+                0, subgraph_index=cast(int, subgraph_index)
+            )
+
+
 class TestOnnxSourceOperatorId:
     """Test canonical ONNX source-operator identity construction."""
 
