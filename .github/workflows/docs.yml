@@ -102,7 +102,7 @@ jobs:
             exit 1
           fi
 
-          metadata=$(unzip -p "${wheels[0]}" '*.dist-info/METADATA' | tr -d '\r' | awk 'NF == 0 { exit } { print }')
+          metadata=$(unzip -p "${wheels[0]}" '*.dist-info/METADATA' | tr -d '\r' | awk 'NF == 0 { header_complete = 1 } !header_complete { print }')
           name=$(sed -n 's/^Name: //p' <<< "${metadata}")
           version=$(sed -n 's/^Version: //p' <<< "${metadata}")
           component=$(printf '%s' "${name}" | tr '[:upper:]' '[:lower:]' | sed -E 's/[-_.]+/-/g')
