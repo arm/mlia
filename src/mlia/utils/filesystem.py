@@ -10,6 +10,7 @@ import os
 import shutil
 import sys
 from contextlib import contextmanager
+from functools import lru_cache
 from importlib import import_module
 from pathlib import Path
 from tempfile import TemporaryDirectory, mkstemp
@@ -24,7 +25,8 @@ else:
 USER_ONLY_PERM_MASK = 0o700
 
 
-def get_mlia_resource_dirs() -> list[Path]:
+@lru_cache
+def get_mlia_resource_dirs() -> tuple[Path, ...]:
     """Get all available resources directories from installed MLIA packages."""
     try:
         mlia_module: ModuleType | None = import_module("mlia")
@@ -72,11 +74,11 @@ def get_mlia_resource_dirs() -> list[Path]:
     resource_dirs = deduped
 
     if resource_dirs:
-        return resource_dirs
+        return tuple(resource_dirs)
 
     with pkg_resources.path("mlia", "__init__.py") as init_path:
         project_root = init_path.parent
-        return [project_root / "resources"]
+        return (project_root / "resources",)
 
 
 def get_mlia_resources() -> Path:
