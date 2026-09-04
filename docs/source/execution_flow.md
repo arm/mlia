@@ -80,8 +80,8 @@ their result and backend lists and retains the first available shared metadata
 such as model, target, context, schema version, run ID, timestamp, tool, and
 extensions.
 
-The workflow returns this canonical dictionary directly. It no longer relies on
-target-specific event handlers to reconstruct output after execution.
+The workflow returns this canonical dictionary directly to the advisor for core
+post-processing.
 
 ## Core post-processing
 
@@ -118,8 +118,7 @@ API mode does not render reports to stdout or stderr.
 ## Failure flow
 
 Exceptions from collection, analysis, pattern detection, output collection, or
-post-processing propagate through the advisor and API to the CLI. The removed
-workflow-event layer is not involved in failure delivery.
+post-processing propagate through the advisor and API to the CLI.
 
 Handled configuration and backend-selection errors are shown concisely. Other
 exceptions propagate to the CLI, and unexpected exceptions include a traceback

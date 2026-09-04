@@ -24,7 +24,7 @@ from mlia import run_advisor
 result = run_advisor(
     advice_category="performance",
     target_profile="<target-profile>",
-    model=Path("model.tflite"),
+    model=Path("my_model.tflite"),
 )
 
 print(result["schema_version"])
@@ -85,9 +85,8 @@ closed when the invocation finishes.
 
 `get_advice()` is the lower-level library entry point used by the CLI. It accepts
 an optional `ExecutionContext`, model or profiling inputs, backend options, and
-resolved application settings. It now returns the advisor's processed
-standardized output rather than communicating results through workflow event
-handlers.
+resolved application settings, and returns the advisor's processed standardized
+output.
 
 Most integrations should prefer `run_advisor()` because it owns input
 validation, temporary output handling, backend installation, logging capture,

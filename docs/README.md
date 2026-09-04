@@ -10,7 +10,7 @@ This directory contains the MkDocs content for the `mlia` repository.
 ## Included pages
 
 - `source/index.md`: documentation landing page
-- `source/overview.md`: role of the core repo in the split MLIA ecosystem
+- `source/overview.md`: role of the core package in the MLIA plugin ecosystem
 - `source/high_level_architecture.md`: core runtime layers and extension boundaries
 - `source/plugin_architecture.md`: how the core repo relates to plugin repos
 - `source/execution_flow.md`: shared `mlia check` command, API, data, and artifact flow
@@ -45,6 +45,6 @@ backend management model.
 
 ## Relationship to plugins
 
-Plugin packages own the target-specific, backend-specific, and transformer or
-converter-specific detail. Keep that material in the plugin repos rather than
-copying it into the core repo.
+Plugin packages own target-specific, backend-specific, transformer-specific,
+and converter-specific guidance. Link to the owning plugin documentation rather
+than duplicating it here.

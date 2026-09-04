@@ -10,7 +10,7 @@ SPDX-License-Identifier: Apache-2.0
 From the repository root:
 
 ```bash
-uv sync --group docs
+uv sync --no-install-project --only-group docs
 uv run mkdocs build --strict
 ```
 

@@ -8,9 +8,9 @@ SPDX-License-Identifier: Apache-2.0
 ## Overview
 
 MLIA can present analysis results in human-readable text form or as structured
-JSON. The core `mlia` repository owns the standardized result shape and the
-high-level user experience around it, while the split plugin repositories
-document the detailed meaning of backend-specific metrics.
+JSON. The core `mlia` package defines the standardized result shape and shared
+presentation, while backend plugin documentation defines the detailed meaning
+of backend-specific metrics.
 
 ## Core output post-processing
 
@@ -57,9 +57,7 @@ Typical top-level JSON fields include:
 
 ### Schema 1.1.0
 
-Schema `1.1.0` uses `results[*].advice` for result-level advice. The earlier
-`results[*].advices` spelling was emitted by code but was not part of the
-validated schema contract.
+Schema `1.1.0` uses `results[*].advice` for result-level advice.
 
 A simplified example:
 
@@ -70,7 +68,7 @@ A simplified example:
   "tool": {"name": "mlia", "version": "..."},
   "run_id": "...",
   "context": {"host": "...", "environment": "..."},
-  "model": {"path": "model.tflite"},
+  "model": {"path": "my_model.tflite"},
   "target": {"profile": "<target-profile>"},
   "backends": [{"name": "<backend>"}],
   "results": [
@@ -104,8 +102,8 @@ From schema version `1.1.0`, result metrics can be represented in two ways:
 For numeric metrics, omitted `availability` means that the value is available.
 Unavailable metric entries do not contain a placeholder `value`.
 
-This explicit availability marker is currently limited to the standardized
-performance fields added for this work: `accelerator_operator_percentage`,
+This explicit availability marker applies to these standardized performance
+fields: `accelerator_operator_percentage`,
 `inferences_per_second`, `cpu_utilization`, `target_utilization`,
 `inference_time`, `model_weight_memory`, `peak_activation_memory`, and
 `average_memory`. It is not a complete availability map for every possible
@@ -192,7 +190,7 @@ A practical approach is:
 - See [Backends](backends.md) for backend ownership and discovery.
 - See [CLI](cli.md) for command-line examples using `--json` and backend
   selection.
-- See the split packages for detailed metric glossaries, examples, and
+- See the plugin packages for detailed metric glossaries, examples, and
   troubleshooting.
 
 ## Entity breakdown projection
@@ -215,10 +213,9 @@ relate to the same source operator. For example, five chain entities associated
 with one resize operation remain five distinct origins and their explicit `sum`
 metrics are additive.
 
-This replaces structural-leaf accounting. Terminal descendants are not used as
-accounting footprints or global equivalence keys. The graph is still validated
-and used to determine represented branches, target coverage, hierarchy
-competition, and contested extras.
+Terminal descendants are not used as accounting footprints or global
+equivalence keys. The graph determines represented branches, target coverage,
+hierarchy competition, and contested extras.
 
 ### Declared authoritative frontiers
 

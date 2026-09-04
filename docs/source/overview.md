@@ -5,18 +5,17 @@ SPDX-License-Identifier: Apache-2.0
 
 # Overview
 
-The `mlia` package is the core of the ML Inference Advisor ecosystem. It is
-where the shared CLI, Python API, and reporting model are defined.
+The `mlia` package provides the shared MLIA CLI, Python API, backend management,
+workflow contracts, and standardized output. Installable plugins register
+target, backend, transformer, and post-analysis capabilities.
 
 ## What lives in this package
 
-If you are trying to understand how to start with MLIA, how the CLI fits
-together, how JSON output is structured, or how plugins are discovered, this is
-the right package.
+Use this package to run MLIA, discover installed targets and backends, integrate
+MLIA through Python, or consume standardized JSON output.
 
-If you are trying to understand the detailed behaviour of a specific target,
-backend family, or model transformation path, the owning plugin package is the
-right place to go next.
+Use the owning plugin documentation for the detailed behaviour of a specific
+target, backend family, or model transformation path.
 
 ## What this documentation covers
 

@@ -5,10 +5,9 @@ SPDX-License-Identifier: Apache-2.0
 
 # MLIA Documentation
 
-This documentation site is the structured entry point for the `mlia` core
-repository. The top-level `README.md` remains the main getting-started guide,
-while these pages explain the role of the core repo now that significant
-functionality has been split into plugin repositories.
+This site documents the core `mlia` package. Start with the top-level
+`README.md` for installation and a first analysis, then use these pages for CLI,
+Python API, standardized-output, backend-management, and architecture guidance.
 
 For in-depth target-specific, backend-specific, or converter-specific detail,
 see the individual plugin repositories.

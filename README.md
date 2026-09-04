@@ -6,15 +6,10 @@ SPDX-License-Identifier: Apache-2.0
 # ML Inference Advisor
 
 ML Inference Advisor (MLIA) helps AI developers evaluate model compatibility
-and performance for supported inference targets. The core `mlia` package is the
-shared foundation of the wider MLIA ecosystem: it provides the common CLI,
-plugin discovery, backend management, reporting model, and Python API used
-across the split target, backend, and converter repos.
-
-In practice, that means the core repo is the place to start even when the final
-analysis is performed by plugin-owned functionality. The core package gives you
-one entry point and one output model, while plugin packages extend what is
-available in the environment.
+and performance for supported inference targets. The core `mlia` package
+provides the shared CLI, public Python API, backend management, and standardized
+output model. Installed plugins register target, backend, converter, and
+post-analysis capabilities.
 
 ## Table of Contents
 
@@ -24,7 +19,12 @@ available in the environment.
 - [Quick start](#quick-start)
 - [Python API](#python-api)
 - [Reporting bugs](#reporting-bugs)
+- [Configuration](#configuration)
 - [Development](#development)
+- [Getting support](#getting-support)
+- [Reporting vulnerabilities](#reporting-vulnerabilities)
+- [License](#license)
+- [Trademarks and copyrights](#trademarks-and-copyrights)
 
 ## Inclusive language commitment
 
@@ -35,23 +35,25 @@ If you find something that concerns you, email <terms@arm.com>.
 
 ## Releases
 
-Release notes can be found in [MLIA releases](RELEASES.md).
+Latest changes and release history can be found in [MLIA releases](https://github.com/arm/mlia/releases).
 
 ## Documentation
 
 Structured repository documentation lives in [docs/README.md](docs/README.md).
 Use the core docs for:
 
-- shared CLI guidance: [docs/source/cli.md](docs/source/cli.md)
-- backend discovery and installation model: [docs/source/backends.md](docs/source/backends.md)
-- output structure and JSON results: [docs/source/metrics.md](docs/source/metrics.md)
-- architecture and repo boundaries:
+- Shared CLI guidance: [docs/source/cli.md](docs/source/cli.md).
+- Backend discovery and installation:
+  [docs/source/backends.md](docs/source/backends.md).
+- Output structure and JSON results:
+  [docs/source/metrics.md](docs/source/metrics.md).
+- Architecture and package boundaries:
   [docs/source/overview.md](docs/source/overview.md),
   [docs/source/high_level_architecture.md](docs/source/high_level_architecture.md),
-  and [docs/source/execution_flow.md](docs/source/execution_flow.md)
+  and [docs/source/execution_flow.md](docs/source/execution_flow.md).
 
 Target-specific, backend-specific, and converter-specific detail belongs in the
-plugin repo that owns that functionality.
+documentation for the plugin package that owns that functionality.
 
 ## Installation
 
@@ -68,17 +70,20 @@ Install the core package with:
 pip install mlia
 ```
 
+Install the target, backend, and converter plugins required for your workflow.
+Use the owning plugin documentation for package names and any additional setup.
+
 ## Plugin model
 
 `mlia` is the core package. Targets, backends, and converters are provided
 through separate plugin wheels.
 
-A useful way to think about the split is:
+MLIA uses the following plugin model:
 
-- `mlia` provides the command-line experience and shared output model
-- plugin repos add target definitions, backend implementations, and converter
-  paths
-- MLIA discovers those plugins at runtime and exposes them through the same CLI
+- `mlia` provides the command-line experience and shared output model.
+- Plugin packages add target definitions, backend implementations, and converter
+  paths.
+- MLIA discovers those plugins at runtime and exposes them through the same CLI.
 
 Install only the plugin packages you need, then use the discovery commands to
 see what is available in the current environment:
@@ -99,7 +104,7 @@ mlia --help
 A typical run looks like this:
 
 ```bash
-mlia check model.tflite --target-profile <target-profile> --performance
+mlia check my_model.tflite --target-profile <target-profile> --performance
 ```
 
 Useful discovery commands:
@@ -113,16 +118,16 @@ mlia check --help
 Use custom target profiles by passing a TOML file path:
 
 ```bash
-mlia check model.tflite --target-profile ./my_target_profile.toml
+mlia check my_model.tflite --target-profile ./my_target_profile.toml
 ```
 
 If you are new to the plugin-based model, the safest first pattern is:
 
-1. install `mlia` and the plugin packages you actually need
-2. confirm target and backend discovery with `mlia target list` and
-   `mlia backend list`
-3. run one simple `mlia check` command before introducing backend-specific
-   options
+1. Install `mlia` and the plugin packages you need.
+2. Confirm target and backend discovery with `mlia target list` and
+   `mlia backend list`.
+3. Run one simple `mlia check` command, then add backend-specific options as
+   needed.
 
 ## Python API
 
@@ -131,12 +136,14 @@ analysis. The main entry point is `run_advisor()`, which mirrors the CLI
 `check` workflow and returns standardized output as a Python `dict`.
 
 ```python
+from pathlib import Path
+
 from mlia import run_advisor
 
 result = run_advisor(
     advice_category="performance",
-    target_profile="ethos-u55-256",
-    model=Path("model.tflite"),
+    target_profile="<target-profile>",
+    model=Path("my_model.tflite"),
 )
 
 print(result["schema_version"])
@@ -157,9 +164,7 @@ If you need `torch.nn.Module` inputs, install the optional extra:
 pip install mlia[torch]
 ```
 
-The Python API follows the same plugin-based architecture as the CLI: the core
-package provides the entry points and shared output structure, while installed
-plugins extend what targets and backends are available.
+The Python API uses the same installed target and backend plugins as the CLI.
 
 ## Reporting bugs
 

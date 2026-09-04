@@ -3,34 +3,19 @@ SPDX-FileCopyrightText: Copyright 2022-2026, Arm Limited and/or its affiliates.
 SPDX-License-Identifier: Apache-2.0
 --->
 
-# MLIA Releases
+# Archived MLIA Release Notes
 
-These are the release notes for all MLIA releases. They document all of the
-main feature changes, interface changes and issues that have been fixed.
+Current release notes are generated when a version tag is published and are
+available on the [GitHub Releases page](https://github.com/arm/mlia/releases).
 
-The version numbering adheres to the [semantic versioning](https://semver.org/)
-scheme.
+This file preserves release notes through version 0.9.2 and is not updated for
+new releases.
 
 ## Trademarks and Copyrights
 
 * Arm®, Cortex®-A, Ethos™-U, Corstone™ are registered trademarks or trademarks
   of Arm® Limited (or its subsidiaries) in the U.S. and/or elsewhere.
 * TensorFlow™ is a trademark of Google® LLC.
-
-## Next
-
-### Breaking changes
-
-* **Removed ArmNN TensorFlow Lite Delegate backend**: The deprecated `armnn-tflite-delegate`
-  backend has been completely removed from MLIA. This backend relied on an unmaintained
-  project and was no longer actively supported.
-* **Removed Cortex-A target profile**: The `cortex-a` target profile has been removed as
-  it was solely dependent on the removed ArmNN TensorFlow Lite Delegate backend.
-
-### Internal changes
-
-* Minimum required Python version bumped to 3.10
-* Minimum required TensorFlow version bumped to 2.20
 
 ## 0.9.2 (2025-10-31)
 

@@ -90,9 +90,9 @@ hardware family, backend, converter, or downstream analysis. Instead:
 - Analysis plugins can add check options and process completed standardized
   output after a successful run.
 
-The generic plugin utilities retain an `mlia.plugin.cli` loader, but the Typer
-application does not call it. The top-level command tree is therefore core-owned
-and cannot currently be extended through CLI entry points.
+The top-level command tree is core-owned and cannot be extended through plugin
+entry points. Backend and analysis plugins can add dynamic options to
+`mlia check`.
 
 This keeps orchestration, validation, and output contracts in core while
 allowing plugin packages to evolve independently.

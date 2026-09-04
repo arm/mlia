@@ -7,11 +7,13 @@ SPDX-License-Identifier: Apache-2.0
 
 ## Overview
 
-The core `mlia` repository owns the main command-line experience. Even when the
-actual analysis is implemented by split plugin repositories, users generally
-interact through the CLI entry points provided by this repo.
+The core `mlia` package provides the command-line interface. Installed plugins
+register the targets, backends, transformations, and post-analysis capabilities
+available through that interface.
 
-These CLI docs therefore focus on the shared workflow: discovering available capabilities, selecting a target profile, running analysis, and following results to the component that provides detailed behavior.
+This guide covers capability discovery, target-profile selection, analysis, and
+standardized output. Use the owning plugin documentation for target- or
+backend-specific options and result interpretation.
 
 ## Main commands
 
@@ -60,25 +62,25 @@ mlia backend list
 Run a compatibility check:
 
 ```bash
-mlia check model.tflite --target-profile <target-profile> --compatibility
+mlia check my_model.tflite --target-profile <target-profile> --compatibility
 ```
 
 Run a performance check:
 
 ```bash
-mlia check model.tflite --target-profile <target-profile> --performance
+mlia check my_model.tflite --target-profile <target-profile> --performance
 ```
 
 Request JSON output:
 
 ```bash
-mlia check model.tflite --target-profile <target-profile> --performance --json
+mlia check my_model.tflite --target-profile <target-profile> --performance --json
 ```
 
 Use measured profiling data alongside a source model:
 
 ```bash
-mlia check model.tflite --target-profile <target-profile> --performance \
+mlia check my_model.tflite --target-profile <target-profile> --performance \
   --profiling-data <profiling-data-path> --json --out-dir <report-dir>
 ```
 
@@ -112,7 +114,7 @@ the `NO_COLOR` environment variable to any non-empty value before running the
 command:
 
 ```bash
-NO_COLOR=1 mlia check model.tflite --target-profile <target-profile> --performance
+NO_COLOR=1 mlia check my_model.tflite --target-profile <target-profile> --performance
 ```
 
 Color is also disabled automatically when standard output is not a TTY, such as
@@ -159,9 +161,10 @@ registered as `example` receives only the `plugins.example` table.
 
 ## Plugin relationship
 
-The core repo provides commands, workflow orchestration, standardized-output
+The core package provides commands, workflow orchestration, standardized-output
 processing, and rendering. Plugin packages can provide targets, backends,
-transformers, CLI commands, and post-analysis actions.
+transformers, dynamic backend options, and post-analysis actions. The top-level
+command tree is core-owned.
 
 A useful mental model is:
 
@@ -171,9 +174,3 @@ A useful mental model is:
 4. Core validates, post-processes, and renders their standardized output.
 5. Enabled analysis plugins consume the completed result.
 6. Plugin docs explain the detailed behaviour owned by each plugin package.
-
-## README versus docs
-
-Use `README.md` when you want the broad getting-started path. Use this page when
-you want a slightly more guided description of the core CLI responsibilities in
-the plugin-based architecture without jumping straight into plugin-specific detail.
