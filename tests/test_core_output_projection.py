@@ -1255,6 +1255,151 @@ def test_equal_scope_targets_preserve_sealed_frontier_priority() -> None:
         ] == [9]
 
 
+@pytest.mark.parametrize(
+    ("alternative_units", "alternative_value"),
+    [(["b"], 5), (["b"], 7), (["a", "b"], 10), (["a", "b"], 12)],
+    ids=[
+        "equal-partial",
+        "conflicting-partial",
+        "equal-complete",
+        "conflicting-complete",
+    ],
+)
+def test_equal_scope_targets_preserve_composed_sealed_frontier(
+    alternative_units: list[str],
+    alternative_value: int,
+) -> None:
+    """Peer recipes retain a sealed sum despite alternatives with other origins."""
+    entities = [
+        schema.Entity(
+            id=target_id,
+            kind="peer",
+            name=target_id,
+            child_ids=["a", "b"],
+        )
+        for target_id in ("target-a", "target-b")
+    ]
+    entities.extend(
+        [
+            schema.Entity(id="donor-a", kind="donor", name="a", child_ids=["a"]),
+            schema.Entity(id="donor-b0", kind="donor", name="b0", child_ids=["b"]),
+            schema.Entity(id="donor-b1", kind="donor", name="b1", child_ids=["b"]),
+            schema.Entity(
+                id="alternative-b",
+                kind=schema.ENTITY_KIND_CODE_STACK,
+                name="alternative b",
+                child_ids=alternative_units,
+            ),
+            schema.Entity(id="a", kind=schema.ENTITY_KIND_SOURCE_OPERATOR, name="a"),
+            schema.Entity(id="b", kind=schema.ENTITY_KIND_SOURCE_OPERATOR, name="b"),
+        ]
+    )
+    result = _result(
+        entities,
+        [
+            _breakdown(
+                entity_id, _metric(value, aggregation=schema.AggregationType.SUM)
+            )
+            for entity_id, value in (
+                ("donor-a", 5),
+                ("donor-b0", 2),
+                ("donor-b1", 3),
+                ("alternative-b", alternative_value),
+            )
+        ],
+    )
+
+    projected = project_entity_breakdowns(result)
+
+    # The declared frontiers seal a=5 and b=2+3. Neither piece alone covers
+    # a peer, and the raw alternative has a different accounting origin.
+    for target_id in ("target-a", "target-b"):
+        assert [
+            breakdown
+            for breakdown in projected.breakdowns
+            if breakdown.entity_id == target_id
+        ] == [
+            _breakdown(target_id, _metric(10, aggregation=schema.AggregationType.SUM))
+        ]
+
+
+@pytest.mark.parametrize("same_provenance", [False, True])
+def test_equal_valued_peer_recipes_preserve_sealed_provenance(
+    same_provenance: bool,
+) -> None:
+    """Equal resolutions still need the priority of an exposed sealed recipe."""
+    declarations = [
+        ("peer-a", "unrestricted", ["a", "b"]),
+        ("peer-b", "unrestricted", ["a", "b"]),
+        ("restricted-peer", "restricted", ["a", "b"]),
+        ("claim-x", "restricted", ["x"]),
+        ("donor-x", "donor", ["sealed-x"]),
+        ("donor-yz", "donor", ["sealed-yz"]),
+        ("sealed-x", "sealed-view", ["a", "x"]),
+        ("sealed-yz", "sealed-view", ["a", "y", "z"]),
+        ("donor-b0", "donor", ["b"]),
+        ("donor-b1", "donor", ["b"]),
+    ]
+    measurements = [
+        ("donor-x", 5),
+        ("donor-yz", 7),
+        ("donor-b0", 2),
+        ("donor-b1", 3 if same_provenance else 2),
+    ]
+    leaves = ["a", "b", "x", "y", "z"]
+    if same_provenance:
+        declarations.extend(
+            [
+                ("claim-w", "unrestricted", ["w"]),
+                ("raw-w", schema.ENTITY_KIND_CODE_STACK, ["a", "b", "w"]),
+            ]
+        )
+        measurements.append(("raw-w", 8))
+        leaves.append("w")
+    else:
+        declarations.extend(
+            [
+                ("raw-x", schema.ENTITY_KIND_CODE_STACK, ["a", "b", "x"]),
+                ("raw-yz", schema.ENTITY_KIND_CODE_STACK, ["a", "b", "y", "z"]),
+            ]
+        )
+        measurements.extend([("raw-x", 9), ("raw-yz", 8)])
+    entities = [
+        schema.Entity(id=entity_id, kind=kind, name=entity_id, child_ids=children)
+        for entity_id, kind, children in declarations
+    ]
+    entities.extend(
+        schema.Entity(id=leaf, kind=schema.ENTITY_KIND_SOURCE_OPERATOR, name=leaf)
+        for leaf in leaves
+    )
+    result = _result(
+        entities,
+        [
+            _breakdown(
+                entity_id, _metric(value, aggregation=schema.AggregationType.SUM)
+            )
+            for entity_id, value in measurements
+        ],
+    )
+
+    projected = project_entity_breakdowns(result)
+
+    # Both peers need to expose their preferred sealed sum, even when their
+    # current resolution has the same value or identical provenance. Otherwise
+    # the restricted peer's higher-extra sealed copy overrides their result.
+    expected = 10 if same_provenance else 9
+    for target_id in ("peer-a", "peer-b"):
+        assert [
+            breakdown
+            for breakdown in projected.breakdowns
+            if breakdown.entity_id == target_id
+        ] == [
+            _breakdown(
+                target_id, _metric(expected, aggregation=schema.AggregationType.SUM)
+            )
+        ]
+
+
 def _equivalent_recipe_target_values(
     ids: dict[str, str],
 ) -> dict[str, float | int | None]:

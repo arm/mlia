@@ -1786,33 +1786,15 @@ def _recipe_source_ids(
             if frontier_requirements.conflicted:
                 continue
             eligible = eligible_contributors(target_id)
-            sealed_keys = {
-                (
-                    item.covered_units,
-                    item.extras,
-                    item.accounted.origins,
-                ): item.accounted.figure_key
-                for item in eligible
-                if item.accounted.sealed
-            }
-            if not any(
-                not item.accounted.sealed
-                and (
-                    sealed_key := sealed_keys.get(
-                        (
-                            item.covered_units,
-                            item.extras,
-                            item.accounted.origins,
-                        )
-                    )
-                )
-                is not None
-                and sealed_key != item.accounted.figure_key
-                for item in eligible
-            ):
+            sealed = [item for item in eligible if item.accounted.sealed]
+            if not sealed or len(sealed) == len(eligible):
                 continue
+            # Resolve complete sealed derivations, including sums assembled
+            # from several contributors. Expose the recipe even if the target
+            # already resolves identically: a complete copy has higher priority
+            # for its peers than independently aggregating the same origins.
             resolution = _eligible_resolution(
-                [item for item in eligible if item.accounted.sealed],
+                sealed,
                 required_units(target_id),
                 frontier_requirements.origins,
             )
