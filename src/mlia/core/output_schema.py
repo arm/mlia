@@ -165,8 +165,8 @@ def vgf_source_operator_id(segment_index: int, spirv_result_id: int) -> str:
 # Entity kind ids with schema-defined semantics do not require matching
 # result-level entity_kinds declarations. Backends may produce source_operator,
 # model, and code_stack entities; code_line is derived centrally by core output
-# postprocessing. Other entity kind ids are backend-defined and should be declared
-# in result.entity_kinds when consumers need to understand their relationships.
+# postprocessing. Every other entity kind id used by an entity is backend-defined
+# and must be declared in result.entity_kinds, even if it has no relationships.
 #
 # A code_stack entity represents one source/debug stack-frame prefix rather than
 # a globally unique function/frame. Its identity includes all ancestor frames

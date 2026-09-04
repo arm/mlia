@@ -1,3 +1,8 @@
+> **Archive status (September 2, 2026):** This checklist records the intended CLI
+> plugin integration. The current Typer application does not invoke
+> `load_cli_plugins()`, so the completed CLI-registration items below do not
+> describe current runtime behaviour.
+
 ## 1. Discovery and compatibility
 
 - [x] 1.1 Add entry-point discovery for backend, target, CLI, and converter

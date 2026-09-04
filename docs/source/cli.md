@@ -118,33 +118,59 @@ NO_COLOR=1 mlia check model.tflite --target-profile <target-profile> --performan
 Color is also disabled automatically when standard output is not a TTY, such as
 when redirecting output to a file or piping it to another command.
 
-## Backend-specific options
+## Dynamic backend and analysis options
 
-The CLI can expose backend-specific options depending on which backends are
-installed.
+The `check` command can expose additional options from installed backend and
+post-analysis plugins. These options are registered before command-line parsing,
+so the available command surface depends on the current environment.
 
-If you are unsure which options are available in the current environment, run:
+Use:
 
 ```bash
 mlia check --help
 ```
 
-This is often the safest way to confirm what a real environment supports before
-assuming a plugin-specific example applies to your setup.
+to inspect the actual backend and post-analysis options available. Backend
+option values are passed to their owning backend. Analysis-plugin options decide
+whether the plugin runs after successful analysis.
+
+The CLI first renders the processed standardized output and then invokes enabled
+post-analysis plugins with that same output, the execution context, resolved
+command parameters, and plugin-scoped configuration. These plugins extend what
+happens after analysis; they do not replace target collectors or analyzers.
+
+## Configuration
+
+MLIA supports `core`, `filtering`, `backend_options`, and plugin-scoped settings
+in addition to the top-level color setting. For example:
+
+```toml
+[[filtering.collapse]]
+kind = "code_stack"
+attribute = "file"
+globs = ["*/generated/*"]
+
+[plugins.example]
+output_format = "custom"
+```
+
+Collapse rules are applied during standardized-output post-processing. A plugin
+registered as `example` receives only the `plugins.example` table.
 
 ## Plugin relationship
 
-The core repo provides the commands and workflow orchestration. Plugin packages
-provide target plugins, backend plugins, and transformer plugins that are
-installed into that experience.
+The core repo provides commands, workflow orchestration, standardized-output
+processing, and rendering. Plugin packages can provide targets, backends,
+transformers, CLI commands, and post-analysis actions.
 
 A useful mental model is:
 
 1. `mlia` is the front door.
-2. `mlia target` and `mlia backend` help discover available capabilities.
-3. Plugin repos extend what those commands can do.
-4. Plugin docs explain the detailed behaviour once you know which plugin path
-   your run is using.
+2. `mlia target` and `mlia backend` expose installed capabilities.
+3. Target and backend plugins determine how analysis runs.
+4. Core validates, post-processes, and renders their standardized output.
+5. Enabled analysis plugins consume the completed result.
+6. Plugin docs explain the detailed behaviour owned by each plugin package.
 
 ## README versus docs
 

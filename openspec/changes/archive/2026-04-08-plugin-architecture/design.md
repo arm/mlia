@@ -1,5 +1,11 @@
 ## Context
 
+> **Archive status (September 2, 2026):** This design records the intended CLI
+> plugin integration. The current Typer application does not invoke
+> `load_cli_plugins()`, so `mlia.plugin.cli` entry points do not extend its
+> command tree. CLI registration claims below are historical, not descriptions
+> of current runtime behaviour.
+
 MLIA's plugin system allows external packages to extend the core product without
 changing the core package. The system crosses several parts of MLIA: entry
 point discovery, compatibility checks, backend and target registries, CLI

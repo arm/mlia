@@ -12,6 +12,22 @@ JSON. The core `mlia` repository owns the standardized result shape and the
 high-level user experience around it, while the split plugin repositories
 document the detailed meaning of backend-specific metrics.
 
+## Core output post-processing
+
+The authoritative standardized output produced by a workflow is processed before
+it reaches the CLI or Python API caller. Core:
+
+1. validates the basic structure and normalized entity graph;
+2. collapses entities selected by backend defaults and configured filtering rules;
+3. derives `code_line` entities from retained `code_stack` entities;
+4. projects missing breakdowns across the graph; and
+5. validates the resulting output again.
+
+This ordering is significant: projection operates on the retained graph and can
+use the centrally derived source-line view. Breakdowns retained after entity
+collapse remain authoritative during projection; collapse may discard breakdowns
+that target collapsed entities.
+
 ## Output formats
 
 ### Text output
@@ -36,6 +52,10 @@ Typical top-level JSON fields include:
 - `backends`
 - `results`
 - Optional result-level `results[*].advice`
+
+## Schema versions
+
+### Schema 1.1.0
 
 Schema `1.1.0` uses `results[*].advice` for result-level advice. The earlier
 `results[*].advices` spelling was emitted by code but was not part of the
@@ -74,7 +94,7 @@ A simplified example:
 The exact contents of the output depend on the installed plugins, but the
 high-level structure stays stable.
 
-### Metric availability
+#### Metric availability
 
 From schema version `1.1.0`, result metrics can be represented in two ways:
 
@@ -108,6 +128,40 @@ Example metric entries:
   }
 ]
 ```
+
+### Schema 1.2.0
+
+Schema version `1.2.0` makes entity identity, provenance, and aggregation
+semantics explicit. A result can include:
+
+- `mode`, identifying measured, simulated, or predicted results;
+- `entity_kinds`, declaring semantic parent-to-child relationships;
+- entities with multiple `parent_ids` and `child_ids`;
+- metrics with aggregation policy, sample count, and qualifiers; and
+- breakdowns, checks, and advice linked to canonical entity IDs.
+
+Core defines canonical `source_operator` identities for common model formats:
+
+| Format | Identity basis | Example shape |
+| --- | --- | --- |
+| ONNX | Zero-based position in the top-level graph node list | `source_operator/<node-index>` |
+| PT2 | Exact top-level `torch.fx.Node.name` | `source_operator/<node-name>` |
+| TOSA | Parser-provided numeric operation identity | `source_operator/<operator-id>` |
+| VGF | Model-sequence segment and SPIR-V result ID | `source_operator/segment_<index>/spirv-<result-id>` |
+
+Names, locations, debug labels, and presentation metadata do not replace these
+identities. IDs are scoped to their containing result; format-specific helpers
+document the stability and nested-graph limitations of each identity scheme.
+
+These identities are part of the generic standardized-output contract and are
+not specific to one target or backend. Plugins produce entities using these
+core-defined identities and document the backend-specific meaning of their
+metrics and additional entity kinds.
+
+Every backend-defined entity kind used by an entity must be declared in
+`entity_kinds`, even when the kind declares no relationships. Schema-defined
+well-known kinds do not require result-level declarations; core already defines
+relationships for well-known `code_stack` and derived `code_line` entities.
 
 ## How to read a result
 

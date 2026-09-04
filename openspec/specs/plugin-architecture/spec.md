@@ -1,16 +1,20 @@
 ## Purpose
 
-Provide a plugin system that lets extension packages add targets, backends, CLI
-commands, and converters to MLIA through well-defined discovery,
-compatibility-checking, and registration flows.
+Provide a plugin system that lets extension packages add targets, backends, and
+converters to MLIA through well-defined discovery, compatibility-checking, and
+registration flows.
+
+The source tree retains `mlia.plugin.cli` discovery utilities, but they are not
+connected to the Typer application. CLI command entry points are therefore not
+part of the supported runtime plugin surface.
 
 ## Requirements
 
 ### Requirement: Discover plugins through dedicated entry point groups
 MLIA SHALL discover extensibility plugins through Python package entry points.
-It SHALL use dedicated groups for target plugins, backend plugins, CLI plugins,
-and converter plugins so each integration surface can load only the plugins
-intended for that surface.
+It SHALL use dedicated groups for target plugins, backend plugins, and converter
+plugins so each integration surface can load only the plugins intended for that
+surface.
 
 #### Scenario: Backend plugins are loaded from the backend group
 - **WHEN** MLIA loads backend extensions
@@ -21,11 +25,6 @@ intended for that surface.
 - **WHEN** MLIA loads target extensions
 - **THEN** it SHALL enumerate entry points in `mlia.plugin.target` and invoke
   each accepted plugin with the target registry
-
-#### Scenario: CLI plugins are loaded from the CLI group
-- **WHEN** MLIA initializes the CLI plugin surface
-- **THEN** it SHALL enumerate entry points in `mlia.plugin.cli` and invoke each
-  accepted plugin with the mutable command configuration
 
 #### Scenario: Converter plugins are loaded from the converter group
 - **WHEN** MLIA loads converter extensions
@@ -84,8 +83,8 @@ reported through logging instead of aborting the host process.
 
 ### Requirement: Initialize plugin-backed surfaces consistently
 MLIA SHALL connect the plugin loader to package initialization and public APIs
-so plugin-backed surfaces are populated before callers use them. Backend,
-target, and CLI package initialization SHALL load the plugins for those
+so supported plugin-backed surfaces are populated before callers use them.
+Backend and target package initialization SHALL load the plugins for those
 surfaces, and target-facing flows that depend on backend registrations SHALL
 load backend plugins before target plugins.
 
@@ -99,11 +98,6 @@ load backend plugins before target plugins.
 - **THEN** MLIA SHALL load backend plugins before target plugins during package
   initialization
 
-#### Scenario: Importing the CLI package loads CLI plugins
-- **WHEN** callers import the `mlia.cli` package
-- **THEN** MLIA SHALL load CLI plugins into the command configuration used by
-  CLI command construction during package initialization
-
 #### Scenario: Backend registry access loads backend plugins once
 - **WHEN** callers query supported backends through the backend registry module
 - **THEN** MLIA SHALL ensure backend plugins have been loaded before returning
@@ -113,11 +107,6 @@ load backend plugins before target plugins.
 - **WHEN** callers query targets, target profiles, or target-backed constants
 - **THEN** MLIA SHALL ensure backend plugins are loaded before target plugins so
   target registrations can rely on registered backend names
-
-#### Scenario: CLI command construction uses the initialized command configuration
-- **WHEN** MLIA builds the main command list
-- **THEN** it SHALL return the command configuration that already includes
-  plugin-provided commands
 
 #### Scenario: Converter plugins load only when the converter loader is invoked
 - **WHEN** MLIA calls the converter plugin loader

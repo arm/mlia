@@ -37,7 +37,7 @@ contract.
 
 **Non-Goals:**
 
-- Do not change backend, target, or CLI plugin initialization contracts.
+- Do not change backend or target plugin initialization contracts.
 - Do not change plugin-owned import or lazy-loading strategies.
 - Do not add a plugin metadata contract, cache, or static backend inventory.
 - Do not derive selectable backend names from entry point names.

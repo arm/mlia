@@ -7,12 +7,9 @@ SPDX-License-Identifier: Apache-2.0
 
 ## Overview
 
-The core `mlia` repository provides backend discovery and backend management
-commands, while many backend implementations now live in split plugin
-repositories.
-
-This page exists so the top-level `README.md` does not need to carry the full
-backend catalog and reference detail.
+The core `mlia` repository provides backend discovery, capability selection, and
+backend management commands. Backend implementations commonly live in split
+plugin repositories, which own their detailed installation and metric guidance.
 
 ## Backend management commands
 
@@ -26,43 +23,68 @@ mlia backend --help
 ```
 
 Depending on the backend, installation may be automatic or may require an
-explicit local path or extra setup.
+explicit local path, acceptance of a licence, or additional setup.
 
-## How to discover backend options
+## Analysis modes
 
-Backend-specific CLI options are exposed through the core command-line
-experience when the relevant backend is installed.
+A backend advertises its support separately for two sources of analysis data:
+
+- **Estimation** analyses a model using a tool, simulator, compiler, or service.
+- **Profiling** analyses measured data supplied through `--profiling-data` or the
+  Python API.
+
+A backend may support estimation, profiling, or both. Its supported advice
+categories are evaluated within the selected mode, so a backend being generally
+available does not imply that it can satisfy every profiling request.
+
+When profiling data is supplied and `--backend` is omitted, MLIA first considers
+profiling-capable default backends for the target. If none are configured, it
+considers all profiling-capable target backends. The selected candidate set must
+contain exactly one backend; otherwise explicit selection is required. An
+estimation-only backend cannot be selected for a profiling-data run.
+
+## Discovering capabilities and options
 
 A practical discovery sequence is:
 
 ```bash
+mlia target list
 mlia backend list
 mlia check --help
 ```
 
-This lets you see both the installed backend set and any backend-specific
-command-line options that MLIA is currently exposing.
+Target discovery lists installed target plugins and profiles. The Python
+`list_targets()` helper exposes the backend hierarchy and mode-specific
+capabilities. The check help includes dynamically registered options from
+installed backends and post-analysis plugins.
+
+Backend-specific CLI options are collected by core and passed to the backend
+under its own configuration entry. Use `--backend` when an option or profiling
+input needs a particular backend rather than relying on automatic selection.
+
+## Entity-collapse defaults
+
+A backend can provide default rules for collapsing entities in its standardized
+output. Core combines those defaults with explicit application
+`filtering.collapse` rules before deriving source-line entities and projecting
+breakdowns. This lets a backend suppress implementation-detail entities while
+keeping the collapse operation and graph validation centralized.
 
 ## Backend families
 
-### Hardware-specific analysis backends
+### Analysis backends
 
-Some plugin repos provide backends that perform compatibility or performance
-analysis for a hardware family or platform family.
+Analysis backends produce compatibility or performance results from models,
+profiling data, or both.
 
 ### Dependency backends
 
-Some backends exist mainly to support larger MLIA pipelines by converting models
-or preparing intermediate artifacts. Users may see them in `mlia backend list`
-without needing to reason about them as the primary analysis backend for a run.
+Some backends mainly support larger pipelines by converting models or preparing
+intermediate artifacts. They may appear in `mlia backend list` without being a
+primary selectable analysis backend.
 
-## Where detailed backend docs live now
+## Detailed backend documentation
 
-For backend-specific installation, metrics, troubleshooting, and CLI examples,
-use the split plugin repo that owns the backend you are working with.
-
-## Why this split helps
-
-Moving detailed backend reference material out of the core README keeps the
-front page shorter and easier to scan, while allowing plugin repos to own the
-detail that changes most often.
+For backend-specific installation, accepted profiling-data formats, metrics,
+troubleshooting, and CLI examples, use the plugin repository that owns the
+backend.

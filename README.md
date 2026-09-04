@@ -172,12 +172,42 @@ specifically isolated to that plugin.
 
 ## Configuration
 
-MLIA supports user level configuration through a TOML file found at
-`~/.config/mlia/config.toml`. The following options are supported at the top
-level only:
+MLIA reads user configuration from the platform-specific configuration
+directory provided by `platformdirs`. On Linux this is normally
+`~/.config/mlia/config.toml`.
 
-- `color` (`bool`): enable/disable colored terminal output.
-- `backend_options` (`dict`): backend options for the running profile.
+Supported top-level TOML keys are:
+
+- `color` (`bool`): enable or disable colored terminal output.
+- `backend_options` (`table`): configuration passed to installed backends.
+- `core` (`table`): settings owned by the core application.
+- `filtering` (`table`): standardized-output filtering settings. Its optional
+  `collapse` value is an array of tables.
+- `plugins` (`table`): settings keyed by post-analysis plugin name. Each plugin's
+  value is a table owned and validated by that plugin.
+
+Entity collapse can be configured with an array of rules:
+
+```toml
+[[filtering.collapse]]
+kind = "code_stack"
+attribute = "file"
+globs = ["*/generated/*", "*/site-packages/*"]
+```
+
+Each rule selects an entity kind, a string attribute, and one or more glob
+patterns. Core combines these rules with defaults supplied by the backend before
+deriving source-line entities and projecting breakdowns.
+
+Post-analysis plugins receive only their own settings table:
+
+```toml
+[plugins.example]
+output_format = "custom"
+```
+
+The plugin registered as `example` receives the contents of `plugins.example`
+and is responsible for validating them.
 
 MLIA follows common CLI environment variables where they map cleanly to existing
 options:
@@ -189,14 +219,14 @@ options:
 - `COLUMNS`: set the terminal width used for interactive output. Redirected
   output is rendered wide so the receiving terminal or tool can wrap it.
 
-MLIA can read environments variables through .env files in parent directories.
+MLIA can read environment variables from `.env` files in parent directories.
 
 When an option is available through more than one source, MLIA applies values
 in this order:
 
 1. Command-line flags.
 2. The running shell's environment variables.
-3. Project level environment variables.
+3. Project-level environment variables.
 4. User-level configuration.
 5. Built-in defaults.
 

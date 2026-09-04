@@ -1,5 +1,11 @@
 ## Why
 
+> **Archive status (September 2, 2026):** This proposal records the intended CLI
+> plugin design. The current Typer application does not invoke
+> `load_cli_plugins()`, so `mlia.plugin.cli` entry points do not extend its
+> command tree. CLI registration claims below are historical, not descriptions
+> of current runtime behaviour.
+
 MLIA needs an extension mechanism that allows targets, backends, CLI commands,
 and converters to be added without modifying the core package. That mechanism
 must support third-party distributions, reject incompatible plugins safely, and

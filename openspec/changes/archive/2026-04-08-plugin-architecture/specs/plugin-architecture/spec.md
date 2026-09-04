@@ -1,5 +1,11 @@
 ## ADDED Requirements
 
+> **Archive status (September 2, 2026):** These requirements record the intended
+> CLI plugin integration. The current Typer application does not invoke
+> `load_cli_plugins()`, so `mlia.plugin.cli` entry points do not extend its
+> command tree. CLI registration requirements below are historical and are not
+> part of the active runtime specification.
+
 ### Requirement: Discover plugins through dedicated entry point groups
 MLIA SHALL discover extensibility plugins through Python package entry points.
 It SHALL use dedicated groups for target plugins, backend plugins, CLI plugins,

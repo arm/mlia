@@ -8,39 +8,94 @@ SPDX-License-Identifier: Apache-2.0
 ## Overview
 
 The core `mlia` package exposes a Python API for programmatic compatibility and
-performance analysis. This API makes use of plugins identically to the CLI.
-This makes it easier to embed MLIA in scripts, notebooks, automation, and
-larger Python applications.
+performance analysis. It uses the same target and backend plugins as the CLI and
+returns MLIA's processed standardized output directly as a JSON-compatible
+`dict`.
 
-## Main entry point
+## Model-based analysis
 
-The main entry point is `run_advisor()`, which mirrors the CLI `mlia check`
-workflow and returns a standardized Python `dict`.
+The main convenience entry point is `run_advisor()`:
 
 ```python
+from pathlib import Path
+
 from mlia import run_advisor
 
 result = run_advisor(
     advice_category="performance",
     target_profile="<target-profile>",
-    model="model.tflite",
+    model=Path("model.tflite"),
 )
 
 print(result["schema_version"])
 print(result["results"])
 ```
 
-A useful way to think about `run_advisor()` is that it gives you the shared MLIA
-workflow without requiring a shell command. You still choose the advice
-category, target profile, and model input, and you still receive the same
-general result structure that the CLI can emit as JSON.
+For a `torch.nn.Module`, provide the module and its example inputs. MLIA exports
+a temporary PT2 artifact for analysis. Quantization is available only for this
+module-input path.
 
-## Discovery Helpers
+## Profiling-data analysis
 
-The core package also exposes helper functions for discovering what the current
-environment supports.
+Measured profiling data can be supplied as one path or an ordered sequence:
 
-Common helpers include:
+```python
+result = run_advisor(
+    advice_category="performance",
+    target_profile="<target-profile>",
+    profiling_data=["capture-part-1", "capture-part-2"],
+    backends=["<profiling-backend>"],
+)
+```
+
+The model may be omitted when profiling data is present. Paths may identify
+files or directories, and MLIA verifies that each path exists before creating
+the advisor. Their accepted format is defined by the selected backend.
+
+When `backends` is omitted, MLIA follows the CLI selection rules. It first
+considers profiling-capable default backends for the target and, when there are
+none, all profiling-capable target backends. The resulting candidate set must
+contain exactly one backend. Estimation-only backends cannot satisfy this
+request.
+
+## Output and validation
+
+`run_advisor()` returns the standardized output produced by the workflow after
+core post-processing. That processing:
+
+1. validates the basic output and entity graph;
+2. applies entity-collapse rules;
+3. derives source-line entities;
+4. projects missing entity breakdowns; and
+5. validates the processed output again.
+
+Basic and entity-graph validation is mandatory. The `validation` argument
+controls additional JSON Schema validation:
+
+- `"strict"` raises when additional schema validation fails;
+- `"warn"` logs the problem and returns the output; and
+- `"off"` skips only the additional JSON Schema validation.
+
+API mode does not render MLIA reports to stdout or stderr. Use
+`write_output_files=True` with `output_dir` when generated artifacts should be
+retained. Supplying `logs_dir` enables per-run file logging; its handlers are
+closed when the invocation finishes.
+
+## Lower-level API
+
+`get_advice()` is the lower-level library entry point used by the CLI. It accepts
+an optional `ExecutionContext`, model or profiling inputs, backend options, and
+resolved application settings. It now returns the advisor's processed
+standardized output rather than communicating results through workflow event
+handlers.
+
+Most integrations should prefer `run_advisor()` because it owns input
+validation, temporary output handling, backend installation, logging capture,
+and optional JSON Schema validation.
+
+## Discovery helpers
+
+The public API includes helpers such as:
 
 - `list_targets()`
 - `list_target_profiles()`
@@ -48,37 +103,20 @@ Common helpers include:
 - `list_backend_options()`
 - `supported_backends(target_profile)`
 
-These helpers are especially useful when a script needs to inspect the current
-plugin environment before deciding which target or backend path to use.
+`list_targets()` includes backend metadata and mode-specific capabilities for
+estimation and profiling, allowing applications to select a viable backend
+before starting analysis.
 
 ## Relationship to plugins
 
-The API surface in core `mlia` stays intentionally generic. The available
-results still depend on plugin packages.
-
-That means:
-
-- The core API defines the shared calling pattern.
-- Plugin packages extend the available targets and backends.
-
-## Working with results
-
-The result returned by `run_advisor()` follows the same high-level structure as
-MLIA JSON output. In practice, that means you can use the API when you want the
-same kind of information as the CLI, but you want to inspect or transform it in
-Python instead of parsing command output.
-
-A practical pattern is:
-
-1. Call `run_advisor()` with the target profile and advice category you want.
-2. Inspect top-level context such as target and backend information.
-3. Read the result metrics at the model level first.
-4. Move to the plugin repo docs when you need the exact meaning of
-   backend-specific fields.
+The core API defines the shared invocation and output contracts. Installed
+plugins determine the available targets, profiles, transformations, backends,
+and detailed result contents. Post-analysis plugins are a CLI extension and are
+not automatically invoked by `run_advisor()`.
 
 ## Cross-links
 
-- See [CLI](cli.md) for the equivalent command-line workflow.
-- See [Outputs](metrics.md) for the shared output structure.
-- See [Overview](overview.md) for how the core API fits into the split MLIA
-  architecture.
+- See [CLI](cli.md) for equivalent command-line workflows.
+- See [Backends](backends.md) for estimation and profiling capabilities.
+- See [Outputs](metrics.md) for schema and entity-processing semantics.
+- See [Plugin Architecture](plugin_architecture.md) for extension categories.
