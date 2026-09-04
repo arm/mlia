@@ -23,10 +23,11 @@ re-evaluate the complete origins when it covers the blocked scope and accounts
 for every required origin. Normal contested-extra rules still apply.
 
 Derived entities expose provenance recipes rather than becoming new accounting
-origins. Recipe discovery reaches a fixed point before any dynamic target is
-resolved, and every recipe retains the authoritative IDs and arithmetic that
-produced it. Final resolution therefore compares the complete provenance closure
-at once instead of depending on traversal order or prematurely committed values.
+origins. Recipes capable of feeding another target are discovered to a fixed
+point before final resolution, and every recipe retains the authoritative IDs
+and arithmetic that produced it. Final resolution therefore compares the
+relevant provenance closure instead of depending on traversal order or
+prematurely committed values.
 
 One complete contributor is copied without interpreting its aggregation policy.
 Combining multiple distinct origins requires corresponding numeric metrics with
@@ -40,7 +41,9 @@ from __future__ import annotations
 import copy
 import json
 import math
-from dataclasses import dataclass, replace
+from collections.abc import Iterable, Iterator
+from dataclasses import dataclass, field, replace
+from heapq import heappop, heappush
 from typing import Any, cast
 
 import mlia.core.output_schema as schema
@@ -58,6 +61,8 @@ from mlia.core.output_validation import (
 MetricIdentity = tuple[str, str, str]
 BreakdownSignature = tuple[str, str | None, str, tuple[str, ...]]
 EntitySet = frozenset[str]
+AccountedKey = tuple[str, tuple[str, ...], bool]
+CoverageCache = dict[tuple[str, AccountedKey], tuple[EntitySet, EntitySet]]
 
 _PRIORITY_EXACT = 2
 _PRIORITY_NO_EXTRAS = 3
@@ -85,6 +90,11 @@ class _AccountedFigures:
     figures: FigureSet
     origins: EntitySet
     sealed: bool = False
+    figure_key: str = field(init=False, compare=False, repr=False)
+
+    def __post_init__(self) -> None:
+        """Cache the canonical figure representation once per record."""
+        object.__setattr__(self, "figure_key", _figure_set_key(self.figures))
 
 
 @dataclass(frozen=True)
@@ -95,6 +105,61 @@ class _EligibleContributor:
     accounted: _AccountedFigures
     covered_units: EntitySet
     extras: EntitySet
+
+
+@dataclass(frozen=True)
+class _IndexedContributor:
+    """One contributor encoded against a fixed derivation-search universe."""
+
+    contributor: _EligibleContributor
+    coverage_mask: int
+    origin_mask: int
+    extra_mask: int
+    figure_key: str
+
+
+@dataclass(frozen=True)
+class _DerivationSearchIndex:
+    """Precomputed bitmask indexes for one derivation search."""
+
+    contributors: tuple[_IndexedContributor, ...]
+    unit_options: tuple[tuple[str, int, tuple[_IndexedContributor, ...]], ...]
+    origin_options: tuple[tuple[str, int, tuple[_IndexedContributor, ...]], ...]
+    required_mask: int
+    required_origin_mask: int
+    origin_ids: tuple[str, ...]
+    extra_ids: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class _DerivationState:
+    """One queued derivation state using the search index's bit universes."""
+
+    covered_mask: int
+    origin_mask: int
+    figures: FigureSet | None
+    figure_key: str | None
+    extra_mask: int
+    sealed: bool
+    selected: tuple[tuple[int, int], ...]
+
+
+@dataclass(frozen=True)
+class _DirectAtom:
+    """One directly represented, indivisible authoritative origin family."""
+
+    origin_mask: int
+    coverage_mask: int
+    extra_mask: int
+    record: _AccountedFigures
+
+
+@dataclass(frozen=True)
+class _DirectAtomSpace:
+    """A proven direct-atom decomposition for one filtered final search."""
+
+    atoms: tuple[_DirectAtom, ...]
+    required_atom_mask: int
 
 
 EligibleContributorKey = tuple[
@@ -177,7 +242,7 @@ def _accounted_key(
 ) -> tuple[str, tuple[str, ...], bool]:
     """Return a deterministic key including accounting provenance."""
     return (
-        _figure_set_key(record.figures),
+        record.figure_key,
         tuple(sorted(record.origins)),
         record.sealed,
     )
@@ -449,35 +514,18 @@ def _covered_target_units(
     record: _AccountedFigures,
     target_units: EntitySet,
     origin_units: dict[str, EntitySet],
-    inclusive_descendants: dict[str, EntitySet],
 ) -> EntitySet:
-    """Return target branches intersected by at least one record origin."""
-    represented_units = _record_origin_units(record, origin_units)
-    return frozenset(
-        target_unit
-        for target_unit in target_units
-        if any(
-            _units_related(target_unit, represented_unit, inclusive_descendants)
-            for represented_unit in represented_units
-        )
-    )
+    """Return terminal target branches represented by at least one origin."""
+    return target_units.intersection(_record_origin_units(record, origin_units))
 
 
 def _record_extras(
     record: _AccountedFigures,
     target_units: EntitySet,
     origin_units: dict[str, EntitySet],
-    inclusive_descendants: dict[str, EntitySet],
 ) -> EntitySet:
-    """Return represented origin branches outside the target hierarchy."""
-    return frozenset(
-        represented_unit
-        for represented_unit in _record_origin_units(record, origin_units)
-        if not any(
-            _units_related(target_unit, represented_unit, inclusive_descendants)
-            for target_unit in target_units
-        )
-    )
+    """Return represented terminal branches outside the target hierarchy."""
+    return _record_origin_units(record, origin_units).difference(target_units)
 
 
 def _extra_is_contested(
@@ -505,25 +553,16 @@ def _required_target_units(
     target_id: str,
     structural_leaf_sets: dict[str, EntitySet],
     origin_units: dict[str, EntitySet],
-    inclusive_descendants: dict[str, EntitySet],
     shadowed_origin_ids: EntitySet,
 ) -> EntitySet:
-    """Return target leaves intersected by non-shadowed authoritative origins."""
-    target_units = _scope_units(target_id, structural_leaf_sets)
+    """Return target leaves covered by non-shadowed authoritative origins."""
     all_origin_units = frozenset(
         unit_id
         for origin_id, units in origin_units.items()
         if origin_id not in shadowed_origin_ids
         for unit_id in units
     )
-    return frozenset(
-        target_unit
-        for target_unit in target_units
-        if any(
-            _units_related(target_unit, origin_unit, inclusive_descendants)
-            for origin_unit in all_origin_units
-        )
-    )
+    return _scope_units(target_id, structural_leaf_sets).intersection(all_origin_units)
 
 
 def _aggregate_records(records: list[_AccountedFigures]) -> _AccountedFigures | None:
@@ -606,7 +645,6 @@ def _direct_authoritative_parent_resolutions(
                 record,
                 target_units,
                 origin_units,
-                inclusive_descendants,
             ):
                 conflicted = True
                 break
@@ -614,7 +652,6 @@ def _direct_authoritative_parent_resolutions(
                 record,
                 target_units,
                 origin_units,
-                inclusive_descendants,
             )
             if any(
                 _extra_is_contested(
@@ -719,10 +756,12 @@ def _eligible_contributors(
     inclusive_descendants: dict[str, EntitySet],
     shadowed_origin_ids: frozenset[str],
     population: dict[
-        tuple[str, tuple[str, ...], bool],
+        AccountedKey,
         tuple[_AccountedFigures, frozenset[str]],
     ]
     | None = None,
+    coverage_cache: CoverageCache | None = None,
+    contested_cache: dict[tuple[str, str], bool] | None = None,
 ) -> list[_EligibleContributor]:
     """Find contributors using graph branches and authoritative origin identity."""
     target_units = _scope_units(target_id, structural_leaf_sets)
@@ -731,40 +770,59 @@ def _eligible_contributors(
         _EligibleContributor,
     ] = {}
     recipe_population = population or _provenance_population(states)
-    for record, exposing_entity_ids in recipe_population.values():
+    for record_key, (record, exposing_entity_ids) in recipe_population.items():
         contributor_ids = exposing_entity_ids.difference({target_id})
         if not contributor_ids:
             continue
         if record.origins.issubset(shadowed_origin_ids):
             continue
-        covered = _covered_target_units(
-            record,
-            target_units,
-            origin_units,
-            inclusive_descendants,
+        cache_key = (target_id, record_key)
+        cached_coverage = (
+            coverage_cache.get(cache_key) if coverage_cache is not None else None
         )
+        if cached_coverage is None:
+            covered = _covered_target_units(
+                record,
+                target_units,
+                origin_units,
+            )
+            extras = _record_extras(
+                record,
+                target_units,
+                origin_units,
+            )
+            if coverage_cache is not None:
+                coverage_cache[cache_key] = covered, extras
+        else:
+            covered, extras = cached_coverage
         if not covered:
             continue
-        extras = _record_extras(
-            record,
-            target_units,
-            origin_units,
-            inclusive_descendants,
-        )
-        if any(
-            _extra_is_contested(
-                target_id,
-                extra_id,
-                entities_by_id,
-                inclusive_ancestors,
-                inclusive_descendants,
+        contested = False
+        for extra_id in extras:
+            contested_key = (target_id, extra_id)
+            extra_contested = (
+                contested_cache.get(contested_key)
+                if contested_cache is not None
+                else None
             )
-            for extra_id in extras
-        ):
+            if extra_contested is None:
+                extra_contested = _extra_is_contested(
+                    target_id,
+                    extra_id,
+                    entities_by_id,
+                    inclusive_ancestors,
+                    inclusive_descendants,
+                )
+                if contested_cache is not None:
+                    contested_cache[contested_key] = extra_contested
+            if extra_contested:
+                contested = True
+                break
+        if contested:
             continue
 
         semantic_key = (
-            _figure_set_key(record.figures),
+            record_key[0],
             tuple(sorted(covered)),
             tuple(sorted(extras)),
             record.sealed,
@@ -817,9 +875,155 @@ def _eligible_contributors(
     )
 
 
-def _derivation_priority(extras: EntitySet) -> int:
-    """Classify a derivation by whether represented branches remain outside."""
-    return _PRIORITY_NO_EXTRAS if not extras else _PRIORITY_WITH_EXTRAS
+def _entity_mask(entity_ids: EntitySet, positions: dict[str, int]) -> int:
+    """Encode entity IDs using a fixed search-local bit universe."""
+    mask = 0
+    for entity_id in entity_ids:
+        mask |= 1 << positions[entity_id]
+    return mask
+
+
+def _entities_from_mask(entity_ids: tuple[str, ...], mask: int) -> EntitySet:
+    """Decode a search-local bitmask into entity IDs."""
+    return frozenset(
+        entity_id for index, entity_id in enumerate(entity_ids) if mask & (1 << index)
+    )
+
+
+def _derivation_search_index(
+    eligible: list[_EligibleContributor],
+    required: EntitySet,
+    priority: int,
+    required_origin_ids: EntitySet,
+) -> _DerivationSearchIndex | None:
+    """Build fixed bitmask indexes before exploring derivation states."""
+    candidates = (
+        [contributor for contributor in eligible if not contributor.extras]
+        if priority == _PRIORITY_NO_EXTRAS
+        else eligible
+    )
+    if not candidates:
+        return None
+
+    unit_ids = tuple(sorted(required))
+    origin_ids = tuple(
+        sorted(
+            required_origin_ids.union(
+                origin_id
+                for contributor in candidates
+                for origin_id in contributor.accounted.origins
+            )
+        )
+    )
+    extra_ids = tuple(
+        sorted(
+            {extra_id for contributor in candidates for extra_id in contributor.extras}
+        )
+    )
+    unit_positions = {entity_id: index for index, entity_id in enumerate(unit_ids)}
+    origin_positions = {entity_id: index for index, entity_id in enumerate(origin_ids)}
+    extra_positions = {entity_id: index for index, entity_id in enumerate(extra_ids)}
+    indexed = tuple(
+        _IndexedContributor(
+            contributor=contributor,
+            coverage_mask=_entity_mask(
+                contributor.covered_units.intersection(required), unit_positions
+            ),
+            origin_mask=_entity_mask(contributor.accounted.origins, origin_positions),
+            extra_mask=_entity_mask(contributor.extras, extra_positions),
+            figure_key=contributor.accounted.figure_key,
+        )
+        for contributor in candidates
+    )
+
+    unit_options = tuple(
+        sorted(
+            [
+                (
+                    unit_id,
+                    unit_bit,
+                    tuple(
+                        contributor
+                        for contributor in indexed
+                        if contributor.coverage_mask & unit_bit
+                    ),
+                )
+                for unit_id, unit_index in unit_positions.items()
+                for unit_bit in (1 << unit_index,)
+            ],
+            key=lambda item: (len(item[2]), item[0]),
+        )
+    )
+    origin_options = tuple(
+        sorted(
+            [
+                (
+                    origin_id,
+                    origin_bit,
+                    tuple(
+                        contributor
+                        for contributor in indexed
+                        if contributor.origin_mask & origin_bit
+                    ),
+                )
+                for origin_id in required_origin_ids
+                for origin_bit in (1 << origin_positions[origin_id],)
+            ],
+            key=lambda item: (len(item[2]), item[0]),
+        )
+    )
+    if any(not options for _entity_id, _bit, options in unit_options) or any(
+        not options for _entity_id, _bit, options in origin_options
+    ):
+        return None
+
+    return _DerivationSearchIndex(
+        contributors=indexed,
+        unit_options=unit_options,
+        origin_options=origin_options,
+        required_mask=(1 << len(unit_ids)) - 1,
+        required_origin_mask=_entity_mask(required_origin_ids, origin_positions),
+        origin_ids=origin_ids,
+        extra_ids=extra_ids,
+    )
+
+
+def _derivation_state_key(
+    state: _DerivationState,
+) -> tuple[int, int, str | None, int, bool, tuple[tuple[int, int], ...]]:
+    """Return the semantic identity used to deduplicate queued states."""
+    return (
+        state.covered_mask,
+        state.origin_mask,
+        state.figure_key,
+        state.extra_mask,
+        state.sealed,
+        state.selected,
+    )
+
+
+def _selection_is_redundant(
+    selected: tuple[tuple[int, int], ...],
+    required_mask: int,
+    required_origin_mask: int,
+) -> bool:
+    """Return whether removing one selected contributor keeps requirements met."""
+    coverage_prefix = [0]
+    origin_prefix = [0]
+    for coverage_mask, origin_mask in selected:
+        coverage_prefix.append(coverage_prefix[-1] | coverage_mask)
+        origin_prefix.append(origin_prefix[-1] | origin_mask)
+
+    coverage_suffix = 0
+    origin_suffix = 0
+    for index in range(len(selected) - 1, -1, -1):
+        if (coverage_prefix[index] | coverage_suffix) == required_mask and (
+            origin_prefix[index] | origin_suffix
+        ) & required_origin_mask == required_origin_mask:
+            return True
+        coverage_suffix |= selected[index][0]
+        origin_suffix |= selected[index][1]
+    return False
 
 
 def _single_complete_derivations(
@@ -849,182 +1053,406 @@ def _single_complete_derivations(
     return [_Derivation(priority, item.accounted, item.extras) for item in candidates]
 
 
+def _set_bit_indexes(mask: int) -> Iterator[int]:
+    """Yield set-bit positions from least to most significant."""
+    while mask:
+        bit = mask & -mask
+        yield bit.bit_length() - 1
+        mask ^= bit
+
+
+def _minimal_masks(masks: Iterable[int]) -> tuple[int, ...]:
+    """Return unique masks with no smaller input mask as a subset."""
+    minimal: list[int] = []
+    for mask in sorted(set(masks), key=lambda item: (item.bit_count(), item)):
+        if any(previous & mask == previous for previous in minimal):
+            continue
+        minimal.append(mask)
+    return tuple(minimal)
+
+
+def _minimum_extra_masks(search: _DerivationSearchIndex) -> Iterator[int]:
+    """Yield satisfying masks with the fewest extra IDs using best-first search."""
+    constraints = tuple(
+        masks
+        for _entity_id, _bit, options in (
+            *search.unit_options,
+            *search.origin_options,
+        )
+        if 0 not in (masks := _minimal_masks(item.extra_mask for item in options))
+    )
+    queue = [(0, 0)]
+    enqueued = {0}
+    best_count: int | None = None
+    while queue:
+        count, mask = heappop(queue)
+        if best_count is not None and count > best_count:
+            return
+        unsatisfied = tuple(
+            options
+            for options in constraints
+            if not any(option & mask == option for option in options)
+        )
+        if not unsatisfied:
+            best_count = count
+            yield mask
+            continue
+
+        options = min(unsatisfied, key=lambda item: (len(item), item))
+        for option in options:
+            next_mask = mask | option
+            if next_mask in enqueued:
+                continue
+            enqueued.add(next_mask)
+            heappush(queue, (next_mask.bit_count(), next_mask))
+
+
+def _aggregate_atom_records(
+    atoms: tuple[_DirectAtom, ...],
+    atom_mask: int,
+) -> _AccountedFigures | None:
+    """Aggregate one structurally selected origin family with normal semantics."""
+    return _aggregate_records(
+        [atoms[position].record for position in _set_bit_indexes(atom_mask)]
+    )
+
+
+def _direct_atom_space(
+    search: _DerivationSearchIndex,
+    allowed_extra_mask: int,
+) -> _DirectAtomSpace | None:
+    """Prove that filtered contributors decompose into direct origin atoms."""
+    candidates = tuple(
+        contributor
+        for contributor in search.contributors
+        if not contributor.extra_mask & ~allowed_extra_mask
+    )
+    coverage_union = 0
+    origin_union = 0
+    for contributor in candidates:
+        coverage_union |= contributor.coverage_mask
+        origin_union |= contributor.origin_mask
+    if (
+        coverage_union != search.required_mask
+        or (origin_union & search.required_origin_mask) != search.required_origin_mask
+    ):
+        return None
+
+    signatures: dict[tuple[int, ...], int] = {}
+    for origin_position in _set_bit_indexes(origin_union):
+        origin_bit = 1 << origin_position
+        signature = tuple(
+            index
+            for index, contributor in enumerate(candidates)
+            if contributor.origin_mask & origin_bit
+        )
+        signatures[signature] = signatures.get(signature, 0) | origin_bit
+    origin_masks = tuple(sorted(signatures.values()))
+
+    atom_positions: dict[int, int] = {}
+    required_atom_mask = 0
+    for atom_position, origin_mask in enumerate(origin_masks):
+        required_part = origin_mask & search.required_origin_mask
+        if required_part and required_part != origin_mask:
+            return None
+        if required_part:
+            required_atom_mask |= 1 << atom_position
+        for origin_position in _set_bit_indexes(origin_mask):
+            atom_positions[origin_position] = atom_position
+
+    contributor_atom_masks: list[int] = []
+    direct_rows: dict[int, list[_IndexedContributor]] = {}
+    for contributor in candidates:
+        atom_mask = 0
+        for origin_position in _set_bit_indexes(contributor.origin_mask):
+            atom_mask |= 1 << atom_positions[origin_position]
+        contributor_atom_masks.append(atom_mask)
+        if atom_mask.bit_count() == 1:
+            direct_rows.setdefault(atom_mask.bit_length() - 1, []).append(contributor)
+
+    atoms: list[_DirectAtom] = []
+    for atom_position, origin_mask in enumerate(origin_masks):
+        rows = direct_rows.get(atom_position)
+        if not rows:
+            return None
+        semantics = {
+            (row.coverage_mask, row.extra_mask, row.figure_key) for row in rows
+        }
+        if len(semantics) != 1:
+            return None
+        coverage_mask, extra_mask, _figure_key = next(iter(semantics))
+        preferred = max(rows, key=lambda row: row.contributor.accounted.sealed)
+        atoms.append(
+            _DirectAtom(
+                origin_mask,
+                coverage_mask,
+                extra_mask,
+                preferred.contributor.accounted,
+            )
+        )
+    atom_tuple = tuple(atoms)
+
+    aggregate_cache: dict[int, _AccountedFigures | None] = {}
+    for contributor, atom_mask in zip(candidates, contributor_atom_masks):
+        aggregate = aggregate_cache.get(atom_mask)
+        if atom_mask not in aggregate_cache:
+            aggregate = _aggregate_atom_records(atom_tuple, atom_mask)
+            aggregate_cache[atom_mask] = aggregate
+        if aggregate is None:
+            return None
+        coverage_mask = 0
+        extra_mask = 0
+        for atom_position in _set_bit_indexes(atom_mask):
+            coverage_mask |= atom_tuple[atom_position].coverage_mask
+            extra_mask |= atom_tuple[atom_position].extra_mask
+        if (
+            coverage_mask != contributor.coverage_mask
+            or extra_mask != contributor.extra_mask
+            or aggregate.origins != contributor.contributor.accounted.origins
+            or aggregate.figure_key != contributor.figure_key
+        ):
+            return None
+
+    return _DirectAtomSpace(atom_tuple, required_atom_mask)
+
+
+def _forced_complete_atom_mask(
+    space: _DirectAtomSpace,
+    required_coverage_mask: int,
+) -> int | None:
+    """Return the unique complete family only when every atom is forced."""
+    atom_mask = space.required_atom_mask
+    coverage_mask = 0
+    for position in _set_bit_indexes(atom_mask):
+        coverage_mask |= space.atoms[position].coverage_mask
+
+    while coverage_mask != required_coverage_mask:
+        missing_mask = required_coverage_mask & ~coverage_mask
+        forced_atoms = 0
+        for unit_position in _set_bit_indexes(missing_mask):
+            unit_bit = 1 << unit_position
+            options = tuple(
+                1 << atom_position
+                for atom_position, atom in enumerate(space.atoms)
+                if not atom_mask & (1 << atom_position)
+                and atom.coverage_mask & unit_bit
+            )
+            if len(options) != 1:
+                return None
+            forced_atoms |= options[0]
+        if not forced_atoms:
+            return None
+        atom_mask |= forced_atoms
+        for position in _set_bit_indexes(forced_atoms):
+            coverage_mask |= space.atoms[position].coverage_mask
+
+    all_atoms_mask = (1 << len(space.atoms)) - 1
+    return atom_mask if atom_mask == all_atoms_mask else None
+
+
+def _atom_addition_is_exact(atoms: tuple[_DirectAtom, ...]) -> bool:
+    """Prove every atom-value addition order is exactly representable."""
+    ratios: list[tuple[int, int]] = []
+    for atom in atoms:
+        for figure in atom.record.figures:
+            for metric in figure.metrics:
+                value = metric.value
+                if type(value) not in (int, float):
+                    return False
+                numeric_value = cast(float | int, value)
+                if isinstance(numeric_value, float):
+                    if not math.isfinite(numeric_value):
+                        return False
+                    ratios.append(numeric_value.as_integer_ratio())
+                else:
+                    ratios.append((numeric_value, 1))
+
+    common_denominator = max((denominator for _value, denominator in ratios), default=1)
+    absolute_coefficients = sum(
+        abs(value) * (common_denominator // denominator)
+        for value, denominator in ratios
+    )
+    return absolute_coefficients <= _MAX_SAFE_INTEGER
+
+
+def _direct_atom_derivations(
+    search: _DerivationSearchIndex,
+    priority: int,
+) -> list[_Derivation] | None:
+    """Resolve covers whose contributors exactly reconstruct from direct atoms."""
+    extra_masks: Iterable[int] = (
+        (0,) if priority == _PRIORITY_NO_EXTRAS else _minimum_extra_masks(search)
+    )
+    completed: dict[tuple[AccountedKey, tuple[str, ...]], _Derivation] = {}
+    for allowed_extra_mask in extra_masks:
+        space = _direct_atom_space(search, allowed_extra_mask)
+        if space is None or not _atom_addition_is_exact(space.atoms):
+            return None
+        atom_mask = _forced_complete_atom_mask(space, search.required_mask)
+        if atom_mask is None:
+            return None
+        record = _aggregate_atom_records(space.atoms, atom_mask)
+        if record is None:
+            return None
+        extra_mask = 0
+        for position in _set_bit_indexes(atom_mask):
+            extra_mask |= space.atoms[position].extra_mask
+        if bool(extra_mask) is not (priority == _PRIORITY_WITH_EXTRAS):
+            return None
+        extras = _entities_from_mask(search.extra_ids, extra_mask)
+        derivation = _Derivation(priority, record, extras)
+        completed[(_accounted_key(record), tuple(sorted(extras)))] = derivation
+
+    return list(completed.values()) if completed else None
+
+
+def _iter_derivations_at_priority_reference(
+    eligible: list[_EligibleContributor],
+    required: EntitySet,
+    priority: int,
+    required_origin_ids: EntitySet = frozenset(),
+) -> Iterator[_Derivation]:
+    """Yield derivations using the general contributor-selection search."""
+    search = _derivation_search_index(eligible, required, priority, required_origin_ids)
+    if search is None:
+        return
+
+    initial = _DerivationState(0, 0, None, None, 0, True, ())
+    states = [initial]
+    enqueued = {_derivation_state_key(initial)}
+    aggregation_cache: dict[tuple[str, str], tuple[FigureSet, str] | None] = {}
+    yielded: set[tuple[AccountedKey, tuple[str, ...]]] = set()
+
+    while states:
+        state = states.pop()
+        if (
+            state.covered_mask == search.required_mask
+            and state.origin_mask & search.required_origin_mask
+            == search.required_origin_mask
+        ):
+            if state.figures is None or bool(state.extra_mask) is not (
+                priority == _PRIORITY_WITH_EXTRAS
+            ):
+                continue
+            if _selection_is_redundant(
+                state.selected,
+                search.required_mask,
+                search.required_origin_mask,
+            ):
+                continue
+            origins = _entities_from_mask(search.origin_ids, state.origin_mask)
+            extras = _entities_from_mask(search.extra_ids, state.extra_mask)
+            record = _AccountedFigures(state.figures, origins, sealed=state.sealed)
+            derivation_key = (_accounted_key(record), tuple(sorted(extras)))
+            if derivation_key not in yielded:
+                yielded.add(derivation_key)
+                yield _Derivation(priority, record, extras)
+            continue
+
+        if state.covered_mask != search.required_mask:
+            next_contributors = next(
+                options
+                for _entity_id, bit, options in search.unit_options
+                if not state.covered_mask & bit
+            )
+        else:
+            next_contributors = next(
+                options
+                for _entity_id, bit, options in search.origin_options
+                if not state.origin_mask & bit
+            )
+
+        for indexed in next_contributors:
+            if state.origin_mask & indexed.origin_mask:
+                continue
+            if state.figures is None:
+                next_figures = indexed.contributor.accounted.figures
+                next_figure_key = indexed.figure_key
+            else:
+                assert state.figure_key is not None
+                aggregation_key = (state.figure_key, indexed.figure_key)
+                if aggregation_key not in aggregation_cache:
+                    aggregated = _aggregate_figure_sets(
+                        [state.figures, indexed.contributor.accounted.figures]
+                    )
+                    aggregation_cache[aggregation_key] = (
+                        (aggregated, _figure_set_key(aggregated))
+                        if aggregated is not None
+                        else None
+                    )
+                aggregation = aggregation_cache[aggregation_key]
+                if aggregation is None:
+                    continue
+                next_figures, next_figure_key = aggregation
+
+            selected = tuple(
+                sorted(
+                    (
+                        *state.selected,
+                        (indexed.coverage_mask, indexed.origin_mask),
+                    )
+                )
+            )
+            next_state = _DerivationState(
+                covered_mask=state.covered_mask | indexed.coverage_mask,
+                origin_mask=state.origin_mask | indexed.origin_mask,
+                figures=next_figures,
+                figure_key=next_figure_key,
+                extra_mask=state.extra_mask | indexed.extra_mask,
+                sealed=state.sealed and indexed.contributor.accounted.sealed,
+                selected=selected,
+            )
+            state_key = _derivation_state_key(next_state)
+            if state_key in enqueued:
+                continue
+            enqueued.add(state_key)
+            states.append(next_state)
+
+
+def _iter_derivations_at_priority(
+    eligible: list[_EligibleContributor],
+    required: EntitySet,
+    priority: int,
+    required_origin_ids: EntitySet = frozenset(),
+) -> Iterator[_Derivation]:
+    """Yield final derivations through a guarded structural fast path."""
+    if required_origin_ids:
+        search = _derivation_search_index(
+            eligible,
+            required,
+            priority,
+            required_origin_ids,
+        )
+        if search is None:
+            return
+        optimized = _direct_atom_derivations(search, priority)
+        if optimized is not None:
+            yield from optimized
+            return
+    yield from _iter_derivations_at_priority_reference(
+        eligible,
+        required,
+        priority,
+        required_origin_ids,
+    )
+
+
 def _derivations_at_priority(
     eligible: list[_EligibleContributor],
     required: EntitySet,
     priority: int,
     required_origin_ids: EntitySet = frozenset(),
 ) -> list[_Derivation]:
-    """Search complete origin-disjoint derivations at one priority."""
-    candidates = (
-        [contributor for contributor in eligible if not contributor.extras]
-        if priority == _PRIORITY_NO_EXTRAS
-        else eligible
+    """Return all reference derivations needed for recipe discovery."""
+    return sorted(
+        _iter_derivations_at_priority_reference(
+            eligible,
+            required,
+            priority,
+            required_origin_ids,
+        ),
+        key=lambda item: _accounted_key(item.accounted),
     )
-    contributors_by_unit = {
-        unit_id: [
-            contributor
-            for contributor in candidates
-            if unit_id in contributor.covered_units
-        ]
-        for unit_id in required
-    }
-    contributors_by_origin = {
-        origin_id: [
-            contributor
-            for contributor in candidates
-            if origin_id in contributor.accounted.origins
-        ]
-        for origin_id in required_origin_ids
-    }
-    if (
-        not candidates
-        or not all(contributors_by_unit.values())
-        or not all(contributors_by_origin.values())
-    ):
-        return []
-
-    states: list[
-        tuple[
-            EntitySet,
-            EntitySet,
-            FigureSet | None,
-            EntitySet,
-            bool,
-            tuple[EntitySet, ...],
-            tuple[EntitySet, ...],
-        ]
-    ] = [(frozenset(), frozenset(), None, frozenset(), True, (), ())]
-    visited: set[
-        tuple[
-            EntitySet,
-            EntitySet,
-            str | None,
-            EntitySet,
-            bool,
-            tuple[tuple[tuple[str, ...], tuple[str, ...]], ...],
-        ]
-    ] = set()
-    derivations: dict[
-        tuple[tuple[str, tuple[str, ...], bool], tuple[str, ...]], _Derivation
-    ] = {}
-
-    while states:
-        (
-            covered,
-            origins,
-            figures,
-            extras,
-            sealed,
-            selected_coverages,
-            selected_origins,
-        ) = states.pop()
-        state_key = (
-            covered,
-            origins,
-            _figure_set_key(figures) if figures is not None else None,
-            extras,
-            sealed,
-            tuple(
-                sorted(
-                    (tuple(sorted(coverage)), tuple(sorted(selected_origin_ids)))
-                    for coverage, selected_origin_ids in zip(
-                        selected_coverages, selected_origins
-                    )
-                )
-            ),
-        )
-        if state_key in visited:
-            continue
-        visited.add(state_key)
-
-        if required.issubset(covered) and required_origin_ids.issubset(origins):
-            if figures is None or _derivation_priority(extras) != priority:
-                continue
-            if any(
-                required.issubset(
-                    frozenset(
-                        unit
-                        for other_index, other_coverage in enumerate(selected_coverages)
-                        if other_index != index
-                        for unit in other_coverage
-                    )
-                )
-                and required_origin_ids.issubset(
-                    frozenset(
-                        origin_id
-                        for other_index, other_origin_ids in enumerate(selected_origins)
-                        if other_index != index
-                        for origin_id in other_origin_ids
-                    )
-                )
-                for index in range(len(selected_coverages))
-            ):
-                continue
-            record = _AccountedFigures(figures, origins, sealed=sealed)
-            derivation = _Derivation(priority, record, extras)
-            derivations[(_accounted_key(record), tuple(sorted(extras)))] = derivation
-            continue
-
-        uncovered = required.difference(covered)
-        if uncovered:
-            next_unit = min(
-                uncovered,
-                key=lambda unit_id: (len(contributors_by_unit[unit_id]), unit_id),
-            )
-            next_contributors = contributors_by_unit[next_unit]
-        else:
-            missing_origins = required_origin_ids.difference(origins)
-            next_origin = min(
-                missing_origins,
-                key=lambda origin_id: (
-                    len(contributors_by_origin[origin_id]),
-                    origin_id,
-                ),
-            )
-            next_contributors = contributors_by_origin[next_origin]
-
-        for contributor in next_contributors:
-            if origins.intersection(contributor.accounted.origins):
-                continue
-            next_figures = (
-                contributor.accounted.figures
-                if figures is None
-                else _aggregate_figure_sets([figures, contributor.accounted.figures])
-            )
-            if next_figures is None:
-                continue
-            states.append(
-                (
-                    frozenset(covered | contributor.covered_units),
-                    frozenset(origins | contributor.accounted.origins),
-                    next_figures,
-                    frozenset(extras | contributor.extras),
-                    sealed and contributor.accounted.sealed,
-                    (*selected_coverages, contributor.covered_units),
-                    (*selected_origins, contributor.accounted.origins),
-                )
-            )
-
-    return sorted(derivations.values(), key=lambda item: _accounted_key(item.accounted))
-
-
-def _complete_derivations(
-    eligible: list[_EligibleContributor], required: EntitySet
-) -> list[_Derivation]:
-    """Return only the highest-priority complete origin-based derivations."""
-    if not required:
-        return []
-    exact_copy = _single_complete_derivations(eligible, required, with_extras=False)
-    if exact_copy:
-        return exact_copy
-    no_extra = _derivations_at_priority(eligible, required, _PRIORITY_NO_EXTRAS)
-    if no_extra:
-        return no_extra
-    residual_copy = _single_complete_derivations(eligible, required, with_extras=True)
-    if residual_copy:
-        return residual_copy
-    return _derivations_at_priority(eligible, required, _PRIORITY_WITH_EXTRAS)
 
 
 def _all_complete_derivations(
@@ -1075,33 +1503,117 @@ def _all_complete_derivations(
     )
 
 
-def _resolve_derivations(derivations: list[_Derivation]) -> _Resolution:
-    """Apply category, extra-count, deduplication, and conflict semantics."""
-    for priority in (
-        _PRIORITY_EXACT,
-        _PRIORITY_NO_EXTRAS,
-        _PRIORITY_RESIDUAL_COPY,
-        _PRIORITY_WITH_EXTRAS,
-    ):
-        at_priority = [item for item in derivations if item.priority == priority]
-        if not at_priority:
-            continue
-        minimum_extra_count = min(len(item.extras) for item in at_priority)
-        at_priority = [
-            item for item in at_priority if len(item.extras) == minimum_extra_count
-        ]
-        figure_keys = {
-            _figure_set_key(derivation.accounted.figures) for derivation in at_priority
-        }
-        if len(figure_keys) > 1:
-            return _Resolution(conflicted=True)
-        records_by_key = {
-            _accounted_key(derivation.accounted): derivation.accounted
-            for derivation in at_priority
-        }
-        return _Resolution(
-            records=tuple(records_by_key[key] for key in sorted(records_by_key))
+def _copy_derivations(
+    eligible: list[_EligibleContributor],
+    required: EntitySet,
+    *,
+    with_extras: bool,
+    required_origin_ids: EntitySet,
+) -> list[_Derivation]:
+    """Return complete copies, applying frontier-specific origin requirements."""
+    if not required_origin_ids:
+        return _single_complete_derivations(
+            eligible,
+            required,
+            with_extras=with_extras,
         )
+
+    priority = _PRIORITY_RESIDUAL_COPY if with_extras else _PRIORITY_EXACT
+    return [
+        _Derivation(priority, contributor.accounted, contributor.extras)
+        for contributor in eligible
+        if bool(contributor.extras) is with_extras
+        and required.issubset(contributor.covered_units)
+        and required_origin_ids.issubset(contributor.accounted.origins)
+    ]
+
+
+def _resolve_priority_derivations(
+    derivations: Iterable[_Derivation],
+    minimum_possible_extra_count: int,
+) -> _Resolution:
+    """Resolve one priority, stopping once its strongest outcome conflicts."""
+    best_extra_count: int | None = None
+    best_figure_key: str | None = None
+    best_record: _AccountedFigures | None = None
+    conflicted = False
+
+    for derivation in derivations:
+        extra_count = len(derivation.extras)
+        figure_key = derivation.accounted.figure_key
+        if best_extra_count is None or extra_count < best_extra_count:
+            best_extra_count = extra_count
+            best_figure_key = figure_key
+            best_record = derivation.accounted
+            conflicted = False
+        elif extra_count > best_extra_count:
+            continue
+        elif figure_key != best_figure_key:
+            conflicted = True
+
+        if conflicted and best_extra_count == minimum_possible_extra_count:
+            return _Resolution(conflicted=True)
+
+    if conflicted:
+        return _Resolution(conflicted=True)
+    return (
+        _Resolution(records=(best_record,))
+        if best_record is not None
+        else _Resolution()
+    )
+
+
+def _eligible_resolution(
+    eligible: list[_EligibleContributor],
+    required: EntitySet,
+    required_origin_ids: EntitySet,
+) -> _Resolution:
+    """Resolve already selected contributors in normal priority order."""
+    searches: tuple[tuple[Iterable[_Derivation], int], ...] = (
+        (
+            _copy_derivations(
+                eligible,
+                required,
+                with_extras=False,
+                required_origin_ids=required_origin_ids,
+            ),
+            0,
+        ),
+        (
+            _iter_derivations_at_priority(
+                eligible,
+                required,
+                _PRIORITY_NO_EXTRAS,
+                required_origin_ids,
+            ),
+            0,
+        ),
+        (
+            _copy_derivations(
+                eligible,
+                required,
+                with_extras=True,
+                required_origin_ids=required_origin_ids,
+            ),
+            1,
+        ),
+        (
+            _iter_derivations_at_priority(
+                eligible,
+                required,
+                _PRIORITY_WITH_EXTRAS,
+                required_origin_ids,
+            ),
+            1,
+        ),
+    )
+    for derivations, minimum_extra_count in searches:
+        resolution = _resolve_priority_derivations(
+            derivations,
+            minimum_extra_count,
+        )
+        if resolution.records or resolution.conflicted:
+            return resolution
     return _Resolution()
 
 
@@ -1126,9 +1638,11 @@ def _target_resolution(
         target_id,
         structural_leaf_sets,
         origin_units,
-        inclusive_descendants,
         shadowed_origin_ids,
     )
+    if not required:
+        return _Resolution()
+
     eligible = _eligible_contributors(
         target_id,
         contributor_states,
@@ -1140,18 +1654,175 @@ def _target_resolution(
         shadowed_origin_ids,
         population,
     )
-    derivations = (
-        _all_complete_derivations(eligible, required, required_origin_ids)
-        if required_origin_ids
-        else _complete_derivations(eligible, required)
-    )
-    return _resolve_derivations(
-        [
-            derivation
-            for derivation in derivations
-            if required_origin_ids.issubset(derivation.accounted.origins)
-        ]
-    )
+    return _eligible_resolution(eligible, required, required_origin_ids)
+
+
+def _recipe_source_ids(
+    states: dict[str, tuple[_AccountedFigures, ...]],
+    dynamic_target_ids: list[str],
+    conflicted_frontiers: dict[str, EntitySet],
+    structural_leaf_sets: dict[str, EntitySet],
+    origin_units: dict[str, EntitySet],
+    entities_by_id: dict[str, schema.Entity],
+    inclusive_ancestors: dict[str, EntitySet],
+    inclusive_descendants: dict[str, EntitySet],
+    shadowed_origin_ids: EntitySet,
+) -> list[str]:
+    """Select recipe producers and expose sealed recipes to equal-scope peers."""
+    required_cache: dict[str, EntitySet] = {}
+    eligible_cache: dict[str, list[_EligibleContributor]] = {}
+    reachable_cache: dict[str, EntitySet] = {}
+    contested_units_cache: dict[str, EntitySet] = {}
+    coverage_cache: CoverageCache = {}
+    extra_contested_cache: dict[tuple[str, str], bool] = {}
+    population = _provenance_population(states)
+
+    def required_units(target_id: str) -> EntitySet:
+        required = required_cache.get(target_id)
+        if required is None:
+            required = _required_target_units(
+                target_id,
+                structural_leaf_sets,
+                origin_units,
+                shadowed_origin_ids,
+            )
+            required_cache[target_id] = required
+        return required
+
+    def eligible_contributors(target_id: str) -> list[_EligibleContributor]:
+        eligible = eligible_cache.get(target_id)
+        if eligible is None:
+            eligible = _eligible_contributors(
+                target_id,
+                states,
+                entities_by_id,
+                structural_leaf_sets,
+                origin_units,
+                inclusive_ancestors,
+                inclusive_descendants,
+                frozenset(shadowed_origin_ids),
+                population,
+                coverage_cache,
+                extra_contested_cache,
+            )
+            eligible_cache[target_id] = eligible
+        return eligible
+
+    def reachable_units(target_id: str) -> EntitySet:
+        reachable = reachable_cache.get(target_id)
+        if reachable is None:
+            required = required_units(target_id)
+            eligible = eligible_contributors(target_id)
+            covered = frozenset(
+                unit_id
+                for contributor in eligible
+                for unit_id in contributor.covered_units
+            )
+            reachable = (
+                frozenset(
+                    unit_id
+                    for contributor in eligible
+                    for unit_id in contributor.covered_units.union(contributor.extras)
+                )
+                if required.issubset(covered)
+                else frozenset()
+            )
+            reachable_cache[target_id] = reachable
+        return reachable
+
+    def contested_units(target_id: str) -> EntitySet:
+        contested = contested_units_cache.get(target_id)
+        if contested is None:
+            target = entities_by_id[target_id]
+            target_ancestors = inclusive_ancestors[target_id]
+            contested = frozenset(
+                unit_id
+                for other_id, other in entities_by_id.items()
+                if other_id != target_id
+                and (
+                    other.kind == target.kind
+                    or bool(
+                        target_ancestors.intersection(inclusive_ancestors[other_id])
+                    )
+                )
+                for unit_id in structural_leaf_sets[other_id]
+            )
+            contested_units_cache[target_id] = contested
+        return contested
+
+    recipe_source_ids: list[str] = []
+    peers_by_required: dict[EntitySet, list[str]] = {}
+    for producer_id in dynamic_target_ids:
+        producer_required = required_units(producer_id)
+        if not producer_required:
+            continue
+        peers_by_required.setdefault(producer_required, []).append(producer_id)
+        producer_reachable = reachable_units(producer_id)
+        for consumer_id in dynamic_target_ids:
+            if consumer_id == producer_id:
+                continue
+            consumer_required = required_units(consumer_id)
+            if consumer_required == producer_required:
+                continue
+            consumer_scope = structural_leaf_sets[consumer_id]
+            if not producer_reachable.intersection(consumer_scope):
+                continue
+            outside_consumer = producer_required.difference(consumer_scope)
+            if outside_consumer.intersection(contested_units(consumer_id)):
+                continue
+            recipe_source_ids.append(producer_id)
+            break
+
+    peer_additions: dict[str, _AccountedFigures] = {}
+    for peer_ids in peers_by_required.values():
+        if len(peer_ids) < 2:
+            continue
+        for target_id in peer_ids:
+            frontier_requirements = _frontier_requirements(
+                target_id,
+                conflicted_frontiers,
+                structural_leaf_sets,
+            )
+            if frontier_requirements.conflicted:
+                continue
+            eligible = eligible_contributors(target_id)
+            sealed_keys = {
+                (
+                    item.covered_units,
+                    item.extras,
+                    item.accounted.origins,
+                ): item.accounted.figure_key
+                for item in eligible
+                if item.accounted.sealed
+            }
+            if not any(
+                not item.accounted.sealed
+                and (
+                    sealed_key := sealed_keys.get(
+                        (
+                            item.covered_units,
+                            item.extras,
+                            item.accounted.origins,
+                        )
+                    )
+                )
+                is not None
+                and sealed_key != item.accounted.figure_key
+                for item in eligible
+            ):
+                continue
+            resolution = _eligible_resolution(
+                [item for item in eligible if item.accounted.sealed],
+                required_units(target_id),
+                frontier_requirements.origins,
+            )
+            if resolution.records:
+                peer_additions[target_id] = resolution.records[0]
+
+    for target_id, record in peer_additions.items():
+        states[target_id] = (*states[target_id], record)
+
+    return recipe_source_ids
 
 
 def _discover_provenance_recipes(
@@ -1166,6 +1837,9 @@ def _discover_provenance_recipes(
     shadowed_origin_ids: frozenset[str],
 ) -> None:
     """Discover every origin-backed recipe before resolving any target."""
+    coverage_cache: CoverageCache = {}
+    contested_cache: dict[tuple[str, str], bool] = {}
+    required_units_cache: dict[str, EntitySet] = {}
     for _pass in range(max(1, len(dynamic_target_ids))):
         snapshot = dict(states)
         snapshot_population = _provenance_population(snapshot)
@@ -1181,13 +1855,15 @@ def _discover_provenance_recipes(
             )
             if frontier_requirements.conflicted:
                 continue
-            required = _required_target_units(
-                target_id,
-                structural_leaf_sets,
-                origin_units,
-                inclusive_descendants,
-                shadowed_origin_ids,
-            )
+            required = required_units_cache.get(target_id)
+            if required is None:
+                required = _required_target_units(
+                    target_id,
+                    structural_leaf_sets,
+                    origin_units,
+                    shadowed_origin_ids,
+                )
+                required_units_cache[target_id] = required
             eligible = _eligible_contributors(
                 target_id,
                 snapshot,
@@ -1198,6 +1874,8 @@ def _discover_provenance_recipes(
                 inclusive_descendants,
                 shadowed_origin_ids,
                 snapshot_population,
+                coverage_cache,
+                contested_cache,
             )
             existing = {_accounted_key(record) for record in states[target_id]}
             for derivation in _all_complete_derivations(
@@ -1221,17 +1899,12 @@ def _discover_provenance_recipes(
             for key in records_by_key
         )
         for target_id, records_by_key in additions.items():
+            merged_records = {
+                _accounted_key(record): record for record in states[target_id]
+            }
+            merged_records.update(records_by_key)
             states[target_id] = tuple(
-                {
-                    _accounted_key(record): record
-                    for record in (*states[target_id], *records_by_key.values())
-                }[key]
-                for key in sorted(
-                    {
-                        _accounted_key(record)
-                        for record in (*states[target_id], *records_by_key.values())
-                    }
-                )
+                merged_records[key] for key in sorted(merged_records)
             )
         if not introduced_new_recipe:
             return
@@ -1351,9 +2024,20 @@ def _project_entity_breakdowns(result: schema.Result) -> schema.Result:
             states[entity_id] = ()
             dynamic_target_ids.append(entity_id)
 
-    _discover_provenance_recipes(
+    recipe_source_ids = _recipe_source_ids(
         states,
         dynamic_target_ids,
+        conflicted_frontiers,
+        structural_leaf_sets,
+        origin_units,
+        entities_by_id,
+        inclusive_ancestors,
+        inclusive_descendants,
+        shadowed_origin_ids,
+    )
+    _discover_provenance_recipes(
+        states,
+        recipe_source_ids,
         conflicted_frontiers,
         entities_by_id,
         structural_leaf_sets,

@@ -113,6 +113,28 @@ def _projected_for(result: schema.Result, entity_id: str) -> list[schema.Breakdo
     ]
 
 
+def test_projection_search_completes_without_a_defensive_fallback() -> None:
+    entities = [
+        schema.Entity(id="donor", kind="stats", name="donor", child_ids=["leaf"]),
+        schema.Entity(id="target", kind="view", name="target", child_ids=["leaf"]),
+        schema.Entity(
+            id="leaf",
+            kind="operator",
+            name="leaf",
+            parent_ids=["donor", "target"],
+        ),
+    ]
+    result = _result(entities, [_breakdown("donor", _metric(7))])
+
+    projected = project_entity_breakdowns(result)
+
+    assert projected.breakdowns[: len(result.breakdowns)] == result.breakdowns
+    assert [item for item in projected.breakdowns if item.entity_id == "target"] == [
+        _breakdown("target", _metric(7))
+    ]
+    assert projected.warnings == result.warnings
+
+
 @pytest.mark.parametrize("relationship_declaration", ["parents", "children", "both"])
 def test_exact_leaf_set_projection_normalizes_relationships(
     relationship_declaration: str,
@@ -1185,6 +1207,178 @@ def test_projection_is_invariant_to_semantically_irrelevant_entity_ids() -> None
     assert project_with_ids(relabelled_ids) == ordinary
 
 
+def test_equal_scope_targets_preserve_sealed_frontier_priority() -> None:
+    """Raw alternatives must not override the sealed result for peer targets."""
+    entities = [
+        schema.Entity(
+            id=target_id,
+            kind=f"target-{index}",
+            name=target_id,
+            child_ids=["a", "b"],
+        )
+        for index, target_id in enumerate(("target-a", "target-b"))
+    ]
+    entities.extend(
+        [
+            schema.Entity(id="donor-a", kind="donor", name="a", child_ids=["a"]),
+            schema.Entity(id="donor-b0", kind="donor", name="b0", child_ids=["b"]),
+            schema.Entity(id="donor-b1", kind="donor", name="b1", child_ids=["b"]),
+            schema.Entity(id="a", kind="source_operator", name="a"),
+            schema.Entity(id="b", kind="source_operator", name="b"),
+        ]
+    )
+    result = _result(
+        entities,
+        [
+            _breakdown(
+                "donor-a",
+                _metric(5, aggregation=schema.AggregationType.SUM),
+            ),
+            _breakdown(
+                "donor-b0",
+                _metric(2, aggregation=schema.AggregationType.SUM),
+            ),
+            _breakdown(
+                "donor-b1",
+                _metric(2, aggregation=schema.AggregationType.SUM),
+            ),
+        ],
+    )
+
+    projected = project_entity_breakdowns(result)
+
+    for target_id in ("target-a", "target-b"):
+        assert [
+            breakdown.metrics[0].value
+            for breakdown in projected.breakdowns
+            if breakdown.entity_id == target_id
+        ] == [9]
+
+
+def _equivalent_recipe_target_values(
+    ids: dict[str, str],
+) -> dict[str, float | int | None]:
+    """Project equivalent recipe targets and return values by semantic name."""
+    entities = [
+        schema.Entity(
+            id=ids["t0"],
+            kind="peer",
+            name="t0",
+            child_ids=[ids["a"], ids["b"]],
+        ),
+        schema.Entity(
+            id=ids["t1"],
+            kind="peer",
+            name="t1",
+            child_ids=[ids["a"], ids["b"]],
+        ),
+        schema.Entity(
+            id=ids["whole"],
+            kind="whole",
+            name="whole",
+            child_ids=[ids["a"], ids["b"], ids["c"]],
+        ),
+        schema.Entity(
+            id=ids["exact"],
+            kind=schema.ENTITY_KIND_CODE_STACK,
+            name="exact",
+            child_ids=[ids["a"], ids["b"]],
+        ),
+        *[
+            schema.Entity(
+                id=ids[f"chain-{name}"],
+                kind="chain",
+                name=f"chain-{name}",
+                child_ids=[ids[name]],
+            )
+            for name in ("a", "b", "c")
+        ],
+        *[
+            schema.Entity(
+                id=ids[name],
+                kind=schema.ENTITY_KIND_SOURCE_OPERATOR,
+                name=name,
+            )
+            for name in ("a", "b", "c")
+        ],
+    ]
+    result = _result(
+        entities,
+        [
+            *[
+                _breakdown(
+                    ids[f"chain-{name}"],
+                    _metric(value, aggregation=schema.AggregationType.SUM),
+                )
+                for name, value in (("a", 2), ("b", 3), ("c", 11))
+            ],
+            _breakdown(
+                ids["exact"],
+                _metric(7, aggregation=schema.AggregationType.MAX),
+            ),
+        ],
+    )
+    names_by_id = {entity.id: entity.name for entity in result.entities}
+    return {
+        names_by_id[breakdown.entity_id]: breakdown.metrics[0].value
+        for breakdown in project_entity_breakdowns(result).breakdowns
+    }
+
+
+def test_equivalent_recipe_targets_preserve_self_exclusion_symmetrically() -> None:
+    """Equivalent t0/t1 producers must have the same recipe exposure semantics."""
+    semantic_ids = (
+        "t0",
+        "t1",
+        "whole",
+        "exact",
+        "chain-a",
+        "chain-b",
+        "chain-c",
+        "a",
+        "b",
+        "c",
+    )
+    values = _equivalent_recipe_target_values({name: name for name in semantic_ids})
+
+    assert values["whole"] == 16
+    assert values["t0"] == 5
+    assert values["t1"] == 5
+
+
+def test_equivalent_recipe_targets_are_invariant_to_id_renaming() -> None:
+    """Renaming t0/t1 must not choose which equivalent target receives output."""
+    semantic_ids = (
+        "t0",
+        "t1",
+        "whole",
+        "exact",
+        "chain-a",
+        "chain-b",
+        "chain-c",
+        "a",
+        "b",
+        "c",
+    )
+    ordinary_ids = {name: name for name in semantic_ids}
+    renamed_ids = {
+        "t0": "z-target",
+        "t1": "a-target",
+        "whole": "whole-renamed",
+        "exact": "exact-renamed",
+        "chain-a": "chain-z",
+        "chain-b": "chain-x",
+        "chain-c": "chain-y",
+        "a": "leaf-c",
+        "b": "leaf-a",
+        "c": "leaf-b",
+    }
+
+    assert _equivalent_recipe_target_values(renamed_ids) == (
+        _equivalent_recipe_target_values(ordinary_ids)
+    )
+
+
 def test_conflicting_same_pass_candidates_are_order_independent() -> None:
     """A target must not commit one candidate before its competitor is known."""
     forward = project_entity_breakdowns(_cross_hierarchy_conflict_result())
@@ -2047,6 +2241,83 @@ def test_no_extra_derivation_wins_over_conflicting_residual_copy() -> None:
     ]
 
 
+def test_nine_exact_groups_outrank_lower_priority_residual() -> None:
+    """An exhaustive no-extra search must resolve before residual fallback."""
+    group_count = 9
+    leaf_pairs = [(f"a-{index}", f"b-{index}") for index in range(group_count)]
+    leaf_ids = [leaf_id for pair in leaf_pairs for leaf_id in pair]
+    result = _result(
+        [
+            schema.Entity(
+                id="target",
+                kind="target",
+                name="target",
+                child_ids=leaf_ids,
+            ),
+            schema.Entity(
+                id="residual",
+                kind=schema.ENTITY_KIND_CODE_STACK,
+                name="residual",
+                child_ids=[*leaf_ids, "extra"],
+            ),
+            *[
+                schema.Entity(
+                    id=f"exact-{index}",
+                    kind=schema.ENTITY_KIND_CODE_STACK,
+                    name=f"exact-{index}",
+                    child_ids=list(pair),
+                )
+                for index, pair in enumerate(leaf_pairs)
+            ],
+            *[
+                schema.Entity(
+                    id=f"split-{leaf_id}",
+                    kind=schema.ENTITY_KIND_CODE_STACK,
+                    name=f"split-{leaf_id}",
+                    child_ids=[leaf_id],
+                )
+                for leaf_id in leaf_ids
+            ],
+            *[
+                schema.Entity(
+                    id=leaf_id,
+                    kind=schema.ENTITY_KIND_SOURCE_OPERATOR,
+                    name=leaf_id,
+                )
+                for leaf_id in [*leaf_ids, "extra"]
+            ],
+        ],
+        [
+            *[
+                _breakdown(
+                    f"exact-{index}",
+                    _metric(3, aggregation=schema.AggregationType.SUM),
+                )
+                for index in range(group_count)
+            ],
+            *[
+                _breakdown(
+                    f"split-{leaf_id}",
+                    _metric(value, aggregation=schema.AggregationType.SUM),
+                )
+                for pair in leaf_pairs
+                for leaf_id, value in zip(pair, (1, 2))
+            ],
+            _breakdown(
+                "residual",
+                _metric(999, aggregation=schema.AggregationType.MAX),
+            ),
+        ],
+    )
+
+    assert _projected_for(result, "target") == [
+        _breakdown(
+            "target",
+            _metric(27, aggregation=schema.AggregationType.SUM),
+        )
+    ]
+
+
 def test_authoritative_exact_match_outranks_no_extra_and_residual_derivations() -> None:
     """An exact MAX copy wins over conflicting SUM and residual values."""
     exact_metric = _metric(50, aggregation=schema.AggregationType.MAX)
@@ -2586,6 +2857,29 @@ def test_non_finite_aggregate_is_suppressed() -> None:
         [
             _breakdown("a", _metric(maximum, aggregation=schema.AggregationType.SUM)),
             _breakdown("b", _metric(maximum, aggregation=schema.AggregationType.SUM)),
+        ],
+    )
+
+    assert _projected_for(result, "line") == []
+
+
+def test_incompatible_sample_metadata_is_not_aggregated() -> None:
+    """Sample counts must be consistently present on every contributor."""
+    result = _result(
+        [
+            schema.Entity(id="line", kind="view", name="line", child_ids=["a", "b"]),
+            schema.Entity(id="a", kind="operator", name="a"),
+            schema.Entity(id="b", kind="operator", name="b"),
+        ],
+        [
+            _breakdown(
+                "a",
+                _metric(2.25, aggregation=schema.AggregationType.SUM, samples=1),
+            ),
+            _breakdown(
+                "b",
+                _metric(3.5, aggregation=schema.AggregationType.SUM),
+            ),
         ],
     )
 
