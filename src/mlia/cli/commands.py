@@ -87,6 +87,22 @@ def _load_analysis_plugin_registry() -> AnalysisPluginRegistry:
     return registry
 
 
+def _exit_with_help_on_empty_args(ctx: click.Context, args: list[str]) -> None:
+    """Print help and exit when arguments are empty outside shell completion."""
+    if not args and not ctx.resilient_parsing:
+        typer.echo(ctx.get_help())
+        ctx.exit(2)
+
+
+class HelpOnEmptyGroup(typer.core.TyperGroup):
+    """Typer group that prints help to stdout for empty argument lists."""
+
+    def parse_args(self, ctx: click.Context, args: list[str]) -> list[str]:
+        """Print help for empty arguments without disrupting shell completion."""
+        _exit_with_help_on_empty_args(ctx, args)
+        return super().parse_args(ctx, args)
+
+
 class CheckOptionCommand(typer.core.TyperCommand):
     """Typer command that adds dynamic options to the check command."""
 
@@ -121,6 +137,11 @@ class CheckOptionCommand(typer.core.TyperCommand):
             backend_options=backend_options,
         )
         return super().invoke(ctx)
+
+    def parse_args(self, ctx: click.Context, args: list[str]) -> list[str]:
+        """Print help for empty arguments without disrupting shell completion."""
+        _exit_with_help_on_empty_args(ctx, args)
+        return super().parse_args(ctx, args)
 
 
 def complete_backend_names(incomplete: str) -> list[str]:
@@ -399,6 +420,7 @@ def format_backend_info(settings: ApplicationSettings) -> None:
 
 
 mlia_app = typer.Typer(
+    cls=HelpOnEmptyGroup,
     no_args_is_help=True,
     epilog=MLIA_HELP_EPILOG,
     context_settings={
@@ -407,6 +429,7 @@ mlia_app = typer.Typer(
 )
 
 backend_app = typer.Typer(
+    cls=HelpOnEmptyGroup,
     no_args_is_help=True,
     context_settings={
         "help_option_names": ["-h", "--help"],
@@ -414,6 +437,7 @@ backend_app = typer.Typer(
 )
 
 target_app = typer.Typer(
+    cls=HelpOnEmptyGroup,
     no_args_is_help=True,
     context_settings={
         "help_option_names": ["-h", "--help"],

@@ -125,6 +125,34 @@ def test_check_option_completion_includes_plugin_provided_options(
     discover_backend_option_specs.assert_called_once_with()
 
 
+def test_check_option_completion_supports_alternative_program_name_and_variable(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Check completion should honor Click's configured completion variable."""
+    monkeypatch.setattr(
+        cli_commands,
+        "discover_backend_option_specs",
+        MagicMock(return_value=[]),
+    )
+
+    result = CliRunner().invoke(
+        cli_main.mlia_app,
+        [],
+        prog_name="alternative",
+        complete_var="_ALT_COMPLETE",
+        env={
+            "_ALT_COMPLETE": "complete_bash",
+            "COMP_WORDS": "alternative check -",
+            "COMP_CWORD": "2",
+        },
+    )
+
+    assert result.exit_code == 0
+    assert result.stderr == ""
+    assert "-h" in result.stdout.splitlines()
+    assert "--help" in result.stdout.splitlines()
+
+
 @pytest.mark.parametrize(
     ("comp_words", "comp_cword"),
     [

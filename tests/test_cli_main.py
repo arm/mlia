@@ -127,13 +127,22 @@ class DemoAnalysisPlugin:
         ),
     ],
 )
-def test_no_arguments_show_help(app: Any, expected_text: tuple[str, ...]) -> None:
+@pytest.mark.parametrize("colors", ("", "1"))
+def test_no_arguments_show_help(
+    app: Any,
+    expected_text: tuple[str, ...],
+    colors: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """Calling a CLI app without arguments should show help."""
+    monkeypatch.setenv("NO_COLOR", colors)
     result = CliRunner().invoke(app, [])
 
     assert result.exit_code == 2
+    assert result.stderr == ""
+    assert "COMMAND [ARGS]..." in result.stdout
     for text in expected_text:
-        assert text in result.stdout or text in result.stderr
+        assert text in result.stdout
 
 
 def test_main_calls_mlia_app(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -218,8 +227,18 @@ def test_emit_standardized_output_replaces_unencodable_characters(
     settings.console.out.assert_called_once_with("??? café", highlight=False)
 
 
-def test_check_without_arguments_shows_help_and_exit_code_2() -> None:
+@pytest.mark.parametrize(
+    "colors",
+    (
+        "",
+        "1",
+    ),
+)
+def test_check_without_arguments_shows_help_and_exit_code_2(
+    monkeypatch: pytest.MonkeyPatch, colors: str
+) -> None:
     """The check command should show help and exit with status 2 when empty."""
+    monkeypatch.setenv("NO_COLOR", colors)
     result = CliRunner().invoke(cli_main.mlia_app, ["check"], terminal_width=120)
 
     assert result.exit_code == 2
