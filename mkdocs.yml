@@ -3,7 +3,7 @@
 
 site_name: ML Inference Advisor
 site_description: Core documentation for the ML Inference Advisor repository.
-site_url: https://github.com/arm/mlia
+site_url: https://arm.github.io/mlia/
 repo_url: https://github.com/arm/mlia
 repo_name: arm/mlia
 edit_uri: edit/main/docs/source/

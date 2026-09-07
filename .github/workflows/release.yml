@@ -223,7 +223,7 @@ jobs:
     needs: build_and_test_wheel
     if: >-
       ${{ github.event.repository.private && github.event_name == 'push' &&
-      github.ref == 'refs/heads/main' }}
+      (github.ref == 'refs/heads/main' || github.ref_type == 'tag') }}
     uses: Arm-Debug/github-workflow-wizardry/.github/workflows/sync-to-public-repo.yml@main
     with:
       public_repo: arm/mlia
