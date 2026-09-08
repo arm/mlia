@@ -14,8 +14,8 @@ post-analysis capabilities.
 ## Table of Contents
 
 - [Documentation](#documentation)
-- [Installation](#installation)
 - [Plugin model](#plugin-model)
+- [Installation](#installation)
 - [Quick start](#quick-start)
 - [Python API](#python-api)
 - [Reporting bugs](#reporting-bugs)
@@ -23,19 +23,10 @@ post-analysis capabilities.
 - [Development](#development)
 - [Getting support](#getting-support)
 - [Reporting vulnerabilities](#reporting-vulnerabilities)
+- [Releases](#releases)
 - [License](#license)
+- [Inclusive language commitment](#inclusive-language-commitment)
 - [Trademarks and copyrights](#trademarks-and-copyrights)
-
-## Inclusive language commitment
-
-This product conforms to Arm's inclusive language policy and, to the best of
-our knowledge, does not contain any non-inclusive language.
-
-If you find something that concerns you, email <terms@arm.com>.
-
-## Releases
-
-Latest changes and release history can be found in [MLIA releases](https://github.com/arm/mlia/releases).
 
 ## Documentation
 
@@ -55,24 +46,6 @@ Use the core docs for:
 Target-specific, backend-specific, and converter-specific detail belongs in the
 documentation for the plugin package that owns that functionality.
 
-## Installation
-
-It is recommended to use a virtual environment for MLIA installation.
-A typical setup requires:
-
-- Ubuntu 22.04 LTS or another compatible Linux environment
-- Python 3.10 or newer
-- `libpython3.10-dev` when required by your environment
-
-Install the core package with:
-
-```bash
-pip install mlia
-```
-
-Install the target, backend, and converter plugins required for your workflow.
-Use the owning plugin documentation for package names and any additional setup.
-
 ## Plugin model
 
 `mlia` is the core package. Targets, backends, and converters are provided
@@ -85,6 +58,24 @@ MLIA uses the following plugin model:
   paths.
 - MLIA discovers those plugins at runtime and exposes them through the same CLI.
 
+### Target plugins
+
+- [MLIA Ethos-U](https://github.com/arm/mlia-ethos-u)
+  (`mlia-ethos-u`) adds Ethos-U target profiles and the Vela and Corstone
+  backends for compatibility and performance analysis.
+- [MLIA Neural Technology](https://github.com/arm/mlia-neural-technology)
+  (`mlia-neural-technology`) adds Neural Technology target profiles and
+  backends for performance estimation and measured profiling analysis.
+
+### Converter plugins
+
+- [MLIA LiteRT Converter](https://github.com/arm/mlia-converters-litert)
+  (`mlia-converters-litert`) converts LiteRT and TensorFlow Lite `.tflite`
+  models into TOSA artifacts.
+- [MLIA PyTorch Converter](https://github.com/arm/mlia-converters-pytorch)
+  (`mlia-converters-pytorch`) converts PyTorch models into artifacts used by
+  supported MLIA target flows.
+
 Install only the plugin packages you need, then use the discovery commands to
 see what is available in the current environment:
 
@@ -92,6 +83,39 @@ see what is available in the current environment:
 mlia target list
 mlia backend list
 ```
+
+## Installation
+
+It is recommended to use a virtual environment for MLIA installation.
+A typical setup requires:
+
+- Ubuntu 22.04 LTS or another compatible Linux environment
+- Python 3.10 or newer
+- `libpython3.10-dev` when required by your environment
+
+Most users should install a [target plugin](#target-plugins). Target plugins
+declare `mlia` as a dependency, so installing one also installs a compatible
+version of the MLIA core package. For example:
+
+```bash
+pip install mlia-ethos-u
+```
+
+If your workflow requires model conversion, install the relevant
+[converter plugin](#converter-plugins) alongside the target plugin:
+
+```bash
+pip install mlia-ethos-u mlia-converters-litert
+```
+
+Install the core package directly only when you do not need a target plugin:
+
+```bash
+pip install mlia
+```
+
+See each plugin's documentation for supported targets, models, and any
+additional setup.
 
 ## Quick start
 
@@ -123,7 +147,7 @@ mlia check my_model.tflite --target-profile ./my_target_profile.toml
 
 If you are new to the plugin-based model, the safest first pattern is:
 
-1. Install `mlia` and the plugin packages you need.
+1. Install the target plugin and any converter plugin you need.
 2. Confirm target and backend discovery with `mlia target list` and
    `mlia backend list`.
 3. Run one simple `mlia check` command, then add backend-specific options as
@@ -158,10 +182,10 @@ Other public helpers include:
 - `list_backend_options()`
 - `supported_backends(target_profile)`
 
-If you need `torch.nn.Module` inputs, install the optional extra:
+If you need `torch.nn.Module` inputs, install the PyTorch converter plugin:
 
 ```bash
-pip install mlia[torch]
+pip install mlia-converters-pytorch
 ```
 
 The Python API uses the same installed target and backend plugins as the CLI.
@@ -270,16 +294,28 @@ team directly for assistance.
 Information on reporting security issues can be found in
 [Reporting vulnerabilities](SECURITY.md).
 
+## Releases
+
+Latest changes and release history can be found in [MLIA releases](https://github.com/arm/mlia/releases).
+
 ## License
 
 ML Inference Advisor is licensed under [Apache License 2.0](LICENSES/Apache-2.0.txt)
 unless otherwise indicated. This project contains software under a range of
 permissive licenses, see [LICENSES](LICENSES/).
 
+## Inclusive language commitment
+
+This product conforms to Arm's inclusive language policy and, to the best of
+our knowledge, does not contain any non-inclusive language.
+
+If you find something that concerns you, email <terms@arm.com>.
+
 ## Trademarks and copyrights
 
 - Arm, Arm Ethos-U, Arm Cortex-A, Arm Cortex-M, and Arm Corstone are registered trademarks or trademarks of Arm Limited (or its subsidiaries) in the U.S. and/or elsewhere.
 - TensorFlow is a trademark of Google LLC.
+- PyTorch and ExecuTorch are trademarks of The Linux Foundation.
 - Keras is a trademark of Francois Chollet.
 - Linux is the registered trademark of Linus Torvalds in the U.S. and elsewhere.
 - Python is a registered trademark of the PSF.
