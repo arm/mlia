@@ -12,7 +12,7 @@ import pytest
 from cyclonedx.schema import OutputFormat, SchemaVersion
 from cyclonedx.validation import make_schemabased_validator
 
-from hatch_build import CustomBuildHook, create_sbom, replace_markdown_relative_paths
+from hatch_build import CustomBuildHook, MetadataHook, create_sbom
 
 
 def test_create_sbom() -> None:
@@ -92,43 +92,65 @@ def test_build_hook_generates_wheel_sbom(tmp_path: Path) -> None:
     assert not sbom_path.exists()
 
 
+def test_metadata_hook_update_uses_commit_hash(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """README metadata links should target the current commit."""
+    (tmp_path / "README.md").write_text(
+        "[Docs](docs.md)\n![Image](image.png)\n[Section](#section)",
+        encoding="utf-8",
+    )
+    (tmp_path / "docs.md").touch()
+    (tmp_path / "image.png").touch()
+    monkeypatch.setattr(
+        "hatch_build.subprocess.run",
+        Mock(
+            side_effect=[
+                Mock(stdout=f"{tmp_path}\n"),
+                Mock(stdout="0123456789abcdef\n"),
+            ]
+        ),
+    )
+    hook = MetadataHook(str(tmp_path), {})
+    metadata = {"version": "0.1.0"}
+
+    hook.update(metadata)
+
+    assert metadata["readme"] == {
+        "content-type": "text/markdown",
+        "text": "[Docs](https://github.com/arm/mlia/blob/"
+        "0123456789abcdef/docs.md)\n"
+        "![Image](https://raw.githubusercontent.com/arm/mlia/"
+        "0123456789abcdef/image.png)\n"
+        "[Section](https://github.com/arm/mlia/blob/"
+        "0123456789abcdef/README.md#section)",
+    }
+
+
 @pytest.mark.parametrize(
-    "linked_file_found, file_content, expected_result",
+    ("version", "revision"),
     [
-        [
-            True,
-            "[Test](README.md)",
-            "[Test](https://github.com/arm/mlia/blob/0.1.0/README.md)",
-        ],
-        [
-            True,
-            "![Test](image.png)",
-            "![Test](https://raw.githubusercontent.com/arm/mlia/0.1.0/image.png)",
-        ],
-        [
-            False,
-            "[Test](https://github.com/arm/mlia)",
-            "[Test](https://github.com/arm/mlia)",
-        ],
-        [False, "[Test](README.md)", "[Test](README.md)"],
-        [
-            True,
-            "Lorem ipsum dolor sit amet, consectetur adipiscing elit",
-            "Lorem ipsum dolor sit amet, consectetur adipiscing elit",
-        ],
+        ("0.12.2", "v0.12.2"),
+        ("0.12.3.dev9+g40a5004", "g40a5004"),
     ],
 )
-def test_replace_markdown_relative_paths(
-    linked_file_found: bool,
-    file_content: str,
-    expected_result: str,
+def test_metadata_hook_update_falls_back_to_version_or_hash(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    version: str,
+    revision: str,
 ) -> None:
-    """Test replacement of relative md paths with links to GitHub."""
-    path_mock = Mock()
-    tag = "0.1.0"
-    path_mock.read_text.return_value = file_content
-    path_mock.exists.return_value = linked_file_found
-    path_mock.joinpath.return_value = path_mock
+    """README links should use the version or its hash without Git metadata."""
+    (tmp_path / "README.md").write_text("[Docs](docs.md)", encoding="utf-8")
+    (tmp_path / "docs.md").touch()
+    monkeypatch.setattr("hatch_build.subprocess.run", Mock(side_effect=OSError))
+    hook = MetadataHook(str(tmp_path), {})
+    metadata = {"version": version}
 
-    result = replace_markdown_relative_paths(path_mock, "test.md", tag)
-    assert result == expected_result
+    hook.update(metadata)
+
+    assert metadata["readme"] == {
+        "content-type": "text/markdown",
+        "text": f"[Docs](https://github.com/arm/mlia/blob/{revision}/docs.md)",
+    }
