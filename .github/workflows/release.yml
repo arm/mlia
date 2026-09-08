@@ -224,7 +224,7 @@ jobs:
     if: >-
       ${{ github.event.repository.private && github.event_name == 'push' &&
       (github.ref == 'refs/heads/main' || github.ref_type == 'tag') }}
-    uses: Arm-Debug/github-workflow-wizardry/.github/workflows/sync-to-public-repo.yml@main
+    uses: Arm-Debug/github-workflow-wizardry/.github/workflows/sync-to-public-repo.yml@43b52230937f49999a2f7e0cb16cf6f078dddfaf
     with:
       public_repo: arm/mlia
     secrets: inherit
