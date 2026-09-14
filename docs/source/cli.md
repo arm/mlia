@@ -77,6 +77,11 @@ Request JSON output:
 mlia check my_model.tflite --target-profile <target-profile> --performance --json
 ```
 
+Every successful `mlia check` writes the canonical standardized output to
+`mlia-output/mlia-output.json`, or beneath the directory selected with
+`--output-dir`. The `--json` option additionally selects JSON instead of text
+for stdout; it does not control whether the canonical file is written.
+
 Use measured profiling data alongside a source model:
 
 ```bash

@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 from collections.abc import Mapping
 from pathlib import Path
@@ -349,7 +350,7 @@ def test_check_accepts_updated_flag_names(args: list[str], expected_text: str) -
 
 def test_check_accepts_target_profile_flag(monkeypatch: pytest.MonkeyPatch) -> None:
     """The check command should accept the target profile flag."""
-    monkeypatch.setattr(mlia_api, "get_advice", MagicMock())
+    monkeypatch.setattr(mlia_api, "get_advice", MagicMock(return_value=None))
     monkeypatch.setattr(
         command_validators,
         "validate_check_target_profile",
@@ -364,11 +365,37 @@ def test_check_accepts_target_profile_flag(monkeypatch: pytest.MonkeyPatch) -> N
     assert result.exit_code == 0
 
 
+def test_check_persists_canonical_output(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Every successful CLI analysis should persist its canonical JSON output."""
+    output: dict[str, object] = {
+        "schema_version": "1.2.0",
+        "results": [{"kind": "compatibility", "status": "ok"}],
+    }
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(mlia_api, "get_advice", MagicMock(return_value=output))
+    monkeypatch.setattr(
+        command_validators,
+        "validate_check_target_profile",
+        MagicMock(return_value=True),
+    )
+
+    result = CliRunner().invoke(
+        cli_main.mlia_app,
+        ["check", "model.tflite", "--target-profile", "ethos-u55-256"],
+    )
+
+    assert result.exit_code == 0
+    output_path = tmp_path / "mlia-output" / "mlia-output.json"
+    assert json.loads(output_path.read_text(encoding="utf-8")) == output
+
+
 def test_check_passes_backend_options_from_discovered_cli_options(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """The check command should forward dynamic backend options to the API."""
-    get_advice = MagicMock()
+    get_advice = MagicMock(return_value=None)
     discover_backend_option_specs = MagicMock(return_value=[_backend_option_spec()])
 
     monkeypatch.setattr(
@@ -444,7 +471,7 @@ def test_check_accepts_namespaced_backend_click_option(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """The check command should accept namespaced long typed backend options."""
-    get_advice = MagicMock()
+    get_advice = MagicMock(return_value=None)
     discover_backend_option_specs = MagicMock(
         return_value=[_typed_backend_option_spec()]
     )

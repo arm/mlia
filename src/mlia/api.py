@@ -35,6 +35,7 @@ from mlia.core.errors import (
     UnsupportedConfigurationError,
 )
 from mlia.core.logging import close_configured_handlers, setup_logging
+from mlia.core.output_persistence import persist_standardized_output
 from mlia.core.output_validation import collect_validation_errors
 from mlia.core.settings import ApplicationSettings
 from mlia.target.config import get_builtin_target_profile_path, load_profile
@@ -275,7 +276,8 @@ def run_advisor(
         backends: Optional list of backend names. Defaults to CLI behavior.
         example_inputs: Required for torch.nn.Module inputs.
         enable_quantization: Only valid for torch.nn.Module inputs.
-        write_output_files: Whether to keep output files on disk.
+        write_output_files: Whether to write the canonical output and keep generated
+            artifacts on disk.
         output_dir: Output directory when write_output_files is true.
         logs_dir: Optional logs directory for file logging. When provided, MLIA
             configures file logging to logs_dir/mlia.log. If omitted, MLIA does
@@ -381,7 +383,9 @@ def run_advisor(
             local_context = _create_api_execution_context(
                 output_base, context, advice_category_enum
             )
-            return _run_advisor_with_context(local_context, inputs)
+            output = _run_advisor_with_context(local_context, inputs)
+            persist_standardized_output(output, local_context.output_dir)
+            return output
 
         try:
             with temp_directory(suffix="mlia-api") as temp_base:

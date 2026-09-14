@@ -77,9 +77,10 @@ controls additional JSON Schema validation:
 - `"off"` skips only the additional JSON Schema validation.
 
 API mode does not render MLIA reports to stdout or stderr. Use
-`write_output_files=True` with `output_dir` when generated artifacts should be
-retained. Supplying `logs_dir` enables per-run file logging; its handlers are
-closed when the invocation finishes.
+`write_output_files=True` with `output_dir` to retain generated artifacts and
+write the canonical result to `mlia-output/mlia-output.json`. Supplying
+`logs_dir` enables per-run file logging; its handlers are closed when the
+invocation finishes.
 
 ## Lower-level API
 

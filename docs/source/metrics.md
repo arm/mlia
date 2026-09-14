@@ -37,8 +37,11 @@ fastest way to read a single run when you mainly want a summary.
 
 ### JSON output
 
-Use `--json` to produce a machine-readable output for automation, CI, archived
-comparisons, or more careful post-run inspection.
+Every successful CLI analysis writes its machine-readable canonical output to
+`mlia-output/mlia-output.json`, regardless of the selected console format. Use
+`--json` to emit the same structured output on stdout for automation and CI.
+The persisted file can be used for archived comparisons or more careful
+post-run inspection.
 
 Typical top-level JSON fields include:
 

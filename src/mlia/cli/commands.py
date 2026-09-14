@@ -27,6 +27,7 @@ from mlia.cli.settings import get_environment, new_settings
 from mlia.core.context import ExecutionContext
 from mlia.core.errors import ConfigurationError
 from mlia.core.logging import close_configured_handlers, setup_logging
+from mlia.core.output_persistence import persist_standardized_output
 from mlia.core.output_rendering import (
     standardized_output_to_json,
     standardized_output_to_text,
@@ -690,6 +691,8 @@ def check_command(
             backend_options=backend_options,
             settings=settings,
         )
+        if output is not None:
+            persist_standardized_output(output, context.output_dir)
         emit_standardized_output(settings, context, output)
         try:
             run_analysis_plugins(

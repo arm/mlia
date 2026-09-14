@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import io
+import json
 import sys
 import types
 from contextlib import contextmanager
@@ -425,6 +426,7 @@ def test_run_advisor_happy_path_uses_temp_dir(
 
     assert output == _FAKE_OUTPUT
     assert captured["output_dir"] == captured["temp_dir"] / "mlia-output"
+    assert not (captured["output_dir"] / "mlia-output.json").exists()
 
 
 def test_run_advisor_passes_default_application_settings(
@@ -475,6 +477,12 @@ def test_run_advisor_happy_path_resolves_output_dir(
 
     assert output == _FAKE_OUTPUT
     assert captured["output_dir"] == (tmp_path / "out").resolve() / "mlia-output"
+    assert (
+        json.loads(
+            (captured["output_dir"] / "mlia-output.json").read_text(encoding="utf-8")
+        )
+        == _FAKE_OUTPUT
+    )
 
 
 def test_run_advisor_coerces_model_path(

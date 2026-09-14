@@ -128,15 +128,18 @@ or API invocation are closed at the end of that run so repeated in-process
 executions do not retain stale file or console handlers.
 
 Unless `--output-dir` is set, generated files and logs use `mlia-output` beneath
-the current working directory. The main log is
-`mlia-output/logs/mlia.log`.
+the current working directory. The canonical standardized output is
+`mlia-output/mlia-output.json`, and the main log is
+`mlia-output/logs/mlia.log`. Selecting `--json` changes stdout rendering but
+does not change this persisted file.
 
 ## API flow
 
 `run_advisor()` mirrors target and backend selection, advisor execution, and
 post-processing without invoking the CLI renderer or post-analysis plugins. It
-supports model-based estimation and profiling-data input, optionally writes
-artifacts, and returns a JSON-compatible standardized-output dictionary.
+supports model-based estimation and profiling-data input, optionally writes the
+canonical output and backend artifacts, and returns a JSON-compatible
+standardized-output dictionary.
 
 Core basic and entity-graph validation always runs. The API's validation mode
 controls the additional JSON Schema validation performed before returning the
