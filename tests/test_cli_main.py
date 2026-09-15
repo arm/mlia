@@ -247,17 +247,21 @@ def test_check_without_arguments_shows_help_and_exit_code_2(
     assert "Generate compatibility/performance advice for a model" in result.stdout
 
 
-def test_check_help_lists_target_profile_option() -> None:
-    """The check command help should list the target profile flag."""
+def test_check_help_includes_discovery_and_compatibility_example() -> None:
+    """Check help should show how to discover profiles and start a check."""
     result = CliRunner().invoke(
         cli_main.mlia_app,
         ["check", "--help"],
         terminal_width=120,
     )
-    help_output = _strip_ansi(result.stdout)
+    help_output = " ".join(_strip_ansi(result.stdout).replace("│", " ").split())
 
     assert result.exit_code == 0
-    assert "--target-profile" in help_output
+    assert "mlia target list" in help_output
+    assert "mlia backend list" in help_output
+    assert re.search(
+        r"mlia check \S+ --target-profile \S+ --compatibility", help_output
+    ), help_output
 
 
 def test_check_help_lists_profiling_data_option(

@@ -592,6 +592,12 @@ def check(
     "check",
     cls=CheckOptionCommand,
     help="Generate compatibility/performance advice for a model",
+    epilog=(
+        "Examples:\n\n"
+        "  mlia target list\n\n"
+        "  mlia check model.tflite --target-profile <profile> --compatibility\n\n"
+        "Replace <profile> with a listed profile name or a custom profile path."
+    ),
     no_args_is_help=True,
 )
 def check_command(
@@ -601,7 +607,11 @@ def check_command(
         typer.Option(
             "--target-profile",
             "-t",
-            help="Set the target profile",
+            help=(
+                "Hardware-analysis configuration: a named profile or path to a "
+                "custom profile. Run 'mlia target list' to see profiles supplied "
+                "by installed plugins."
+            ),
             autocompletion=complete_target_profile_names,
         ),
     ],
@@ -615,7 +625,12 @@ def check_command(
         typer.Option(
             "--backend",
             "-b",
-            help="Set backend profiles to use for evaluation",
+            help=(
+                "Implementation that performs the analysis. Normally uses the "
+                "target's default backends; repeat this option to select "
+                "compatible backends explicitly. Run 'mlia backend list' to see "
+                "available backends and their installation status."
+            ),
             autocompletion=complete_backend_names,
         ),
     ] = None,
