@@ -113,6 +113,23 @@ estimator-only backend is requested.
 ## Color output
 
 MLIA enables colored CLI output when writing to an interactive terminal.
+The dark theme is used by default. To select a theme in the MLIA configuration
+file, set the top-level `theme` value:
+
+```toml
+theme = "light"  # or "dark"
+```
+
+You can override the configured theme for an invocation by setting either
+`MLIA_LIGHT` or `MLIA_DARK` to a non-empty value:
+
+```bash
+MLIA_LIGHT=1 mlia check my_model.tflite --target-profile <target-profile> --performance
+```
+
+The environment setting takes precedence over `theme` in the configuration
+file. Setting both `MLIA_LIGHT` and `MLIA_DARK` to non-empty values is an error;
+an empty value is ignored.
 
 To disable colors explicitly for `mlia`, `mlia target`, and `mlia backend`, set
 the `NO_COLOR` environment variable to any non-empty value before running the
@@ -149,9 +166,11 @@ happens after analysis; they do not replace target collectors or analyzers.
 ## Configuration
 
 MLIA supports `core`, `filtering`, `backend_options`, and plugin-scoped settings
-in addition to the top-level color setting. For example:
+in addition to the top-level `color` and `theme` settings. For example:
 
 ```toml
+theme = "light"
+
 [[filtering.collapse]]
 kind = "code_stack"
 attribute = "file"

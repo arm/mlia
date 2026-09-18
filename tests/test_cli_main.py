@@ -13,6 +13,7 @@ from unittest.mock import MagicMock, patch
 
 import click
 import pytest
+from typer import rich_utils
 from typer.testing import CliRunner
 
 import mlia.api as mlia_api
@@ -25,6 +26,19 @@ from mlia.core.settings import ApplicationSettings
 from mlia.plugins.analysis import AnalysisPluginRegistry, AnalysisRunResult
 
 ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-9;?]*[ -/]*[@-~]")
+TYPER_HELP_STYLE_NAMES = (
+    "STYLE_OPTION",
+    "STYLE_SWITCH",
+    "STYLE_NEGATIVE_OPTION",
+    "STYLE_NEGATIVE_SWITCH",
+    "STYLE_METAVAR",
+    "STYLE_USAGE",
+    "STYLE_REQUIRED_SHORT",
+    "STYLE_REQUIRED_LONG",
+    "STYLE_COMMANDS_TABLE_FIRST_COLUMN",
+    "STYLE_OPTIONS_PANEL_BORDER",
+    "STYLE_COMMANDS_PANEL_BORDER",
+)
 
 
 def _strip_ansi(value: str) -> str:
@@ -146,15 +160,92 @@ def test_no_arguments_show_help(
         assert text in result.stdout
 
 
+@pytest.mark.parametrize(
+    ("theme", "expected_colors"),
+    [
+        ("dark", ("107;155;248", "184;190;203", "246;155;79")),
+        ("light", ("1;87;255", "64;69;79", "219;130;50")),
+    ],
+)
+def test_help_uses_selected_mlia_colors(
+    monkeypatch: pytest.MonkeyPatch,
+    theme: cli_settings.ThemeName,
+    expected_colors: tuple[str, ...],
+) -> None:
+    """Generated Rich help should render with the selected MLIA palette."""
+    monkeypatch.delenv("NO_COLOR", raising=False)
+    monkeypatch.setattr(rich_utils, "FORCE_TERMINAL", True)
+    monkeypatch.setattr(rich_utils, "COLOR_SYSTEM", "truecolor")
+    for style_name in TYPER_HELP_STYLE_NAMES:
+        monkeypatch.setattr(rich_utils, style_name, getattr(rich_utils, style_name))
+    cli_settings.configure_typer_help(True, theme)
+
+    result = CliRunner().invoke(cli_main.mlia_app, ["--help"], color=True)
+
+    assert result.exit_code == 0
+    for expected_color in expected_colors:
+        assert f"38;2;{expected_color}" in result.stdout
+
+
+@pytest.mark.parametrize(
+    ("theme", "required_color"),
+    [("dark", "237;86;77"), ("light", "180;24;27")],
+)
+def test_help_uses_selected_required_color(
+    monkeypatch: pytest.MonkeyPatch,
+    theme: cli_settings.ThemeName,
+    required_color: str,
+) -> None:
+    """Required options and arguments should use the selected theme color."""
+    monkeypatch.delenv("NO_COLOR", raising=False)
+    monkeypatch.setattr(rich_utils, "FORCE_TERMINAL", True)
+    monkeypatch.setattr(rich_utils, "COLOR_SYSTEM", "truecolor")
+    for style_name in TYPER_HELP_STYLE_NAMES:
+        monkeypatch.setattr(rich_utils, style_name, getattr(rich_utils, style_name))
+    cli_settings.configure_typer_help(True, theme)
+
+    check_help = CliRunner().invoke(cli_main.mlia_app, ["check", "--help"], color=True)
+    backend_help = CliRunner().invoke(
+        cli_main.backend_app, ["install", "--help"], color=True
+    )
+
+    assert check_help.exit_code == 0
+    assert backend_help.exit_code == 0
+    ansi_color = f"\x1b[38;2;{required_color}m"
+    assert f"{ansi_color}[required]" in check_help.stdout
+    assert f"{ansi_color}*" in backend_help.stdout
+
+
+def test_required_help_has_no_ansi_when_color_is_disabled(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Required markers should have no ANSI color when color is disabled."""
+    monkeypatch.setenv("NO_COLOR", "1")
+    monkeypatch.setattr(rich_utils, "FORCE_TERMINAL", True)
+    monkeypatch.setattr(rich_utils, "STYLE_REQUIRED_SHORT", "#ED564D")
+    monkeypatch.setattr(rich_utils, "STYLE_REQUIRED_LONG", "#ED564D")
+
+    result = CliRunner().invoke(
+        cli_main.backend_app, ["install", "--help"], color=False
+    )
+
+    assert result.exit_code == 0
+    assert "*" in result.stdout
+    assert "\x1b[38;" not in result.stdout
+
+
 def test_main_calls_mlia_app(monkeypatch: pytest.MonkeyPatch) -> None:
     """Main entry point should call the root Typer app."""
     mlia_app = MagicMock()
+    configure_typer_help = MagicMock()
 
     monkeypatch.setattr(cli_settings, "_color_enabled", lambda: None)
     monkeypatch.setattr(cli_main, "mlia_app", mlia_app)
+    monkeypatch.setattr(cli_main, "configure_typer_help", configure_typer_help)
     monkeypatch.setattr(cli_settings.tomllib, "load", lambda x: {})
 
     cli_main.main()
+    configure_typer_help.assert_called_once_with(True, "dark")
     mlia_app.assert_called_once_with(color=True)
 
 
@@ -768,14 +859,17 @@ def test_backend_main_warns_about_deprecated_entry_point(
 ) -> None:
     """Backend entry point should warn before calling the Typer app."""
     backend_app = MagicMock()
+    configure_typer_help = MagicMock()
     secho = MagicMock()
 
     monkeypatch.setattr(cli_main, "backend_app", backend_app)
+    monkeypatch.setattr(cli_main, "configure_typer_help", configure_typer_help)
     monkeypatch.setattr(cli_settings, "_color_enabled", MagicMock(return_value=False))
     monkeypatch.setattr(cli_main.typer, "secho", secho)
 
     cli_main.backend_main()
 
+    configure_typer_help.assert_called_once_with(False, "dark")
     secho.assert_called_once_with(
         cli_main.DEPRECATED_BACKEND_ENTRY_POINT,
         fg=cli_main.typer.colors.YELLOW,
@@ -791,14 +885,17 @@ def test_target_main_warns_about_deprecated_entry_point(
 ) -> None:
     """Target entry point should warn before calling the Typer app."""
     target_app = MagicMock()
+    configure_typer_help = MagicMock()
     secho = MagicMock()
 
     monkeypatch.setattr(cli_main, "target_app", target_app)
+    monkeypatch.setattr(cli_main, "configure_typer_help", configure_typer_help)
     monkeypatch.setattr(cli_settings, "_color_enabled", MagicMock(return_value=False))
     monkeypatch.setattr(cli_main.typer, "secho", secho)
 
     cli_main.target_main()
 
+    configure_typer_help.assert_called_once_with(False, "dark")
     secho.assert_called_once_with(
         cli_main.DEPRECATED_TARGET_ENTRY_POINT,
         fg=cli_main.typer.colors.YELLOW,

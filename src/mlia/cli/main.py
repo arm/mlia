@@ -8,7 +8,7 @@ import typer
 from dotenv import load_dotenv
 
 from mlia.cli.commands import backend_app, mlia_app, target_app
-from mlia.cli.settings import new_settings
+from mlia.cli.settings import configure_typer_help, new_settings
 from mlia.plugins.plugins import load_cli_plugins as _load_cli_plugins
 from mlia.utils.registry import Registry
 
@@ -30,6 +30,7 @@ def main() -> None:
     load_dotenv()
     settings = new_settings()
 
+    configure_typer_help(settings.color, settings.theme)
     mlia_app.rich_markup_mode = "rich" if settings.color else None
     mlia_app(color=settings.color)
 
@@ -38,6 +39,7 @@ def backend_main() -> None:
     """Entry point of the backend application."""
     load_dotenv()
     settings = new_settings()
+    configure_typer_help(settings.color, settings.theme)
     typer.secho(
         DEPRECATED_BACKEND_ENTRY_POINT,
         fg=typer.colors.YELLOW,
@@ -51,6 +53,7 @@ def target_main() -> None:
     """Entry point of the target application."""
     load_dotenv()
     settings = new_settings()
+    configure_typer_help(settings.color, settings.theme)
     typer.secho(
         DEPRECATED_TARGET_ENTRY_POINT,
         fg=typer.colors.YELLOW,

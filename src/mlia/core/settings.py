@@ -6,11 +6,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Mapping
+from typing import Any, Literal, Mapping
 
 from rich.console import Console
 
 from mlia.core.errors import ConfigurationError
+
+ThemeName = Literal["dark", "light"]
 
 
 @dataclass(frozen=True)
@@ -39,6 +41,7 @@ class ApplicationSettings:
     core_settings: dict[str, Any] = field(default_factory=dict)
     filtering: FilteringSettings = field(default_factory=FilteringSettings)
     plugin_settings: dict[str, dict[str, Any]] = field(default_factory=dict)
+    theme: ThemeName = "dark"
 
     def for_plugin(self, name: str) -> Mapping[str, Any]:
         """Return the settings table owned by one plugin."""

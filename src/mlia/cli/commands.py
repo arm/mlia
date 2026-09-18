@@ -280,12 +280,12 @@ def _log_plugin_table(settings: ApplicationSettings, title: str, group: str) -> 
 
     table.add_column(
         "Name",
-        style="bold cyan",
+        style="tbl.name",
         no_wrap=True,
     )
     table.add_column(
         "Entry Point",
-        style="yellow",
+        style="tbl.highlight",
         overflow="fold",
         max_width=(LIST_TABLE_WIDTH // 2),
     )
@@ -294,7 +294,7 @@ def _log_plugin_table(settings: ApplicationSettings, title: str, group: str) -> 
     )
     table.add_column(
         "Version",
-        style="tbl.border",
+        style="tbl.version",
         no_wrap=True,
     )
 
