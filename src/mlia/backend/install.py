@@ -41,6 +41,8 @@ class DownloadAndInstall:
 class InstallFromVendorPackage:
     """Installation from a vendor package."""
 
+    eula_agreement: bool = True
+
 
 InstallationType = Union[InstallFromPath, DownloadAndInstall, InstallFromVendorPackage]
 
@@ -195,7 +197,11 @@ class BackendInstallation(Installation):
             backend_info = self.path_checker(resolved_path)
             if backend_info is None:
                 with temp_directory() as tmpdir:
-                    backend_info = self._resolve_vendor_archive(resolved_path, tmpdir)
+                    backend_info = self._resolve_vendor_archive(
+                        resolved_path,
+                        tmpdir,
+                        install_type.eula_agreement,
+                    )
                     self._install_from(backend_info)
             else:
                 self._install_from(backend_info)
@@ -231,7 +237,12 @@ class BackendInstallation(Installation):
 
             self.install(InstallFromPath(backend_path))
 
-    def _resolve_vendor_archive(self, vendor_dir: Path, tmpdir: Path) -> BackendInfo:
+    def _resolve_vendor_archive(
+        self,
+        vendor_dir: Path,
+        tmpdir: Path,
+        eula_agreement: bool,
+    ) -> BackendInfo:
         """Extract a vendored archive and return backend info."""
         archives = sorted(path.name for path in vendor_dir.glob("*.tar.gz"))
         if len(archives) != 1:
@@ -246,7 +257,7 @@ class BackendInstallation(Installation):
         )
         backend_path = dist_dir
         if self.backend_installer:
-            backend_path = self.backend_installer(True, dist_dir)
+            backend_path = self.backend_installer(eula_agreement, dist_dir)
         backend_info = self.path_checker(backend_path)
         if backend_info is None:
             raise RuntimeError(

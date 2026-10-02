@@ -246,8 +246,13 @@ class DefaultInstallationManager(InstallationManager, InstallationFiltersMixin):
         backend_names: list[str],
         install_types: list[InstallationType],
         force: bool,
+        eula_agreement: bool = True,
     ) -> None:
-        """Check metadata and install backend."""
+        """Check metadata and install backend.
+
+        The EULA flag records preacceptance. Interactive backend installers may
+        collect agreement themselves when it is false.
+        """
         installations = [
             inst
             for name, type in zip(backend_names, install_types)
@@ -259,6 +264,25 @@ class DefaultInstallationManager(InstallationManager, InstallationFiltersMixin):
 
         dep_installations = self._get_dependency_installations(installations)
 
+        pending_installations = installations + [
+            installation
+            for installation in dep_installations
+            if not installation.already_installed
+        ]
+        # Interactive installers can collect agreement; noninteractive ones cannot.
+        if self.noninteractive and not eula_agreement:
+            eula_backends = [
+                installation.name
+                for installation in pending_installations
+                if installation.requires_eula
+            ]
+            if eula_backends:
+                raise ConfigurationError(
+                    "EULA acceptance required for backend(s): "
+                    f"{', '.join(eula_backends)}. Pass accept_eula=True "
+                    "(or --accept-eula in the CLI) to proceed."
+                )
+
         # Filter out installed dependencies and collect their
         # install types
         dep_installations_to_be_installed = []
@@ -269,7 +293,10 @@ class DefaultInstallationManager(InstallationManager, InstallationFiltersMixin):
                 continue
             dep_installations_to_be_installed.append(inst)
 
-            inst_type = self._get_default_insallation_type(inst)
+            inst_type = self._get_default_insallation_type(
+                inst,
+                eula_agreement=eula_agreement,
+            )
             if inst_type is None:
                 raise InternalError(
                     f"{inst.name} found, but can only be installed from a file."
@@ -310,12 +337,16 @@ class DefaultInstallationManager(InstallationManager, InstallationFiltersMixin):
             logger.info("%s successfully installed", inst.name)
 
     def _get_default_insallation_type(
-        self, installation: Installation
+        self,
+        installation: Installation,
+        eula_agreement: bool,
     ) -> InstallationType | None:
-        if installation.supports(InstallFromVendorPackage()):
-            return InstallFromVendorPackage()
+        """Create the default installation type with explicit EULA state."""
+        vendor_install = InstallFromVendorPackage(eula_agreement=eula_agreement)
+        if installation.supports(vendor_install):
+            return vendor_install
         if installation.supports(DownloadAndInstall()):
-            return DownloadAndInstall()
+            return DownloadAndInstall(eula_agreement=eula_agreement)
         return None
 
     def install_from(
@@ -331,15 +362,21 @@ class DefaultInstallationManager(InstallationManager, InstallationFiltersMixin):
         install_types: list[InstallationType] = []
         for name in backend_names:
             installation = self._resolve_backend(name)
-            install_type = self._get_default_insallation_type(installation)
+            install_type = self._get_default_insallation_type(
+                installation,
+                eula_agreement=eula_agreement,
+            )
             if install_type is None:
                 raise InternalError(
                     f"{name} found, but can only be installed from a file."
                 )
-            if isinstance(install_type, DownloadAndInstall):
-                install_type.eula_agreement = eula_agreement
             install_types.append(install_type)
-        self._install(backend_names, install_types, force)
+        self._install(
+            backend_names,
+            install_types,
+            force,
+            eula_agreement=eula_agreement,
+        )
 
     def show_env_details(self) -> None:
         """Print current state of the execution environment."""

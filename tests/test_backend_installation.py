@@ -108,6 +108,47 @@ def test_install_from_vendor_archive(
     assert (backend_dir / "tool").is_file()
 
 
+@pytest.mark.parametrize("eula_agreement", [False, True])
+def test_install_from_vendor_archive_passes_eula_agreement_to_installer(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    fake_backend_repository_path: Path,
+    eula_agreement: bool,
+) -> None:
+    """Pass the caller's EULA decision to vendored backend installers."""
+    vendor_dir = tmp_path / "vendor" / "sample-backend"
+    archive_path = vendor_dir / "sample-backend.tar.gz"
+    _create_tar_with_file(archive_path, "payload")
+    backend_installer = MagicMock()
+
+    def install_backend(agreement: bool, dist_dir: Path) -> Path:
+        backend_installer(agreement, dist_dir)
+        installed_dir = dist_dir / "installed"
+        installed_dir.mkdir()
+        (installed_dir / "tool").write_text("data", encoding="utf-8")
+        return installed_dir
+
+    monkeypatch.setattr(
+        "mlia.backend.install.vendor_artifact_path", lambda _: vendor_dir
+    )
+    installation = BackendInstallation(
+        name="sample-backend",
+        description="Sample backend",
+        fvp_dir_name="sample-backend",
+        download_config=None,
+        supported_platforms=["Linux"],
+        path_checker=PackagePathChecker(expected_files=["tool"]),
+        backend_installer=install_backend,
+        vendor_path="sample-backend",
+    )
+
+    installation.install(InstallFromVendorPackage(eula_agreement=eula_agreement))
+
+    backend_installer.assert_called_once()
+    assert backend_installer.call_args.args[0] is eula_agreement
+    assert (fake_backend_repository_path / "backends/sample-backend/tool").is_file()
+
+
 def test_install_from_vendor_archive_backend_subfolder_error(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

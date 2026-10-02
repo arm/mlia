@@ -53,6 +53,9 @@ jobs:
           key: pre-commit|${{ runner.os }}|${{ env.PYTHON_VERSION }}|${{ hashFiles('.pre-commit-config.yaml') }}
       - run: uv sync --no-sources --group dev
       - run: uv run pre-commit run --all-files
+      - name: Pre-Commit Failure Report
+        if: failure()
+        run: git diff
 
   build:
     name: Build

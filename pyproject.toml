@@ -30,7 +30,7 @@ dependencies = [
     "python-dotenv>=1.2.2"
 ]
 keywords = ["ml", "arm", "ethos-u", "tflite"]
-authors = [{name = "Arm Ltd", email = "mlia@arm.com"}]
+authors = [{ name = "Arm Ltd", email = "mlia@arm.com" }]
 license = "Apache-2.0"
 license-files = ["LICENSES/*.txt"]
 classifiers = [
@@ -158,7 +158,7 @@ schema = "<type>(<scope>): <Subject-capitalized>\n<BLANK LINE>\n<body>\n<BLANK L
 # Commit parser is used to render the commits for RELEASES.md
 commit_parser = "^((?P<change_type>build|ci|docs|feat|fix|perf|refactor|style|test|BREAKING CHANGE)(?:\\((?P<scope>[^()\\r\\n]*)\\)|\\()?(?P<breaking>!)?|\\w+!):\\s(?P<message>.*)?"
 # Change type map to render the title for that category as per {tag:title}
-change_type_map = {'feat' = 'Feature changes', 'fix' = 'Bug fix', 'perf' = 'Performance improvements', 'build' = 'Development changes'}
+change_type_map = { 'feat' = 'Feature changes', 'fix' = 'Bug fix', 'perf' = 'Performance improvements', 'build' = 'Development changes' }
 
 [dependency-groups]
 test = [
@@ -170,7 +170,7 @@ test = [
     "hatchling>=1.32.0"
 ]
 dev = [
-    {include-group = "test"},
+    { include-group = "test" },
     "mypy==1.5.1",
     "pre-commit==4.5.1"
 ]

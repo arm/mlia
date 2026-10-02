@@ -20,6 +20,7 @@ from mlia.backend.install import (
     Installation,
     InstallationType,
     InstallFromPath,
+    InstallFromVendorPackage,
 )
 from mlia.backend.manager import (
     DefaultInstallationManager,
@@ -63,6 +64,7 @@ def get_installation_mock(
     could_be_installed: bool = False,
     supported_install_type: type | tuple | None = None,
     dependencies: list[str] | None = None,
+    requires_eula: bool = False,
 ) -> MagicMock:
     """Get mock instance for the installation."""
     mock = MagicMock(spec=Installation)
@@ -80,6 +82,7 @@ def get_installation_mock(
         "already_installed": already_installed,
         "could_be_installed": could_be_installed,
         "dependencies": dependencies if dependencies else [],
+        "requires_eula": requires_eula,
     }
     for prop, value in props.items():
         setattr(type(mock), prop, PropertyMock(return_value=value))
@@ -122,6 +125,14 @@ _could_be_downloaded_and_installed_mock_named = partial(
     already_installed=False,
     could_be_installed=True,
     supported_install_type=DownloadAndInstall,
+)
+
+_could_be_installed_from_vendor_mock = partial(
+    get_installation_mock,
+    name="could_be_installed_from_vendor",
+    already_installed=False,
+    could_be_installed=True,
+    supported_install_type=InstallFromVendorPackage,
 )
 
 
@@ -259,6 +270,76 @@ def test_installation_manager_download_and_install(
         install_mock.uninstall.assert_called_once()
     else:
         install_mock.uninstall.assert_not_called()
+
+
+@pytest.mark.parametrize("eula_agreement", [False, True])
+def test_installation_manager_passes_eula_to_vendor_installation(
+    eula_agreement: bool,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Apply EULA decisions to vendored installation requests."""
+    installation = _could_be_installed_from_vendor_mock()
+    manager = get_installation_manager(True, [installation], monkeypatch)
+
+    manager.download_and_install([installation.name], eula_agreement=eula_agreement)
+
+    installation.install.assert_called_once_with(
+        InstallFromVendorPackage(eula_agreement=eula_agreement)
+    )
+
+
+def test_noninteractive_manager_rejects_unaccepted_eula_vendor(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Do not start a non-interactive EULA installation without acceptance."""
+    installation = _could_be_installed_from_vendor_mock(requires_eula=True)
+    manager = get_installation_manager(True, [installation], monkeypatch)
+
+    with pytest.raises(ConfigurationError, match="EULA acceptance required"):
+        manager.download_and_install([installation.name], eula_agreement=False)
+
+    installation.install.assert_not_called()
+
+
+def test_interactive_manager_allows_installer_to_collect_eula(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Let an interactive vendored installer collect EULA acceptance itself."""
+    installation = _could_be_installed_from_vendor_mock(requires_eula=True)
+    manager = get_installation_manager(False, [installation], monkeypatch)
+
+    manager.download_and_install([installation.name], eula_agreement=False)
+
+    installation.install.assert_called_once_with(
+        InstallFromVendorPackage(eula_agreement=False)
+    )
+
+
+def test_installation_manager_passes_eula_to_vendor_dependency(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Propagate a caller's EULA decision to vendored dependencies."""
+    dependency = get_installation_mock(
+        name="dependency",
+        already_installed=False,
+        could_be_installed=True,
+        supported_install_type=InstallFromVendorPackage,
+    )
+    frontend = get_installation_mock(
+        name="frontend",
+        already_installed=False,
+        could_be_installed=True,
+        supported_install_type=DownloadAndInstall,
+        dependencies=[dependency.name],
+    )
+    manager = get_installation_manager(False, [frontend, dependency], monkeypatch)
+
+    manager.download_and_install([frontend.name], eula_agreement=False)
+
+    dependency.install.assert_called_once_with(
+        InstallFromVendorPackage(eula_agreement=False)
+    )
+    frontend.install.assert_called_once_with(DownloadAndInstall(eula_agreement=False))
 
 
 def test_installation_manager_unknown_backend_logs_current_list_command(
