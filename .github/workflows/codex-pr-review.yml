@@ -14,6 +14,27 @@ jobs:
       github.event.changes.base != null }}
     uses: Arm-Debug/github-workflow-wizardry/.github/workflows/codex-pr-review.yaml@main
     with:
+      review_instructions: |
+        Apply these repository boundary rules when reviewing changed code:
+
+        - Boundary actions must be implemented in `src/mlia/utils/boundaries/**`.
+          Flag new or modified code elsewhere that directly performs, or adds an
+          obvious wrapper or alias around, filesystem mutation, network access,
+          subprocess execution, package installation, log-file configuration,
+          or a comparable externally observable action.
+        - Notice-worthy boundary actions must call `log_boundary_action()` before
+          the first action on every path that can perform it. This includes
+          downloads, installers, backend execution, destructive state changes,
+          and other externally visible or surprising effects.
+        - Flag logging after the action; logging only in a conditional, exception
+          handler, or possibly empty loop while the action is unconditional; an
+          action evaluated as an argument to the logging call; or delegation to a
+          logging helper that is not guaranteed to execute before the action.
+        - Do not require a notice for documented user-requested output,
+          temporary/cache operations, or low-level gateways used beneath an
+          operation that has already announced the action.
+        - Report only concrete, high-confidence violations introduced by the PR,
+          and attach findings to changed lines as required by the main prompt.
       vault_secret_path: kv/data/MLIA/CI
       vault_secret_version: ${{ vars.VAULT_CI_SECRET_VERSION || '0' }}
     secrets: inherit

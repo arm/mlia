@@ -19,7 +19,10 @@ from mlia.core.common import AdviceCategory
 from mlia.core.errors import ConfigurationError
 from mlia.core.helpers import ActionResolver, APIActionResolver
 from mlia.core.typing import OutputFormat
-from mlia.utils.filesystem import USER_ONLY_PERM_MASK, recreate_directory
+from mlia.utils.boundaries.filesystem import (
+    ensure_output_location_with_notice,
+    recreate_output_directory_with_notice,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -191,12 +194,21 @@ class ExecutionContext(Context):
         try:
             if output_dir:
                 output_dir_location = Path(output_dir)
-                output_dir_location.mkdir(exist_ok=True, mode=USER_ONLY_PERM_MASK)
+                ensure_output_location_with_notice(
+                    logger,
+                    f"Ensuring MLIA output location '{output_dir_location}' exists.",
+                    output_dir_location,
+                )
             else:
                 output_dir_location = Path.cwd()
 
             output_dir_path = output_dir_location / "mlia-output"
-            recreate_directory(output_dir_path)
+            action = "Replacing existing" if output_dir_path.exists() else "Creating"
+            recreate_output_directory_with_notice(
+                logger,
+                f"{action} MLIA output directory '{output_dir_path}'.",
+                output_dir_path,
+            )
 
             self._output_dir_path = output_dir_path
         except OSError as err:

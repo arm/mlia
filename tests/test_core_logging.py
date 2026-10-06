@@ -11,6 +11,7 @@ import pytest
 
 from mlia.core.logging import setup_logging
 from mlia.core.typing import OutputFormat
+from mlia.utils.logging import log_boundary_action
 from tests.utils.logging import clear_loggers
 
 
@@ -84,7 +85,7 @@ def test_setup_logging(
     """Test function setup_logging."""
     logs_dir_path = tmp_path / logs_dir if logs_dir else None
 
-    setup_logging(logs_dir_path, verbose, output_format)
+    setup_logging(logs_dir_path, verbose, output_format, cli_mode=True)
 
     backend_logger = logging.getLogger("mlia.backend.manager")
     backend_logger.debug("backends debug")
@@ -100,6 +101,32 @@ def test_setup_logging(
     check_log_assertions(logs_dir_path, expected_log_file_content)
 
 
+def test_setup_logging_defaults_to_cli_console_output(
+    capfd: pytest.CaptureFixture,
+) -> None:
+    """Existing callers retain console logging without passing CLI mode."""
+    setup_logging()
+
+    logging.getLogger("mlia.test").info("application info")
+
+    stdout, stderr = capfd.readouterr()
+    assert stdout == "application info\n"
+    assert stderr == ""
+
+
+def test_setup_logging_defaults_to_cli_verbose_tool_output(
+    capfd: pytest.CaptureFixture,
+) -> None:
+    """Existing verbose callers retain tool console logging."""
+    setup_logging(verbose=True)
+
+    logging.getLogger("tensorflow").debug("tensorflow detail")
+
+    stdout, stderr = capfd.readouterr()
+    assert "tensorflow detail" in stdout
+    assert stderr == ""
+
+
 def test_setup_logging_closes_replaced_file_handlers(tmp_path: Path) -> None:
     """Reconfiguring logging releases files owned by the previous setup."""
     first_logs = tmp_path / "first"
@@ -113,6 +140,74 @@ def test_setup_logging_closes_replaced_file_handlers(tmp_path: Path) -> None:
 
     first_file.unlink()
     assert not first_file.exists()
+
+
+def test_json_logging_sends_only_boundary_info_and_errors_to_stderr(
+    capfd: pytest.CaptureFixture,
+) -> None:
+    """Boundary notices remain visible without corrupting JSON stdout."""
+    setup_logging(output_format="json", cli_mode=True)
+    logger = logging.getLogger("mlia.test")
+
+    logger.info("ordinary info")
+    log_boundary_action(logger, "runtime boundary")
+    logger.error("failure")
+
+    stdout, stderr = capfd.readouterr()
+    assert stdout == ""
+    assert "ordinary info" not in stderr
+    assert "runtime boundary" in stderr
+    assert "failure" in stderr
+
+
+def test_non_cli_json_logging_writes_only_to_file(
+    tmp_path: Path, capfd: pytest.CaptureFixture
+) -> None:
+    """Library JSON logging does not install a console handler."""
+    logs_dir = tmp_path / "logs"
+    setup_logging(logs_dir, output_format="json", cli_mode=False)
+    logger = logging.getLogger("mlia.test")
+
+    log_boundary_action(logger, "runtime boundary")
+    logger.error("failure")
+
+    stdout, stderr = capfd.readouterr()
+    assert stdout == ""
+    assert stderr == ""
+    content = (logs_dir / "mlia.log").read_text(encoding="utf-8")
+    assert "runtime boundary" in content
+    assert "failure" in content
+
+
+def test_non_cli_verbose_tool_logging_writes_only_to_file(
+    tmp_path: Path, capfd: pytest.CaptureFixture
+) -> None:
+    """Library calls do not install tool console handlers in verbose mode."""
+    logs_dir = tmp_path / "logs"
+    setup_logging(logs_dir, verbose=True, output_format="json", cli_mode=False)
+
+    logging.getLogger("tensorflow").debug("tensorflow detail")
+    logging.getLogger("py.warnings").warning("library warning")
+
+    stdout, stderr = capfd.readouterr()
+    assert stdout == ""
+    assert stderr == ""
+    content = (logs_dir / "mlia.log").read_text(encoding="utf-8")
+    assert "tensorflow detail" in content
+    assert "library warning" in content
+
+
+def test_cli_verbose_tool_logging_writes_to_stdout(
+    capfd: pytest.CaptureFixture,
+) -> None:
+    """Verbose tool output remains visible when invoked through the CLI."""
+    setup_logging(verbose=True, output_format="plain_text", cli_mode=True)
+
+    logging.getLogger("tensorflow").debug("tensorflow detail")
+
+    stdout, stderr = capfd.readouterr()
+    assert "tensorflow detail" in stdout
+    assert stderr == ""
 
 
 def check_log_assertions(

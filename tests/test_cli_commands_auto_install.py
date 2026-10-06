@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from pathlib import Path
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, call
 
 import pytest
 import typer
@@ -151,7 +151,10 @@ def test_check_passes_cli_context_settings(
     assert context.output_dir == tmp_path / "mlia-output"
     assert context.output_format == "json"
     assert context.verbose is True
-    setup_logging.assert_called_once_with(context.logs_path, True, "json")
+    assert setup_logging.call_args_list == [
+        call(verbose=True, output_format="json", cli_mode=True),
+        call(context.logs_path, True, "json", cli_mode=True),
+    ]
 
 
 @pytest.mark.parametrize(
@@ -178,4 +181,4 @@ def test_contextless_commands_pass_debug_to_logging(
 
     command(*args, debug=True)
 
-    setup_logging.assert_called_once_with(verbose=True)
+    setup_logging.assert_called_once_with(verbose=True, cli_mode=True)

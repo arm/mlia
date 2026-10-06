@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import hashlib
+import logging
 import re
 from contextlib import ExitStack as does_not_raise
 from pathlib import Path
@@ -66,7 +67,7 @@ def test_download(
 ) -> None:
     """Test function download."""
     monkeypatch.setattr(
-        "mlia.utils.download.requests.get",
+        "mlia.utils.boundaries.network.requests.get",
         MagicMock(return_value=response_mock(content_length, content_chunks)),
     )
     hash_obj = hashlib.sha256()
@@ -86,6 +87,39 @@ def test_download(
     assert dest.read_bytes() == bytes(
         byte for chunk in content_chunks for byte in chunk
     )
+
+
+def test_download_announces_request_before_network_access(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Downloads announce their source and destination before requesting data."""
+    url = (
+        "https://user:password@example.test:8443/artifact.bin"
+        "?X-Amz-Credential=secret#token"
+    )
+    safe_url = "https://example.test:8443/artifact.bin"
+    dest = tmp_path / "artifact.bin"
+
+    def request(*args: Any, **kwargs: Any) -> MagicMock:
+        del args, kwargs
+        assert any(
+            record.getMessage() == f"Downloading '{safe_url}' to '{dest}'."
+            and getattr(record, "boundary_action", False) is True
+            for record in caplog.records
+        )
+        return response_mock("0", [])
+
+    monkeypatch.setattr("mlia.utils.boundaries.network.requests.get", request)
+    with caplog.at_level(logging.INFO, logger="mlia.utils.boundaries.network"):
+        download(dest, DownloadConfig(url, sha256_hash=""))
+
+    log_output = caplog.text
+    assert "user" not in log_output
+    assert "password" not in log_output
+    assert "X-Amz-Credential" not in log_output
+    assert "secret" not in log_output
 
 
 @pytest.mark.parametrize(
@@ -115,7 +149,7 @@ def test_download_artifact_download_to(
 ) -> None:
     """Test artifact downloading."""
     monkeypatch.setattr(
-        "mlia.utils.download.requests.get",
+        "mlia.utils.boundaries.network.requests.get",
         MagicMock(return_value=response_mock(content_length, content_chunks)),
     )
 
@@ -136,7 +170,7 @@ def test_download_artifact_unable_to_overwrite(
 ) -> None:
     """Test that download process cannot overwrite file."""
     monkeypatch.setattr(
-        "mlia.utils.download.requests.get",
+        "mlia.utils.boundaries.network.requests.get",
         MagicMock(return_value=response_mock("10", [bytes(range(10))])),
     )
 

@@ -14,6 +14,8 @@ from types import MappingProxyType
 from typing import Any, Mapping
 from uuid import uuid4
 
+from mlia.utils.boundaries.filesystem import write_user_output_text
+
 # Schema version for standardized output
 SCHEMA_VERSION = "1.2.0"
 
@@ -948,7 +950,7 @@ class StandardizedOutput:
     def save(self, filepath: Path | str) -> None:
         """Save to JSON file."""
         path = Path(filepath)
-        path.write_text(self.to_json(), encoding="utf-8")
+        write_user_output_text(path, self.to_json())
 
     @classmethod
     def load(cls, filepath: Path | str) -> StandardizedOutput:

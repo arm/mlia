@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 
 import pytest
@@ -119,3 +120,22 @@ def test_execution_context_with_default_params(tmp_path: Path) -> None:
         "output_format=plain_text"
     )
     assert str(context_with_default_params) == expected_str
+
+
+def test_execution_context_announces_replacing_output(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Replacing the implicit output directory is announced first."""
+    output_dir = tmp_path / "mlia-output"
+    output_dir.mkdir()
+    (output_dir / "old.txt").write_text("old", encoding="utf-8")
+
+    with caplog.at_level(logging.INFO, logger="mlia.core.context"):
+        ExecutionContext(output_dir=tmp_path)
+
+    record = next(
+        record for record in caplog.records if "Replacing existing" in record.message
+    )
+    assert getattr(record, "boundary_action", False) is True
+    assert str(output_dir) in record.message
+    assert not (output_dir / "old.txt").exists()

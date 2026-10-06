@@ -49,6 +49,7 @@ from mlia.target.registry import registry as target_registry
 from mlia.target.registry import supported_advice as target_supported_advice
 from mlia.target.registry import supported_backends as target_supported_backends
 from mlia.transformers.registry import TransformRequest, transform_model
+from mlia.utils.boundaries.filesystem import ensure_user_output_directory
 from mlia.utils.filesystem import temp_directory
 from mlia.utils.logging import process_raw_output
 
@@ -409,7 +410,7 @@ def _configured_api_logging(
         yield
         return
 
-    setup_logging(logs_path, verbose=verbose, output_format="json")
+    setup_logging(logs_path, verbose=verbose, output_format="json", cli_mode=False)
     try:
         yield
     finally:
@@ -573,7 +574,7 @@ def _resolve_logs_dir(logs_dir: str | Path | None) -> Path | None:
         raise ConfigurationError(f"Logs path '{logs_path}' is not a directory.")
 
     try:
-        logs_path.mkdir(parents=True, exist_ok=True)
+        ensure_user_output_directory(logs_path)
     except OSError as err:
         raise ConfigurationError(f"Unable to create logs directory: {err}.") from err
 

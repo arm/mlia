@@ -5,41 +5,12 @@
 from __future__ import annotations
 
 import logging
-import subprocess  # nosec
-from dataclasses import dataclass
 from functools import partial
-from pathlib import Path
-from typing import Callable, Generator
+from typing import Callable
+
+from mlia.utils.boundaries.process import Command, command_output
 
 logger = logging.getLogger(__name__)
-
-
-@dataclass(frozen=True)
-class Command:
-    """Command information."""
-
-    cmd: list[str]
-    cwd: Path = Path.cwd()
-    env: dict[str, str] | None = None
-
-
-def command_output(command: Command) -> Generator[str, None, None]:
-    """Get command output."""
-    logger.debug("Running command: %s", command)
-
-    with subprocess.Popen(  # nosec
-        command.cmd,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        universal_newlines=True,
-        bufsize=1,
-        cwd=command.cwd,
-        env=command.env,
-    ) as process:
-        yield from process.stdout or []
-
-    if process.returncode:
-        raise subprocess.CalledProcessError(process.returncode, command.cmd)
 
 
 OutputConsumer = Callable[[str], None]

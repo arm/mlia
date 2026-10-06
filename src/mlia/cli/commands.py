@@ -33,6 +33,7 @@ from mlia.core.output_rendering import (
     standardized_output_to_text,
 )
 from mlia.core.settings import ApplicationSettings
+from mlia.core.typing import OutputFormat
 from mlia.plugins.analysis import AnalysisPluginRegistry, AnalysisRunResult
 from mlia.plugins.plugins import (
     BACKEND_PLUGIN_GROUP,
@@ -163,7 +164,7 @@ def complete_target_profile_names(incomplete: str) -> list[str]:
 
 def _setup_command_logging(debug: bool) -> None:
     """Set up logging for commands without an execution context."""
-    setup_logging(verbose=debug)
+    setup_logging(verbose=debug, cli_mode=True)
 
 
 def run_analysis_plugins(
@@ -220,11 +221,15 @@ def _create_check_context(
         "noninteractive": noninteractive,
         "backend_options": backend_options or {},
     }
+    output_format: OutputFormat = "json" if json_output else "plain_text"
+    # Configure console logging before constructing the context because context
+    # creation may replace the runtime output directory.
+    setup_logging(verbose=debug, output_format=output_format, cli_mode=True)
     try:
         execution_context = ExecutionContext(
             verbose=debug,
             action_resolver=CLIActionResolver(cli_args),
-            output_format="json" if json_output else "plain_text",
+            output_format=output_format,
             output_dir=output_dir,
         )
     except Exception as err:  # pylint: disable=broad-except
@@ -235,6 +240,7 @@ def _create_check_context(
         execution_context.logs_path,
         execution_context.verbose,
         execution_context.output_format,
+        cli_mode=True,
     )
     return execution_context
 

@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import io
 import json
+import logging
 import sys
 import types
 from contextlib import contextmanager
@@ -55,6 +56,7 @@ from mlia.core.workflow import WorkflowExecutor
 from mlia.target.config import TargetInfo
 from mlia.target.registry import registry as target_registry
 from mlia.transformers.registry import TransformRequest
+from mlia.utils.logging import log_boundary_action
 
 _FAKE_OUTPUT: dict[str, object] = {"schema_version": "1.0.0", "results": []}
 
@@ -1260,7 +1262,12 @@ def test_run_advisor_closes_configured_logging_when_logs_dir_provided(
         logs_dir=tmp_path / "logs",
     )
 
-    setup_logging.assert_called_once()
+    setup_logging.assert_called_once_with(
+        tmp_path / "logs",
+        verbose=False,
+        output_format="json",
+        cli_mode=False,
+    )
     close_handlers.assert_called_once_with()
 
 
@@ -1288,7 +1295,12 @@ def test_run_advisor_closes_configured_logging_after_failure(
             logs_dir=tmp_path / "logs",
         )
 
-    setup_logging.assert_called_once()
+    setup_logging.assert_called_once_with(
+        tmp_path / "logs",
+        verbose=False,
+        output_format="json",
+        cli_mode=False,
+    )
     close_handlers.assert_called_once_with()
 
 
@@ -1332,6 +1344,36 @@ def test_run_advisor_releases_log_file_after_return(
     log_file = logs_dir / "mlia.log"
     log_file.unlink()
     assert not log_file.exists()
+
+
+def test_run_advisor_logs_boundary_notice_without_stderr(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    test_tflite_model: Path,
+    capfd: pytest.CaptureFixture[str],
+) -> None:
+    """API-owned file logging does not expose boundary notices on stderr."""
+
+    def fake_get_advice(*_args: object, **_kwargs: object) -> dict[str, object]:
+        log_boundary_action(logging.getLogger("mlia.api"), "runtime boundary")
+        return _FAKE_OUTPUT
+
+    _patch_common_run_advisor_dependencies(monkeypatch)
+    monkeypatch.setattr("mlia.api.get_advice", fake_get_advice)
+    monkeypatch.setattr("mlia.api.collect_validation_errors", lambda _data: [])
+    logs_dir = tmp_path / "logs"
+
+    run_advisor(
+        "compatibility",
+        "tosa",
+        test_tflite_model,
+        logs_dir=logs_dir,
+    )
+
+    captured = capfd.readouterr()
+    assert captured.out == ""
+    assert captured.err == ""
+    assert "runtime boundary" in (logs_dir / "mlia.log").read_text(encoding="utf-8")
 
 
 def test_capture_external_output_ignores_unsupported_stream(

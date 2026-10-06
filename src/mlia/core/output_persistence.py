@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from mlia.core.output_rendering import standardized_output_to_json
+from mlia.utils.boundaries.filesystem import write_user_output_text
 
 STANDARDIZED_OUTPUT_FILENAME = "mlia-output.json"
 
@@ -15,8 +16,5 @@ STANDARDIZED_OUTPUT_FILENAME = "mlia-output.json"
 def persist_standardized_output(output: dict[str, Any], output_dir: Path) -> Path:
     """Write canonical standardized output and return its stable path."""
     output_path = output_dir / STANDARDIZED_OUTPUT_FILENAME
-    output_path.write_text(
-        standardized_output_to_json(output) + "\n",
-        encoding="utf-8",
-    )
+    write_user_output_text(output_path, standardized_output_to_json(output) + "\n")
     return output_path

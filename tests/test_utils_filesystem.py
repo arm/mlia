@@ -3,11 +3,14 @@
 """Tests for the filesystem module."""
 
 import contextlib
+import logging
 import re
 from pathlib import Path
+from unittest.mock import MagicMock, call
 
 import pytest
 
+from mlia.utils.boundaries.filesystem import write_persistent_state_text_with_notice
 from mlia.utils.filesystem import (
     USER_ONLY_PERM_MASK,
     all_files_exist,
@@ -151,7 +154,7 @@ def test_recreate_directory(tmp_path: Path) -> None:
     test_file1.touch()
 
     test_dir2 = sample_dir / "test_dir2"
-    recreate_directory(test_dir2)
+    recreate_directory(dir_path=test_dir2)
 
     assert test_dir1.is_dir()
     assert test_file1.is_file()
@@ -175,3 +178,23 @@ def test_recreate_directory_wrong_path(tmp_path: Path) -> None:
         match=re.escape(f"Path {sample_file} is not a directory."),
     ):
         recreate_directory(sample_file)
+
+
+def test_write_persistent_state_notice_precedes_write(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Persistent state writes are announced before crossing the boundary."""
+    events = MagicMock()
+    monkeypatch.setattr(
+        "mlia.utils.boundaries.filesystem.log_boundary_action", events.notice
+    )
+    monkeypatch.setattr(Path, "write_text", events.write)
+    logger = logging.getLogger("test")
+    path = tmp_path / "state.json"
+
+    write_persistent_state_text_with_notice(logger, "Updating state.", path, "{}")
+
+    assert events.mock_calls == [
+        call.notice(logger, "Updating state."),
+        call.write("{}"),
+    ]

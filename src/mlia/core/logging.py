@@ -10,7 +10,8 @@ from pathlib import Path
 from typing import Iterable
 
 from mlia.core.typing import OutputFormat
-from mlia.utils.logging import NoASCIIFormatter, create_log_handler
+from mlia.utils.boundaries.filesystem import ensure_user_output_directory
+from mlia.utils.logging import LogFilter, NoASCIIFormatter, create_log_handler
 
 _CONSOLE_DEBUG_FORMAT = "%(name)s - %(levelname)s - %(message)s"
 _FILE_DEBUG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -58,6 +59,7 @@ def setup_logging(
     verbose: bool = False,
     output_format: OutputFormat = "plain_text",
     log_filename: str = "mlia.log",
+    cli_mode: bool = True,
 ) -> None:
     """Set up logging.
 
@@ -70,6 +72,7 @@ def setup_logging(
     :param output_format: specify the out format needed for setting up the right
            logging system
     :param log_filename: name of the log file in the logs directory
+    :param cli_mode: enable console handlers intended for CLI presentation
     """
     mlia_logger = logging.getLogger("mlia")
     tensorflow_logger = logging.getLogger("tensorflow")
@@ -80,10 +83,12 @@ def setup_logging(
     for logger in [mlia_logger, tensorflow_logger]:
         logger.setLevel(logging.DEBUG)
 
-    mlia_handlers = _get_mlia_handlers(logs_dir, log_filename, verbose, output_format)
+    mlia_handlers = _get_mlia_handlers(
+        logs_dir, log_filename, verbose, output_format, cli_mode
+    )
     _replace_configured_handlers(mlia_handlers, [mlia_logger])
 
-    tools_handlers = _get_tools_handlers(logs_dir, log_filename, verbose)
+    tools_handlers = _get_tools_handlers(logs_dir, log_filename, verbose, cli_mode)
     _replace_configured_handlers(
         tools_handlers,
         [tensorflow_logger, py_warnings_logger],
@@ -95,6 +100,7 @@ def _get_mlia_handlers(
     log_filename: str,
     verbose: bool,
     output_format: OutputFormat,
+    cli_mode: bool,
 ) -> Iterable[logging.Handler]:
     """Get handlers for the MLIA loggers."""
     # MLIA needs output to standard output via the logging system only when the
@@ -102,7 +108,7 @@ def _get_mlia_handlers(
     # MLIA disables completely the logging system for the console output and it
     # relies on the print() function. This is needed because the output might
     # be corrupted with spurious messages in the standard output.
-    if output_format == "plain_text":
+    if output_format == "plain_text" and cli_mode:
         if verbose:
             log_level = logging.DEBUG
             log_format = _CONSOLE_DEBUG_FORMAT
@@ -114,12 +120,18 @@ def _get_mlia_handlers(
         yield create_log_handler(
             stream=sys.stdout, log_level=log_level, log_format=log_format
         )
-    else:
-        # In case of non plain text output, we need to inform the user if an
-        # error happens during execution.
+    elif cli_mode:
+        # Keep JSON stdout machine-readable while making boundary actions and
+        # errors visible on stderr.
         yield create_log_handler(
             stream=sys.stderr,
-            log_level=logging.ERROR,
+            log_level=logging.INFO,
+            log_filter=LogFilter(
+                lambda record: (
+                    record.levelno >= logging.ERROR
+                    or bool(getattr(record, "boundary_action", False))
+                )
+            ),
         )
 
     # If the logs directory is specified, MLIA stores all output (according to
@@ -143,9 +155,10 @@ def _get_tools_handlers(
     logs_dir: str | Path | None,
     log_filename: str,
     verbose: bool,
+    cli_mode: bool,
 ) -> Iterable[logging.Handler]:
     """Get handler for the tools loggers."""
-    if verbose:
+    if verbose and cli_mode:
         yield create_log_handler(
             stream=sys.stdout,
             log_level=logging.DEBUG,
@@ -164,6 +177,6 @@ def _get_tools_handlers(
 def _get_log_file(logs_dir: str | Path, log_filename: str) -> Path:
     """Get the log file path."""
     logs_dir_path = Path(logs_dir)
-    logs_dir_path.mkdir(parents=True, exist_ok=True)
+    ensure_user_output_directory(logs_dir_path)
 
     return logs_dir_path / log_filename

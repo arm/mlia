@@ -50,6 +50,25 @@ When changing this repository:
 - Link plugin-specific details rather than copying them into the core docs.
 - Update `mkdocs.yml` whenever a page is added or renamed.
 
+## Runtime boundary actions
+
+Application code must not directly perform runtime network access, launch
+external processes, install packages, or mutate the filesystem. These actions
+must go through a gateway in `mlia.utils.boundaries`. For example:
+
+```python
+from mlia.utils.boundaries.filesystem import write_user_output_text
+
+write_user_output_text(output_path, content)
+```
+
+To add a new boundary operation, add an intention-revealing function to the
+boundary package and add tests for its behavior. Reviewers must manually verify,
+with LLM assistance where useful, that boundary operations remain inside the
+package and that user-visible actions call `log_boundary_action()` before
+crossing the boundary. Build hooks, CI workflows, and tests are outside this
+policy.
+
 ## Extending standardized output
 
 Schema changes should keep the Python schema classes, JSON schema resources,

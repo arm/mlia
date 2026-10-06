@@ -7,13 +7,19 @@ from __future__ import annotations
 import logging
 import os
 import sys
-import tempfile
 import threading
 from contextlib import ExitStack, contextmanager, redirect_stderr, redirect_stdout
 from pathlib import Path
 from typing import Any, Callable, Generator, Iterable, TextIO
 
+from mlia.utils.boundaries.logging import create_file_handler
+from mlia.utils.boundaries.temporary import temporary_text_stream
 from mlia.utils.console import remove_ascii_codes
+
+
+def log_boundary_action(logger: logging.Logger, message: str, *args: object) -> None:
+    """Log an externally visible runtime action."""
+    logger.info(message, *args, extra={"boundary_action": True})
 
 
 class LoggerWriter:
@@ -66,7 +72,7 @@ def process_raw_output(
     consumer: Callable[[str], None], output: TextIO
 ) -> Generator[None, None, None]:
     """Process output on file descriptor level."""
-    with tempfile.TemporaryFile(mode="r+") as tmp:
+    with temporary_text_stream() as tmp:
         old_output_fd: int | None = None
         try:
             output_fd = output.fileno()
@@ -182,7 +188,7 @@ def create_log_handler(
     handler: logging.Handler | None = None
 
     if file_path is not None:
-        handler = logging.FileHandler(file_path, delay=delay)
+        handler = create_file_handler(file_path, delay=delay)
     elif stream is not None:
         handler = logging.StreamHandler(stream)
 

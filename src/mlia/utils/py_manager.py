@@ -5,11 +5,10 @@
 from __future__ import annotations
 
 import logging
-import subprocess  # nosec
-import sys
 from importlib.metadata import PackageNotFoundError, distribution
 
 from mlia.core.errors import InternalError
+from mlia.utils.boundaries.process import run_pip_with_notice
 
 logger = logging.getLogger(__name__)
 
@@ -48,25 +47,7 @@ class PyPackageManager:
     @staticmethod
     def _execute_pip_cmd(subcommand: str, params: list[str]) -> None:
         """Execute pip command."""
-        assert sys.executable, "Unable to launch pip command"
-
-        try:
-            output = subprocess.check_output(  # nosec
-                [
-                    sys.executable,
-                    "-m",
-                    "pip",
-                    "--disable-pip-version-check",
-                    subcommand,
-                    *params,
-                ],
-                stderr=subprocess.STDOUT,
-                text=True,
-            )
-            returncode = 0
-        except subprocess.CalledProcessError as err:
-            output = err.output
-            returncode = err.returncode
+        output, returncode = run_pip_with_notice(logger, subcommand, params)
 
         for line in output.splitlines():
             logger.debug(line.rstrip())

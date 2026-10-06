@@ -16,6 +16,10 @@ from typing import Callable, Iterable, Optional, Union
 
 from mlia.backend.repo import get_backend_repository
 from mlia.backend.vendor import vendor_artifact_path
+from mlia.utils.boundaries.filesystem import (
+    ensure_temporary_directory,
+    extract_temporary_archive,
+)
 from mlia.utils.download import DownloadConfig, download
 from mlia.utils.filesystem import all_files_exist, temp_directory
 from mlia.utils.py_manager import get_package_manager
@@ -272,7 +276,7 @@ class BackendInstallation(Installation):
     ) -> Path:
         """Extract a tar.gz archive into a temp dist directory."""
         dist_dir = tmpdir / "dist"
-        dist_dir.mkdir(parents=True, exist_ok=True)
+        ensure_temporary_directory(dist_dir)
         with tarfile.open(archive_path) as archive:
             logger.debug(
                 "Extracting %s artifact %s to %s.",
@@ -280,9 +284,10 @@ class BackendInstallation(Installation):
                 archive_path,
                 dist_dir,
             )
-            archive.extractall(
+            extract_temporary_archive(
+                archive,
                 dist_dir,
-                members=_filter_tar_members(archive.getmembers(), dist_dir),
+                _filter_tar_members(archive.getmembers(), dist_dir),
             )
         return dist_dir
 

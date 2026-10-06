@@ -19,11 +19,20 @@ from configuration file along with backend files if needed.
 from __future__ import annotations
 
 import json
+import logging
 import os
-import shutil
 from pathlib import Path
 
-from mlia.utils.filesystem import copy_all
+from mlia.utils.boundaries.filesystem import (
+    copy_persistent_state_tree,
+    copy_persistent_state_with_notice,
+    create_persistent_state_directories_with_notice,
+    remove_persistent_state_with_notice,
+    write_persistent_state_text,
+    write_persistent_state_text_with_notice,
+)
+
+logger = logging.getLogger(__name__)
 
 
 class _ConfigFile:
@@ -42,30 +51,36 @@ class _ConfigFile:
         """Check if configuration file exists."""
         return self.config_file.is_file()
 
-    def save(self) -> None:
+    def save(self, notice: str | None = None) -> None:
         """Save configuration."""
         content = json.dumps(self.config, indent=4)
-        self.config_file.write_text(content)
+        if notice is None:
+            write_persistent_state_text(self.config_file, content)
+        else:
+            write_persistent_state_text_with_notice(
+                logger, notice, self.config_file, content
+            )
 
     def add_backend(
         self,
         backend_name: str,
         settings: dict,
+        notice: str | None = None,
     ) -> None:
         """Add backend settings to configuration file."""
         item = {"name": backend_name, "settings": settings}
         self.config["backends"].append(item)
 
-        self.save()
+        self.save(notice)
 
-    def remove_backend(self, backend_name: str) -> None:
+    def remove_backend(self, backend_name: str, notice: str | None = None) -> None:
         """Remove backend settings."""
         backend = self._get_backend(backend_name)
 
         if backend:
             self.config["backends"].remove(backend)
 
-        self.save()
+        self.save(notice)
 
     def backend_exists(self, backend_name: str) -> bool:
         """Check if backend exists in configuration file."""
@@ -114,7 +129,12 @@ class BackendRepository:
         if repo_backend_path.exists():
             raise RuntimeError(f"Unable to copy backend files for {backend_name}.")
 
-        copy_all(backend_path, dest=repo_backend_path)
+        copy_persistent_state_with_notice(
+            logger,
+            f"Installing backend '{backend_name}' into '{repo_backend_path}'.",
+            backend_path,
+            destination=repo_backend_path,
+        )
         _copy_supporting_folders(repo_backend_path, supporting_paths)
 
         settings = settings or {}
@@ -135,7 +155,12 @@ class BackendRepository:
         settings = settings or {}
         settings["backend_path"] = backend_path.absolute().as_posix()
 
-        self.config_file.add_backend(backend_name, settings)
+        self.config_file.add_backend(
+            backend_name,
+            settings,
+            f"Registering backend '{backend_name}' from '{backend_path}' in "
+            f"'{self.config_file.config_file}'.",
+        )
 
     def remove_backend(self, backend_name: str) -> None:
         """Remove backend from repository."""
@@ -146,9 +171,18 @@ class BackendRepository:
 
         if "backend_dir" in settings:
             repo_backend_path = self._get_backend_path(settings["backend_dir"])
-            shutil.rmtree(repo_backend_path)
-
-        self.config_file.remove_backend(backend_name)
+            remove_persistent_state_with_notice(
+                logger,
+                f"Removing backend '{backend_name}' from '{repo_backend_path}'.",
+                repo_backend_path,
+            )
+            self.config_file.remove_backend(backend_name)
+        else:
+            self.config_file.remove_backend(
+                backend_name,
+                f"Removing backend '{backend_name}' registration from "
+                f"'{self.config_file.config_file}'.",
+            )
 
     def is_backend_installed(self, backend_name: str) -> bool:
         """Check if backend is installed."""
@@ -181,8 +215,12 @@ class BackendRepository:
                     f"Directory {self.repository} could not be used as MLIA repository."
                 )
         else:
-            self.repository.mkdir()
-            self.repository.joinpath("backends").mkdir()
+            create_persistent_state_directories_with_notice(
+                logger,
+                f"Creating MLIA backend repository '{self.repository}'.",
+                self.repository,
+                self.repository.joinpath("backends"),
+            )
 
             self.config_file.save()
 
@@ -208,5 +246,4 @@ def _copy_supporting_folders(
     """Copy supporting folders into backend repository path."""
     for source_path, relative_path in supporting_paths or []:
         destination = repo_backend_path / relative_path
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copytree(source_path, destination, dirs_exist_ok=True)
+        copy_persistent_state_tree(source_path, destination)

@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import re
 from pathlib import Path
 
@@ -58,7 +59,7 @@ def test_empty_backend_repository(tmp_path: Path) -> None:
         repo.get_backend_settings("sample_backend")
 
 
-def test_adding_backend(tmp_path: Path) -> None:
+def test_adding_backend(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
     """Test adding backend to the repository."""
     repo_path = tmp_path / "repo"
     repo = get_backend_repository(repo_path)
@@ -67,7 +68,17 @@ def test_adding_backend(tmp_path: Path) -> None:
     backend_path.mkdir()
 
     settings = {"param": "value"}
-    repo.add_backend("sample_backend", backend_path, settings)
+    caplog.clear()
+    with caplog.at_level(logging.INFO, logger="mlia.backend.repo"):
+        repo.add_backend("sample_backend", backend_path, settings)
+
+    registration_record = next(
+        record for record in caplog.records if "Registering backend" in record.message
+    )
+    assert getattr(registration_record, "boundary_action", False) is True
+    assert "sample_backend" in registration_record.message
+    assert str(backend_path) in registration_record.message
+    assert str(repo.config_file.config_file) in registration_record.message
 
     backends_dir = repo_path / "backends"
     assert backends_dir.is_dir()
@@ -100,7 +111,17 @@ def test_adding_backend(tmp_path: Path) -> None:
     with pytest.raises(Exception, match="Backend sample_backend already installed"):
         repo.add_backend("sample_backend", backend_path, settings)
 
-    repo.remove_backend("sample_backend")
+    caplog.clear()
+    with caplog.at_level(logging.INFO, logger="mlia.backend.repo"):
+        repo.remove_backend("sample_backend")
+
+    removal_record = next(
+        record
+        for record in caplog.records
+        if "Removing backend 'sample_backend' registration" in record.message
+    )
+    assert getattr(removal_record, "boundary_action", False) is True
+    assert str(repo.config_file.config_file) in removal_record.message
     assert not repo.is_backend_installed("sample_backend")
 
 

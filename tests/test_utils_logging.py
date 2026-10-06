@@ -81,6 +81,18 @@ def test_create_log_handler(
         assert isinstance(handler, expected_class)
 
 
+def test_create_log_handler_uses_classified_file_gateway(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """File-backed handlers are constructed through the boundary gateway."""
+    handler = MagicMock(spec=logging.FileHandler)
+    create_handler = MagicMock(return_value=handler)
+    monkeypatch.setattr("mlia.utils.logging.create_file_handler", create_handler)
+
+    assert create_log_handler(file_path=Path("output.log"), delay=False) is handler
+    create_handler.assert_called_once_with(Path("output.log"), delay=False)
+
+
 @pytest.mark.parametrize(
     "redirect_context_manager",
     [

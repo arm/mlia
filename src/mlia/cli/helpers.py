@@ -6,10 +6,10 @@ from __future__ import annotations
 
 import importlib
 from pathlib import Path
-from shutil import copy
 from typing import Any, cast
 
 from mlia.core.helpers import ActionResolver
+from mlia.utils.boundaries.filesystem import copy_user_output_file
 
 
 def _get_target_option_args(target_args: dict[str, Any] | None) -> list[str]:
@@ -88,7 +88,7 @@ def copy_profile_file_to_output_dir(
     )
     output_file_path = f"{output_dir}/{profile_file_path.stem}.toml"
     try:
-        copy(profile_file_path, output_file_path)
+        copy_user_output_file(profile_file_path, output_file_path)
         return True
     except OSError as err:
         raise RuntimeError(f"Failed to copy {profile_to_copy} file: {err}") from err

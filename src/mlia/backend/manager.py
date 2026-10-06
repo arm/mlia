@@ -319,7 +319,6 @@ class DefaultInstallationManager(InstallationManager, InstallationFiltersMixin):
         for inst, inst_type in zip(
             dep_installations_to_be_installed, dep_install_types_to_be_installed
         ):
-            logger.info("Installing %s", inst.name)
             inst.install(inst_type)
             logger.info("%s successfully installed", inst.name)
 
@@ -332,7 +331,6 @@ class DefaultInstallationManager(InstallationManager, InstallationFiltersMixin):
                     inst.name,
                 )
                 inst.uninstall()
-            logger.info("Installing %s", inst.name)
             inst.install(inst_type)
             logger.info("%s successfully installed", inst.name)
 
