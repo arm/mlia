@@ -63,12 +63,18 @@ MLIA uses the following plugin model:
 - [MLIA Ethos-U](https://github.com/arm/mlia-ethos-u)
   (`mlia-ethos-u`) adds Ethos-U target profiles and the Vela and Corstone
   backends for compatibility and performance analysis.
+- [MLIA Neural Technology](https://github.com/arm/mlia-neural-technology)
+  (`mlia-neural-technology`) adds Arm Neural Technology target profiles and
+  backends for performance estimation and performance analysis.
 
 ### Converter plugins
 
 - [MLIA PyTorch Converter](https://github.com/arm/mlia-converters-pytorch)
   (`mlia-converters-pytorch`) converts PyTorch models into artifacts used by
   supported MLIA target flows.
+- [MLIA LiteRT Converter](https://github.com/arm/mlia-converters-litert)
+  (`mlia-converters-litert`) converts LiteRT / TensorFlow Lite `.tflite` models
+  into TOSA artifacts for supported MLIA target flows.
 
 Install only the plugin packages you need, then use the discovery commands to
 see what is available in the current environment:

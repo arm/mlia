@@ -78,5 +78,10 @@ output_format = "custom"
 Core passes only `plugins.example` to the plugin registered as `example`.
 Plugins are responsible for validating the contents of their own table.
 
-See the individual plugin packages for target-specific, backend-specific,
-transformer-specific, and analysis-plugin documentation.
+## Available plugin packages
+
+For current target and converter plugins, see the
+[plugin list in the MLIA README](https://github.com/arm/mlia#plugin-model).
+
+Each plugin repository documents its supported targets, backends, models, and
+installation requirements.
