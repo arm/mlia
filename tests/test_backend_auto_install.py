@@ -47,8 +47,8 @@ def _setup_registry(monkeypatch: pytest.MonkeyPatch, items: dict[str, Any]) -> N
 
 
 def test_auto_install_non_eula_cli(monkeypatch: pytest.MonkeyPatch) -> None:
-    installation = _install("vela", installed=False)
-    _setup_registry(monkeypatch, {"vela": _cfg(installation)})
+    installation = _install("backend-filler", installed=False)
+    _setup_registry(monkeypatch, {"backend-filler": _cfg(installation)})
 
     noninteractive_mgr = MagicMock()
     interactive_mgr = MagicMock()
@@ -58,17 +58,21 @@ def test_auto_install_non_eula_cli(monkeypatch: pytest.MonkeyPatch) -> None:
 
     monkeypatch.setattr(backend_manager, "get_installation_manager", _get_manager)
 
-    backend_manager.ensure_backends_installed(["vela"], accept_eula=None)
+    prompt = MagicMock()
+    backend_manager.ensure_backends_installed(
+        ["backend-filler"], accept_eula=None, prompt=prompt
+    )
 
     noninteractive_mgr.download_and_install.assert_called_once_with(
-        ["vela"], eula_agreement=True, force=False
+        ["backend-filler"], eula_agreement=True, force=False
     )
     interactive_mgr.download_and_install.assert_not_called()
+    prompt.assert_not_called()
 
 
 def test_auto_install_eula_cli(monkeypatch: pytest.MonkeyPatch) -> None:
-    installation = _install("corstone-300", installed=False, requires_eula=True)
-    _setup_registry(monkeypatch, {"corstone-300": _cfg(installation)})
+    installation = _install("backend-sample", installed=False, requires_eula=True)
+    _setup_registry(monkeypatch, {"backend-sample": _cfg(installation)})
 
     noninteractive_mgr = MagicMock()
     interactive_mgr = MagicMock()
@@ -78,39 +82,43 @@ def test_auto_install_eula_cli(monkeypatch: pytest.MonkeyPatch) -> None:
 
     monkeypatch.setattr(backend_manager, "get_installation_manager", _get_manager)
 
-    backend_manager.ensure_backends_installed(["corstone-300"], accept_eula=None)
+    backend_manager.ensure_backends_installed(["backend-sample"], accept_eula=None)
 
     interactive_mgr.download_and_install.assert_called_once_with(
-        ["corstone-300"], eula_agreement=False, force=False
+        ["backend-sample"], eula_agreement=False, force=False
     )
     noninteractive_mgr.download_and_install.assert_not_called()
 
 
 def test_auto_install_eula_api_requires_accept(monkeypatch: pytest.MonkeyPatch) -> None:
-    installation = _install("corstone-300", installed=False, requires_eula=True)
-    _setup_registry(monkeypatch, {"corstone-300": _cfg(installation)})
+    installation = _install("backend-sample", installed=False, requires_eula=True)
+    _setup_registry(monkeypatch, {"backend-sample": _cfg(installation)})
 
     get_installation_manager = MagicMock()
     monkeypatch.setattr(
         backend_manager, "get_installation_manager", get_installation_manager
     )
 
-    with pytest.raises(ConfigurationError):
-        backend_manager.ensure_backends_installed(["corstone-300"], accept_eula=False)
+    prompt = MagicMock(return_value="yes")
+    with pytest.raises(ConfigurationError, match="Pass accept_eula=True"):
+        backend_manager.ensure_backends_installed(
+            ["backend-sample"], accept_eula=False, prompt=prompt
+        )
 
     get_installation_manager.assert_not_called()
+    prompt.assert_not_called()
 
 
 def test_auto_install_eula_api_fails_before_non_eula_install(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    vela = _install("vela", installed=False)
-    corstone = _install("corstone-300", installed=False, requires_eula=True)
+    bk_filler = _install("backend-filler", installed=False)
+    bk_sample = _install("backend-sample", installed=False, requires_eula=True)
     _setup_registry(
         monkeypatch,
         {
-            "vela": _cfg(vela),
-            "corstone-300": _cfg(corstone),
+            "backend-filler": _cfg(bk_filler),
+            "backend-sample": _cfg(bk_sample),
         },
     )
 
@@ -123,7 +131,7 @@ def test_auto_install_eula_api_fails_before_non_eula_install(
 
     with pytest.raises(ConfigurationError):
         backend_manager.ensure_backends_installed(
-            ["vela", "corstone-300"], accept_eula=False
+            ["backend-filler", "backend-sample"], accept_eula=False
         )
 
     manager.download_and_install.assert_not_called()
@@ -222,8 +230,8 @@ def test_auto_install_eula_dependency_cancel_stops_non_eula_install(
 
 
 def test_auto_install_eula_api_accepts(monkeypatch: pytest.MonkeyPatch) -> None:
-    installation = _install("corstone-300", installed=False, requires_eula=True)
-    _setup_registry(monkeypatch, {"corstone-300": _cfg(installation)})
+    installation = _install("backend-sample", installed=False, requires_eula=True)
+    _setup_registry(monkeypatch, {"backend-sample": _cfg(installation)})
 
     noninteractive_mgr = MagicMock()
     monkeypatch.setattr(
@@ -232,10 +240,70 @@ def test_auto_install_eula_api_accepts(monkeypatch: pytest.MonkeyPatch) -> None:
         lambda noninteractive=False: noninteractive_mgr,
     )
 
-    backend_manager.ensure_backends_installed(["corstone-300"], accept_eula=True)
+    prompt = MagicMock(return_value="no")
+    backend_manager.ensure_backends_installed(
+        ["backend-sample"], accept_eula=True, prompt=prompt
+    )
 
     noninteractive_mgr.download_and_install.assert_called_once_with(
-        ["corstone-300"], eula_agreement=True, force=False
+        ["backend-sample"], eula_agreement=True, force=False
+    )
+    prompt.assert_not_called()
+
+
+def test_auto_install_prompt_acceptance_avoids_terminal_input(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Frontend consent selects the noninteractive installation path."""
+    installation = _install("backend-sample", installed=False, requires_eula=True)
+    _setup_registry(monkeypatch, {"backend-sample": _cfg(installation)})
+    get_manager = MagicMock()
+    monkeypatch.setattr(backend_manager, "get_installation_manager", get_manager)
+    prompt = MagicMock(return_value=" YES ")
+
+    backend_manager.ensure_backends_installed(
+        ["backend-sample"], accept_eula=None, prompt=prompt
+    )
+
+    prompt.assert_not_called()
+    get_manager.assert_called_once_with(noninteractive=True)
+    get_manager.return_value.download_and_install.assert_called_once_with(
+        ["backend-sample"],
+        eula_agreement=False,
+        force=False,
+        eula_prompt=prompt,
+    )
+
+
+@pytest.mark.parametrize("response", ["no", ""], ids=["refused", "default"])
+def test_auto_install_passes_frontend_prompt_to_eula_installation(
+    monkeypatch: pytest.MonkeyPatch, response: str
+) -> None:
+    """The staged installer, not the manager, obtains frontend consent."""
+    _setup_registry(
+        monkeypatch,
+        {
+            "backend-filler": _cfg(_install("backend-filler", installed=False)),
+            "backend-sample": _cfg(
+                _install("backend-sample", installed=False, requires_eula=True)
+            ),
+        },
+    )
+    get_manager = MagicMock()
+    monkeypatch.setattr(backend_manager, "get_installation_manager", get_manager)
+    prompt = MagicMock(return_value=response)
+
+    backend_manager.ensure_backends_installed(
+        ["backend-filler", "backend-sample"], accept_eula=None, prompt=prompt
+    )
+
+    prompt.assert_not_called()
+    get_manager.assert_any_call(noninteractive=True)
+    get_manager.return_value.download_and_install.assert_any_call(
+        ["backend-sample"],
+        eula_agreement=False,
+        force=False,
+        eula_prompt=prompt,
     )
 
 

@@ -11,7 +11,6 @@ import pytest
 import typer
 
 import mlia.api
-import mlia.cli.command_validators as cli_validators
 import mlia.cli.commands as cli_commands
 from mlia.cli.commands import mlia_app
 from mlia.cli.settings import new_settings
@@ -99,56 +98,4 @@ def test_backend_command_action_install(
         accept_eula=expected_accept_eula,
         noninteractive=noninteractive,
         force=force,
-    )
-
-
-@pytest.mark.parametrize(
-    "compatibility, performance, expected_category",
-    [
-        pytest.param(True, True, {"compatibility", "performance"}, id="both"),
-        pytest.param(True, False, {"compatibility"}, id="compatibility-only"),
-        pytest.param(False, True, {"performance"}, id="performance-only"),
-        pytest.param(False, False, {"compatibility"}, id="default"),
-    ],
-)
-def test_check_category_combinations(
-    monkeypatch: pytest.MonkeyPatch,
-    test_tflite_model: Path,
-    compatibility: bool,
-    performance: bool,
-    expected_category: set[str],
-) -> None:
-    """Test check() with different category combinations."""
-    execution_context = MagicMock()
-    get_advice = MagicMock()
-
-    monkeypatch.setattr(
-        cli_commands,
-        "_create_check_context",
-        MagicMock(return_value=execution_context),
-    )
-    monkeypatch.setattr(
-        cli_validators,
-        "validate_check_target_profile",
-        MagicMock(return_value=True),
-    )
-    monkeypatch.setattr(mlia.api, "get_advice", get_advice)
-
-    cli_commands.check(
-        model=str(test_tflite_model),
-        target_profile="ethos-u55-256",
-        compatibility=compatibility,
-        performance=performance,
-    )
-
-    get_advice.assert_called_once_with(
-        "ethos-u55-256",
-        str(test_tflite_model),
-        expected_category,
-        profiling_data=None,
-        context=execution_context,
-        backends=None,
-        accept_eula=None,
-        backend_options=None,
-        settings=None,
     )

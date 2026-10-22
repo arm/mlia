@@ -6,9 +6,11 @@ from __future__ import annotations
 
 import json
 import re
+import sys
 from collections.abc import Mapping
 from pathlib import Path
-from typing import Any
+from types import SimpleNamespace
+from typing import Any, TextIO, cast
 from unittest.mock import MagicMock, patch
 
 import click
@@ -17,11 +19,14 @@ from typer import rich_utils
 from typer.testing import CliRunner
 
 import mlia.api as mlia_api
-import mlia.cli.command_validators as command_validators
 import mlia.cli.commands as cli_commands
 import mlia.cli.main as cli_main
-import mlia.cli.settings as cli_settings
+import mlia.core.application_settings as cli_settings
 from mlia.backend.options import BackendOptionSpec
+from mlia.check import CheckError, CheckResult
+from mlia.cli.settings import configure_typer_help
+from mlia.core import check_validation as command_validators
+from mlia.core.errors import ConfigurationError
 from mlia.core.settings import ApplicationSettings
 from mlia.plugins.analysis import AnalysisPluginRegistry, AnalysisRunResult
 
@@ -109,6 +114,24 @@ class DemoAnalysisPlugin:
         self.results.append(result)
 
 
+class FileAnalysisPlugin(DemoAnalysisPlugin):
+    """Read a Click-owned resource while the command context is still open."""
+
+    contents: str = ""
+
+    def cli_options(self) -> list[click.Option]:
+        """Add a file input to the ordinary demo options."""
+        return [
+            *super().cli_options(),
+            click.Option(["--plugin-input"], type=click.File("r")),
+        ]
+
+    def run(self, result: AnalysisRunResult) -> None:
+        """Read the input during execution and retain the result for assertions."""
+        self.contents = cast(TextIO, result.args["plugin_input"]).read()
+        super().run(result)
+
+
 @pytest.mark.parametrize(
     ("app", "expected_text"),
     [
@@ -178,7 +201,7 @@ def test_help_uses_selected_mlia_colors(
     monkeypatch.setattr(rich_utils, "COLOR_SYSTEM", "truecolor")
     for style_name in TYPER_HELP_STYLE_NAMES:
         monkeypatch.setattr(rich_utils, style_name, getattr(rich_utils, style_name))
-    cli_settings.configure_typer_help(True, theme)
+    configure_typer_help(True, theme)
 
     result = CliRunner().invoke(cli_main.mlia_app, ["--help"], color=True)
 
@@ -202,7 +225,7 @@ def test_help_uses_selected_required_color(
     monkeypatch.setattr(rich_utils, "COLOR_SYSTEM", "truecolor")
     for style_name in TYPER_HELP_STYLE_NAMES:
         monkeypatch.setattr(rich_utils, style_name, getattr(rich_utils, style_name))
-    cli_settings.configure_typer_help(True, theme)
+    configure_typer_help(True, theme)
 
     check_help = CliRunner().invoke(cli_main.mlia_app, ["check", "--help"], color=True)
     backend_help = CliRunner().invoke(
@@ -212,7 +235,7 @@ def test_help_uses_selected_required_color(
     assert check_help.exit_code == 0
     assert backend_help.exit_code == 0
     ansi_color = f"\x1b[38;2;{required_color}m"
-    assert f"{ansi_color}[required]" in check_help.stdout
+    assert "[required]" not in _strip_ansi(check_help.stdout)
     assert f"{ansi_color}*" in backend_help.stdout
 
 
@@ -252,13 +275,13 @@ def test_main_calls_mlia_app(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_color_enabled_enables_color_for_tty_without_no_color(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """With TTY ouput, colors should be delegated to lower configuration
-    levels when NO_COLOR and MLIA_NO_COLOR is unset."""
+    """Delegate TTY colors when the environment does not disable them."""
+    monkeypatch.delenv("NO_COLOR", raising=False)
+    monkeypatch.delenv("MLIA_NO_COLOR", raising=False)
+    monkeypatch.setenv("TERM", "xterm-256color")
     stream = MagicMock()
     stream.isatty.return_value = True
     monkeypatch.setattr(cli_settings.sys, "stdout", stream)
-    monkeypatch.setattr(cli_settings, "get_environment", lambda: {})
-
     assert cli_settings._color_enabled() is None
 
 
@@ -284,39 +307,6 @@ def test_color_enabled_disables_color_when_no_color_is_set(
     monkeypatch.setattr(cli_settings.sys, "stdout", stream)
 
     assert not cli_settings._color_enabled()
-
-
-def test_emit_standardized_output_uses_application_console(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Standardized output should use the configured application console."""
-    settings = MagicMock()
-    settings.console.encoding = "utf-8"
-    context = MagicMock(output_format="plain_text")
-    output: dict[str, object] = {"result": "[literal]"}
-    render = MagicMock(return_value="[literal]")
-    monkeypatch.setattr(cli_commands, "standardized_output_to_text", render)
-
-    cli_commands.emit_standardized_output(settings, context, output)
-
-    render.assert_called_once_with(output)
-    settings.console.out.assert_called_once_with("[literal]", highlight=False)
-
-
-def test_emit_standardized_output_replaces_unencodable_characters(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """CLI text output should respect the configured console encoding."""
-    settings = MagicMock()
-    settings.console.encoding = "cp1252"
-    context = MagicMock(output_format="plain_text")
-    output: dict[str, object] = {"result": "table"}
-    render = MagicMock(return_value="┌─┐ café")
-    monkeypatch.setattr(cli_commands, "standardized_output_to_text", render)
-
-    cli_commands.emit_standardized_output(settings, context, output)
-
-    settings.console.out.assert_called_once_with("??? café", highlight=False)
 
 
 @pytest.mark.parametrize(
@@ -440,11 +430,20 @@ def test_check_accepts_updated_flag_names(args: list[str], expected_text: str) -
     result = CliRunner().invoke(cli_main.mlia_app, args)
 
     assert result.exit_code == 2
-    assert expected_text in result.output
+    assert result.stderr == expected_text + "\n"
 
 
-def test_check_accepts_target_profile_flag(monkeypatch: pytest.MonkeyPatch) -> None:
-    """The check command should accept the target profile flag."""
+def test_check_accepts_target_profile_flag(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Ordinary execution neither needs nor imports the optional TUI package."""
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.syspath_prepend(str(tmp_path))
+    monkeypatch.delitem(sys.modules, "mlia_tui", raising=False)
+    (tmp_path / "mlia_tui.py").write_text(
+        "raise AssertionError('TUI must not be imported')\n",
+        encoding="utf-8",
+    )
     monkeypatch.setattr(mlia_api, "get_advice", MagicMock(return_value=None))
     monkeypatch.setattr(
         command_validators,
@@ -692,6 +691,71 @@ def test_check_runs_enabled_analysis_plugins(
     assert plugin.results[0].parameters["model"] == "model.tflite"
 
 
+def test_check_preserves_click_file_options(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Backend and analysis options retain live resources until CLI completion."""
+    source = tmp_path / "plugin-input.txt"
+    source.write_text("plugin data", encoding="utf-8")
+    plugin = FileAnalysisPlugin()
+    registry = AnalysisPluginRegistry()
+    registry.register(plugin)
+
+    def read_backend_input(*_args: object, **kwargs: object) -> None:
+        backend_options = cast(dict[str, dict[str, TextIO]], kwargs["backend_options"])
+        assert backend_options["file-backend"]["input"].read() == "plugin data"
+
+    get_advice = MagicMock(side_effect=read_backend_input)
+    backend_option: BackendOptionSpec = {
+        "module": "file_backend",
+        "backend": "file-backend",
+        "config_key": "input",
+        "click_option": click.Option(
+            ["--file-backend.input", "backend_input"], type=click.File("r")
+        ),
+    }
+    monkeypatch.setattr(
+        cli_commands,
+        "discover_backend_option_specs",
+        MagicMock(return_value=[backend_option]),
+    )
+    monkeypatch.setattr(
+        cli_commands, "_load_analysis_plugin_registry", MagicMock(return_value=registry)
+    )
+    monkeypatch.setattr(mlia_api, "get_advice", get_advice)
+
+    result = CliRunner().invoke(
+        cli_main.mlia_app,
+        [
+            "check",
+            "model.tflite",
+            "--target-profile",
+            "tosa",
+            "--output-dir",
+            str(tmp_path),
+            "--demo-analysis",
+            "--plugin-input",
+            str(source),
+            "--file-backend.input",
+            str(source),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert plugin.contents == "plugin data"
+    assert len(plugin.results) == 1
+    assert cast(TextIO, plugin.results[0].args["plugin_input"]).closed
+    backend_input = get_advice.call_args.kwargs["backend_options"]["file-backend"][
+        "input"
+    ]
+    assert backend_input.name == str(source)
+    assert backend_input.closed
+    assert (
+        get_advice.call_args.kwargs["settings"].backend_options["file-backend"]["input"]
+        is backend_input
+    )
+
+
 def test_check_help_lists_analysis_plugin_options(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -925,3 +989,222 @@ def test_debug_option_is_set_from_environment(
 
     with patch.dict("os.environ", clear=True, **environment):
         assert cli_commands.debug_option().default is result
+
+
+@pytest.mark.parametrize(
+    ("args", "target", "model", "backends"),
+    [
+        pytest.param(
+            ["check", "--backend", "vela", "model.tflite", "--tui", "--compatibility"],
+            None,
+            "model.tflite",
+            ("vela",),
+            id="missing-target",
+        ),
+        pytest.param(["check", "--tui"], None, None, None, id="discovery-only"),
+        pytest.param(
+            ["check", "--tui", "--target-profile", "example"],
+            "example",
+            None,
+            None,
+            id="missing-model",
+        ),
+    ],
+)
+def test_tui_accepts_incomplete_check_request(
+    monkeypatch: pytest.MonkeyPatch,
+    args: list[str],
+    target: str | None,
+    model: str | None,
+    backends: tuple[str, ...] | None,
+) -> None:
+    """Editable fields can be completed after the optional interface opens."""
+    launch = MagicMock(return_value=None)
+    monkeypatch.setitem(sys.modules, "mlia_tui", SimpleNamespace(launch=launch))
+
+    result = CliRunner().invoke(cli_main.mlia_app, args)
+
+    assert result.exit_code == 0, result.stdout
+    launch.assert_called_once()
+    request = launch.call_args.args[0]
+    assert (request.target_profile, request.model, request.backend) == (
+        target,
+        model,
+        backends,
+    )
+
+
+@pytest.mark.parametrize(
+    "args",
+    [
+        ["check", "model.tflite"],
+        ["check", "--backend=--tui", "model.tflite"],
+        ["check", "--", "--tui"],
+    ],
+)
+def test_non_tui_check_still_requires_target_profile(
+    monkeypatch: pytest.MonkeyPatch,
+    args: list[str],
+) -> None:
+    """Relaxing interactive preparation does not relax CLI execution."""
+    execute = MagicMock()
+    monkeypatch.setattr(cli_commands, "execute_check", execute)
+    registry = MagicMock(spec=AnalysisPluginRegistry)
+    registry.cli_options.return_value = [click.Option(["--token"], prompt=True)]
+    monkeypatch.setattr(
+        cli_commands, "_load_analysis_plugin_registry", lambda: registry
+    )
+
+    result = CliRunner().invoke(cli_main.mlia_app, args)
+
+    assert result.exit_code == 2
+    assert "Missing option '--target-profile'" in _strip_ansi(result.output)
+    assert "Token:" not in result.output
+    execute.assert_not_called()
+
+
+def test_tui_completed_check_emits_canonical_json(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """JSON comes from the completed result after the interface closes."""
+    output: dict[str, object] = {"results": []}
+    launch = MagicMock(return_value=CheckResult(output, None, "Rendered report"))
+    monkeypatch.setitem(sys.modules, "mlia_tui", SimpleNamespace(launch=launch))
+
+    result = CliRunner().invoke(cli_main.mlia_app, ["check", "--tui", "--json"])
+
+    assert result.exit_code == 0, result.output
+    assert json.loads(result.stdout) == output
+    assert result.stderr == ""
+
+
+@pytest.mark.parametrize(
+    "check_result",
+    [None, CheckResult(None, None)],
+    ids=["no-attempt", "completed-without-output"],
+)
+def test_tui_without_output_emits_no_json(
+    monkeypatch: pytest.MonkeyPatch, check_result: CheckResult | None
+) -> None:
+    """Closing discovery or completing without output leaves stdout empty."""
+    launch = MagicMock(return_value=check_result)
+    monkeypatch.setitem(sys.modules, "mlia_tui", SimpleNamespace(launch=launch))
+
+    result = CliRunner().invoke(cli_main.mlia_app, ["check", "--tui", "--json"])
+
+    assert result.exit_code == 0, result.output
+    assert result.output == ""
+
+
+def test_tui_skipped_check_reports_reason_without_json(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A skipped check reports its reason on stderr even with JSON requested."""
+    launch = MagicMock(
+        return_value=CheckResult(
+            None, None, outcome="skipped", skip_reason="No supported checks selected."
+        )
+    )
+    monkeypatch.setitem(sys.modules, "mlia_tui", SimpleNamespace(launch=launch))
+
+    result = CliRunner().invoke(cli_main.mlia_app, ["check", "--tui", "--json"])
+
+    assert result.exit_code == 0
+    assert result.stdout == ""
+    assert result.stderr == "No supported checks selected.\n"
+
+
+@pytest.mark.parametrize("exit_code", [1, 2, 130])
+def test_tui_failed_check_preserves_exit_code_without_json(
+    monkeypatch: pytest.MonkeyPatch, exit_code: int
+) -> None:
+    """The CLI preserves the failure status returned by the interface."""
+    launch = MagicMock(side_effect=CheckError("Check failed.", exit_code=exit_code))
+    monkeypatch.setitem(sys.modules, "mlia_tui", SimpleNamespace(launch=launch))
+
+    result = CliRunner().invoke(cli_main.mlia_app, ["check", "--tui", "--json"])
+
+    assert result.exit_code == exit_code
+    assert result.stdout == ""
+    assert result.stderr == "Error: Check failed.\n"
+
+
+def test_tui_missing_package_is_actionable(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Only requesting the unavailable optional interface requires its installation."""
+    monkeypatch.setitem(sys.modules, "mlia_tui", None)
+
+    result = CliRunner().invoke(cli_main.mlia_app, ["check", "--tui"])
+
+    assert result.exit_code == 1
+    assert result.stdout == ""
+    assert "pip install mlia-tui" in result.stderr
+
+
+def test_tui_broken_dependency_is_not_reported_as_missing_package(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """An installed frontend's import error retains the missing dependency."""
+    monkeypatch.syspath_prepend(str(tmp_path))
+    monkeypatch.delitem(sys.modules, "mlia_tui", raising=False)
+    (tmp_path / "mlia_tui.py").write_text(
+        "raise ModuleNotFoundError('missing dependency', name='frontend_dependency')\n",
+        encoding="utf-8",
+    )
+
+    result = CliRunner().invoke(cli_main.mlia_app, ["check", "--tui"])
+
+    assert result.exit_code == 1
+    assert isinstance(result.exception, ModuleNotFoundError)
+    assert result.exception.name == "frontend_dependency"
+    assert "pip install mlia-tui" not in result.output
+
+
+def test_ordinary_check_preserves_configuration_error(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Normal advisor errors keep their existing exception and presentation."""
+    error = ConfigurationError("Invalid analysis configuration")
+    monkeypatch.setattr(mlia_api, "get_advice", MagicMock(side_effect=error))
+
+    result = CliRunner().invoke(
+        cli_main.mlia_app,
+        ["check", "model.tflite", "-t", "tosa", "--output-dir", str(tmp_path)],
+    )
+
+    assert result.exit_code == 1
+    assert result.exception is error
+    assert "Error: Invalid analysis configuration" not in result.stderr
+
+
+def test_post_analysis_failure_preserves_output(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Post-analysis errors retain ordinary CLI reporting and persisted results."""
+    output: dict[str, object] = {"results": []}
+    plugin = DemoAnalysisPlugin()
+    monkeypatch.setattr(
+        plugin, "run", MagicMock(side_effect=ConfigurationError("Plugin failed"))
+    )
+    registry = AnalysisPluginRegistry()
+    registry.register(plugin)
+    monkeypatch.setattr(
+        cli_commands, "_load_analysis_plugin_registry", lambda: registry
+    )
+    monkeypatch.setattr(mlia_api, "get_advice", MagicMock(return_value=output))
+
+    result = CliRunner().invoke(
+        cli_main.mlia_app,
+        [
+            "check",
+            "model.tflite",
+            "-t",
+            "tosa",
+            "--output-dir",
+            str(tmp_path),
+            "--demo-analysis",
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert result.stderr == "Error: Plugin failed\n"
+    assert json.loads((tmp_path / "mlia-output/mlia-output.json").read_text()) == output

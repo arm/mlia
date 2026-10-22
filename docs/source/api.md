@@ -93,6 +93,57 @@ Most integrations should prefer `run_advisor()` because it owns input
 validation, temporary output handling, backend installation, logging capture,
 and optional JSON Schema validation.
 
+## Prepared checks for interactive frontends
+
+`mlia.check` exposes `CheckRequest`, `CheckSettings`, `CheckResult`, `CheckError`,
+`prepare_check()` and `execute_check()`. Use these when an application needs the
+check workflow, including persisted output and post-analysis plugins, after a
+separate configuration step. `run_advisor()` remains the library convenience API.
+
+`prepare_check()` captures resolved values without running analysis or creating
+output. `execute_check()` validates completeness and runs the shared workflow.
+A profiling-only request can omit the model. The result distinguishes completed
+and skipped checks; execution failures propagate as exceptions, with `CheckError`
+carrying an exit status for command callers.
+
+`CheckRequest.output_dir` is the base directory; when omitted, it defaults to
+the current working directory. Execution recreates the `mlia-output` directory
+inside that base, replacing any previous contents. Choose a fresh base or ask
+the user to confirm replacement before executing another check there.
+`CheckResult.output_dir` identifies the actual `mlia-output` directory.
+
+Standalone frontends obtain CLI defaults and typed plugin options through the
+public `mlia.cli.preparation.prepare_check_defaults()` context manager:
+
+```python
+from mlia.cli.preparation import prepare_check_defaults
+
+with prepare_check_defaults() as request:
+    # Configure the request and run the frontend inside this context.
+    print(request.target_profile)
+```
+
+The context retains callback resources until frontend shutdown. Preparation
+uses the actual CLI declarations, environment/configuration, conversions and
+callbacks. Required plugin options without usable defaults produce an actionable
+error. Declarative prompts are suppressed only for standalone preparation;
+callbacks that require terminal input are unsupported on that route.
+
+Requests copy MLIA-owned mappings and preserve plugin-owned values, including
+live resources. Any process transport restrictions belong to the frontend.
+The optional execution `prompt` callback handles backend installation consent;
+ordinary CLI installation policy is preserved when no callback is supplied.
+The executor closes MLIA-configured logging handlers on every exit.
+
+Use `execute_check(request, output_stream=stream)` to capture rendered output
+while retaining MLIA's configured theme and named styles. The caller owns the
+stream; execution leaves it open. An explicit `console` takes precedence over
+`output_stream`. Without either, rendered output is returned in `CheckResult.report`.
+
+Frontend integrations use these documented entry points and the discovery API.
+CLI command callbacks, internal validators, rendering helpers and context
+metadata are implementation details, not integration interfaces.
+
 ## Discovery helpers
 
 The public API includes helpers such as:
@@ -102,6 +153,7 @@ The public API includes helpers such as:
 - `list_backends()`
 - `list_backend_options()`
 - `supported_backends(target_profile)`
+- `target_for_profile(name_or_path)`
 
 `list_targets()` includes backend metadata and mode-specific capabilities for
 estimation and profiling, allowing applications to select a viable backend

@@ -9,7 +9,7 @@ import os
 import platform
 import tarfile
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from functools import partial
 from pathlib import Path
 from typing import Callable, Iterable, Optional, Union
@@ -27,6 +27,18 @@ from mlia.utils.py_manager import get_package_manager
 logger = logging.getLogger(__name__)
 
 
+@dataclass(frozen=True)
+class EulaDocument:
+    """One end-user licence document supplied with a backend artifact."""
+
+    title: str
+    text: str
+
+
+EulaPrompt = Callable[[str], str]
+EulaResolver = Callable[[Path | None], Iterable[EulaDocument]]
+
+
 @dataclass
 class InstallFromPath:
     """Installation from the local path."""
@@ -39,6 +51,7 @@ class DownloadAndInstall:
     """Download and install."""
 
     eula_agreement: bool = True
+    eula_prompt: EulaPrompt | None = None
 
 
 @dataclass
@@ -46,6 +59,7 @@ class InstallFromVendorPackage:
     """Installation from a vendor package."""
 
     eula_agreement: bool = True
+    eula_prompt: EulaPrompt | None = None
 
 
 InstallationType = Union[InstallFromPath, DownloadAndInstall, InstallFromVendorPackage]
@@ -60,6 +74,7 @@ class Installation(ABC):
         description: str,
         dependencies: list[str] | None = None,
         requires_eula: bool = False,
+        eula_resolver: EulaResolver | None = None,
     ) -> None:
         """Init the installation."""
         assert not dependencies or name not in dependencies, (
@@ -71,6 +86,7 @@ class Installation(ABC):
         self.description = description
         self.dependencies = dependencies if dependencies else []
         self.requires_eula = requires_eula
+        self.eula_resolver = eula_resolver
 
     @property
     @abstractmethod
@@ -93,6 +109,60 @@ class Installation(ABC):
     @abstractmethod
     def uninstall(self) -> None:
         """Uninstall the backend."""
+
+    def resolve_eula_prompt(self, install_type: InstallationType) -> InstallationType:
+        """Resolve static EULA terms without dispatching installation."""
+        if isinstance(install_type, (DownloadAndInstall, InstallFromVendorPackage)):
+            agreement = self._resolve_eula_agreement(None, install_type)
+            install_type = replace(
+                install_type, eula_agreement=agreement, eula_prompt=None
+            )
+        return install_type
+
+    def _resolve_eula_agreement(
+        self,
+        source: Path | None,
+        install_type: DownloadAndInstall | InstallFromVendorPackage,
+    ) -> bool:
+        """Obtain frontend consent for EULA documents exposed by an installation."""
+        if (
+            not self.requires_eula
+            or install_type.eula_agreement
+            or install_type.eula_prompt is None
+        ):
+            return install_type.eula_agreement
+
+        documents = self._resolve_eula_documents(source)
+        if not documents:
+            raise RuntimeError(
+                f"Backend '{self.name}' requires EULA acceptance, but its "
+                "licence terms could not be found in the downloaded artifact."
+            )
+
+        sections = []
+        for document in documents:
+            sections.append(f"{document.title}\n{'-' * len(document.title)}")
+            sections.append(document.text.rstrip())
+        message = (
+            f"End-user licence agreement for backend '{self.name}'\n\n"
+            + "\n\n".join(sections)
+            + "\n\nAccept these terms and install the backend?"
+        )
+        response = install_type.eula_prompt(message)
+        if response.strip().lower() not in {"y", "yes"}:
+            raise RuntimeError(
+                f"Backend installation canceled because the EULA for "
+                f"'{self.name}' was not accepted."
+            )
+        return True
+
+    def _resolve_eula_documents(self, source: Path | None) -> list[EulaDocument]:
+        """Resolve EULA documents supplied by installation metadata."""
+        if self.eula_resolver is None:
+            return []
+        return [
+            document for document in self.eula_resolver(source) if document.text.strip()
+        ]
 
     def __eq__(self, other: object) -> bool:
         """Check equality with another Installation."""
@@ -135,9 +205,10 @@ class BackendInstallation(Installation):
         dependencies: list[str] | None = None,
         vendor_path: str | None = None,
         requires_eula: bool = False,
+        eula_resolver: EulaResolver | None = None,
     ) -> None:
         """Init the backend installation."""
-        super().__init__(name, description, dependencies, requires_eula)
+        super().__init__(name, description, dependencies, requires_eula, eula_resolver)
 
         self.fvp_dir_name = fvp_dir_name
         self.download_config = download_config
@@ -186,9 +257,7 @@ class BackendInstallation(Installation):
         if isinstance(install_type, DownloadAndInstall):
             assert self.download_config is not None, "No artifact provided"
 
-            self._download_and_install(
-                self.download_config, install_type.eula_agreement
-            )
+            self._download_and_install(self.download_config, install_type)
         elif isinstance(install_type, InstallFromPath):
             backend_info = self.path_checker(install_type.backend_path)
 
@@ -204,10 +273,11 @@ class BackendInstallation(Installation):
                     backend_info = self._resolve_vendor_archive(
                         resolved_path,
                         tmpdir,
-                        install_type.eula_agreement,
+                        install_type,
                     )
                     self._install_from(backend_info)
             else:
+                self._resolve_eula_agreement(resolved_path, install_type)
                 self._install_from(backend_info)
         else:
             raise RuntimeError(f"Unable to install {install_type}.")
@@ -217,7 +287,13 @@ class BackendInstallation(Installation):
         backend_repo = get_backend_repository()
         backend_repo.remove_backend(self.name)
 
-    def _download_and_install(self, cfg: DownloadConfig, eula_agreement: bool) -> None:
+    def resolve_eula_prompt(self, install_type: InstallationType) -> InstallationType:
+        """Defer EULA resolution until the backend archive is extracted."""
+        return install_type
+
+    def _download_and_install(
+        self, cfg: DownloadConfig, install_type: DownloadAndInstall
+    ) -> None:
         """Download and install the backend."""
         with temp_directory() as tmpdir:
             try:
@@ -231,6 +307,7 @@ class BackendInstallation(Installation):
                 raise RuntimeError("Unable to download backend artifact.") from err
 
             dist_dir = self._extract_archive_to_dist(dest, tmpdir)
+            eula_agreement = self._resolve_eula_agreement(dist_dir, install_type)
 
             backend_path = dist_dir
             if self.backend_installer:
@@ -245,7 +322,7 @@ class BackendInstallation(Installation):
         self,
         vendor_dir: Path,
         tmpdir: Path,
-        eula_agreement: bool,
+        install_type: InstallFromVendorPackage,
     ) -> BackendInfo:
         """Extract a vendored archive and return backend info."""
         archives = sorted(path.name for path in vendor_dir.glob("*.tar.gz"))
@@ -259,6 +336,7 @@ class BackendInstallation(Installation):
         dist_dir = self._extract_archive_to_dist(
             archive_path, tmpdir, log_prefix="vendor"
         )
+        eula_agreement = self._resolve_eula_agreement(dist_dir, install_type)
         backend_path = dist_dir
         if self.backend_installer:
             backend_path = self.backend_installer(eula_agreement, dist_dir)
@@ -270,6 +348,31 @@ class BackendInstallation(Installation):
                 f"Archive: {archive_path.name}."
             )
         return backend_info
+
+    def _resolve_eula_documents(self, source: Path | None) -> list[EulaDocument]:
+        """Read EULA documents supplied by metadata or the standard directory."""
+        if self.eula_resolver is not None:
+            return super()._resolve_eula_documents(source)
+        if source is None:
+            return []
+        eula_dir = source / "license_terms"
+        if not eula_dir.is_dir():
+            return []
+        documents = []
+        for path in sorted(eula_dir.rglob("*")):
+            if not path.is_file():
+                continue
+            try:
+                text = path.read_text(encoding="utf-8")
+            except (OSError, UnicodeError) as exc:
+                raise RuntimeError(
+                    f"Unable to read EULA document '{path.name}' for backend "
+                    f"'{self.name}'."
+                ) from exc
+            if text.strip():
+                documents.append(EulaDocument(str(path.relative_to(eula_dir)), text))
+
+        return documents
 
     def _extract_archive_to_dist(
         self, archive_path: Path, tmpdir: Path, log_prefix: str = "downloaded"
@@ -520,9 +623,15 @@ class PyPackageBackendInstallation(Installation):
         download_config: DownloadConfig | None = None,
         vendor_path: str | None = None,
         requires_eula: bool = False,
+        eula_resolver: EulaResolver | None = None,
     ) -> None:
         """Init the backend installation."""
-        super().__init__(name, description, requires_eula=requires_eula)
+        super().__init__(
+            name,
+            description,
+            requires_eula=requires_eula,
+            eula_resolver=eula_resolver,
+        )
 
         self.download_config = download_config
         self._packages_to_install = packages_to_install

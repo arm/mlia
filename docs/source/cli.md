@@ -26,6 +26,18 @@ The most important entry points are:
 Together, these commands define the basic MLIA flow: discovery first, then
 analysis.
 
+## Optional terminal interface
+
+With the optional `mlia-tui` package installed, `mlia check --tui` opens an
+interactive configuration session. Supplied check options prepopulate that
+session; a missing target or model can be completed there. Analysis starts only
+when the user selects Run. Without the package, requesting `--tui` reports how
+to install it. Ordinary commands remain available without the optional package.
+
+`--noninteractive` still controls backend installation prompts; the TUI remains
+interactive. With `--json`, the latest completed result is emitted after the UI
+closes. A failed or cancelled latest attempt does not emit an earlier result.
+
 ## A good starting sequence
 
 If you are in a fresh environment, a practical first sequence is:

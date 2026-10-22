@@ -12,6 +12,7 @@ from typing import Callable
 from mlia.backend.config import BackendType
 from mlia.backend.install import (
     DownloadAndInstall,
+    EulaPrompt,
     Installation,
     InstallationType,
     InstallFromPath,
@@ -84,7 +85,11 @@ class InstallationManager(ABC):
 
     @abstractmethod
     def download_and_install(
-        self, backend_names: list[str], eula_agreement: bool, force: bool
+        self,
+        backend_names: list[str],
+        eula_agreement: bool,
+        force: bool,
+        eula_prompt: EulaPrompt | None = None,
     ) -> None:
         """Download and install backends."""
 
@@ -247,6 +252,7 @@ class DefaultInstallationManager(InstallationManager, InstallationFiltersMixin):
         install_types: list[InstallationType],
         force: bool,
         eula_agreement: bool = True,
+        eula_prompt: EulaPrompt | None = None,
     ) -> None:
         """Check metadata and install backend.
 
@@ -270,7 +276,7 @@ class DefaultInstallationManager(InstallationManager, InstallationFiltersMixin):
             if not installation.already_installed
         ]
         # Interactive installers can collect agreement; noninteractive ones cannot.
-        if self.noninteractive and not eula_agreement:
+        if self.noninteractive and not eula_agreement and eula_prompt is None:
             eula_backends = [
                 installation.name
                 for installation in pending_installations
@@ -296,6 +302,7 @@ class DefaultInstallationManager(InstallationManager, InstallationFiltersMixin):
             inst_type = self._get_default_insallation_type(
                 inst,
                 eula_agreement=eula_agreement,
+                eula_prompt=eula_prompt,
             )
             if inst_type is None:
                 raise InternalError(
@@ -319,6 +326,8 @@ class DefaultInstallationManager(InstallationManager, InstallationFiltersMixin):
         for inst, inst_type in zip(
             dep_installations_to_be_installed, dep_install_types_to_be_installed
         ):
+            if eula_prompt is not None and inst.requires_eula:
+                inst_type = inst.resolve_eula_prompt(inst_type)
             inst.install(inst_type)
             logger.info("%s successfully installed", inst.name)
 
@@ -331,6 +340,8 @@ class DefaultInstallationManager(InstallationManager, InstallationFiltersMixin):
                     inst.name,
                 )
                 inst.uninstall()
+            if eula_prompt is not None and inst.requires_eula:
+                inst_type = inst.resolve_eula_prompt(inst_type)
             inst.install(inst_type)
             logger.info("%s successfully installed", inst.name)
 
@@ -338,13 +349,18 @@ class DefaultInstallationManager(InstallationManager, InstallationFiltersMixin):
         self,
         installation: Installation,
         eula_agreement: bool,
+        eula_prompt: EulaPrompt | None = None,
     ) -> InstallationType | None:
         """Create the default installation type with explicit EULA state."""
-        vendor_install = InstallFromVendorPackage(eula_agreement=eula_agreement)
+        vendor_install = InstallFromVendorPackage(
+            eula_agreement=eula_agreement, eula_prompt=eula_prompt
+        )
         if installation.supports(vendor_install):
             return vendor_install
         if installation.supports(DownloadAndInstall()):
-            return DownloadAndInstall(eula_agreement=eula_agreement)
+            return DownloadAndInstall(
+                eula_agreement=eula_agreement, eula_prompt=eula_prompt
+            )
         return None
 
     def install_from(
@@ -354,7 +370,11 @@ class DefaultInstallationManager(InstallationManager, InstallationFiltersMixin):
         self._install([backend_name], [InstallFromPath(backend_path)], force)
 
     def download_and_install(
-        self, backend_names: list[str], eula_agreement: bool = True, force: bool = False
+        self,
+        backend_names: list[str],
+        eula_agreement: bool = True,
+        force: bool = False,
+        eula_prompt: EulaPrompt | None = None,
     ) -> None:
         """Download and install available backends."""
         install_types: list[InstallationType] = []
@@ -363,6 +383,7 @@ class DefaultInstallationManager(InstallationManager, InstallationFiltersMixin):
             install_type = self._get_default_insallation_type(
                 installation,
                 eula_agreement=eula_agreement,
+                eula_prompt=eula_prompt,
             )
             if install_type is None:
                 raise InternalError(
@@ -374,6 +395,7 @@ class DefaultInstallationManager(InstallationManager, InstallationFiltersMixin):
             install_types,
             force,
             eula_agreement=eula_agreement,
+            eula_prompt=eula_prompt,
         )
 
     def show_env_details(self) -> None:
@@ -477,6 +499,7 @@ def ensure_backends_installed(
     backend_names: list[str],
     *,
     accept_eula: bool | None,
+    prompt: EulaPrompt | None = None,
 ) -> None:
     """Ensure requested backends are installed.
 
@@ -484,6 +507,10 @@ def ensure_backends_installed(
       - None: allow interactive EULA handling (CLI behavior)
       - False: deterministic API mode; fail if EULA acceptance is required
       - True: noninteractive acceptance for EULA backends
+
+    A prompt callback allows an interactive frontend to obtain consent before
+    running an installer without terminal input. It is ignored when acceptance
+    is already specified.
     """
     if not backend_names:
         return
@@ -535,11 +562,20 @@ def ensure_backends_installed(
         )
 
     if missing_eula and accept_eula is None:
-        get_installation_manager(noninteractive=False).download_and_install(
-            missing_eula,
-            eula_agreement=False,
-            force=False,
-        )
+        manager = get_installation_manager(noninteractive=prompt is not None)
+        if prompt is None:
+            manager.download_and_install(
+                missing_eula,
+                eula_agreement=False,
+                force=False,
+            )
+        else:
+            manager.download_and_install(
+                missing_eula,
+                eula_agreement=False,
+                force=False,
+                eula_prompt=prompt,
+            )
         missing_non_eula, missing_eula = collect_missing_backend_names(backend_names)
         if missing_eula:
             return

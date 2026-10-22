@@ -9,7 +9,8 @@ from pathlib import Path
 import pytest
 from typer import rich_utils
 
-import mlia.cli.settings as cli_settings
+import mlia.core.application_settings as cli_settings
+from mlia.cli.settings import configure_typer_help
 from mlia.core.errors import ConfigurationError
 from mlia.core.settings import (
     ApplicationSettings,
@@ -51,7 +52,7 @@ def test_configure_typer_help_uses_selected_theme(
     for style_name in style_names:
         monkeypatch.setattr(rich_utils, style_name, "original")
 
-    cli_settings.configure_typer_help(True, theme)
+    configure_typer_help(True, theme)
 
     assert rich_utils.STYLE_OPTION == f"bold {name}"
     assert rich_utils.STYLE_SWITCH == f"bold {name}"
@@ -72,7 +73,7 @@ def test_configure_typer_help_does_not_add_colors_when_disabled(
     """Disabled color output should leave Typer's styles unchanged."""
     monkeypatch.setattr(rich_utils, "STYLE_OPTION", "original")
 
-    cli_settings.configure_typer_help(False)
+    configure_typer_help(False)
 
     assert rich_utils.STYLE_OPTION == "original"
 

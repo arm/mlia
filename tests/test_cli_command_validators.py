@@ -7,7 +7,7 @@ from __future__ import annotations
 import pytest
 
 from mlia.backend.config import BackendConfiguration, BackendType
-from mlia.cli import command_validators
+from mlia.core import check_validation as command_validators
 from mlia.core.errors import ConfigurationError
 
 

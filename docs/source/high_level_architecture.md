@@ -68,7 +68,8 @@ processed output; they do not reconstruct it from workflow events.
 
 | Layer | Core modules | Responsibility |
 | --- | --- | --- |
-| CLI | `mlia.cli.main`, `mlia.cli.commands`, `mlia.cli.command_validators` | Parse commands, add dynamic backend and analysis-plugin options, build execution context, render output, and invoke enabled post-analysis plugins. |
+| CLI | `mlia.cli.main`, `mlia.cli.commands`, `mlia.cli.preparation` | Parse core and dynamic options, retain callback resources, and dispatch prepared requests to ordinary execution or the optional TUI. |
+| Shared check execution | `mlia.check`, `mlia.core.check_validation`, `mlia.core.check_actions`, `mlia.core.application_settings` | Validate and execute requests, create output context, preserve resolved settings, persist/render output, invoke post-analysis plugins, and close logging handlers. |
 | Public API | `mlia.api` | Validate model or profiling inputs, resolve targets, select backends for the input source, ensure required backends are installed, run advisors, and return standardized output. |
 | Registries | `mlia.target.registry`, `mlia.backend.registry`, `mlia.plugins.*` | Load plugin entry points and expose registered target, backend, transformer, and analysis capabilities. |
 | Backend management | `mlia.backend.manager`, `mlia.backend.install`, `mlia.backend.config` | Report backend status, install or remove backends, resolve dependencies, and describe estimation and profiling capabilities. |

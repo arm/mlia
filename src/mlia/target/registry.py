@@ -150,7 +150,9 @@ def create_target_profile(path: Path) -> TargetProfile:
     target = profile_data.get("target_type") or profile_data.get("target")
     if not target:
         raise ValueError(f"Profile {path} must contain 'target_type' or 'target' field")
-    target_info = registry.items[target]
+    target_info = registry.items.get(target)
+    if target_info is None:
+        raise ValueError(f"Unknown target '{target}' in target profile '{path}'.")
     return target_info.target_profile_cls.load_data(profile_data)
 
 

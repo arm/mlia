@@ -6,7 +6,6 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Mapping
-from dataclasses import replace
 from pathlib import Path
 from typing import Annotated, Any, cast
 
@@ -21,20 +20,16 @@ from mlia.backend.options import (
     discover_backend_option_specs,
 )
 from mlia.backend.registry import get_selectable_backends
+from mlia.check import CheckError, CheckRequest, execute_check, prepare_check
 from mlia.cli.completion import target_profile_names
-from mlia.cli.helpers import CLIActionResolver
 from mlia.cli.settings import get_environment, new_settings
-from mlia.core.context import ExecutionContext
 from mlia.core.errors import ConfigurationError
-from mlia.core.logging import close_configured_handlers, setup_logging
-from mlia.core.output_persistence import persist_standardized_output
+from mlia.core.logging import setup_logging
 from mlia.core.output_rendering import (
     standardized_output_to_json,
-    standardized_output_to_text,
 )
 from mlia.core.settings import ApplicationSettings
-from mlia.core.typing import OutputFormat
-from mlia.plugins.analysis import AnalysisPluginRegistry, AnalysisRunResult
+from mlia.plugins.analysis import AnalysisPluginRegistry
 from mlia.plugins.plugins import (
     BACKEND_PLUGIN_GROUP,
     TARGET_PLUGIN_GROUP,
@@ -54,7 +49,6 @@ MLIA_HELP_EPILOG = (
     "  Browse MLIA repositories: "
     "https://github.com/orgs/arm/repositories?q=mlia"
 )
-ANALYSIS_PLUGIN_REGISTRY_META_KEY = "mlia.analysis_plugin_registry"
 ANALYSIS_PLUGIN_ARGS_META_KEY = "mlia.analysis_plugin_args"
 
 
@@ -120,8 +114,8 @@ class CheckOptionCommand(typer.core.TyperCommand):
         command_kwargs = {**kwargs, "params": params}
         super().__init__(*args, **command_kwargs)
 
-    def invoke(self, ctx: click.Context) -> Any:
-        """Collect dynamic option values before invoking the Typer callback."""
+    def prepare_request(self, ctx: click.Context) -> CheckRequest:
+        """Collect dynamic options and run the shared Typer preparation callback."""
         backend_options = _reshape_backend_options(
             self._backend_option_specs, ctx.params
         )
@@ -132,13 +126,51 @@ class CheckOptionCommand(typer.core.TyperCommand):
             _click_option_name(option): ctx.params.pop(_click_option_name(option), None)
             for option in self._analysis_plugin_options
         }
-        ctx.meta[ANALYSIS_PLUGIN_REGISTRY_META_KEY] = self._analysis_plugin_registry
         ctx.meta[ANALYSIS_PLUGIN_ARGS_META_KEY] = analysis_plugin_args
         ctx.obj = new_settings(
             source=ctx.ensure_object(ApplicationSettings),
             backend_options=backend_options,
         )
-        return super().invoke(ctx)
+        return cast(CheckRequest, super().invoke(ctx))
+
+    def invoke(self, ctx: click.Context) -> None:
+        """Prepare a request and dispatch to the selected frontend."""
+        request = self.prepare_request(ctx)
+        settings = ctx.ensure_object(ApplicationSettings)
+        analysis_plugin_registry = self._analysis_plugin_registry
+        try:
+            if ctx.params["tui"]:
+                try:
+                    from mlia_tui import launch
+                except ModuleNotFoundError as err:
+                    if err.name != "mlia_tui":
+                        raise
+                    raise CheckError(
+                        "The optional TUI package is not installed. "
+                        "Install it in this environment with 'pip install mlia-tui'."
+                    ) from err
+                result = launch(request)
+                if result is None:
+                    return
+                if result.outcome == "skipped":
+                    typer.echo(result.skip_reason or "Check skipped.", err=True)
+                elif request.json_output and result.output is not None:
+                    settings.console.out(
+                        standardized_output_to_json(result.output), highlight=False
+                    )
+            else:
+                execute_check(
+                    request,
+                    console=settings.console,
+                    analysis_plugin_registry=analysis_plugin_registry,
+                )
+        except ConfigurationError as err:
+            if not ctx.params["tui"] and not isinstance(err, CheckError):
+                raise
+            exit_code = err.exit_code if isinstance(err, CheckError) else 1
+            prefix = "" if not ctx.params["tui"] and exit_code == 2 else "Error: "
+            typer.echo(f"{prefix}{err}", err=True)
+            raise typer.Exit(code=exit_code) from err
 
     def parse_args(self, ctx: click.Context, args: list[str]) -> list[str]:
         """Print help for empty arguments without disrupting shell completion."""
@@ -165,102 +197,6 @@ def complete_target_profile_names(incomplete: str) -> list[str]:
 def _setup_command_logging(debug: bool) -> None:
     """Set up logging for commands without an execution context."""
     setup_logging(verbose=debug, cli_mode=True)
-
-
-def run_analysis_plugins(
-    registry: AnalysisPluginRegistry,
-    args: Mapping[str, object],
-    context: ExecutionContext,
-    parameters: dict[str, Any],
-    output: dict[str, object] | None,
-    settings: ApplicationSettings,
-) -> None:
-    """Run enabled post-analysis plugins."""
-    enabled_plugins = registry.enabled_plugins(args)
-    if not enabled_plugins:
-        return
-
-    result = AnalysisRunResult(
-        output=output,
-        context=context,
-        args=args,
-        command_name="check",
-        parameters=parameters,
-    )
-    for plugin in enabled_plugins:
-        logger.debug("Running analysis plugin '%s'", plugin.name)
-        plugin.run(replace(result, settings=settings.for_plugin(plugin.name)))
-
-
-def _create_check_context(
-    *,
-    model: str | None,
-    target_profile: str,
-    backend: list[str] | None,
-    performance: bool,
-    compatibility: bool,
-    profiling_data: list[Path] | None,
-    output_dir: Path | None,
-    json_output: bool,
-    i_agree_to_the_contained_eula: bool,
-    noninteractive: bool,
-    debug: bool,
-    backend_options: dict[str, dict[str, object]] | None = None,
-) -> ExecutionContext:
-    """Create an execution context for the live Typer check command."""
-    cli_args: dict[str, Any] = {
-        "model": model,
-        "target_profile": target_profile,
-        "backend": backend,
-        "performance": performance,
-        "compatibility": compatibility,
-        "profiling_data": profiling_data,
-        "output_dir": output_dir,
-        "json": json_output,
-        "i_agree_to_the_contained_eula": i_agree_to_the_contained_eula,
-        "noninteractive": noninteractive,
-        "backend_options": backend_options or {},
-    }
-    output_format: OutputFormat = "json" if json_output else "plain_text"
-    # Configure console logging before constructing the context because context
-    # creation may replace the runtime output directory.
-    setup_logging(verbose=debug, output_format=output_format, cli_mode=True)
-    try:
-        execution_context = ExecutionContext(
-            verbose=debug,
-            action_resolver=CLIActionResolver(cli_args),
-            output_format=output_format,
-            output_dir=output_dir,
-        )
-    except Exception as err:  # pylint: disable=broad-except
-        typer.echo(f"Error: {err}", err=True)
-        raise typer.Exit(code=1) from err
-
-    setup_logging(
-        execution_context.logs_path,
-        execution_context.verbose,
-        execution_context.output_format,
-        cli_mode=True,
-    )
-    return execution_context
-
-
-def emit_standardized_output(
-    settings: ApplicationSettings,
-    context: ExecutionContext,
-    output: dict[str, object] | None,
-) -> None:
-    """Emit command output from the canonical standardized output object."""
-    if output is None:
-        return
-    if context.output_format == "json":
-        text = standardized_output_to_json(output)
-    else:
-        text = standardized_output_to_text(output)
-    settings.console.out(
-        _replace_unencodable_characters(text, settings.console.encoding),
-        highlight=False,
-    )
 
 
 def _replace_unencodable_characters(text: str, encoding: str) -> str:
@@ -512,86 +448,13 @@ def target_app_main(ctx: typer.Context) -> None:
     ctx.obj = new_settings(source=src)
 
 
-def check(
-    model: str | None,
-    target_profile: str,
-    output_dir: Path | None = None,
-    backend: list[str] | None = None,
-    performance: bool = False,
-    compatibility: bool = False,
-    profiling_data: list[Path] | None = None,
-    json_output: bool = False,
-    i_agree_to_the_contained_eula: bool = False,
-    noninteractive: bool = False,
-    debug: bool = False,
-    backend_options: dict[str, dict[str, object]] | None = None,
-    settings: ApplicationSettings | None = None,
-) -> tuple[ExecutionContext, dict[str, object] | None, dict[str, Any]]:
-    """Generate advice for the input model and return canonical output."""
-    from mlia.api import get_advice
-    from mlia.cli.command_validators import validate_check_target_profile
-
-    if model is None and profiling_data is None:
-        typer.echo("Missing argument 'MODEL'", err=True)
-        raise typer.Exit(code=2)
-
-    category = set()
-    if compatibility:
-        category.add("compatibility")
-
-    if performance:
-        category.add("performance")
-
-    if not category:
-        category.add("compatibility")
-
-    if not validate_check_target_profile(target_profile, category):
-        raise typer.Exit(code=0)
-
-    execution_context = _create_check_context(
-        model=model,
-        target_profile=target_profile,
-        backend=backend,
-        performance=performance,
-        compatibility=compatibility,
-        profiling_data=profiling_data,
-        output_dir=output_dir,
-        json_output=json_output,
-        i_agree_to_the_contained_eula=i_agree_to_the_contained_eula,
-        noninteractive=noninteractive,
-        debug=debug,
-        backend_options=backend_options,
-    )
-
-    output = get_advice(
-        target_profile,
-        model,
-        category,
-        profiling_data=profiling_data,
-        context=execution_context,
-        backends=backend,
-        accept_eula=True
-        if i_agree_to_the_contained_eula
-        else False
-        if noninteractive
-        else None,
-        backend_options=backend_options,
-        settings=settings,
-    )
-    parameters: dict[str, Any] = {
-        "model": model,
-        "target_profile": target_profile,
-        "output_dir": output_dir,
-        "backend": backend,
-        "performance": performance,
-        "compatibility": compatibility,
-        "profiling_data": profiling_data,
-        "json_output": json_output,
-        "i_agree_to_the_contained_eula": i_agree_to_the_contained_eula,
-        "noninteractive": noninteractive,
-        "debug": debug,
-    }
-    return execution_context, output, parameters
+def _require_cli_target(
+    ctx: click.Context, param: click.Parameter, value: str | None
+) -> str | None:
+    """Reject a missing CLI target before unspecified plugin options are resolved."""
+    if value is None and not ctx.resilient_parsing and not ctx.params.get("tui"):
+        raise click.MissingParameter(ctx=ctx, param=param)
+    return value
 
 
 @mlia_app.command(
@@ -609,18 +472,19 @@ def check(
 def check_command(
     ctx: typer.Context,
     target_profile: Annotated[
-        str,
+        str | None,
         typer.Option(
             "--target-profile",
             "-t",
             help=(
                 "Hardware-analysis configuration: a named profile or path to a "
                 "custom profile. Run 'mlia target list' to see profiles supplied "
-                "by installed plugins."
+                "by installed plugins. Required unless --tui is supplied."
             ),
             autocompletion=complete_target_profile_names,
+            callback=_require_cli_target,
         ),
-    ],
+    ] = None,
     model: Annotated[str | None, typer.Argument(help="Model to check")] = None,
     output_dir: Annotated[
         Path | None,
@@ -680,55 +544,43 @@ def check_command(
     ] = False,
     noninteractive: Annotated[
         bool,
-        typer.Option("--noninteractive", help="Run check without interaction"),
+        typer.Option(
+            "--noninteractive",
+            help="Do not prompt for backend installation (also applies with --tui)",
+        ),
+    ] = False,
+    tui: Annotated[
+        bool,
+        typer.Option(
+            "--tui",
+            help="Configure and run the check in the optional TUI",
+            is_eager=True,  # Resolve the launch mode before validating the target.
+        ),
     ] = False,
     debug: bool = debug_option(),
-) -> None:
-    """Typer entry point for the check command."""
+) -> CheckRequest:
+    """Prepare the check request from resolved Typer values."""
     settings = ctx.obj if isinstance(ctx.obj, ApplicationSettings) else new_settings()
-    backend_options = settings.backend_options
-    analysis_plugin_registry = cast(
-        AnalysisPluginRegistry,
-        ctx.meta[ANALYSIS_PLUGIN_REGISTRY_META_KEY],
-    )
     plugin_args = cast(
         Mapping[str, object],
         ctx.meta[ANALYSIS_PLUGIN_ARGS_META_KEY],
     )
 
-    try:
-        context, output, parameters = check(
-            model=model,
-            output_dir=output_dir,
-            target_profile=target_profile,
-            backend=backend,
-            performance=performance,
-            compatibility=compatibility,
-            profiling_data=profiling_data,
-            json_output=json_output,
-            i_agree_to_the_contained_eula=i_agree_to_the_contained_eula,
-            noninteractive=noninteractive,
-            debug=debug,
-            backend_options=backend_options,
-            settings=settings,
-        )
-        if output is not None:
-            persist_standardized_output(output, context.output_dir)
-        emit_standardized_output(settings, context, output)
-        try:
-            run_analysis_plugins(
-                analysis_plugin_registry,
-                plugin_args,
-                context,
-                parameters,
-                output,
-                settings,
-            )
-        except ConfigurationError as err:
-            typer.echo(f"Error: {err}", err=True)
-            raise typer.Exit(code=1) from err
-    finally:
-        close_configured_handlers()
+    return prepare_check(
+        model=model,
+        target_profile=target_profile,
+        output_dir=output_dir,
+        backend=backend,
+        performance=performance,
+        compatibility=compatibility,
+        profiling_data=profiling_data,
+        json_output=json_output,
+        i_agree_to_the_contained_eula=i_agree_to_the_contained_eula,
+        noninteractive=noninteractive,
+        debug=debug,
+        settings=settings,
+        plugin_args=plugin_args,
+    )
 
 
 @backend_app.command("install")

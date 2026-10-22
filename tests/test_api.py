@@ -38,6 +38,7 @@ from mlia.api import (
     list_targets,
     run_advisor,
     supported_backends,
+    target_for_profile,
 )
 from mlia.backend.config import BackendConfiguration, BackendType
 from mlia.backend.registry import registry as backend_registry
@@ -872,6 +873,67 @@ def test_supported_backends_invalid_target_profile() -> None:
         supported_backends("not-a-real-target-profile")
 
 
+def test_target_for_custom_profile(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Resolve a custom file through the installed target's profile loader."""
+    path = tmp_path / "custom.toml"
+    path.write_text('target_type = "example"\n', encoding="utf-8")
+    loader = MagicMock(return_value=types.SimpleNamespace(target="example"))
+    monkeypatch.setitem(
+        target_registry.items,
+        "example",
+        TargetInfo(
+            [], [], MagicMock(), cast(Any, types.SimpleNamespace(load_data=loader))
+        ),
+    )
+
+    assert target_for_profile(path) == "example"
+    loader.assert_called_once_with({"target_type": "example"})
+
+
+def test_target_for_profile_rejects_unknown_profile() -> None:
+    """Report unknown profiles through the public configuration error type."""
+    with pytest.raises(ConfigurationError, match="not-a-real-target-profile"):
+        target_for_profile("not-a-real-target-profile")
+
+
+def test_target_for_profile_rejects_unregistered_custom_target(tmp_path: Path) -> None:
+    """Report an unregistered custom target as a configuration error."""
+    path = tmp_path / "custom.toml"
+    path.write_text('target_type = "unregistered-test-target"\n', encoding="utf-8")
+
+    with pytest.raises(
+        ConfigurationError,
+        match=(
+            rf"Unknown target 'unregistered-test-target' in target profile "
+            rf"'{path}'"
+        ),
+    ):
+        target_for_profile(path)
+
+
+def test_target_for_profile_preserves_loader_key_error(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Do not misreport malformed registered profiles as unknown targets."""
+    path = tmp_path / "malformed.toml"
+    path.write_text('target_type = "malformed-test-target"\n', encoding="utf-8")
+    loader = MagicMock(side_effect=KeyError("required-field"))
+    monkeypatch.setitem(
+        target_registry.items,
+        "malformed-test-target",
+        TargetInfo(
+            [], [], MagicMock(), cast(Any, types.SimpleNamespace(load_data=loader))
+        ),
+    )
+
+    with pytest.raises(KeyError) as error:
+        target_for_profile(path)
+
+    assert error.value.args == ("required-field",)
+
+
 def test_require_torch_module_rejects_missing_torch(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -1112,7 +1174,9 @@ def test_get_advice_updates_context_and_runs_advisor(
     )
 
     assert context.advice_category == {AdviceCategory.COMPATIBILITY}
-    ensure_backends_installed.assert_called_once_with(["backend-a"], accept_eula=False)
+    ensure_backends_installed.assert_called_once_with(
+        ["backend-a"], accept_eula=False, prompt=None
+    )
     advisor.run.assert_called_once()
     assert advisor.run.call_args.args[0] is context
     assert advisor.run.call_args.args[1] is settings
@@ -1123,6 +1187,7 @@ def test_get_advice_creates_context_when_missing(
 ) -> None:
     """get_advice should create an execution context when one is not provided."""
     advisor = MagicMock()
+    prompt = MagicMock(return_value="yes")
     captured: dict[str, object] = {}
     default_settings = ApplicationSettings()
     monkeypatch.setattr("mlia.api.ApplicationSettings", lambda: default_settings)
@@ -1144,11 +1209,15 @@ def test_get_advice_creates_context_when_missing(
 
     monkeypatch.setattr("mlia.api.get_advisor", fake_get_advisor)
 
-    get_advice("profile", "model.tflite", {"compatibility"}, accept_eula=None)
+    get_advice(
+        "profile", "model.tflite", {"compatibility"}, accept_eula=None, prompt=prompt
+    )
 
     context = cast(ExecutionContext, captured["context"])
     assert context.advice_category == {AdviceCategory.COMPATIBILITY}
-    ensure_backends_installed.assert_called_once_with(["backend-a"], accept_eula=None)
+    ensure_backends_installed.assert_called_once_with(
+        ["backend-a"], accept_eula=None, prompt=prompt
+    )
     advisor.run.assert_called_once()
     assert advisor.run.call_args.args[0] is context
     assert advisor.run.call_args.args[1] is default_settings

@@ -8,6 +8,7 @@ import tarfile
 from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
+from shutil import copyfile
 from unittest.mock import MagicMock
 
 import pytest
@@ -15,12 +16,16 @@ import pytest
 from mlia.backend.install import (
     BackendInstallation,
     CompoundPathChecker,
+    DownloadAndInstall,
+    EulaDocument,
     InstallFromVendorPackage,
     PackagePathChecker,
+    PyPackageBackendInstallation,
     _filter_tar_members,
     logger,
 )
 from mlia.backend.repo import get_backend_repository
+from mlia.utils.download import DownloadConfig
 
 
 @pytest.fixture
@@ -147,6 +152,182 @@ def test_install_from_vendor_archive_passes_eula_agreement_to_installer(
     backend_installer.assert_called_once()
     assert backend_installer.call_args.args[0] is eula_agreement
     assert (fake_backend_repository_path / "backends/sample-backend/tool").is_file()
+
+
+def test_install_from_vendor_archive_prompts_with_contained_eula(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    fake_backend_repository_path: Path,
+) -> None:
+    """Display contained terms and reuse the extracted artifact after consent."""
+    vendor_dir = tmp_path / "vendor" / "sample-backend"
+    source_dir = tmp_path / "archive-source"
+    (source_dir / "license_terms").mkdir(parents=True)
+    (source_dir / "license_terms" / "terms.txt").write_text(
+        "These are the licence terms.\n", encoding="utf-8"
+    )
+    (source_dir / "payload").write_text("data", encoding="utf-8")
+    _create_tar_from_directory(vendor_dir / "sample-backend.tar.gz", source_dir)
+    backend_installer = MagicMock()
+
+    def install_backend(agreement: bool, dist_dir: Path) -> Path:
+        backend_installer(agreement, dist_dir)
+        installed_dir = dist_dir / "installed"
+        installed_dir.mkdir()
+        (installed_dir / "tool").write_text("data", encoding="utf-8")
+        return installed_dir
+
+    monkeypatch.setattr(
+        "mlia.backend.install.vendor_artifact_path", lambda _: vendor_dir
+    )
+    prompt = MagicMock(return_value="yes")
+    installation = BackendInstallation(
+        name="sample-backend",
+        description="Sample backend",
+        fvp_dir_name="sample-backend",
+        download_config=None,
+        supported_platforms=["Linux"],
+        path_checker=PackagePathChecker(expected_files=["tool"]),
+        backend_installer=install_backend,
+        vendor_path="sample-backend",
+        requires_eula=True,
+    )
+
+    installation.install(
+        InstallFromVendorPackage(eula_agreement=False, eula_prompt=prompt)
+    )
+
+    message = prompt.call_args.args[0]
+    assert "End-user licence agreement for backend 'sample-backend'" in message
+    assert "terms.txt" in message
+    assert "These are the licence terms." in message
+    assert message.endswith("Accept these terms and install the backend?")
+    backend_installer.assert_called_once()
+    assert backend_installer.call_args.args[0] is True
+    assert (fake_backend_repository_path / "backends/sample-backend/tool").is_file()
+
+
+def test_download_prompts_from_and_installs_the_same_artifact(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    fake_backend_repository_path: Path,
+) -> None:
+    """Download once, show its contained EULA, and continue from its staging area."""
+    source_dir = tmp_path / "archive-source"
+    (source_dir / "license_terms").mkdir(parents=True)
+    (source_dir / "license_terms" / "terms.txt").write_text(
+        "Downloaded licence terms.\n", encoding="utf-8"
+    )
+    archive = tmp_path / "source" / "sample-backend.tar.gz"
+    _create_tar_from_directory(archive, source_dir)
+    download = MagicMock(side_effect=lambda dest, **_: copyfile(archive, dest))
+    monkeypatch.setattr("mlia.backend.install.download", download)
+
+    def install_backend(agreement: bool, dist_dir: Path) -> Path:
+        assert agreement is True
+        assert (dist_dir / "license_terms/terms.txt").is_file()
+        installed_dir = dist_dir / "installed"
+        installed_dir.mkdir()
+        (installed_dir / "tool").write_text("data", encoding="utf-8")
+        return installed_dir
+
+    prompt = MagicMock(return_value="yes")
+    installation = BackendInstallation(
+        name="sample-backend",
+        description="Sample backend",
+        fvp_dir_name="sample-backend",
+        download_config=DownloadConfig(
+            "https://example.com/sample-backend.tar.gz", sha256_hash="unused"
+        ),
+        supported_platforms=["Linux"],
+        path_checker=PackagePathChecker(expected_files=["tool"]),
+        backend_installer=install_backend,
+        requires_eula=True,
+    )
+
+    installation.install(DownloadAndInstall(eula_agreement=False, eula_prompt=prompt))
+
+    download.assert_called_once()
+    assert "Downloaded licence terms." in prompt.call_args.args[0]
+    assert (fake_backend_repository_path / "backends/sample-backend/tool").is_file()
+
+
+@pytest.mark.parametrize("response", ["no", ""])
+def test_install_from_vendor_archive_declining_eula_stops_installation(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    fake_backend_repository_path: Path,
+    response: str,
+) -> None:
+    """Do not invoke the backend installer when contained terms are declined."""
+    vendor_dir = tmp_path / "vendor" / "sample-backend"
+    source_dir = tmp_path / "archive-source"
+    source_dir.mkdir()
+    (source_dir / "terms").write_text("terms", encoding="utf-8")
+    _create_tar_from_directory(vendor_dir / "sample-backend.tar.gz", source_dir)
+    backend_installer = MagicMock()
+    monkeypatch.setattr(
+        "mlia.backend.install.vendor_artifact_path", lambda _: vendor_dir
+    )
+    installation = BackendInstallation(
+        name="sample-backend",
+        description="Sample backend",
+        fvp_dir_name="sample-backend",
+        download_config=None,
+        supported_platforms=["Linux"],
+        path_checker=PackagePathChecker(expected_files=["tool"]),
+        backend_installer=backend_installer,
+        vendor_path="sample-backend",
+        requires_eula=True,
+        eula_resolver=lambda dist_dir: (
+            [EulaDocument("terms", (dist_dir / "terms").read_text())]
+            if dist_dir is not None
+            else []
+        ),
+    )
+
+    with pytest.raises(RuntimeError, match="EULA.*was not accepted"):
+        installation.install(
+            InstallFromVendorPackage(
+                eula_agreement=False, eula_prompt=MagicMock(return_value=response)
+            )
+        )
+
+    backend_installer.assert_not_called()
+
+
+def test_install_from_vendor_archive_blocks_when_eula_is_missing(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    fake_backend_repository_path: Path,
+) -> None:
+    """Never offer blind acceptance when required terms cannot be resolved."""
+    vendor_dir = tmp_path / "vendor" / "sample-backend"
+    _create_tar_with_file(vendor_dir / "sample-backend.tar.gz", "payload")
+    backend_installer = MagicMock()
+    monkeypatch.setattr(
+        "mlia.backend.install.vendor_artifact_path", lambda _: vendor_dir
+    )
+    prompt = MagicMock(return_value="yes")
+    installation = BackendInstallation(
+        name="sample-backend",
+        description="Sample backend",
+        fvp_dir_name="sample-backend",
+        download_config=None,
+        supported_platforms=["Linux"],
+        path_checker=PackagePathChecker(expected_files=["tool"]),
+        backend_installer=backend_installer,
+        vendor_path="sample-backend",
+        requires_eula=True,
+    )
+
+    with pytest.raises(RuntimeError, match="licence terms could not be found"):
+        installation.install(
+            InstallFromVendorPackage(eula_agreement=False, eula_prompt=prompt)
+        )
+
+    prompt.assert_not_called()
+    backend_installer.assert_not_called()
 
 
 def test_install_from_vendor_archive_backend_subfolder_error(
@@ -519,6 +700,61 @@ def test_backend_installation_accepts_requires_eula() -> None:
     )
 
     assert installation.requires_eula is True
+
+
+@pytest.mark.parametrize(
+    ("agreement", "response", "should_install"),
+    [
+        pytest.param(True, None, True, id="pre-approved"),
+        pytest.param(False, "yes", True, id="prompt-approved"),
+        pytest.param(False, "no", False, id="prompt-declined"),
+    ],
+)
+def test_python_package_installation_resolves_eula(
+    monkeypatch: pytest.MonkeyPatch,
+    agreement: bool,
+    response: str | None,
+    should_install: bool,
+) -> None:
+    """Python package installations can expose their EULA to frontends."""
+    package_manager = MagicMock()
+    monkeypatch.setattr(
+        "mlia.backend.install.get_package_manager", lambda: package_manager
+    )
+    resolver = MagicMock(
+        return_value=[EulaDocument("Licence", "Terms for the package")]
+    )
+    prompt = MagicMock(return_value=response) if response is not None else MagicMock()
+    installation = PyPackageBackendInstallation(
+        description="Sample backend",
+        name="sample-backend",
+        packages_to_install=["sample-package"],
+        packages_to_uninstall=["sample-package"],
+        expected_packages=["sample-package"],
+        requires_eula=True,
+        eula_resolver=resolver,
+    )
+
+    install_type = DownloadAndInstall(
+        eula_agreement=agreement,
+        eula_prompt=prompt,
+    )
+    if should_install:
+        resolved_install_type = installation.resolve_eula_prompt(install_type)
+        package_manager.install.assert_not_called()
+        installation.install(resolved_install_type)
+        package_manager.install.assert_called_once_with(["sample-package"])
+    else:
+        with pytest.raises(RuntimeError, match="was not accepted"):
+            installation.resolve_eula_prompt(install_type)
+        package_manager.install.assert_not_called()
+
+    if agreement:
+        resolver.assert_not_called()
+        prompt.assert_not_called()
+    else:
+        resolver.assert_called_once_with(None)
+        prompt.assert_called_once()
 
 
 def _make_installation(

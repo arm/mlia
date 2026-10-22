@@ -11,7 +11,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-import mlia.cli.settings as cli_settings
+import mlia.core.application_settings as cli_settings
 
 
 @pytest.mark.parametrize(

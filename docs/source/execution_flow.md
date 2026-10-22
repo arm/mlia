@@ -19,6 +19,7 @@ points, see [Plugin Architecture](plugin_architecture.md).
 sequenceDiagram
     participant User
     participant CLI as mlia CLI
+    participant Check as Shared check executor
     participant Plugins as Plugin registries
     participant API as mlia.api
     participant BackendMgr as Backend manager
@@ -32,7 +33,8 @@ sequenceDiagram
     User->>CLI: mlia check [model] --target-profile profile
     CLI->>Plugins: Load backend and analysis-plugin options
     CLI->>CLI: Parse model, profiling data, settings, and flags
-    CLI->>API: get_advice(...)
+    CLI->>Check: execute_check(prepared request)
+    Check->>API: get_advice(...)
     API->>Plugins: Resolve target and select backends for the input source
     API->>BackendMgr: Ensure selected backends are installed
     API->>Advisor: Create advisor with model or profiling inputs
@@ -47,11 +49,17 @@ sequenceDiagram
     Advisor->>Post: Validate and process each result
     Post-->>Advisor: Processed standardized output
     Advisor-->>API: Processed standardized output
-    API-->>CLI: Processed standardized output
-    CLI->>Render: Render text or JSON
+    API-->>Check: Processed standardized output
+    Check->>Check: Persist canonical output
+    Check->>Render: Render text or JSON
     Render-->>User: Console output
-    CLI->>Analysis: Run enabled plugins with processed output
+    Check->>Analysis: Run enabled plugins with processed output
 ```
+
+With `--tui`, the CLI passes the prepared request to the optional interface and
+waits for its session to finish. The interface invokes the same executor only
+after the user selects Run. Ordinary checks do not import the TUI package.
+Parser contexts retain option resources until the command or UI session ends.
 
 ## Input and backend selection
 

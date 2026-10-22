@@ -9,6 +9,7 @@ import io
 import logging
 import os
 import sys
+from collections.abc import Callable
 from contextlib import ExitStack, contextmanager
 from dataclasses import dataclass
 from enum import Enum
@@ -24,8 +25,8 @@ from mlia.backend.options import (
     discover_backend_option_specs,
 )
 from mlia.backend.registry import registry as backend_registry
-from mlia.cli.command_validators import validate_backend
 from mlia.core.advisor import InferenceAdvisor
+from mlia.core.check_validation import validate_backend
 from mlia.core.common import AdviceCategory
 from mlia.core.context import ExecutionContext
 from mlia.core.errors import (
@@ -849,6 +850,18 @@ def _validate_backend_options(backend_options: dict[str, dict[str, Any]]) -> Non
                 )
 
 
+def target_for_profile(target_profile: str | Path) -> str:
+    """Resolve a built-in profile name or custom profile path to its target.
+
+    Uses the installed target plugin's profile loader. Invalid profile names
+    raise ``ConfigurationError``; profile loading errors retain their details.
+    """
+    try:
+        return get_target(target_profile)
+    except ValueError as err:
+        raise ConfigurationError(str(err)) from err
+
+
 def supported_backends(target_profile: str | Path) -> list[str]:
     """List backends supported by a target profile.
 
@@ -861,11 +874,7 @@ def supported_backends(target_profile: str | Path) -> list[str]:
     Raises:
         ConfigurationError: If the target profile is invalid.
     """
-    try:
-        target = get_target(target_profile)
-    except ValueError as err:
-        raise ConfigurationError(str(err)) from err
-    return target_supported_backends(target)
+    return target_supported_backends(target_for_profile(target_profile))
 
 
 def get_advice(
@@ -880,6 +889,7 @@ def get_advice(
     backend_options: dict[str, dict[str, Any]] | None = None,
     accept_eula: bool | None = False,
     settings: ApplicationSettings | None = None,
+    prompt: Callable[[str], str] | None = None,
 ) -> dict[str, object] | None:
     """Get the advice.
 
@@ -910,6 +920,8 @@ def get_advice(
            True accepts EULAs non-interactively. None enables interactive CLI behavior.
     :param settings: Resolved MLIA application settings. Defaults are used when
            omitted.
+    :param prompt: Optional frontend prompt for missing backend EULA acceptance.
+           Used only when accept_eula is None.
 
     Examples:
         NB: Before launching MLIA, the logging functionality should be configured!
@@ -946,7 +958,9 @@ def get_advice(
     except Exception as err:
         raise UnsupportedConfigurationError(str(err)) from err
 
-    ensure_backends_installed(validated_backends, accept_eula=accept_eula)
+    ensure_backends_installed(
+        validated_backends, accept_eula=accept_eula, prompt=prompt
+    )
 
     advisor = get_advisor(
         context,

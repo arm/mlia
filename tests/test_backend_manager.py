@@ -315,6 +315,81 @@ def test_interactive_manager_allows_installer_to_collect_eula(
     )
 
 
+def test_installation_manager_resolves_frontend_eula_before_dispatch(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Resolve frontend consent without hiding installation dispatch."""
+    installation = _could_be_downloaded_and_installed_mock(requires_eula=True)
+    manager = get_installation_manager(True, [installation], monkeypatch)
+    prompt = MagicMock(return_value="yes")
+    requested = DownloadAndInstall(eula_agreement=False, eula_prompt=prompt)
+    resolved = DownloadAndInstall(eula_agreement=True)
+    events: list[str] = []
+
+    def resolve_eula(_: InstallationType) -> InstallationType:
+        events.append("resolve")
+        return resolved
+
+    installation.resolve_eula_prompt.side_effect = resolve_eula
+    installation.install.side_effect = lambda _: events.append("install")
+
+    manager.download_and_install(
+        [installation.name],
+        eula_agreement=False,
+        eula_prompt=prompt,
+    )
+
+    installation.resolve_eula_prompt.assert_called_once_with(requested)
+    installation.install.assert_called_once_with(resolved)
+    assert events == ["resolve", "install"]
+
+
+def test_installation_manager_resolves_dependency_eula_before_dispatch(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Keep consent and installation dispatch separate for dependencies."""
+    dependency = get_installation_mock(
+        name="dependency",
+        already_installed=False,
+        could_be_installed=True,
+        supported_install_type=InstallFromVendorPackage,
+        requires_eula=True,
+    )
+    frontend = get_installation_mock(
+        name="frontend",
+        already_installed=False,
+        could_be_installed=True,
+        supported_install_type=DownloadAndInstall,
+        dependencies=[dependency.name],
+    )
+    manager = get_installation_manager(True, [frontend, dependency], monkeypatch)
+    prompt = MagicMock(return_value="yes")
+    requested = InstallFromVendorPackage(eula_agreement=False, eula_prompt=prompt)
+    resolved = InstallFromVendorPackage(eula_agreement=True)
+    events: list[str] = []
+
+    def resolve_eula(_: InstallationType) -> InstallationType:
+        events.append("resolve")
+        return resolved
+
+    dependency.resolve_eula_prompt.side_effect = resolve_eula
+    dependency.install.side_effect = lambda _: events.append("install")
+
+    manager.download_and_install(
+        [frontend.name],
+        eula_agreement=False,
+        eula_prompt=prompt,
+    )
+
+    dependency.resolve_eula_prompt.assert_called_once_with(requested)
+    dependency.install.assert_called_once_with(resolved)
+    assert events == ["resolve", "install"]
+    frontend.resolve_eula_prompt.assert_not_called()
+    frontend.install.assert_called_once_with(
+        DownloadAndInstall(eula_agreement=False, eula_prompt=prompt)
+    )
+
+
 def test_installation_manager_passes_eula_to_vendor_dependency(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
