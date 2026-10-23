@@ -1208,3 +1208,52 @@ def test_post_analysis_failure_preserves_output(
     assert result.exit_code == 1
     assert result.stderr == "Error: Plugin failed\n"
     assert json.loads((tmp_path / "mlia-output/mlia-output.json").read_text()) == output
+
+
+@pytest.mark.parametrize("tui", [False, True], ids=["cli", "tui"])
+def test_check_companion_option_without_analysis_plugins(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, tui: bool
+) -> None:
+    """The companion is a core analysis input even without Model Explorer."""
+    get_advice = MagicMock(return_value=None)
+    launch = MagicMock(return_value=None)
+    monkeypatch.setitem(sys.modules, "mlia_tui", SimpleNamespace(launch=launch))
+    monkeypatch.setattr(
+        cli_commands, "_load_analysis_plugin_registry", AnalysisPluginRegistry
+    )
+    monkeypatch.setattr(
+        cli_commands, "discover_backend_option_specs", lambda *_args: []
+    )
+    monkeypatch.setattr(mlia_api, "get_advice", get_advice)
+    monkeypatch.setattr(
+        command_validators,
+        "validate_check_target_profile",
+        lambda *_args, **_kwargs: True,
+    )
+    companion = tmp_path / "model.pte"
+    companion.touch()
+    result = CliRunner().invoke(
+        cli_main.mlia_app,
+        [
+            "check",
+            "model.etrecord",
+            "--target-profile",
+            "neural-technology",
+            "--performance",
+            "--profiling-data",
+            str(tmp_path),
+            "--companion-model",
+            str(companion),
+            "--output-dir",
+            str(tmp_path),
+        ]
+        + (["--tui"] if tui else []),
+    )
+    assert result.exit_code == 0, result.output
+    if tui:
+        launch.assert_called_once()
+        assert launch.call_args.args[0].companion_model == companion
+        get_advice.assert_not_called()
+    else:
+        assert get_advice.call_args.kwargs["companion_model"] == companion
+        launch.assert_not_called()

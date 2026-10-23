@@ -77,6 +77,7 @@ class CheckRequest:
     debug: bool = False
     settings: CheckSettings = field(default_factory=CheckSettings)
     plugin_args: dict[str, object] = field(default_factory=dict)
+    companion_model: Path | None = None
 
     @property
     def categories(self) -> tuple[str, ...]:
@@ -142,6 +143,7 @@ def prepare_check(
     debug: bool = False,
     settings: ApplicationSettings | None = None,
     plugin_args: Mapping[str, object] | None = None,
+    companion_model: Path | None = None,
 ) -> CheckRequest:
     """Capture inputs without starting a check or touching its output.
 
@@ -162,6 +164,7 @@ def prepare_check(
         debug=debug,
         settings=_copy_settings(resolved),
         plugin_args=dict(plugin_args or {}),
+        companion_model=companion_model,
     )
 
 
@@ -267,6 +270,7 @@ def execute_check(
                 "performance",
                 "compatibility",
                 "profiling_data",
+                "companion_model",
                 "json_output",
                 "i_agree_to_the_contained_eula",
                 "noninteractive",
@@ -300,11 +304,15 @@ def execute_check(
         except Exception as err:
             raise CheckError(str(err)) from err
         setup_logging(context.logs_path, context.verbose, context.output_format)
+        companion_args: dict[str, Any] = {}
+        if request.companion_model is not None:
+            companion_args["companion_model"] = request.companion_model
         output = get_advice(
             request.target_profile,
             request.model,
             set(request.categories),
             profiling_data=parameters["profiling_data"],
+            **companion_args,
             context=context,
             backends=parameters["backend"],
             accept_eula=True

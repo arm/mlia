@@ -570,6 +570,58 @@ def test_run_advisor_preserves_ordered_profiling_data_paths(
     assert captured["profiling_data"] == [first, second]
 
 
+def test_run_advisor_forwards_companion_model_without_visualizer(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Companion analysis is an ordinary Python API input."""
+    model = tmp_path / "model.etrecord"
+    companion = tmp_path / "model.pte"
+    model.touch()
+    companion.touch()
+    captured: dict[str, object] = {}
+    monkeypatch.setattr(
+        "mlia.api.validate_backend", lambda *_args, **_kwargs: ["profiler"]
+    )
+    monkeypatch.setattr(
+        "mlia.api.get_advice",
+        lambda *_args, **kwargs: captured.update(kwargs) or _FAKE_OUTPUT,
+    )
+    monkeypatch.setattr("mlia.api.collect_validation_errors", lambda _data: [])
+    assert (
+        run_advisor(
+            "performance",
+            "profile",
+            model,
+            profiling_data=tmp_path,
+            companion_model=companion,
+        )
+        == _FAKE_OUTPUT
+    )
+    assert captured["companion_model"] == companion
+
+
+@pytest.mark.parametrize(
+    "model_name,companion_name",
+    [("model.vgf", "model.pte"), ("model.etrecord", "model.vgf")],
+)
+def test_run_advisor_rejects_invalid_companion_inputs(
+    tmp_path: Path, model_name: str, companion_name: str
+) -> None:
+    """Companion validation is independent of visualization installation."""
+    model, companion = tmp_path / model_name, tmp_path / companion_name
+    model.touch()
+    companion.touch()
+    with pytest.raises(ConfigurationError, match="[Cc]ompanion"):
+        run_advisor(
+            "performance",
+            "profile",
+            model,
+            profiling_data=tmp_path,
+            companion_model=companion,
+        )
+
+
 def test_run_advisor_uses_existing_context(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path, test_tflite_model: Path
 ) -> None:

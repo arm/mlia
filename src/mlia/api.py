@@ -26,6 +26,7 @@ from mlia.backend.options import (
 )
 from mlia.backend.registry import registry as backend_registry
 from mlia.core.advisor import InferenceAdvisor
+from mlia.core.artifacts import validate_companion_model
 from mlia.core.check_validation import validate_backend
 from mlia.core.common import AdviceCategory
 from mlia.core.context import ExecutionContext
@@ -248,6 +249,7 @@ def run_advisor(
     model: Path | nn.Module | None = None,
     *,
     profiling_data: str | Path | Sequence[str | Path] | None = None,
+    companion_model: str | Path | None = None,
     backends: list[str] | None = None,
     example_inputs: tuple[Any, ...] | None = None,
     enable_quantization: bool = False,
@@ -275,6 +277,8 @@ def run_advisor(
             may be omitted when profiling_data is provided.
         profiling_data: Optional measured profiling data path or ordered sequence of
             paths. It is passed through the target advisor workflow as a list.
+        companion_model: Optional deployed PTE companion of an ETRecord. Its
+            relationships are included in analysis output without a visualizer.
         backends: Optional list of backend names. Defaults to CLI behavior.
         example_inputs: Required for torch.nn.Module inputs.
         enable_quantization: Only valid for torch.nn.Module inputs.
@@ -316,6 +320,7 @@ def run_advisor(
         - CLI behavior is unchanged by this API path.
     """
     validation_mode = _normalize_validation_mode(validation)
+    companion_model_path = validate_companion_model(model, companion_model)
     profiling_data_path = _validate_analysis_inputs(model, profiling_data)
     settings = ApplicationSettings()
     advice_set = {advice_category}
@@ -367,6 +372,7 @@ def run_advisor(
         advice_set=advice_set,
         advice_category_enum=advice_category_enum,
         model=model,
+        companion_model=companion_model_path,
         profiling_data=profiling_data_path,
         module_input=module_input,
         transform_options=transform_options,
@@ -434,6 +440,7 @@ class _RunAdvisorInputs:
     validation: ValidationMode
     accept_eula: bool
     settings: ApplicationSettings
+    companion_model: Path | None = None
 
 
 def _create_api_execution_context(
@@ -473,6 +480,7 @@ def _run_advisor_with_context(
             model=model_for_run,
             category=inputs.advice_set,
             profiling_data=inputs.profiling_data,
+            companion_model=inputs.companion_model,
             context=local_context,
             backends=inputs.selected_backends,
             backend_options=inputs.backend_options,
@@ -890,6 +898,7 @@ def get_advice(
     accept_eula: bool | None = False,
     settings: ApplicationSettings | None = None,
     prompt: Callable[[str], str] | None = None,
+    companion_model: str | Path | None = None,
 ) -> dict[str, object] | None:
     """Get the advice.
 
@@ -911,6 +920,7 @@ def get_advice(
            target. Default settings will be used if None.
     :param profiling_data: Optional measured profiling data path or ordered sequence
            of paths. It is passed to the selected target advisor as a list.
+    :param companion_model: Optional deployed PTE companion of an ETRecord.
     :param backend_options: Optional dictionary of backend-specific options
            discovered from CLI arguments. Backend parameters are defined in each
            backend's BackendConfiguration.cli_options and automatically exposed
@@ -936,6 +946,7 @@ def get_advice(
         >>> get_advice("ethos-u55-256", "path/to/the/model", {"performance"})
 
     """
+    companion_model_path = validate_companion_model(model, companion_model)
     profiling_data_path = _validate_analysis_inputs(model, profiling_data)
     advice_category = AdviceCategory.from_string(category)
 
@@ -970,6 +981,11 @@ def get_advice(
         optimization_profile=optimization_profile,
         backends=validated_backends,
         profiling_data=profiling_data_path,
+        **(
+            {"companion_model": companion_model_path}
+            if companion_model_path is not None
+            else {}
+        ),
         backend_options=backend_options,
     )
     return advisor.run(context, settings or ApplicationSettings())

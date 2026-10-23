@@ -58,6 +58,28 @@ none, all profiling-capable target backends. The resulting candidate set must
 contain exactly one backend. Estimation-only backends cannot satisfy this
 request.
 
+An ETRecord analysis may also receive its deployed PTE as `companion_model`:
+
+```python
+result = run_advisor(
+    advice_category="performance",
+    target_profile="neural-technology",
+    model="model.etrecord",
+    profiling_data="run.etdump",
+    companion_model="model.pte",
+)
+relationships = result["extensions"]["executorch"]
+```
+
+The core CLI exposes the same input as `--companion-model`. It validates the
+ETRecord/PTE file pairing and passes the companion to the target's analysis.
+Install `mlia-neural-technology[executorch]` for this workflow. Shared artifact
+readers and runtime timing live in `mlia-converters-pytorch`; Neural Technology
+decodes VGF profiling and correlates embedded VGF operators. The output includes
+source dataflow, chain relationships and companion associations without requiring
+Model Explorer. Enable visualization separately with `--model-explorer files`
+or `--model-explorer open`.
+
 ## Output and validation
 
 `run_advisor()` returns the standardized output produced by the workflow after

@@ -732,7 +732,9 @@ class Entity:
     zero-based model-sequence segment index and numeric SPIR-V instruction result
     ID. Debug names and API labels never contribute to identity. ONNX subgraphs,
     ONNX functions, and PT2 nested graphs are not currently supported and require
-    a future graph-qualified identity.
+    a future graph-qualified identity. ETRecord operations use
+    ``source_operator/etrecord/<method>/<fx_node_name>`` so that source names and
+    debug handles can be reused independently in different exported methods.
     """
 
     id: str  # pylint: disable=invalid-name

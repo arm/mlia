@@ -134,6 +134,47 @@ def test_check_accepts_profiling_without_model(
     assert get_advice.call_args.kwargs["profiling_data"] == [profiling_data]
 
 
+@pytest.mark.parametrize(
+    "request_factory", [prepare_check, CheckRequest], ids=["prepared", "direct"]
+)
+@pytest.mark.parametrize("with_companion", [False, True])
+def test_check_forwards_companion_to_analysis_and_plugins(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    request_factory: Callable[..., CheckRequest],
+    with_companion: bool,
+) -> None:
+    """Shared execution preserves companions and ordinary analysis call signatures."""
+    companion = tmp_path / "model.pte" if with_companion else None
+    get_advice = MagicMock(return_value=None)
+    monkeypatch.setattr(mlia.api, "get_advice", get_advice)
+    monkeypatch.setattr(
+        check_validation, "validate_check_target_profile", MagicMock(return_value=True)
+    )
+    plugin = MagicMock()
+    plugin.name = "example"
+    plugin.enabled.return_value = True
+    registry = AnalysisPluginRegistry()
+    registry.register(plugin)
+    request = request_factory(
+        target_profile="neural-technology",
+        model="model.etrecord",
+        companion_model=companion,
+        profiling_data=[tmp_path / "model.etdump"],
+        performance=True,
+        output_dir=tmp_path,
+    )
+
+    execute_check(request, analysis_plugin_registry=registry)
+
+    if with_companion:
+        assert get_advice.call_args.kwargs["companion_model"] == companion
+    else:
+        assert "companion_model" not in get_advice.call_args.kwargs
+    plugin.run.assert_called_once()
+    assert plugin.run.call_args.args[0].parameters["companion_model"] == companion
+
+
 def test_check_preserves_option_identity_and_owns_settings_mappings(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:

@@ -528,6 +528,13 @@ def check_command(
             ),
         ),
     ] = None,
+    companion_model: Annotated[
+        Path | None,
+        typer.Option(
+            "--companion-model",
+            help="Analyze the deployed PTE companion of an ETRecord",
+        ),
+    ] = None,
     json_output: Annotated[
         bool,
         typer.Option(
@@ -574,6 +581,7 @@ def check_command(
         performance=performance,
         compatibility=compatibility,
         profiling_data=profiling_data,
+        companion_model=companion_model,
         json_output=json_output,
         i_agree_to_the_contained_eula=i_agree_to_the_contained_eula,
         noninteractive=noninteractive,
