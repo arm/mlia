@@ -210,3 +210,20 @@ A useful mental model is:
 4. Core validates, post-processes, and renders their standardized output.
 5. Enabled analysis plugins consume the completed result.
 6. Plugin docs explain the detailed behaviour owned by each plugin package.
+
+## Entity reasons in terminal output
+
+The standardized entity table always displays Name, Kind, ID and Placement.
+Reason appears only when at least one displayed entity has a reported reason.
+Reason reads `checks[].details.reasons` from checks linked by `entity_id`.
+Each reason contains a `description` and a `detail` string, which may be empty.
+Multiple reasons are separated by semicolons, with duplicate text removed.
+When Reason is visible, empty or absent reasons display `-`. Long reasons wrap
+to the terminal width; full details remain in JSON. Placement alone does not
+imply a reason.
+
+AI Tile, Ethos-U and Neural Technology all use this representation. No target
+identifiers or target-specific reason attributes are needed by the renderer.
+Whole-model checks and checks without an entity reference are not assigned to
+individual operators. Entity `kind` remains available in both JSON and the
+terminal table; Reason is an additional column.

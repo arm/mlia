@@ -7,6 +7,8 @@ from __future__ import annotations
 import json
 from typing import Any
 
+from rich.markup import escape
+
 from mlia.core.reporting import CustomJSONEncoder
 from mlia.utils.console import create_section_header, produce_table
 
@@ -111,7 +113,7 @@ def _result_section(index: int, result: dict[str, Any]) -> str:
     metrics = _metrics_table(result.get("metrics"))
     if metrics:
         lines.append("Metrics:\n" + metrics)
-    entities = _entities_table(result.get("entities"))
+    entities = _entities_table(result.get("entities"), result.get("checks"))
     if entities:
         lines.append("Entities:\n" + entities)
     breakdowns = _breakdowns_table(result.get("breakdowns"), entities_by_id)
@@ -142,10 +144,10 @@ def _metrics_table(metrics: object) -> str | None:
     return produce_table(rows, headers=["Metric", "Value", "Unit"]) if rows else None
 
 
-def _entities_table(entities: object) -> str | None:
+def _entities_table(entities: object, checks: object = None) -> str | None:
     if not isinstance(entities, list) or not entities:
         return None
-    rows = []
+    rows: list[tuple[str, ...]] = []
     truncated = len(entities) > 20
     for entity in entities[:20]:
         if isinstance(entity, dict):
@@ -155,14 +157,46 @@ def _entities_table(entities: object) -> str | None:
                     str(entity.get("kind") or "-"),
                     str(entity.get("id") or "-"),
                     str(entity.get("placement") or "-"),
+                    escape(_entity_reason(entity, checks)),
                 )
             )
     if not rows:
         return None
-    table = produce_table(rows, headers=["Name", "Kind", "ID", "Placement"])
+    headers = ["Name", "Kind", "ID", "Placement"]
+    if any(row[-1] != "-" for row in rows):
+        headers.append("Reason")
+    else:
+        rows = [row[:-1] for row in rows]
+    table = produce_table(rows, headers=headers)
     if truncated:
         table += f"\nShowing 20 of {len(entities)} entities."
     return table
+
+
+def _entity_reason(entity: dict[str, Any], checks: object) -> str:
+    """Render entity-linked check reasons without inferring missing evidence."""
+    reasons: list[str] = []
+    if isinstance(checks, list) and entity.get("id"):
+        for check in checks:
+            if not isinstance(check, dict) or check.get("entity_id") != entity["id"]:
+                continue
+            details = check.get("details")
+            if not isinstance(details, dict):
+                continue
+            values = details.get("reasons")
+            if isinstance(values, list):
+                for value in values:
+                    if isinstance(value, str) and value:
+                        reasons.append(value)
+                    elif isinstance(value, dict):
+                        text = ": ".join(
+                            part
+                            for key in ("description", "detail")
+                            if isinstance(part := value.get(key), str) and part
+                        )
+                        if text:
+                            reasons.append(text)
+    return "; ".join(dict.fromkeys(reasons)) or "-"
 
 
 def _breakdowns_table(
