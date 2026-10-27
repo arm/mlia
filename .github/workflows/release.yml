@@ -29,11 +29,6 @@ env:
   UV_TOOL_DIR: ${{ github.workspace }}/.uv-tools-ci-${{ github.run_id }}-${{ github.run_attempt }}
   UV_TOOL_BIN_DIR: ${{ github.workspace }}/.uv-bin-ci-${{ github.run_id }}-${{ github.run_attempt }}
 
-  VAULT_COMMON_CI_SECRETS: &vault-common-ci-secrets |
-    kv/data/MLIA/CI?version=${{ vars.VAULT_CI_SECRET_VERSION || '0' }} UV_DEFAULT_INDEX | UV_DEFAULT_INDEX ;
-    kv/data/MLIA/CI?version=${{ vars.VAULT_CI_SECRET_VERSION || '0' }} INTERNAL_PYPI_USERNAME | INTERNAL_PYPI_USERNAME ;
-    kv/data/MLIA/CI?version=${{ vars.VAULT_CI_SECRET_VERSION || '0' }} INTERNAL_PYPI_PASSWORD | INTERNAL_PYPI_PASSWORD ;
-
 jobs:
   resolve_source:
     name: Resolve Release Source
@@ -94,19 +89,6 @@ jobs:
     needs: resolve_source
     runs-on: ${{ fromJson(vars.UBUNTU_RUNNER || '["ubuntu-24.04-arm"]') }}
     steps:
-      - name: Import secrets from Vault
-        # Vault secrets must not be exposed to pull requests from forks.
-        if: >-
-          ${{ github.event_name != 'pull_request' ||
-          github.event.pull_request.head.repo.full_name == github.repository }}
-        uses: hashicorp/vault-action@v4
-        with:
-          url: ${{ secrets.VAULT_URL }}
-          method: approle
-          roleId: ${{ secrets.VAULT_ROLE_ID }}
-          secretId: ${{ secrets.VAULT_SECRET_ID }}
-          namespace: iac-expkits/prod
-          secrets: *vault-common-ci-secrets
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -158,22 +140,7 @@ jobs:
       - resolve_source
       - build_and_test_wheel
     runs-on: ${{ fromJson(vars.UBUNTU_RUNNER || '["ubuntu-24.04-arm"]') }}
-    env:
-      PUBLISH_PYPI_HOST: ${{ secrets.PUBLISH_PYPI_HOST || '' }}
     steps:
-      - name: Import secrets from Vault
-        # Vault secrets must not be exposed to pull requests from forks.
-        if: >-
-          ${{ github.event_name != 'pull_request' ||
-          github.event.pull_request.head.repo.full_name == github.repository }}
-        uses: hashicorp/vault-action@v4
-        with:
-          url: ${{ secrets.VAULT_URL }}
-          method: approle
-          roleId: ${{ secrets.VAULT_ROLE_ID }}
-          secretId: ${{ secrets.VAULT_SECRET_ID }}
-          namespace: iac-expkits/prod
-          secrets: *vault-common-ci-secrets
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -185,12 +152,24 @@ jobs:
       - run: uv sync --no-sources --no-install-project --group test
       - name: Validate wheel SBOM
         run: uv run --no-sync python scripts/validate_wheel_sbom.py dist/*.whl
-      - if: ${{ env.PUBLISH_PYPI_HOST != '' }}
+      - name: Import publishing secrets from Vault
+        # Vault secrets must not be exposed to pull requests from forks.
+        if: >-
+          ${{ github.event_name != 'pull_request' ||
+          github.event.pull_request.head.repo.full_name == github.repository }}
+        uses: hashicorp/vault-action@v4
+        with:
+          url: ${{ secrets.VAULT_URL }}
+          method: approle
+          roleId: ${{ secrets.VAULT_ROLE_ID }}
+          secretId: ${{ secrets.VAULT_SECRET_ID }}
+          namespace: iac-expkits/prod
+          secrets: |
+            kv/data/MLIA/CI?version=${{ vars.VAULT_CI_SECRET_VERSION || '0' }} PUBLISH_PYPI_HOST | UV_PUBLISH_URL ;
+            kv/data/MLIA/CI?version=${{ vars.VAULT_CI_SECRET_VERSION || '0' }} PUBLISH_PYPI_USERNAME | UV_PUBLISH_USERNAME ;
+            kv/data/MLIA/CI?version=${{ vars.VAULT_CI_SECRET_VERSION || '0' }} PUBLISH_PYPI_PASSWORD | UV_PUBLISH_PASSWORD
+      - if: ${{ env.UV_PUBLISH_URL != '' }}
         run: uv publish dist/*
-        env:
-          UV_PUBLISH_URL: ${{ env.PUBLISH_PYPI_HOST }}
-          UV_PUBLISH_USERNAME: ${{ secrets.INTERNAL_PYPI_USERNAME || secrets.PUBLISH_PYPI_USERNAME }}
-          UV_PUBLISH_PASSWORD: ${{ secrets.INTERNAL_PYPI_PASSWORD || secrets.PUBLISH_PYPI_PASSWORD }}
 
   publish_docs:
     name: Publish Documentation
