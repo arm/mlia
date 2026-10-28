@@ -532,7 +532,11 @@ def check_command(
         Path | None,
         typer.Option(
             "--companion-model",
-            help="Analyze the deployed PTE companion of an ETRecord",
+            help=(
+                "Path to a supplementary model used by the selected target/backend "
+                "during analysis. See the plugin documentation for supported "
+                "formats and usage."
+            ),
         ),
     ] = None,
     json_output: Annotated[

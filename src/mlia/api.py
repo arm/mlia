@@ -277,8 +277,8 @@ def run_advisor(
             may be omitted when profiling_data is provided.
         profiling_data: Optional measured profiling data path or ordered sequence of
             paths. It is passed through the target advisor workflow as a list.
-        companion_model: Optional deployed PTE companion of an ETRecord. Its
-            relationships are included in analysis output without a visualizer.
+        companion_model: Optional additional model provided alongside the primary
+            input. Usage and supported formats are defined by the target/backend.
         backends: Optional list of backend names. Defaults to CLI behavior.
         example_inputs: Required for torch.nn.Module inputs.
         enable_quantization: Only valid for torch.nn.Module inputs.
@@ -320,7 +320,7 @@ def run_advisor(
         - CLI behavior is unchanged by this API path.
     """
     validation_mode = _normalize_validation_mode(validation)
-    companion_model_path = validate_companion_model(model, companion_model)
+    companion_model_path = validate_companion_model(companion_model)
     profiling_data_path = _validate_analysis_inputs(model, profiling_data)
     settings = ApplicationSettings()
     advice_set = {advice_category}
@@ -920,7 +920,8 @@ def get_advice(
            target. Default settings will be used if None.
     :param profiling_data: Optional measured profiling data path or ordered sequence
            of paths. It is passed to the selected target advisor as a list.
-    :param companion_model: Optional deployed PTE companion of an ETRecord.
+    :param companion_model: Optional additional model provided alongside the primary
+           input. Usage and supported formats are defined by the target/backend.
     :param backend_options: Optional dictionary of backend-specific options
            discovered from CLI arguments. Backend parameters are defined in each
            backend's BackendConfiguration.cli_options and automatically exposed
@@ -946,7 +947,7 @@ def get_advice(
         >>> get_advice("ethos-u55-256", "path/to/the/model", {"performance"})
 
     """
-    companion_model_path = validate_companion_model(model, companion_model)
+    companion_model_path = validate_companion_model(companion_model)
     profiling_data_path = _validate_analysis_inputs(model, profiling_data)
     advice_category = AdviceCategory.from_string(category)
 

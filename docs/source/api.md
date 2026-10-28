@@ -58,27 +58,25 @@ none, all profiling-capable target backends. The resulting candidate set must
 contain exactly one backend. Estimation-only backends cannot satisfy this
 request.
 
-An ETRecord analysis may also receive its deployed PTE as `companion_model`:
+An analysis may receive an additional model as `companion_model` when supported
+by the selected target/backend:
 
 ```python
 result = run_advisor(
     advice_category="performance",
-    target_profile="neural-technology",
-    model="model.etrecord",
-    profiling_data="run.etdump",
-    companion_model="model.pte",
+    target_profile="<target-profile>",
+    model="path/to/primary-model",
+    companion_model="path/to/companion-model",
 )
-relationships = result["extensions"]["executorch"]
 ```
 
-The core CLI exposes the same input as `--companion-model`. It validates the
-ETRecord/PTE file pairing and passes the companion to the target's analysis.
-Install `mlia-neural-technology[executorch]` for this workflow. Shared artifact
-readers and runtime timing live in `mlia-converters-pytorch`; Neural Technology
-decodes VGF profiling and correlates embedded VGF operators. The output includes
-source dataflow, chain relationships and companion associations without requiring
-Model Explorer. Enable visualization separately with `--model-explorer files`
-or `--model-explorer open`.
+The core CLI exposes the same input as `--companion-model`. Core expands and
+resolves the companion path, verifies that it identifies an existing file, and
+passes it to the target advisor. The consuming target/backend defines its
+purpose, supported formats and model pairings, and any additional requirements
+such as profiling data. It is also responsible for checking that the companion
+corresponds to the primary input and rejecting unsupported uses. Core does not
+read or interpret the companion model, and visualization is not required.
 
 ## Output and validation
 

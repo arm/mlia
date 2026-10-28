@@ -570,15 +570,25 @@ def test_run_advisor_preserves_ordered_profiling_data_paths(
     assert captured["profiling_data"] == [first, second]
 
 
+@pytest.mark.parametrize(
+    ("model_name", "companion_name"),
+    [
+        pytest.param("model.etrecord", "model.pte", id="etrecord-pte"),
+        pytest.param("model.tflite", "companion.vgf", id="format-neutral"),
+    ],
+)
 def test_run_advisor_forwards_companion_model_without_visualizer(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
+    model_name: str,
+    companion_name: str,
 ) -> None:
-    """Companion analysis is an ordinary Python API input."""
-    model = tmp_path / "model.etrecord"
-    companion = tmp_path / "model.pte"
+    """Companion analysis accepts any existing paired artifact."""
+    model = tmp_path / model_name
+    companion = tmp_path / companion_name
     model.touch()
     companion.touch()
+    monkeypatch.chdir(tmp_path)
     captured: dict[str, object] = {}
     monkeypatch.setattr(
         "mlia.api.validate_backend", lambda *_args, **_kwargs: ["profiler"]
@@ -592,27 +602,26 @@ def test_run_advisor_forwards_companion_model_without_visualizer(
         run_advisor(
             "performance",
             "profile",
-            model,
+            Path(model_name),
             profiling_data=tmp_path,
-            companion_model=companion,
+            companion_model=companion_name,
         )
         == _FAKE_OUTPUT
     )
-    assert captured["companion_model"] == companion
+    assert captured["companion_model"] == companion.resolve()
 
 
-@pytest.mark.parametrize(
-    "model_name,companion_name",
-    [("model.vgf", "model.pte"), ("model.etrecord", "model.vgf")],
-)
-def test_run_advisor_rejects_invalid_companion_inputs(
-    tmp_path: Path, model_name: str, companion_name: str
+@pytest.mark.parametrize("is_directory", [False, True], ids=["missing", "directory"])
+def test_run_advisor_rejects_invalid_companion_path(
+    tmp_path: Path, is_directory: bool
 ) -> None:
-    """Companion validation is independent of visualization installation."""
-    model, companion = tmp_path / model_name, tmp_path / companion_name
+    """Companion validation requires an existing file."""
+    model, companion = tmp_path / "model.tflite", tmp_path / "companion.vgf"
     model.touch()
-    companion.touch()
-    with pytest.raises(ConfigurationError, match="[Cc]ompanion"):
+    if is_directory:
+        companion.mkdir()
+
+    with pytest.raises(ConfigurationError, match="[Cc]ompanion.*file"):
         run_advisor(
             "performance",
             "profile",
