@@ -47,7 +47,7 @@ repos:
   rev: v0.9.35
   hooks:
     - id: pymarkdown
-      args: ["-d", "MD041,MD025,MD024,MD002,MD013", "scan"]
+      args: ["--enable-extensions", "front-matter", "-d", "MD041,MD025,MD024,MD002,MD013", "scan"]
       exclude: '^((AGENTS\.md)|(\.github/prompts|\.github/skills|\.codex/skills|openspec)/)'
 
 - repo: https://github.com/ryanrhee/shellcheck-py

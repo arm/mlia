@@ -1,0 +1,61 @@
+{# SPDX-FileCopyrightText: Copyright 2026, Arm Limited and/or its affiliates. #}
+{# SPDX-License-Identifier: Apache-2.0 #}
+{% extends "main.html" %}
+{% block styles %}
+{{ super() }}
+<link rel="stylesheet" href="{{ 'assets/mlia/landing.css' | url }}">
+{% endblock %}
+{% macro external_attrs(to) -%}{% if to.startswith('http://') or to.startswith('https://') %} target="_blank" rel="noopener noreferrer"{% endif %}{%- endmacro %}
+{% macro indicator(to) -%}<span class="mlia-linkIndicator" aria-hidden="true">{{ '↗' if to.startswith('http://') or to.startswith('https://') else '→' }}</span>{% if to.startswith('http://') or to.startswith('https://') %}<span class="mlia-srOnly"> (opens in a new tab)</span>{% endif %}{%- endmacro %}
+{% macro link(to, label, style='cardLink') -%}
+<a class="mlia-{{ style }}" href="{{ landing_url(to) }}"{{ external_attrs(to) }}>{{ label }} {{ indicator(to) }}</a>
+{%- endmacro %}
+{% block content %}
+<div class="mlia-home"><div class="mlia-surface"><div class="mlia-page">
+  <div class="mlia-brand">
+    <img class="mlia-logo-light" src="{{ 'assets/mlia/mlia-logo-stacked-ink.png' | url }}" alt="Arm machine learning inference advisor" width="3300" height="432">
+    <img class="mlia-logo-dark" src="{{ 'assets/mlia/mlia-logo-stacked-white.png' | url }}" alt="Arm machine learning inference advisor" width="3301" height="431">
+  </div>
+  <section class="mlia-hero" aria-labelledby="landing-title"><div class="mlia-heroCopy">
+    {% if not is_core %}<p class="mlia-eyebrow">{{ landing.category }} / {{ landing.title }}</p>{% endif %}
+    <h1 id="landing-title">{{ landing.headline }}{% if is_core %}<span>{{ landing.headlineSecond }}</span>{% endif %}</h1>
+    <p class="mlia-lead">{{ landing.lead }}</p>
+    <div class="mlia-actions">
+      {% if landing.learning %}{{ link(landing.learning, 'Follow the Learning Path', 'primaryButton') }}
+      {% else %}{{ link('/cli' if is_core else landing.start, 'Get started', 'primaryButton') }}{% endif %}
+      {{ link('/documentation', 'Browse documentation', 'secondaryButton') }}
+    </div>
+    {{ link(config.repo_url, 'View on GitHub', 'repositoryLink') }}
+  </div></section>
+  {% if landing.learning %}
+  <section class="mlia-learningPath" aria-labelledby="learning-title"><div>
+    <p class="mlia-eyebrow">Start here · Arm Learning Path</p><h2 id="learning-title">{{ landing.learningTitle }}</h2><p>{{ landing.learningDescription }}</p>
+  </div>{{ link(landing.learning, 'Follow the step-by-step guide', 'primaryButton') }}</section>
+  {% endif %}
+  <section class="mlia-analysisSection" aria-labelledby="focus-title">
+    <div class="mlia-analysisHeader"><p class="mlia-eyebrow">{{ 'Inside the analysis' if is_core else landing.category }}</p><h2 id="focus-title">{{ 'One model. Three perspectives.' if is_core else 'Work with ' ~ landing.title ~ '.' }}</h2></div>
+    {% if is_core %}<div class="mlia-analysisBody"><div class="mlia-heroVisual"><div class="mlia-visualLabel"><span></span> MLIA / COMMAND LINE</div><div class="mlia-analysisConsole"><p class="mlia-consoleTitle">Discover your environment</p><pre><code>{{ landing.discoveryExample }}</code></pre><p class="mlia-consoleNote">Available checks depend on your installed plugins and backends.</p></div></div>{% endif %}
+    <div class="mlia-capabilities">
+    {% for item in landing.capabilities if is_core %}
+      <a class="mlia-capabilityCard" href="{{ landing_url(item.to) }}"{{ external_attrs(item.to) }}><span class="mlia-number">{{ item.number }}</span><h2>{{ item.title }}</h2><p>{{ item.description }}</p><span class="mlia-cardLink">{{ item.link }} {{ indicator(item.to) }}</span></a>
+    {% endfor %}
+    {% if not is_core %}{% for item in landing.focus %}
+      <a class="mlia-capabilityCard" href="{{ landing_url(item.to) }}"{{ external_attrs(item.to) }}><span class="mlia-number">0{{ loop.index }}</span><h2>{{ item.title }}</h2><p>{{ item.description }}</p><span class="mlia-cardLink">Read the guide {{ indicator(item.to) }}</span></a>
+    {% endfor %}{% endif %}
+    </div>{% if is_core %}</div>{% endif %}
+  </section>
+  <div class="mlia-workspace{% if not is_core %} mlia-pairedPanels{% endif %}">
+    <section class="mlia-startSection" aria-labelledby="setup-title"><div>
+      <p class="mlia-eyebrow">{{ 'Your first analysis' if is_core else 'Part of MLIA' }}</p>
+      <h2 id="setup-title">{{ 'Open a terminal. Start exploring.' if is_core else (landing.panels.startTitle if landing.panels else 'Start with the right setup.') }}</h2>
+      <p class="mlia-sectionLead">{{ 'Install the plugins for your model and target, discover the available backends, then run your first analysis.' if is_core else (landing.panels.startDescription if landing.panels else landing.note) }}</p></div>
+      <div class="mlia-textLinks">{% if is_core %}{{ link('https://github.com/arm/mlia#installation','Installation guide') }}{{ link('/api','Use the Python API') }}{% elif landing.panels %}{% for item in landing.panels.startLinks %}{{ link(item.to,item.label) }}{% endfor %}{% else %}{{ link(landing.start,'Usage guide') }}{{ link('https://developer.arm.com/dev-docs/mlia/','MLIA core documentation') }}{% endif %}</div>
+      {% if is_core %}{{ link('/cli#common-workflows','Follow a workflow','secondaryButton') }}{% endif %}
+    </section>
+    {% if landing.panels %}<section class="mlia-pluginSection mlia-taskPanel" aria-labelledby="guides-title"><p class="mlia-eyebrow">Understand the view</p><h2 id="guides-title">{{ landing.panels.resultsTitle }}</h2><p class="mlia-panelDescription">{{ landing.panels.resultsDescription }}</p><div class="mlia-panelLinks">{% for item in landing.panels.resultsLinks %}{{ link(item.to,item.label) }}{% endfor %}</div></section>{% else %}    <section class="mlia-pluginSection{% if not is_core %} mlia-taskPanel{% endif %}" aria-labelledby="guides-title"><div class="mlia-sectionHeader"><p class="mlia-eyebrow">{{ 'The MLIA ecosystem' if is_core else 'Documentation' }}</p><h2 id="guides-title">{{ 'Connect your toolkit.' if is_core else 'Find your next step.' }}</h2>{% if is_core %}<p>The core provides shared workflows. Choose plugins for your targets, converters, and visualization.</p>{% endif %}</div>
+    <div class="mlia-pluginGrid">{% if is_core %}{% for plugin in landing.plugins %}<a class="mlia-pluginCard" href="{{ plugin.to }}"{{ external_attrs(plugin.to) }}><span class="mlia-tag">{{ plugin.kind }}</span><h3>{{ plugin.name }}</h3><p>{{ plugin.description }}</p><span class="mlia-cardLink">Read the guide {{ indicator(plugin.to) }}</span></a>{% endfor %}{% else %}{% for guide in landing.guides %}<a class="mlia-guideRow" href="{{ landing_url(guide.to) }}"><span>{{ guide.title }}</span>{{ indicator(guide.to) }}</a>{% endfor %}{% endif %}</div></section>{% endif %}
+  </div>
+  {% if landing.panels %}<section class="mlia-guideDirectory" aria-labelledby="all-guides-title"><div class="mlia-sectionHeader"><p class="mlia-eyebrow">Documentation</p><h2 id="all-guides-title">Explore all guides.</h2></div><div class="mlia-pluginGrid">{% for guide in landing.guides %}<a class="mlia-guideRow" href="{{ landing_url(guide.to) }}"><span>{{ guide.title }}</span>{{ indicator(guide.to) }}</a>{% endfor %}</div></section>{% endif %}
+  <section class="mlia-contribute" aria-labelledby="development-title"><div><p class="mlia-eyebrow">Under the hood</p><h2 id="development-title">{{ 'Follow the analysis. Build what’s next.' if is_core else 'Explore the implementation.' }}</h2><p>{{ 'Explore the architecture, follow an analysis, or build your own plugin.' if is_core else 'Find integration details and contributor guidance.' }}</p></div><div class="mlia-actions">{% if is_core %}{{ link('/high_level_architecture','Architecture','secondaryButton') }}{% endif %}{{ link('/development','Development','secondaryButton') }}</div></section>
+</div></div></div>
+{% endblock %}

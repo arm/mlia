@@ -30,6 +30,8 @@ post-analysis capabilities.
 
 ## Documentation
 
+[Read the documentation on Arm Developer](https://developer.arm.com/dev-docs/mlia/).
+
 Structured repository documentation lives in [docs/README.md](docs/README.md).
 Use the core docs for:
 
@@ -63,8 +65,8 @@ MLIA uses the following plugin model:
 - [MLIA Ethos-U](https://github.com/arm/mlia-ethos-u)
   (`mlia-ethos-u`) adds Ethos-U target profiles and the Vela and Corstone
   backends for compatibility and performance analysis.
-- [MLIA Neural Technology](https://github.com/arm/mlia-neural-technology)
-  (`mlia-neural-technology`) adds Arm Neural Technology target profiles and
+- [MLIA for Arm Mali with Neural Technology](https://github.com/arm/mlia-neural-technology)
+  (`mlia-neural-technology`) adds target profiles for Arm Mali GPUs with Neural Technology and
   backends for performance estimation and performance analysis.
 
 ### Converter plugins

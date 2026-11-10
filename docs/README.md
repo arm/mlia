@@ -48,3 +48,7 @@ backend management model.
 Plugin packages own target-specific, backend-specific, transformer-specific,
 and converter-specific guidance. Link to the owning plugin documentation rather
 than duplicating it here.
+
+## Published documentation
+
+[Read the documentation on Arm Developer](https://developer.arm.com/dev-docs/mlia/).

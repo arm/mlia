@@ -1,0 +1,34 @@
+{
+  "siteLabel": "ML Inference Advisor",
+  "navbarItems": [
+    {
+      "label": "Home",
+      "to": "/",
+      "activeBaseRegex": "^/$",
+      "position": "left"
+    },
+    {
+      "label": "Overview",
+      "to": "/overview",
+      "position": "left"
+    },
+    {
+      "label": "User Guide",
+      "to": "/cli",
+      "activeBaseRegex": "(^|/)(cli|api|backends|metrics)(/|$)",
+      "position": "left"
+    },
+    {
+      "label": "Architecture",
+      "to": "/high_level_architecture",
+      "activeBaseRegex": "(^|/)(high_level_architecture|plugin_architecture|execution_flow)(/|$)",
+      "position": "left"
+    },
+    {
+      "label": "Development",
+      "to": "/development",
+      "position": "left"
+    }
+  ],
+  "indexPageDirectory": "landing-page"
+}

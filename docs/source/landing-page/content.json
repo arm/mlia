@@ -1,0 +1,62 @@
+{
+  "capabilities": [
+    {
+      "number": "01",
+      "title": "Check compatibility",
+      "description": "Find out which operations your target supports before deployment.",
+      "to": "/cli#common-workflows",
+      "link": "Run a compatibility check"
+    },
+    {
+      "number": "02",
+      "title": "Estimate performance",
+      "description": "Choose a target and backend to understand model performance.",
+      "to": "/backends",
+      "link": "Explore analysis backends"
+    },
+    {
+      "number": "03",
+      "title": "Explore the results",
+      "description": "Turn analysis output into metrics, visualizations, and decisions.",
+      "to": "/metrics",
+      "link": "Understand your results"
+    }
+  ],
+  "discoveryExample": "mlia backend list\nmlia target list\nmlia check --help",
+  "plugins": [
+    {
+      "kind": "Target",
+      "name": "Mali with Neural Technology",
+      "description": "Target profiles and analysis for supported Arm Mali GPUs with Neural Technology.",
+      "to": "https://developer.arm.com/dev-docs/mlia-neural-technology/"
+    },
+    {
+      "kind": "Target",
+      "name": "Arm Ethos-U",
+      "description": "Analyze models with Vela and Corstone backends.",
+      "to": "https://developer.arm.com/dev-docs/mlia-ethos-u/"
+    },
+    {
+      "kind": "Converter",
+      "name": "LiteRT",
+      "description": "Prepare TensorFlow Lite models for supported analysis flows.",
+      "to": "https://developer.arm.com/dev-docs/mlia-converters-litert/"
+    },
+    {
+      "kind": "Converter",
+      "name": "PyTorch",
+      "description": "Explore PyTorch, PTE, and delegate conversion paths.",
+      "to": "https://developer.arm.com/dev-docs/mlia-converters-pytorch/"
+    },
+    {
+      "kind": "Visualization",
+      "name": "Model Explorer",
+      "description": "See model structure and analysis results together.",
+      "to": "https://developer.arm.com/dev-docs/mlia-model-explorer/"
+    }
+  ],
+  "title": "ML Inference Advisor",
+  "headline": "From model",
+  "headlineSecond": "to informed decisions.",
+  "lead": "Explore what runs, what performs, and what to improve. MLIA connects your model to the insights that guide deployment."
+}

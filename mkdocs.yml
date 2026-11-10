@@ -11,8 +11,26 @@ docs_dir: docs/source
 site_dir: .mkdocs/site
 strict: true
 
+exclude_docs: |
+  /landing-page/
+
+hooks:
+  - docs/scripts/landing.py
+
 theme:
   name: material
+  custom_dir: docs/overrides
+  palette:
+    - media: '(prefers-color-scheme: light)'
+      scheme: default
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: '(prefers-color-scheme: dark)'
+      scheme: slate
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
   features:
     - navigation.sections
     - navigation.top
@@ -38,12 +56,15 @@ extra_javascript:
 
 nav:
   - Home: index.md
+  - Documentation: documentation.md
   - Overview: overview.md
-  - High-level Architecture: high_level_architecture.md
-  - Plugin Architecture: plugin_architecture.md
-  - End-to-end Execution Flow: execution_flow.md
-  - CLI: cli.md
-  - API: api.md
-  - Backends: backends.md
-  - Outputs: metrics.md
+  - User Guide:
+      - CLI: cli.md
+      - Python API: api.md
+      - Backends: backends.md
+      - Outputs: metrics.md
+  - Architecture:
+      - High-level Architecture: high_level_architecture.md
+      - Plugin Architecture: plugin_architecture.md
+      - End-to-end Execution Flow: execution_flow.md
   - Development: development.md

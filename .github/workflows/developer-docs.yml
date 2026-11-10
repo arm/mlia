@@ -1,0 +1,84 @@
+# SPDX-FileCopyrightText: Copyright 2026, Arm Limited and/or its affiliates.
+# SPDX-License-Identifier: Apache-2.0
+
+name: Developer documentation
+
+on:
+  pull_request:
+    paths:
+      - 'docs/**'
+      - '.github/workflows/developer-docs.yml'
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Documentation destination for a manual publication
+        type: choice
+        options:
+          - staging
+          - production
+        default: staging
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: developer-docs-${{ github.event_name == 'pull_request' && github.ref || 'publish' }}
+  # Preserve pending publications instead of replacing them with newer runs.
+  queue: max
+  cancel-in-progress: false
+
+jobs:
+  destination:
+    name: Select documentation destination
+    if: github.repository_owner == 'Arm-Debug'
+    runs-on: ${{ fromJSON(vars.UBUNTU_RUNNER_ARM64 || '["ubuntu-24.04-arm"]') }}
+    outputs:
+      environment: ${{ steps.select.outputs.environment }}
+      aws-account: ${{ steps.select.outputs.aws-account }}
+    steps:
+      - name: Select release environment
+        id: select
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+          MANUAL_ENVIRONMENT: ${{ inputs.environment }}
+        run: |
+          set -euo pipefail
+          destination=staging
+          if [[ "$EVENT_NAME" == workflow_dispatch ]]; then
+            destination=$MANUAL_ENVIRONMENT
+          elif [[ "$EVENT_NAME" == push && "$REF_TYPE" == tag && "$REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            destination=production
+          fi
+          case "$destination" in
+            staging) account=529607359382 ;;
+            production) account=930800959236 ;;
+            *) echo "Unknown documentation environment: $destination" >&2; exit 1 ;;
+          esac
+          echo "environment=$destination" >> "$GITHUB_OUTPUT"
+          echo "aws-account=$account" >> "$GITHUB_OUTPUT"
+
+  developer-docs:
+    needs: destination
+    name: Validate and publish developer docs
+    if: github.repository_owner == 'Arm-Debug'
+    permissions:
+      contents: read
+      id-token: write
+    uses: Arm-Debug/github-workflow-wizardry/.github/workflows/developer-docs.yml@4e9ad6627c08032ed5b312d7a78746390ecaebcc
+    with:
+      docs-root: docs/source
+      docs-config: docs/docs-config.json
+      site-id: mlia
+      runs-on: ${{ vars.UBUNTU_RUNNER_ARM64 || '["ubuntu-24.04-arm"]' }}
+      publish: >-
+        ${{ github.event_name == 'workflow_dispatch' ||
+        (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) }}
+      aws-role-arn: arn:aws:iam::${{ needs.destination.outputs.aws-account }}:role/Proj-GHA-mlia-s3-upload
+      environment: ${{ needs.destination.outputs.environment }}

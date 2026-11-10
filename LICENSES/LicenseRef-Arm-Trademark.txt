@@ -1,0 +1,5 @@
+Arm trademarks and logo artwork
+
+All rights reserved. Arm trademarks and logos remain the property of Arm Limited
+and/or its affiliates. No trademark rights are granted by the software licence.
+Use of this artwork is subject to the applicable Arm brand guidelines.
