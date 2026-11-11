@@ -11,80 +11,24 @@ provides the shared CLI, public Python API, backend management, and standardized
 output model. Installed plugins register target, backend, converter, and
 post-analysis capabilities.
 
+[Read the documentation on Arm Developer](https://developer.arm.com/dev-docs/mlia/).
+
 ## Table of Contents
 
-- [Documentation](#documentation)
-- [Plugin model](#plugin-model)
 - [Installation](#installation)
 - [Quick start](#quick-start)
+- [Documentation](#documentation)
+- [Plugin model](#plugin-model)
 - [Python API](#python-api)
-- [Reporting bugs](#reporting-bugs)
 - [Configuration](#configuration)
 - [Development](#development)
+- [Reporting bugs](#reporting-bugs)
 - [Getting support](#getting-support)
 - [Reporting vulnerabilities](#reporting-vulnerabilities)
 - [Releases](#releases)
 - [License](#license)
 - [Inclusive language commitment](#inclusive-language-commitment)
 - [Trademarks and copyrights](#trademarks-and-copyrights)
-
-## Documentation
-
-[Read the documentation on Arm Developer](https://developer.arm.com/dev-docs/mlia/).
-
-Structured repository documentation lives in [docs/README.md](docs/README.md).
-Use the core docs for:
-
-- Shared CLI guidance: [docs/source/cli.md](docs/source/cli.md).
-- Backend discovery and installation:
-  [docs/source/backends.md](docs/source/backends.md).
-- Output structure and JSON results:
-  [docs/source/metrics.md](docs/source/metrics.md).
-- Architecture and package boundaries:
-  [docs/source/overview.md](docs/source/overview.md),
-  [docs/source/high_level_architecture.md](docs/source/high_level_architecture.md),
-  and [docs/source/execution_flow.md](docs/source/execution_flow.md).
-
-Target-specific, backend-specific, and converter-specific detail belongs in the
-documentation for the plugin package that owns that functionality.
-
-## Plugin model
-
-`mlia` is the core package. Targets, backends, and converters are provided
-through separate plugin wheels.
-
-MLIA uses the following plugin model:
-
-- `mlia` provides the command-line experience and shared output model.
-- Plugin packages add target definitions, backend implementations, and converter
-  paths.
-- MLIA discovers those plugins at runtime and exposes them through the same CLI.
-
-### Target plugins
-
-- [MLIA Ethos-U](https://github.com/arm/mlia-ethos-u)
-  (`mlia-ethos-u`) adds Ethos-U target profiles and the Vela and Corstone
-  backends for compatibility and performance analysis.
-- [MLIA for Arm Mali with Neural Technology](https://github.com/arm/mlia-neural-technology)
-  (`mlia-neural-technology`) adds target profiles for Arm Mali GPUs with Neural Technology and
-  backends for performance estimation and performance analysis.
-
-### Converter plugins
-
-- [MLIA PyTorch Converter](https://github.com/arm/mlia-converters-pytorch)
-  (`mlia-converters-pytorch`) converts PyTorch models into artifacts used by
-  supported MLIA target flows.
-- [MLIA LiteRT Converter](https://github.com/arm/mlia-converters-litert)
-  (`mlia-converters-litert`) converts LiteRT / TensorFlow Lite `.tflite` models
-  into TOSA artifacts for supported MLIA target flows.
-
-Install only the plugin packages you need, then use the discovery commands to
-see what is available in the current environment:
-
-```bash
-mlia target list
-mlia backend list
-```
 
 ## Installation
 
@@ -155,6 +99,62 @@ If you are new to the plugin-based model, the safest first pattern is:
 3. Run one simple `mlia check` command, then add backend-specific options as
    needed.
 
+## Documentation
+
+Structured repository documentation lives in [docs/README.md](docs/README.md).
+Use the core docs for:
+
+- Shared CLI guidance: [docs/source/cli.md](docs/source/cli.md).
+- Backend discovery and installation:
+  [docs/source/backends.md](docs/source/backends.md).
+- Output structure and JSON results:
+  [docs/source/metrics.md](docs/source/metrics.md).
+- Architecture and package boundaries:
+  [docs/source/overview.md](docs/source/overview.md),
+  [docs/source/high_level_architecture.md](docs/source/high_level_architecture.md),
+  and [docs/source/execution_flow.md](docs/source/execution_flow.md).
+
+Target-specific, backend-specific, and converter-specific detail belongs in the
+documentation for the plugin package that owns that functionality.
+
+## Plugin model
+
+`mlia` is the core package. Targets, backends, and converters are provided
+through separate plugin wheels.
+
+MLIA uses the following plugin model:
+
+- `mlia` provides the command-line experience and shared output model.
+- Plugin packages add target definitions, backend implementations, and converter
+  paths.
+- MLIA discovers those plugins at runtime and exposes them through the same CLI.
+
+### Target plugins
+
+- [MLIA Ethos-U](https://github.com/arm/mlia-ethos-u)
+  (`mlia-ethos-u`) adds Ethos-U target profiles and the Vela and Corstone
+  backends for compatibility and performance analysis.
+- [MLIA for Arm Mali with Neural Technology](https://github.com/arm/mlia-neural-technology)
+  (`mlia-neural-technology`) adds target profiles for Arm Mali GPUs with Neural Technology and
+  backends for performance estimation and performance analysis.
+
+### Converter plugins
+
+- [MLIA PyTorch Converter](https://github.com/arm/mlia-converters-pytorch)
+  (`mlia-converters-pytorch`) converts PyTorch models into artifacts used by
+  supported MLIA target flows.
+- [MLIA LiteRT Converter](https://github.com/arm/mlia-converters-litert)
+  (`mlia-converters-litert`) converts LiteRT / TensorFlow Lite `.tflite` models
+  into TOSA artifacts for supported MLIA target flows.
+
+Install only the plugin packages you need, then use the discovery commands to
+see what is available in the current environment:
+
+```bash
+mlia target list
+mlia backend list
+```
+
 ## Python API
 
 MLIA also provides a Python API for programmatic compatibility and performance
@@ -191,15 +191,6 @@ pip install mlia-converters-pytorch
 ```
 
 The Python API uses the same installed target and backend plugins as the CLI.
-
-## Reporting bugs
-
-Report bugs by creating a GitHub issue. Use the
-[`arm/mlia` issue tracker](https://github.com/arm/mlia/issues) by default,
-including when you are not sure which repo owns the problem.
-
-Only file an issue in a plugin repository if the bug is clearly and
-specifically isolated to that plugin.
 
 ## Configuration
 
@@ -280,6 +271,15 @@ uv build
 
 Wheel builds include a CycloneDX SBOM in the wheel's
 `mlia-<version>.dist-info/sboms/` directory.
+
+## Reporting bugs
+
+Report bugs by creating a GitHub issue. Use the
+[`arm/mlia` issue tracker](https://github.com/arm/mlia/issues) by default,
+including when you are not sure which repo owns the problem.
+
+Only file an issue in a plugin repository if the bug is clearly and
+specifically isolated to that plugin.
 
 ## Getting support
 
