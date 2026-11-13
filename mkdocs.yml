@@ -63,6 +63,7 @@ nav:
       - Python API: api.md
       - Backends: backends.md
       - Outputs: metrics.md
+  - Learning Paths: learning-paths.md
   - Architecture:
       - High-level Architecture: high_level_architecture.md
       - Plugin Architecture: plugin_architecture.md

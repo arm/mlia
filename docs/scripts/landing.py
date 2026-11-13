@@ -5,7 +5,6 @@
 import json
 import re
 from pathlib import Path
-from shutil import copyfile
 from typing import Any
 from urllib.parse import urlsplit
 
@@ -80,12 +79,10 @@ def _prefix_selector(match: re.Match[str]) -> str:
 
 
 def on_post_build(config: MkDocsConfig) -> None:
-    """Publish logos and a scoped version of the shared landing stylesheet."""
+    """Publish a scoped version of the shared landing stylesheet."""
     source = Path(config.docs_dir) / "landing-page"
     output = Path(config.site_dir) / "assets" / "mlia"
     output.mkdir(parents=True, exist_ok=True)
-    for image in source.glob("mlia-logo-stacked-*.png"):
-        copyfile(image, output / image.name)
     css = (source / "index.module.css").read_text()
     css = css.replace(
         ':global(html[data-theme="dark"])', '[data-md-color-scheme="slate"]'

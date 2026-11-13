@@ -4,19 +4,6 @@
 .mlia-home {
   margin: 0 -0.8rem;
 }
-.mlia-home .mlia-brand img {
-  width: 100%;
-  height: auto;
-}
-.mlia-logo-dark {
-  display: none !important;
-}
-[data-md-color-scheme="slate"] .mlia-logo-light {
-  display: none !important;
-}
-[data-md-color-scheme="slate"] .mlia-logo-dark {
-  display: block !important;
-}
 .mlia-home h1,
 .mlia-home h2,
 .mlia-home h3 {

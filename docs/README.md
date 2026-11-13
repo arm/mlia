@@ -15,6 +15,7 @@ This directory contains the MkDocs content for the `mlia` repository.
 - `source/plugin_architecture.md`: how the core repo relates to plugin repos
 - `source/execution_flow.md`: shared `mlia check` command, API, data, and artifact flow
 - `source/cli.md`: command-line entry points and common workflows
+- `source/learning-paths.md`: guided MLIA tutorials for supported targets
 - `source/backends.md`: backend discovery, installation, and responsibility boundaries
 - `source/metrics.md`: output formats, schema shape, and metrics guidance
 - `source/development.md`: docs and development maintenance notes

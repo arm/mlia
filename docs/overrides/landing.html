@@ -12,17 +12,14 @@
 {%- endmacro %}
 {% block content %}
 <div class="mlia-home"><div class="mlia-surface"><div class="mlia-page">
-  <div class="mlia-brand">
-    <img class="mlia-logo-light" src="{{ 'assets/mlia/mlia-logo-stacked-ink.png' | url }}" alt="Arm machine learning inference advisor" width="3300" height="432">
-    <img class="mlia-logo-dark" src="{{ 'assets/mlia/mlia-logo-stacked-white.png' | url }}" alt="Arm machine learning inference advisor" width="3301" height="431">
-  </div>
   <section class="mlia-hero" aria-labelledby="landing-title"><div class="mlia-heroCopy">
     {% if not is_core %}<p class="mlia-eyebrow">{{ landing.category }} / {{ landing.title }}</p>{% endif %}
-    <h1 id="landing-title">{{ landing.headline }}{% if is_core %}<span>{{ landing.headlineSecond }}</span>{% endif %}</h1>
+    <h1 id="landing-title">{{ landing.headline if is_core else 'Machine Learning Inference Advisor (MLIA)' }}</h1>
+    <p class="mlia-heroTagline">{{ landing.headlineSecond if is_core else landing.headline }}</p>
     <p class="mlia-lead">{{ landing.lead }}</p>
     <div class="mlia-actions">
       {% if landing.learning %}{{ link(landing.learning, 'Follow the Learning Path', 'primaryButton') }}
-      {% else %}{{ link('/cli' if is_core else landing.start, 'Get started', 'primaryButton') }}{% endif %}
+      {% else %}{{ link('/documentation#get-started' if is_core else landing.start, 'Get started', 'primaryButton') }}{% endif %}
       {{ link('/documentation', 'Browse documentation', 'secondaryButton') }}
     </div>
     {{ link(config.repo_url, 'View on GitHub', 'repositoryLink') }}

@@ -14,11 +14,32 @@ conversion paths, and visualization.
 
 ## Get started
 
-1. [Install MLIA](https://github.com/arm/mlia#installation) and the plugins
-   needed for your model and target.
-2. [Discover targets and backends](cli.md#a-good-starting-sequence).
-3. [Run an analysis](cli.md#common-workflows) and
-   [understand the results](metrics.md).
+Use Python 3.10 or newer on Ubuntu 22.04 LTS or a compatible Linux environment.
+Install `libpython3.10-dev` if your environment requires it. We recommend a
+virtual environment.
+
+Install a target plugin for your model and target. It installs a compatible
+version of MLIA as a dependency. For example, for Arm Ethos-U:
+
+```bash
+pip install mlia-ethos-u
+```
+
+If you also need PyTorch model conversion, install the converter alongside the
+target plugin:
+
+```bash
+pip install mlia-ethos-u mlia-converters-pytorch
+```
+
+If you do not need a target plugin, install the core package with
+`pip install mlia`. See the [plugin guides](#targets-converters-and-visualization)
+for other targets, model formats, and additional setup.
+
+Check your installation with `mlia --help`, then
+[discover targets and backends](cli.md#a-good-starting-sequence). When you have
+chosen a target, [run an analysis](cli.md#common-workflows) and
+[understand the results](metrics.md).
 
 ## Find the right guide
 
@@ -29,6 +50,7 @@ conversion paths, and visualization.
 | Integrate model analysis in Python | [Python API](api.md) |
 | Discover and manage analysis backends | [Backends](backends.md) |
 | Read JSON results and metrics | [Outputs](metrics.md) |
+| Follow a guided tutorial | [Learning Paths](learning-paths.md) |
 | Understand the runtime components | [High-level architecture](high_level_architecture.md) |
 | Build or extend a plugin | [Plugin architecture](plugin_architecture.md) |
 | Follow an analysis from input to output | [Execution flow](execution_flow.md) |

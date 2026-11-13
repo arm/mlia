@@ -1,7 +1,7 @@
 ---
 # SPDX-FileCopyrightText: Copyright 2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
-sidebar_position: 8
+sidebar_position: 9
 ---
 
 # Plugin Architecture

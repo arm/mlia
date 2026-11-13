@@ -4,7 +4,6 @@
 import SiteLink, { LinkIndicator } from "./_links";
 import CodeBlock from "@theme/CodeBlock";
 import Layout from "@theme/Layout";
-import ThemedImage from "@theme/ThemedImage";
 import type { ReactElement } from "react";
 
 import {
@@ -16,8 +15,6 @@ import {
   headlineSecond,
   lead,
 } from "./_homepage";
-import mliaLogo from "./mlia-logo-stacked-ink.png";
-import mliaLogoWhite from "./mlia-logo-stacked-white.png";
 import styles from "./index.module.css";
 
 export default function Home(): ReactElement {
@@ -25,23 +22,16 @@ export default function Home(): ReactElement {
     <Layout title={title} description={lead}>
       <main className={styles.surface}>
         <div className={styles.page}>
-          <div className={styles.brand}>
-            <ThemedImage
-              sources={{ light: mliaLogo, dark: mliaLogoWhite }}
-              alt="Arm machine learning inference advisor"
-              width="3300"
-              height="432"
-            />
-          </div>
           <section className={styles.hero} aria-labelledby="landing-title">
             <div className={styles.heroCopy}>
-              <h1 id="landing-title">
-                {headline}
-                <span>{headlineSecond}</span>
-              </h1>
+              <h1 id="landing-title">{headline}</h1>
+              <p className={styles.heroTagline}>{headlineSecond}</p>
               <p className={styles.lead}>{lead}</p>
               <div className={styles.actions}>
-                <SiteLink className={styles.primaryButton} to="/cli">
+                <SiteLink
+                  className={styles.primaryButton}
+                  to="/documentation#get-started"
+                >
                   Get started
                 </SiteLink>
                 <SiteLink

@@ -3,23 +3,23 @@
     {
       "number": "01",
       "title": "Check compatibility",
-      "description": "Find out which operations your target supports before deployment.",
+      "description": "See whether your model uses operations supported by your chosen Arm target.",
       "to": "/cli#common-workflows",
       "link": "Run a compatibility check"
     },
     {
       "number": "02",
       "title": "Estimate performance",
-      "description": "Choose a target and backend to understand model performance.",
+      "description": "Estimate how your model may perform on a supported target before deployment.",
       "to": "/backends",
       "link": "Explore analysis backends"
     },
     {
       "number": "03",
-      "title": "Explore the results",
-      "description": "Turn analysis output into metrics, visualizations, and decisions.",
+      "title": "Turn advice into action",
+      "description": "Review the results and, where available, MLIA advice to choose what to improve next.",
       "to": "/metrics",
-      "link": "Understand your results"
+      "link": "Read results and advice"
     }
   ],
   "discoveryExample": "mlia backend list\nmlia target list\nmlia check --help",
@@ -56,7 +56,7 @@
     }
   ],
   "title": "ML Inference Advisor",
-  "headline": "From model",
-  "headlineSecond": "to informed decisions.",
+  "headline": "Machine Learning Inference Advisor (MLIA)",
+  "headlineSecond": "From model to informed decisions.",
   "lead": "Explore what runs, what performs, and what to improve. MLIA connects your model to the insights that guide deployment."
 }

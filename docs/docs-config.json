@@ -19,6 +19,11 @@
       "position": "left"
     },
     {
+      "label": "Learning Paths",
+      "to": "/learning-paths",
+      "position": "left"
+    },
+    {
       "label": "Architecture",
       "to": "/high_level_architecture",
       "activeBaseRegex": "(^|/)(high_level_architecture|plugin_architecture|execution_flow)(/|$)",
