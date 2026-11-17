@@ -89,3 +89,25 @@ assert not attempts, f"Unnecessary plugin loads: {attempts}"
         env={**os.environ, "PYTHONPATH": source},
     )
     assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_catalog_snapshot_refreshes_after_each_operation(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Repeated discovery shares a scan without hiding later catalog changes."""
+    from mlia.runtime import catalog
+
+    scans: list[bool] = []
+
+    def directories() -> list[Path]:
+        scans.append(True)
+        return []
+
+    monkeypatch.setattr(catalog, "catalog_directories", directories)
+    with catalog.catalog_snapshot():
+        assert catalog.load_catalog() == {}
+        with catalog.catalog_snapshot():
+            assert catalog.load_catalog() == {}
+    with catalog.catalog_snapshot():
+        assert catalog.load_catalog() == {}
+    assert len(scans) == 2

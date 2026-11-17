@@ -17,7 +17,12 @@ jobs:
       review_instructions: |
         Apply these repository boundary rules when reviewing changed code:
 
-        - Boundary actions must be implemented in `src/mlia/utils/boundaries/**`.
+        - Isolated runtime management and worker adapters are an approved boundary.
+          Core announces installation, execution, removal and local registration.
+          Provider calls into this boundary and work inside its worker do not need
+          redundant gateways or notices. Build hooks, CI and tests are outside
+          the runtime-boundary policy.
+        - Other boundary actions must be implemented in `src/mlia/utils/boundaries/**`.
           Flag new or modified code elsewhere that directly performs, or adds an
           obvious wrapper or alias around, filesystem mutation, network access,
           subprocess execution, package installation, log-file configuration,

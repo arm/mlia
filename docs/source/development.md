@@ -55,7 +55,13 @@ When changing this repository:
 
 Application code must not directly perform runtime network access, launch
 external processes, install packages, or mutate the filesystem. These actions
-must go through a gateway in `mlia.utils.boundaries`. For example:
+must go through a gateway in `mlia.utils.boundaries` or the isolated runtime
+boundary in `mlia.runtime`. Runtime management announces installation (including
+Python provisioning), execution, removal and local registration before the
+operation. Its catalogs, session files and dependency-free workers are internal
+parts of this boundary. Provider adapters may perform tool execution and job
+filesystem work inside the announced worker invocation; target collectors call
+this boundary without adding redundant gateways or notices. For other actions:
 
 ```python
 from mlia.utils.boundaries.filesystem import write_user_output_text
