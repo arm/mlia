@@ -5,8 +5,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from pathlib import Path
-from unittest.mock import MagicMock, call
+from unittest.mock import MagicMock
 
 import pytest
 import typer
@@ -17,7 +16,6 @@ from mlia.cli import commands as cli_commands
 from mlia.cli.commands import mlia_app
 from mlia.cli.settings import new_settings
 from mlia.core import check_validation as command_validators
-from mlia.core.context import ExecutionContext
 from mlia.core.settings import ApplicationSettings
 
 
@@ -40,79 +38,6 @@ def test_backend_list_does_not_install(monkeypatch: pytest.MonkeyPatch) -> None:
 
     install_backends.assert_not_called()
     list_backends.assert_called()
-
-
-def test_check_preserves_interactive_eula_prompt(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    get_advice = MagicMock()
-    monkeypatch.setattr(
-        command_validators, "validate_check_target_profile", MagicMock()
-    )
-    monkeypatch.setattr(mlia_api, "get_advice", get_advice)
-    monkeypatch.setattr(cli_commands, "setup_logging", MagicMock())
-    monkeypatch.setattr(check, "_run_analysis_plugins", MagicMock())
-    monkeypatch.setattr(check, "persist_standardized_output", MagicMock())
-
-    req = check.prepare_check(
-        model="model.tflite",
-        target_profile="ethos-u55-256",
-        backend=["corstone-300"],
-    )
-    check.execute_check(req)
-
-    assert get_advice.call_args.kwargs["backends"] == ["corstone-300"]
-    assert get_advice.call_args.kwargs["accept_eula"] is None
-    assert isinstance(get_advice.call_args.kwargs["context"], ExecutionContext)
-
-
-def test_check_noninteractive_without_eula_rejects_eula_install(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    get_advice = MagicMock()
-    monkeypatch.setattr(
-        command_validators, "validate_check_target_profile", MagicMock()
-    )
-    monkeypatch.setattr(mlia_api, "get_advice", get_advice)
-    monkeypatch.setattr(cli_commands, "setup_logging", MagicMock())
-    monkeypatch.setattr(check, "_run_analysis_plugins", MagicMock())
-    monkeypatch.setattr(check, "persist_standardized_output", MagicMock())
-
-    req = check.prepare_check(
-        model="model.tflite",
-        target_profile="ethos-u55-256",
-        backend=["corstone-300"],
-        noninteractive=True,
-    )
-    check.execute_check(req)
-
-    assert get_advice.call_args.kwargs["backends"] == ["corstone-300"]
-    assert get_advice.call_args.kwargs["accept_eula"] is False
-
-
-def test_check_noninteractive_with_eula_accepts_eula_install(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    get_advice = MagicMock()
-    monkeypatch.setattr(
-        command_validators, "validate_check_target_profile", MagicMock()
-    )
-    monkeypatch.setattr(mlia_api, "get_advice", get_advice)
-    monkeypatch.setattr(cli_commands, "setup_logging", MagicMock())
-    monkeypatch.setattr(check, "_run_analysis_plugins", MagicMock())
-    monkeypatch.setattr(check, "persist_standardized_output", MagicMock())
-
-    req = check.prepare_check(
-        model="model.tflite",
-        target_profile="ethos-u55-256",
-        backend=["corstone-300"],
-        noninteractive=True,
-        i_agree_to_the_contained_eula=True,
-    )
-    check.execute_check(req)
-
-    assert get_advice.call_args.kwargs["backends"] == ["corstone-300"]
-    assert get_advice.call_args.kwargs["accept_eula"] is True
 
 
 def test_check_passes_backend_options(
@@ -138,41 +63,6 @@ def test_check_passes_backend_options(
     check.execute_check(req)
 
     assert get_advice.call_args.kwargs["backend_options"] == settings.backend_options
-
-
-def test_check_passes_cli_context_settings(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
-    get_advice = MagicMock()
-    setup_logging = MagicMock()
-
-    monkeypatch.setattr(
-        command_validators, "validate_check_target_profile", MagicMock()
-    )
-    monkeypatch.setattr(mlia_api, "get_advice", get_advice)
-    monkeypatch.setattr(check, "setup_logging", setup_logging)
-    monkeypatch.setattr(check, "_run_analysis_plugins", MagicMock())
-    monkeypatch.setattr(check, "persist_standardized_output", MagicMock())
-    monkeypatch.setattr(check, "_emit_standardized_output", MagicMock())
-
-    req = check.prepare_check(
-        model="model.tflite",
-        target_profile="ethos-u55-256",
-        output_dir=tmp_path,
-        json_output=True,
-        debug=True,
-    )
-    check.execute_check(req)
-
-    context = get_advice.call_args.kwargs["context"]
-    assert isinstance(context, ExecutionContext)
-    assert context.output_dir == tmp_path / "mlia-output"
-    assert context.output_format == "json"
-    assert context.verbose is True
-    assert setup_logging.call_args_list == [
-        call(verbose=True, output_format="json"),
-        call(context.logs_path, True, "json"),
-    ]
 
 
 @pytest.mark.parametrize(

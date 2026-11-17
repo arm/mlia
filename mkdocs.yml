@@ -62,6 +62,7 @@ nav:
       - CLI: cli.md
       - Python API: api.md
       - Backends: backends.md
+      - Backend runtimes: isolated_runtimes.md
       - Outputs: metrics.md
   - Learning Paths: learning-paths.md
   - Architecture:

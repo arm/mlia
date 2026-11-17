@@ -24,6 +24,7 @@ from mlia.backend.registry import (
     registry,
 )
 from mlia.core.errors import ConfigurationError, InternalError
+from mlia.runtime.catalog import catalog_snapshot
 from mlia.utils.misc import yes
 
 backend_registry = registry
@@ -80,7 +81,14 @@ class InstallationManager(ABC):
     """Helper class for managing installations."""
 
     @abstractmethod
-    def install_from(self, backend_path: Path, backend_name: str, force: bool) -> None:
+    def install_from(
+        self,
+        backend_path: Path,
+        backend_name: str,
+        force: bool,
+        *,
+        eula_agreement: bool = True,
+    ) -> None:
         """Install backend from the local directory."""
 
     @abstractmethod
@@ -364,10 +372,20 @@ class DefaultInstallationManager(InstallationManager, InstallationFiltersMixin):
         return None
 
     def install_from(
-        self, backend_path: Path, backend_name: str, force: bool = False
+        self,
+        backend_path: Path,
+        backend_name: str,
+        force: bool = False,
+        *,
+        eula_agreement: bool = True,
     ) -> None:
         """Install from the provided directory."""
-        self._install([backend_name], [InstallFromPath(backend_path)], force)
+        self._install(
+            [backend_name],
+            [InstallFromPath(backend_path)],
+            force,
+            eula_agreement=eula_agreement,
+        )
 
     def download_and_install(
         self,
@@ -482,16 +500,30 @@ def get_installation_manager(noninteractive: bool = False) -> InstallationManage
     return DefaultInstallationManager(backends, noninteractive=noninteractive)
 
 
+@catalog_snapshot()
 def get_available_backends() -> list[str]:
     """Return list of the available backends."""
     ensure_backend_plugins_loaded()
     manager = get_installation_manager()
-    available_backends = [
-        backend
-        for backend in get_selectable_backends()
-        if backend_registry.items[backend].type == BackendType.BUILTIN
-        or manager.backend_installed(backend)
-    ]
+    from mlia.runtime.catalog import default_backend_runtime
+    from mlia.runtime.manager import RuntimeManager
+
+    available_backends = []
+    runtimes = RuntimeManager()
+    for backend in get_selectable_backends():
+        config = backend_registry.items[backend]
+        if config.runtime_operation:
+            try:
+                definition = default_backend_runtime(backend, config.runtime_operation)
+            except ConfigurationError:
+                continue  # An absent provider catalog is not an installed backend.
+            available = runtimes.ready(definition)
+        else:
+            available = config.type == BackendType.BUILTIN or manager.backend_installed(
+                backend
+            )
+        if available:
+            available_backends.append(backend)
     return available_backends
 
 
@@ -515,7 +547,11 @@ def ensure_backends_installed(
     if not backend_names:
         return
 
+    from mlia.runtime.catalog import RuntimeDefinition, default_backend_runtime
+    from mlia.runtime.session import provision_runtimes
+
     ensure_backend_plugins_loaded()
+    runtimes: dict[str, RuntimeDefinition] = {}
 
     def collect_missing_backend_names(names: list[str]) -> tuple[list[str], list[str]]:
         """Return missing backend names split into non-EULA and EULA groups."""
@@ -524,6 +560,7 @@ def ensure_backends_installed(
         visited: set[str] = set()
 
         def visit(backend_name: str) -> None:
+            backend_name = backend_name.casefold()
             if backend_name in visited:
                 return
             visited.add(backend_name)
@@ -531,6 +568,12 @@ def ensure_backends_installed(
             cfg = backend_registry.items.get(backend_name)
             if cfg is None:
                 raise ConfigurationError(f"Backend '{backend_name}' is not registered.")
+            if cfg.runtime_operation:
+                definition = default_backend_runtime(
+                    backend_name, cfg.runtime_operation
+                )
+                runtimes[definition.identity] = definition
+                return
             if cfg.type == BackendType.BUILTIN:
                 return
             if cfg.installation is None:
@@ -559,6 +602,11 @@ def ensure_backends_installed(
         raise ConfigurationError(
             "EULA acceptance required for one or more backends. "
             "Pass accept_eula=True to proceed."
+        )
+
+    if runtimes:
+        provision_runtimes(
+            list(runtimes.values()), accept_eula=accept_eula, prompt=prompt
         )
 
     if missing_eula and accept_eula is None:

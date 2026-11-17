@@ -20,7 +20,7 @@ import zipfile
 from collections.abc import Iterator
 from contextlib import contextmanager
 from contextvars import ContextVar
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
@@ -145,6 +145,7 @@ class ExecutionProfile:
 class _CatalogSnapshot:
     definitions: dict[str, RuntimeDefinition] | None = None
     profiles: list[tuple[Path, dict[str, Any]]] | None = None
+    profile_contents: dict[Path, bytes] = field(default_factory=dict)
 
 
 _SNAPSHOT: ContextVar[_CatalogSnapshot | None] = ContextVar(
@@ -275,11 +276,22 @@ def validate_operations(operations: Any) -> None:
             raise ValueError("An operation result schema is required")
 
 
+def _profile_content(path: Path) -> bytes:
+    """Keep profile discovery and binding on the same file contents for one check."""
+    snapshot = _SNAPSHOT.get()
+    if snapshot is None:
+        return path.read_bytes()
+    path = path.resolve()
+    if path not in snapshot.profile_contents:
+        snapshot.profile_contents[path] = path.read_bytes()
+    return snapshot.profile_contents[path]
+
+
 def _read_profile(path: Path, content: bytes | None = None) -> dict[str, Any]:
     """Read and validate profile structure before resolving any runtime bindings."""
     try:
         data = tomllib.loads(
-            (path.read_bytes() if content is None else content).decode("utf-8")
+            (_profile_content(path) if content is None else content).decode("utf-8")
         )
         if (
             type(data["schema_version"]) is not int
@@ -313,6 +325,11 @@ def _validate_stage(name: str, stage: Any) -> None:
     for key in ("operation", "runtime"):
         if not isinstance(stage.get(key), str) or not stage[key]:
             raise ValueError(f"Stage {name} requires {key}")
+    if "inputs" in stage and (
+        not isinstance(stage["inputs"], list)
+        or any(not isinstance(item, str) or not item for item in stage["inputs"])
+    ):
+        raise ValueError(f"Stage {name} inputs must be a list of nonempty strings")
     options = stage.get("options", {})
     if not isinstance(options, dict):
         raise ValueError(f"Stage {name} options must be a table")
@@ -451,9 +468,12 @@ def load_catalog() -> dict[str, RuntimeDefinition]:
 
 
 def load_profile(
-    path: str | Path, catalog: dict[str, RuntimeDefinition] | None = None
+    path: str | Path,
+    catalog: dict[str, RuntimeDefinition] | None = None,
+    *,
+    model: str | Path | None = None,
 ) -> ExecutionProfile:
-    """Resolve a file or qualified profile name against available definitions."""
+    """Resolve profile bindings, selecting stages applicable to the model input."""
     candidate = Path(path).expanduser()
     if not candidate.is_file():
         matches = [file for file, data in catalog_profiles() if data["id"] == str(path)]
@@ -464,17 +484,22 @@ def load_profile(
         candidate = matches[0]
     definitions = load_catalog() if catalog is None else catalog
     try:
-        content = candidate.read_bytes()
+        content = _profile_content(candidate)
         data = _read_profile(candidate, content)
         stages = {}
         operations = set()
+        suffix = Path(model).suffix.lower().lstrip(".") if model is not None else None
         for name, stage in data["stages"].items():
+            if stage.get("inputs") and suffix not in stage["inputs"]:
+                continue
             operation, definition = _resolve_stage(name, stage, definitions, data["id"])
             stage["runtime"] = definition.name
             if operation in operations:
                 raise ValueError(f"Ambiguous repeated operation: {operation}")
             operations.add(operation)
             stages[name] = (operation, definition)
+        if not stages:
+            raise ValueError("No execution stages match the supplied input")
     except (OSError, ValueError, KeyError, TypeError) as exc:
         raise ConfigurationError(
             f"Invalid execution profile {candidate}: {exc}"

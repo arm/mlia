@@ -78,6 +78,8 @@ class CheckRequest:
     settings: CheckSettings = field(default_factory=CheckSettings)
     plugin_args: dict[str, object] = field(default_factory=dict)
     companion_model: Path | None = None
+    execution_profile: str | Path | None = None
+    show_plan: bool = False
 
     @property
     def categories(self) -> tuple[str, ...]:
@@ -144,6 +146,8 @@ def prepare_check(
     settings: ApplicationSettings | None = None,
     plugin_args: Mapping[str, object] | None = None,
     companion_model: Path | None = None,
+    execution_profile: str | Path | None = None,
+    show_plan: bool = False,
 ) -> CheckRequest:
     """Capture inputs without starting a check or touching its output.
 
@@ -165,6 +169,8 @@ def prepare_check(
         settings=_copy_settings(resolved),
         plugin_args=dict(plugin_args or {}),
         companion_model=companion_model,
+        execution_profile=execution_profile,
+        show_plan=show_plan,
     )
 
 
@@ -175,6 +181,7 @@ def _run_analysis_plugins(
     parameters: dict[str, Any],
     output: dict[str, object] | None,
     settings: ApplicationSettings,
+    prompt: Callable[[str], str] | None = None,
 ) -> None:
     """Run enabled post-analysis plugins after persisting and rendering output."""
     result = AnalysisRunResult(
@@ -183,6 +190,7 @@ def _run_analysis_plugins(
         args=args,
         command_name="check",
         parameters=parameters,
+        prompt=prompt,
     )
     for plugin in registry.enabled_plugins(args):
         logger.debug("Running analysis plugin '%s'", plugin.name)
@@ -207,6 +215,76 @@ def _emit_standardized_output(
             ),
             highlight=False,
         )
+
+
+def _preview_execution(
+    request: CheckRequest,
+    console: Console | None,
+    output_stream: TextIO | None,
+    analysis_plugin_registry: AnalysisPluginRegistry | None,
+) -> CheckResult:
+    """Resolve and report a plan without creating output directories or runtimes."""
+    import json
+
+    from mlia.api import _resolve_backends
+    from mlia.core.common import AdviceCategory
+    from mlia.runtime.session import (
+        select_profile,
+        validate_target_profile,
+    )
+    from mlia.target.registry import profile as target_profile
+
+    assert request.target_profile is not None
+    backends = _resolve_backends(
+        request.target_profile,
+        list(request.backend) if request.backend else None,
+        request.execution_profile,
+        request.model,
+        list(request.profiling_data) if request.profiling_data is not None else None,
+    )
+    profile = select_profile(request.execution_profile, backends, request.model)
+    if profile is None:
+        raise CheckError("No execution profile selected or configured", exit_code=2)
+    validate_target_profile(
+        profile,
+        target_profile(request.target_profile).load_profile(
+            request.target_profile, request.settings.backend_options
+        ),
+        request.model,
+        AdviceCategory.from_string(set(request.categories)),
+    )
+    plan = profile.describe()
+    registry = analysis_plugin_registry
+    if registry is None:
+        registry = AnalysisPluginRegistry()
+        load_analysis_plugins(registry)
+    plugin_plans = {}
+    for plugin in registry.enabled_plugins(request.plugin_args):
+        preview = getattr(plugin, "execution_plan", None)
+        if callable(preview):
+            plugin_plan = preview(
+                request.plugin_args,
+                {
+                    "model": request.model,
+                    "execution_profile": request.execution_profile,
+                },
+            )
+            if plugin_plan is not None:
+                plugin_plans[plugin.name] = plugin_plan
+    if plugin_plans:
+        plan["analysis_plugins"] = plugin_plans
+    plan_report = json.dumps(plan, indent=2)
+    if console is not None:
+        console.print(plan_report, markup=False, highlight=False)
+    elif output_stream is not None:
+        output_stream.write(plan_report + "\n")
+    return CheckResult(
+        None,
+        None,
+        report=plan_report,
+        outcome="skipped",
+        skip_reason="Plan preview",
+    )
 
 
 def execute_check(
@@ -250,6 +328,10 @@ def execute_check(
                     f"{', '.join(request.categories)}."
                 ),
             )
+        if request.show_plan:
+            return _preview_execution(
+                request, console, output_stream, analysis_plugin_registry
+            )
         report = StringIO()
         snapshot = _copy_settings(request.settings)
         selected_console = console or Console(
@@ -271,6 +353,7 @@ def execute_check(
                 "compatibility",
                 "profiling_data",
                 "companion_model",
+                "execution_profile",
                 "json_output",
                 "i_agree_to_the_contained_eula",
                 "noninteractive",
@@ -307,6 +390,8 @@ def execute_check(
         companion_args: dict[str, Any] = {}
         if request.companion_model is not None:
             companion_args["companion_model"] = request.companion_model
+        if request.execution_profile:
+            companion_args["execution_profile"] = request.execution_profile
         output = get_advice(
             request.target_profile,
             request.model,
@@ -339,6 +424,7 @@ def execute_check(
                 parameters,
                 output,
                 settings,
+                prompt,
             )
         except CheckError:
             raise

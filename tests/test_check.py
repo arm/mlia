@@ -387,6 +387,12 @@ def test_check_forwards_installation_policy(
     )
     monkeypatch.setattr(mlia.api, "get_advice", get_advice)
 
+    registry = AnalysisPluginRegistry()
+    plugin = MagicMock()
+    plugin.name = "runtime-consumer"
+    plugin.enabled.return_value = True
+    registry.register(plugin)
+
     execute_check(
         prepare_check(
             model="model.tflite",
@@ -396,7 +402,7 @@ def test_check_forwards_installation_policy(
             noninteractive=noninteractive,
             i_agree_to_the_contained_eula=accept_eula,
         ),
-        analysis_plugin_registry=AnalysisPluginRegistry(),
+        analysis_plugin_registry=registry,
         prompt=prompt,
     )
 
@@ -404,6 +410,11 @@ def test_check_forwards_installation_policy(
     assert get_advice.call_args.kwargs["accept_eula"] is expected_policy
     assert get_advice.call_args.kwargs["prompt"] is prompt
     assert isinstance(get_advice.call_args.kwargs["context"], ExecutionContext)
+
+    post_result = plugin.run.call_args.args[0]
+    assert post_result.prompt is prompt
+    assert post_result.parameters["noninteractive"] is noninteractive
+    assert post_result.parameters["i_agree_to_the_contained_eula"] is accept_eula
 
 
 def test_check_passes_cli_context_settings(

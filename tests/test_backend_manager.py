@@ -1183,3 +1183,26 @@ def test_get_selectable_backends_ignores_installation_state(
 
     assert get_selectable_backends() == ["selectable_backend"]
     get_installation_manager.assert_not_called()
+
+
+@pytest.mark.parametrize("accepted", [False, True])
+def test_local_install_dependencies_require_explicit_consent(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, accepted: bool
+) -> None:
+    """Local sources must not implicitly preaccept dependency EULAs."""
+    dependency = _could_be_downloaded_and_installed_mock_named(
+        name="licensed-dependency", requires_eula=True
+    )
+    installation = _could_be_installed_from_mock(dependencies=[dependency.name])
+    manager = get_installation_manager(True, [installation, dependency], monkeypatch)
+    if accepted:
+        manager.install_from(tmp_path, installation.name, eula_agreement=True)
+        dependency.install.assert_called_once_with(
+            DownloadAndInstall(eula_agreement=True)
+        )
+        installation.install.assert_called_once()
+    else:
+        with pytest.raises(ConfigurationError, match="EULA acceptance required"):
+            manager.install_from(tmp_path, installation.name, eula_agreement=False)
+        dependency.install.assert_not_called()
+        installation.install.assert_not_called()

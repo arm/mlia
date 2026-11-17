@@ -40,6 +40,7 @@ from mlia.core.logging import close_configured_handlers, setup_logging
 from mlia.core.output_persistence import persist_standardized_output
 from mlia.core.output_validation import collect_validation_errors
 from mlia.core.settings import ApplicationSettings
+from mlia.runtime.catalog import catalog_snapshot
 from mlia.target.config import get_builtin_target_profile_path, load_profile
 from mlia.target.registry import (
     get_optimization_profile,
@@ -82,6 +83,8 @@ class ValidationMode(Enum):
 
 if TYPE_CHECKING:
     from torch import nn
+
+    from mlia.runtime.catalog import RuntimeDefinition
 
 
 def _require_torch_module(model: object) -> nn.Module:
@@ -145,6 +148,55 @@ def _validate_analysis_inputs(
                 "or directory."
             )
     return profiling_data_paths
+
+
+def _module_backend_options(
+    target_profile: str,
+    backend_options: dict[str, dict[str, Any]] | None,
+    transform_options: dict[str, Any] | None,
+) -> dict[str, dict[str, Any]]:
+    """Apply live-model quantization policy without mutating caller options."""
+    options = copy.deepcopy(backend_options) if backend_options is not None else {}
+    if (
+        transform_options is not None
+        and transform_options.get("enable_quantization") is False
+    ):
+        backend_name, option_key = _torch_module_backend_config(target_profile)
+        if backend_name:
+            options.setdefault(backend_name, {})[option_key] = False
+    return options
+
+
+def _resolve_backends(
+    target_profile: str,
+    backends: list[str] | None,
+    execution_profile: str | Path | None,
+    model: object,
+    profiling_data: list[Path] | None,
+) -> list[str]:
+    """Resolve explicit choices or format-specific defaults after model export."""
+    from mlia.runtime.session import profile_backends
+
+    backends = profile_backends(
+        execution_profile,
+        backends,
+        target_profile=target_profile,
+        model=model if profiling_data is None else None,
+    )
+    try:
+        selected = (
+            validate_backend(target_profile, backends, profiling_data=True)
+            if profiling_data is not None
+            else validate_backend(target_profile, backends)
+        )
+    except ConfigurationError:
+        raise
+    except ValueError as err:
+        raise ConfigurationError(str(err)) from err
+    except Exception as err:
+        raise UnsupportedConfigurationError(str(err)) from err
+
+    return selected
 
 
 def _validate_module_input(
@@ -261,6 +313,7 @@ def run_advisor(
     context: ExecutionContext | None = None,
     backend_options: dict[str, dict[str, Any]] | None = None,
     validation: ValidationMode | str = ValidationMode.WARN,
+    execution_profile: str | Path | None = None,
 ) -> dict[str, object]:
     """Run MLIA analysis and return standardized JSON-compatible output.
 
@@ -298,6 +351,8 @@ def run_advisor(
             directory, output format, and event handlers are still owned by
             run_advisor().
         backend_options: Optional per-backend configuration overrides.
+        execution_profile: Named runtime profile or TOML file. Missing selected
+            runtimes are installed into isolated environments before execution.
         validation: Additional JSON Schema validation mode. Core always performs
             required basic and entity-graph validation before delivering output.
             Use ValidationMode.STRICT to raise for additional schema issues,
@@ -338,36 +393,10 @@ def run_advisor(
 
     output_base = _resolve_output_base_dir(write_output_files, output_dir)
 
-    try:
-        selected_backends = (
-            validate_backend(target_profile, backends, profiling_data=True)
-            if profiling_data_path is not None
-            else validate_backend(target_profile, backends)
-        )
-    except ConfigurationError:
-        raise
-    except ValueError as err:
-        raise ConfigurationError(str(err)) from err
-    except Exception as err:
-        raise UnsupportedConfigurationError(str(err)) from err
-
-    backend_options_local = (
-        copy.deepcopy(backend_options) if backend_options is not None else {}
+    _validate_backend_options(backend_options or {})
+    backend_options_local = _module_backend_options(
+        target_profile, backend_options, transform_options
     )
-    _validate_backend_options(backend_options_local)
-    if (
-        module_input is not None
-        and transform_options is not None
-        and (
-            "enable_quantization" in transform_options
-            and not transform_options["enable_quantization"]
-        )
-    ):
-        backend_name, option_key = _torch_module_backend_config(target_profile)
-        if backend_name:
-            backend_options_local.setdefault(backend_name, {})[option_key] = False
-    _validate_deprecated_backends(selected_backends, advice_category_enum)
-
     inputs = _RunAdvisorInputs(
         advice_set=advice_set,
         advice_category_enum=advice_category_enum,
@@ -379,11 +408,12 @@ def run_advisor(
         logs_dir=logs_dir,
         verbose=verbose,
         target_profile=target_profile,
-        selected_backends=selected_backends,
+        backends=backends,
         backend_options=backend_options_local,
         validation=validation_mode,
         accept_eula=accept_eula,
         settings=settings,
+        execution_profile=execution_profile,
     )
 
     with _configured_api_logging(inputs.logs_dir, inputs.verbose):
@@ -435,12 +465,13 @@ class _RunAdvisorInputs:
     logs_dir: str | Path | None
     verbose: bool
     target_profile: str
-    selected_backends: list[str]
+    backends: list[str] | None
     backend_options: dict[str, dict[str, Any]]
     validation: ValidationMode
     accept_eula: bool
     settings: ApplicationSettings
     companion_model: Path | None = None
+    execution_profile: str | Path | None = None
 
 
 def _create_api_execution_context(
@@ -463,6 +494,7 @@ def _create_api_execution_context(
     )
 
 
+@catalog_snapshot()
 def _run_advisor_with_context(
     local_context: ExecutionContext,
     inputs: _RunAdvisorInputs,
@@ -474,6 +506,15 @@ def _run_advisor_with_context(
         local_context.output_dir,
     )
 
+    selected_backends = _resolve_backends(
+        inputs.target_profile,
+        inputs.backends,
+        inputs.execution_profile,
+        model_for_run,
+        inputs.profiling_data,
+    )
+    _validate_deprecated_backends(selected_backends, inputs.advice_category_enum)
+
     with _capture_external_output():
         output = get_advice(
             target_profile=inputs.target_profile,
@@ -482,18 +523,17 @@ def _run_advisor_with_context(
             profiling_data=inputs.profiling_data,
             companion_model=inputs.companion_model,
             context=local_context,
-            backends=inputs.selected_backends,
+            backends=selected_backends,
             backend_options=inputs.backend_options,
             accept_eula=inputs.accept_eula,
             settings=inputs.settings,
+            execution_profile=inputs.execution_profile,
         )
     if output is None:
-        _raise_if_deprecated_output_missing(
-            inputs.selected_backends, inputs.target_profile
-        )
+        _raise_if_deprecated_output_missing(selected_backends, inputs.target_profile)
         raise InternalError(
             "Standardized output is missing for target-profile "
-            f"'{inputs.target_profile}' with backends {inputs.selected_backends}."
+            f"'{inputs.target_profile}' with backends {selected_backends}."
         )
     if inputs.module_input is not None:
         _override_model_name_for_module(output, inputs.module_input)
@@ -504,7 +544,7 @@ def _run_advisor_with_context(
             logger.debug(
                 "Schema validation failed for target-profile '%s' with backends %s: %s",
                 inputs.target_profile,
-                inputs.selected_backends,
+                selected_backends,
                 "; ".join(errors),
                 exc_info=True,
             )
@@ -512,7 +552,7 @@ def _run_advisor_with_context(
                 "Schema validation failed for target-profile '%s' with backends %s: "
                 "%d issue(s).",
                 inputs.target_profile,
-                inputs.selected_backends,
+                selected_backends,
                 len(errors),
             )
             error_counts: dict[str, int] = {}
@@ -524,7 +564,7 @@ def _run_advisor_with_context(
                 summary = (
                     "Schema validation failed for target-profile "
                     f"'{inputs.target_profile}' with backends "
-                    f"{inputs.selected_backends}: {len(errors)} issue(s)."
+                    f"{selected_backends}: {len(errors)} issue(s)."
                 )
                 raise InternalError(summary) from None
     return output
@@ -642,6 +682,7 @@ def _raise_if_deprecated_output_missing(
     )
 
 
+@catalog_snapshot()
 def list_targets() -> list[dict[str, object]]:
     """List targets, profiles, backends and mode-specific capabilities.
 
@@ -743,32 +784,86 @@ def install_backends(
 
     Args:
         names: Backend names to install.
-        path: Optional local backend path. When set, exactly one backend name is
-            required.
+        path: Optional local backend package.
+            When set, exactly one backend name or qualified runtime ID is required.
         accept_eula: Whether to accept contained EULAs.
         noninteractive: Whether to run installer prompts non-interactively.
         force: Whether to reinstall when the backend is already installed.
     """
-    manager = get_installation_manager(noninteractive)
+    from mlia.runtime.session import provision_runtimes
+
+    if path is not None and len(names) != 1:
+        raise ConfigurationError("Exactly one backend name is required with --path.")
+    consent = accept_eula if accept_eula or noninteractive else None
     if path is not None:
-        if len(names) != 1:
-            raise ValueError("Exactly one backend name is required.")
-        manager.install_from(path, names[0], force)
+        _install_backend_from_path(
+            names[0],
+            path,
+            accept_eula=consent,
+            noninteractive=noninteractive,
+            force=force,
+        )
         return
 
-    manager.download_and_install(names, accept_eula, force)
+    runtimes, legacy = _selected_installation_runtimes(names)
+    if runtimes:
+        provision_runtimes(
+            runtimes,
+            accept_eula=consent,
+            force=force,
+        )
+    if legacy:
+        get_installation_manager(noninteractive).download_and_install(
+            legacy, accept_eula, force
+        )
+
+
+def _install_backend_from_path(
+    name: str,
+    path: Path,
+    *,
+    accept_eula: bool | None,
+    noninteractive: bool,
+    force: bool,
+) -> None:
+    """Choose the registered backend's installer for an explicit local package."""
+    from mlia.backend.registry import ensure_backend_plugins_loaded
+    from mlia.runtime.catalog import default_backend_runtime
+    from mlia.runtime.local_install import install_local_runtime
+
+    ensure_backend_plugins_loaded()
+    config = backend_registry.items.get(name.casefold())
+    operation = config.runtime_operation if config is not None else None
+    if "@" in name or operation:
+        runtime_id = name
+        if "@" not in name and operation:
+            runtime_id = default_backend_runtime(name.casefold(), operation).name
+        install_local_runtime(
+            path,
+            runtime_id=runtime_id,
+            operation=operation,
+            accept_eula=accept_eula,
+            force=force,
+        )
+        return
+    manager = get_installation_manager(noninteractive)
+    manager.install_from(path, name, force, eula_agreement=bool(accept_eula))
 
 
 def uninstall_backends(names: list[str]) -> None:
-    """Uninstall backend packages.
+    """Uninstall selected runtime-backed and legacy backend packages."""
+    runtimes, legacy = _selected_installation_runtimes(names)
+    if runtimes:
+        from mlia.runtime.manager import RuntimeManager
 
-    Args:
-        names: Backend names to uninstall.
-    """
-    manager = get_installation_manager(noninteractive=True)
-    manager.uninstall(names)
+        runtime_manager = RuntimeManager()
+        for definition in runtimes:
+            runtime_manager.remove(definition)
+    if legacy:
+        get_installation_manager(noninteractive=True).uninstall(legacy)
 
 
+@catalog_snapshot()
 def list_backends() -> list[BackendInfo]:
     """List available backends with install status.
 
@@ -782,7 +877,18 @@ def list_backends() -> list[BackendInfo]:
         if not config.selectable or not config.supported_advice:
             continue
 
-        if config.type == BackendType.BUILTIN:
+        if config.runtime_operation:
+            from mlia.runtime.catalog import default_backend_runtime
+            from mlia.runtime.manager import RuntimeManager
+
+            try:
+                definition = default_backend_runtime(backend, config.runtime_operation)
+            except ConfigurationError:
+                installed, could_be_installed = False, False
+            else:
+                installed = RuntimeManager().ready(definition)
+                could_be_installed = RuntimeManager.supports(definition)
+        elif config.type == BackendType.BUILTIN:
             installed = True
             could_be_installed = True
         elif config.installation:
@@ -886,6 +992,7 @@ def supported_backends(target_profile: str | Path) -> list[str]:
     return target_supported_backends(target_for_profile(target_profile))
 
 
+@catalog_snapshot()
 def get_advice(
     target_profile: str,
     model: str | Path | nn.Module | None,
@@ -900,6 +1007,9 @@ def get_advice(
     settings: ApplicationSettings | None = None,
     prompt: Callable[[str], str] | None = None,
     companion_model: str | Path | None = None,
+    execution_profile: str | Path | None = None,
+    example_inputs: tuple | None = None,
+    enable_quantization: bool = True,
 ) -> dict[str, object] | None:
     """Get the advice.
 
@@ -930,6 +1040,8 @@ def get_advice(
     :param accept_eula: Controls EULA acceptance for auto-installed backends.
            False (default) fails with ConfigurationError if EULA acceptance is required.
            True accepts EULAs non-interactively. None enables interactive CLI behavior.
+    :param example_inputs: Positional export inputs for a live torch.nn.Module.
+    :param enable_quantization: Enable quantization during live-model export.
     :param settings: Resolved MLIA application settings. Defaults are used when
            omitted.
     :param prompt: Optional frontend prompt for missing backend EULA acceptance.
@@ -958,39 +1070,61 @@ def get_advice(
     if context is None:
         context = ExecutionContext(advice_category=advice_category)
 
-    try:
-        validated_backends = (
-            validate_backend(target_profile, backends, profiling_data=True)
-            if profiling_data_path is not None
-            else validate_backend(target_profile, backends)
+    if model is not None and not isinstance(model, (str, Path)):
+        module, options = _validate_module_input(
+            model, example_inputs, enable_quantization, target_profile
         )
-    except ConfigurationError:
-        raise
-    except ValueError as err:
-        raise ConfigurationError(str(err)) from err
-    except Exception as err:
-        raise UnsupportedConfigurationError(str(err)) from err
+        model = _resolve_model_for_run(model, module, options, context.output_dir)
+        backend_options = _module_backend_options(
+            target_profile, backend_options, options
+        )
 
-    ensure_backends_installed(
-        validated_backends, accept_eula=accept_eula, prompt=prompt
+    from mlia.runtime.session import validate_target_profile
+
+    validated_backends = _resolve_backends(
+        target_profile, backends, execution_profile, model, profiling_data_path
     )
 
-    advisor = get_advisor(
-        context,
-        target_profile,
-        model,
-        optimization_targets=optimization_targets,
-        optimization_profile=optimization_profile,
-        backends=validated_backends,
-        profiling_data=profiling_data_path,
-        **(
-            {"companion_model": companion_model_path}
-            if companion_model_path is not None
-            else {}
-        ),
-        backend_options=backend_options,
-    )
-    return advisor.run(context, settings or ApplicationSettings())
+    from mlia.runtime.session import execution_session, select_profile
+
+    execution = select_profile(execution_profile, validated_backends, model)
+    if execution is not None:
+        validate_target_profile(
+            execution,
+            profile(target_profile).load_profile(target_profile, backend_options),
+            model,
+            advice_category,
+        )
+    with execution_session(
+        execution, context.output_dir, accept_eula=accept_eula, prompt=prompt
+    ):
+        # The profile provisions its selected runtimes; hybrid paths may also
+        # contain backends that still use their own installer.
+        to_install = [
+            name
+            for name in validated_backends
+            if execution is None
+            or (config := backend_registry.items.get(name)) is None
+            or not config.runtime_operation
+        ]
+        ensure_backends_installed(to_install, accept_eula=accept_eula, prompt=prompt)
+
+        advisor = get_advisor(
+            context,
+            target_profile,
+            model,
+            optimization_targets=optimization_targets,
+            optimization_profile=optimization_profile,
+            backends=validated_backends,
+            profiling_data=profiling_data_path,
+            **(
+                {"companion_model": companion_model_path}
+                if companion_model_path is not None
+                else {}
+            ),
+            backend_options=backend_options,
+        )
+        return advisor.run(context, settings or ApplicationSettings())
 
 
 def get_advisor(
@@ -1014,3 +1148,48 @@ def get_advisor(
         model,
         **extra_args,
     )
+
+
+def list_runtimes() -> list[dict[str, Any]]:
+    """List supplied runtime identities, operations and installation status."""
+    from mlia.runtime.catalog import load_catalog
+    from mlia.runtime.manager import RuntimeManager
+
+    manager = RuntimeManager()
+    return [
+        {
+            "id": item.name,
+            "identity": item.identity,
+            "installed": manager.ready(item),
+            "operations": sorted(item.data["operations"]),
+        }
+        for item in load_catalog().values()
+    ]
+
+
+@catalog_snapshot()
+def _selected_installation_runtimes(
+    names: list[str],
+) -> tuple[list[RuntimeDefinition], list[str]]:
+    """Resolve qualified runtime IDs and migrated backend aliases consistently."""
+    from mlia.backend.registry import ensure_backend_plugins_loaded
+    from mlia.runtime.catalog import default_backend_runtime, load_catalog
+
+    ensure_backend_plugins_loaded()
+    definitions = []
+    legacy = []
+    for name in names:
+        if "@" in name:
+            catalog = load_catalog()
+            if name not in catalog:
+                raise ConfigurationError(f"Unknown runtime: {name}")
+            definitions.append(catalog[name])
+        else:
+            config = backend_registry.items.get(name.casefold())
+            if config is not None and config.runtime_operation:
+                definitions.append(
+                    default_backend_runtime(name.casefold(), config.runtime_operation)
+                )
+            else:
+                legacy.append(name)
+    return list({d.identity: d for d in definitions}.values()), legacy

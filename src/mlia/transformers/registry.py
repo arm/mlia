@@ -58,6 +58,10 @@ class TransformRequest:
 
 def transform_model(req: TransformRequest) -> Path:
     """Transform a model to the requested format when needed."""
+    # Runtime dispatch depends on this registry; import here to avoid a cycle.
+    from mlia.runtime.session import current_session
+    from mlia.runtime.transformer import select_runtime_transformer
+
     if isinstance(req.model, Path):
         try:
             if _get_model_format(req.model) == req.target_format:
@@ -65,12 +69,19 @@ def transform_model(req: TransformRequest) -> Path:
         except ValueError as err:
             raise ConfigurationError(str(err)) from err
 
-    transformer = _get_transformer(
-        transformer_registry,
-        req.model,
-        req.target_format,
-        req.transform_options,
-    )
+    session = current_session()
+    transformer: Transformer
+    if session is not None:
+        transformer = select_runtime_transformer(
+            session.profile, req.model, req.target_format, req.transform_options
+        )
+    else:
+        transformer = _get_transformer(
+            transformer_registry,
+            req.model,
+            req.target_format,
+            req.transform_options,
+        )
     return transformer(req.model, req.output_dir, **(req.transform_options))
 
 

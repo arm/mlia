@@ -51,6 +51,31 @@ def _strip_ansi(value: str) -> str:
     return ANSI_ESCAPE_RE.sub("", value)
 
 
+def test_plan_preview_reports_invalid_target_without_traceback(tmp_path: Path) -> None:
+    """An invalid target is a usage error, including with an explicit backend."""
+    model = tmp_path / "model.tflite"
+    model.write_bytes(b"model")
+    result = CliRunner().invoke(
+        cli_commands.mlia_app,
+        [
+            "check",
+            str(model),
+            "-t",
+            "missing-target",
+            "--backend",
+            "missing-backend",
+            "--show-plan",
+            "--output-dir",
+            str(tmp_path / "output"),
+        ],
+    )
+    assert result.exit_code != 0
+    assert "Error:" in result.output
+    assert "missing-target" in result.output
+    assert "Traceback" not in result.output
+    assert not (tmp_path / "output").exists()
+
+
 def _backend_option_spec() -> BackendOptionSpec:
     """Return backend option metadata for CLI parser tests."""
     return {
@@ -1159,10 +1184,10 @@ def test_tui_broken_dependency_is_not_reported_as_missing_package(
     assert "pip install mlia-tui" not in result.output
 
 
-def test_ordinary_check_preserves_configuration_error(
+def test_ordinary_check_reports_configuration_error(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """Normal advisor errors keep their existing exception and presentation."""
+    """Configuration errors produce an actionable CLI message without a traceback."""
     error = ConfigurationError("Invalid analysis configuration")
     monkeypatch.setattr(mlia_api, "get_advice", MagicMock(side_effect=error))
 
@@ -1172,8 +1197,8 @@ def test_ordinary_check_preserves_configuration_error(
     )
 
     assert result.exit_code == 1
-    assert result.exception is error
-    assert "Error: Invalid analysis configuration" not in result.stderr
+    assert isinstance(result.exception, SystemExit)
+    assert result.stderr == "Error: Invalid analysis configuration\n"
 
 
 def test_post_analysis_failure_preserves_output(

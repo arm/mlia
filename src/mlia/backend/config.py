@@ -82,6 +82,7 @@ class BackendConfiguration:
         supports_estimation: bool = True,
         supports_profiling_data: bool = False,
         default_collapse_rules: tuple[CollapseRule, ...] = (),
+        runtime_operation: str | None = None,
     ) -> None:
         """Set up basic information about the backend."""
         self.supported_advice = supported_advice
@@ -95,6 +96,7 @@ class BackendConfiguration:
         self.supports_estimation = supports_estimation
         self.supports_profiling_data = supports_profiling_data
         self.default_collapse_rules = default_collapse_rules
+        self.runtime_operation = runtime_operation
 
     def __str__(self) -> str:
         """List supported advice."""
@@ -114,6 +116,7 @@ class BackendConfiguration:
                 and self.supports_estimation == other.supports_estimation
                 and self.supports_profiling_data == other.supports_profiling_data
                 and self.default_collapse_rules == other.default_collapse_rules
+                and self.runtime_operation == other.runtime_operation
             )
         raise NotImplementedError
 

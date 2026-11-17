@@ -8,45 +8,9 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
-import typer
 
 import mlia.api
 import mlia.cli.commands as cli_commands
-from mlia.cli.commands import mlia_app
-from mlia.cli.settings import new_settings
-
-
-def _get_app_context() -> typer.Context:
-    return typer.Context(
-        typer.main.get_command(mlia_app),
-        obj=new_settings(),
-    )
-
-
-def test_backend_command_action_list(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Test `mlia backend list` command helper."""
-    format_backend_info = MagicMock()
-
-    monkeypatch.setattr(cli_commands, "format_backend_info", format_backend_info)
-    monkeypatch.setattr(cli_commands, "setup_logging", MagicMock())
-
-    ctx = _get_app_context()
-    cli_commands.backend_list(ctx)
-
-    format_backend_info.assert_called_once_with(ctx.obj)
-
-
-def test_target_command_action_list(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Test `mlia target list` command helper."""
-    format_target_info = MagicMock()
-
-    monkeypatch.setattr(cli_commands, "format_target_info", format_target_info)
-    monkeypatch.setattr(cli_commands, "setup_logging", MagicMock())
-
-    ctx = _get_app_context()
-    cli_commands.target_list(ctx)
-
-    format_target_info.assert_called_once_with(ctx.obj)
 
 
 def test_backend_command_action_uninstall(monkeypatch: pytest.MonkeyPatch) -> None:

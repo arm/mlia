@@ -9,7 +9,7 @@ invoked after a successful analysis run with MLIA's canonical structured output.
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Protocol
@@ -29,6 +29,7 @@ class AnalysisRunResult:
     command_name: str
     parameters: dict[str, Any] = field(default_factory=dict)
     settings: Mapping[str, Any] = field(default_factory=dict)
+    prompt: Callable[[str], str] | None = None
 
     @property
     def output_dir(self) -> Path:
@@ -37,7 +38,12 @@ class AnalysisRunResult:
 
 
 class AnalysisPlugin(Protocol):
-    """Protocol implemented by analysis plugin instances."""
+    """Protocol implemented by analysis plugin instances.
+
+    Plugins may additionally expose ``execution_plan(args, parameters)`` returning
+    a JSON-compatible plan or None. Core calls this optional hook during a plan
+    preview only; it must not provision dependencies or execute analysis.
+    """
 
     name: str
 

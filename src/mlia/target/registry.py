@@ -207,9 +207,15 @@ def all_supported_backends() -> set[str]:
 
 def table() -> Table:
     """Get a table representation of registered targets with backends."""
+    from mlia.backend.manager import get_available_backends
+
+    available = set(get_available_backends())
 
     def get_status(backend: str) -> str:
-        if backend_registry.items[backend].type == BackendType.BUILTIN:
+        config = backend_registry.items[backend]
+        if config.runtime_operation:
+            return "INSTALLED" if backend in available else "NOT INSTALLED"
+        if config.type == BackendType.BUILTIN:
             return BackendType.BUILTIN.name
         mgr = get_installation_manager()
         return "INSTALLED" if mgr.backend_installed(backend) else "NOT INSTALLED"

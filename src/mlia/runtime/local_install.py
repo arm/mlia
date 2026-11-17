@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import logging
+import platform
 import shutil
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -23,7 +24,62 @@ from mlia.runtime.catalog import (
     load_catalog_variants,
     local_catalog_directory,
 )
+from mlia.runtime.session import provision_runtimes
 from mlia.utils.logging import log_boundary_action
+
+
+def install_local_runtime(
+    path: Path,
+    *,
+    runtime_id: str | None = None,
+    operation: str | None = None,
+    accept_eula: bool | None = False,
+    force: bool = False,
+) -> None:
+    """Validate a local backend's selection, install it and retain its source files."""
+    definition = load_local_runtime(path)
+    if runtime_id is not None and runtime_id != definition.name:
+        raise ConfigurationError(
+            f"Local runtime {definition.name} does not match {runtime_id}"
+        )
+    if operation is not None and operation not in definition.data["operations"]:
+        raise ConfigurationError(
+            f"Local runtime {definition.name} does not provide {operation}"
+        )
+    _check_catalog_conflicts(definition)
+    provision_runtimes([definition], accept_eula=accept_eula, force=force)
+    try:
+        register_local_runtime(definition)
+    except (ConfigurationError, OSError) as exc:
+        raise ConfigurationError(
+            f"Runtime {definition.name} is installed, but catalog registration failed: "
+            f"{exc}. Fix the catalog problem and repeat installation from the same "
+            "local package without --force to reuse the installed environment."
+        ) from exc
+    logging.getLogger(__name__).info(
+        "Installed runtime %s; execution profiles select its runtime ID.",
+        definition.name,
+    )
+
+
+def _check_catalog_conflicts(definition: RuntimeDefinition) -> None:
+    """Reject definitions that would share an installed environment on this host."""
+    architecture = definition.data.get("architecture")
+    architectures = (
+        {None, platform.machine()}
+        if architecture in {None, platform.machine()}
+        else {architecture}
+    )
+    for (name, arch), existing in load_catalog_variants().items():
+        if (
+            name == definition.name
+            and arch in architectures
+            and existing.identity != definition.identity
+        ):
+            raise ConfigurationError(
+                f"Conflicting runtime definition: {definition.name}; "
+                "use a distinct runtime ID"
+            )
 
 
 def load_local_runtime(path: Path) -> RuntimeDefinition:
@@ -68,13 +124,7 @@ def register_local_runtime(definition: RuntimeDefinition) -> None:
     catalog.parent.mkdir(parents=True, exist_ok=True)
     with (catalog.parent / ".catalog.lock").open("a") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
-        existing = load_catalog_variants().get(
-            (definition.name, definition.data.get("architecture"))
-        )
-        if existing is not None and existing.identity != definition.identity:
-            raise ConfigurationError(
-                f"Conflicting runtime definition: {definition.name}"
-            )
+        _check_catalog_conflicts(definition)
         destination = catalog / definition.identity
         if destination.exists():
             stored = RuntimeDefinition.load(destination / "definition.runtime.json")

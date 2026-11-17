@@ -89,3 +89,5 @@ primary selectable analysis backend.
 For backend-specific installation, accepted profiling-data formats, metrics,
 troubleshooting, and CLI examples, use the plugin repository that owns the
 backend.
+
+See [Isolated backend runtimes](isolated_runtimes.md) for choosing backend versions and managing their installations.

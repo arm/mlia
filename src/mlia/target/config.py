@@ -9,7 +9,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Callable, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Callable, TypeVar, cast
 
 from mlia.backend.registry import registry as backend_registry
 from mlia.core.advisor import InferenceAdvisor
@@ -19,6 +19,9 @@ from mlia.utils.filesystem import (
     get_mlia_target_optimization_dir,
     get_mlia_target_profiles_dir,
 )
+
+if TYPE_CHECKING:
+    from mlia.runtime.catalog import ExecutionProfile
 
 if sys.version_info >= (3, 11):
     import tomllib  # pragma: no cover
@@ -130,6 +133,7 @@ class TargetProfile(ABC):
         cls: type[T], profile_data: dict, override_backend_options: dict | None = None
     ) -> T:
         """Load a target profile from a dictionary and backend override options."""
+        profile_data = dict(profile_data)
         # Support both old 'target' field and new 'target_type' field
         # Map target_type to target for backward compatibility with existing code
         if "target_type" in profile_data and "target" not in profile_data:
@@ -171,6 +175,10 @@ class TargetProfile(ABC):
         """Save this target profile to a file."""
         raise NotImplementedError("Saving target profiles is currently not supported.")
 
+    def default_runtime_backends(self, model: Path) -> list[str] | None:
+        """Optionally specialize backend defaults for a serialized input format."""
+        return None
+
     @abstractmethod
     def verify(self) -> None:
         """
@@ -195,6 +203,14 @@ class TargetInfo:
     torch_module_quantization_option: str = "enable_quantization"
 
     default_backend_resolver: Callable[[], list[str]] | None = None
+
+    runtime_validator: (
+        Callable[
+            [ExecutionProfile, str | Path | None, set[AdviceCategory], TargetProfile],
+            None,
+        ]
+        | None
+    ) = None
 
     def resolve_default_backends(self) -> list[str]:
         """Resolve environment-dependent defaults only for a consuming operation."""

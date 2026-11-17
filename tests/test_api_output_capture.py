@@ -20,6 +20,10 @@ _OUTPUT: dict[str, object] = {"schema_version": "1.0.0", "results": []}
 
 def _patch_common_api_dependencies(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr("mlia.api.validate_backend", lambda _tp, _b: [])
+    monkeypatch.setattr(
+        "mlia.runtime.session.profile_backends",
+        lambda _profile, backends, **_kwargs: backends,
+    )
 
 
 def test_run_advisor_captures_subprocess_stdio(

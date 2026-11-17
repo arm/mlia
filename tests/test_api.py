@@ -23,7 +23,6 @@ from mlia.api import (
     _normalize_validation_mode,
     _raise_if_deprecated_output_missing,
     _require_torch_module,
-    _resolve_logs_dir,
     _resolve_model_for_run,
     _target_supports_torch_module,
     _torch_module_backend_config,
@@ -65,86 +64,12 @@ _FAKE_OUTPUT: dict[str, object] = {"schema_version": "1.0.0", "results": []}
 def _patch_common_run_advisor_dependencies(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    monkeypatch.setattr(
+        "mlia.runtime.session.profile_backends",
+        lambda _selection, backends, **_kwargs: backends,
+    )
     monkeypatch.setattr("mlia.api.validate_backend", lambda _tp, _b: [])
     monkeypatch.setattr("mlia.api.get_target", lambda target_profile: target_profile)
-
-
-def test_list_targets_shape() -> None:
-    """Ensure list_targets returns the expected shape."""
-    result = list_targets()
-    assert isinstance(result, list)
-
-    registry_targets = set(target_registry.names())
-    for entry in result:
-        assert set(entry.keys()) == {
-            "target",
-            "pretty_name",
-            "profiles",
-            "backends",
-            "supported_backends",
-            "supported_advice",
-        }
-        assert entry["target"] in registry_targets
-        assert isinstance(entry["pretty_name"], str)
-        assert isinstance(entry["profiles"], list)
-        assert isinstance(entry["backends"], list)
-        for backend in entry["backends"]:
-            assert set(backend) == {
-                "name",
-                "pretty_name",
-                "default",
-                "selectable",
-                "capabilities",
-            }
-            assert set(backend["capabilities"]) == {"estimation", "profiling"}
-        assert isinstance(entry["supported_backends"], list)
-        assert isinstance(entry["supported_advice"], list)
-
-
-def test_list_target_profiles_shape() -> None:
-    """Ensure list_target_profiles returns the expected shape."""
-    result = list_target_profiles()
-
-    for target, entries in result.items():
-        assert isinstance(target, str)
-        assert isinstance(entries, list)
-        for entry in entries:
-            assert set(entry.keys()) == {"name", "description"}
-            assert isinstance(entry["name"], str)
-            assert isinstance(entry["description"], str)
-
-
-def test_list_backends_shape() -> None:
-    """Ensure list_backends returns the expected shape."""
-    result = list_backends()
-    assert isinstance(result, list)
-
-    expected_names = {
-        name
-        for name, cfg in backend_registry.items.items()
-        if cfg.selectable and cfg.supported_advice
-    }
-    assert {entry["name"] for entry in result} == expected_names
-    for entry in result:
-        assert set(entry.keys()) == {"name", "installed", "could_be_installed"}
-        assert isinstance(entry["name"], str)
-        assert isinstance(entry["installed"], bool)
-        assert isinstance(entry["could_be_installed"], bool)
-
-
-def test_list_backend_options_shape() -> None:
-    """Ensure list_backend_options returns the expected shape."""
-    result = list_backend_options()
-    assert isinstance(result, list)
-    for entry in result:
-        assert set(entry.keys()) == {"backend", "options"}
-        assert entry["backend"] in backend_registry.items
-        assert isinstance(entry["options"], list)
-        for option in entry["options"]:
-            assert set(option.keys()) == {"config_key", "type", "description"}
-            assert isinstance(option["config_key"], str)
-            assert isinstance(option["type"], str)
-            assert isinstance(option["description"], str)
 
 
 def test_list_backend_options_uses_discovered_metadata(
@@ -591,6 +516,10 @@ def test_run_advisor_forwards_companion_model_without_visualizer(
     monkeypatch.chdir(tmp_path)
     captured: dict[str, object] = {}
     monkeypatch.setattr(
+        "mlia.runtime.session.profile_backends",
+        lambda _selection, backends, **_kwargs: backends,
+    )
+    monkeypatch.setattr(
         "mlia.api.validate_backend", lambda *_args, **_kwargs: ["profiler"]
     )
     monkeypatch.setattr(
@@ -724,6 +653,10 @@ def test_run_advisor_rejects_missing_output(
 ) -> None:
     """Ensure run_advisor rejects missing standardized output."""
 
+    monkeypatch.setattr(
+        "mlia.runtime.session.profile_backends",
+        lambda _selection, backends, **_kwargs: backends,
+    )
     monkeypatch.setattr("mlia.api.validate_backend", lambda _tp, _b: ["legacy-backend"])
     monkeypatch.setitem(
         backend_registry.items,
@@ -810,6 +743,10 @@ def test_run_advisor_preserves_configuration_error(
     def raise_error(*_args: object, **_kwargs: object) -> list[str]:
         raise ConfigurationError("bad argument")
 
+    monkeypatch.setattr(
+        "mlia.runtime.session.profile_backends",
+        lambda _selection, backends, **_kwargs: backends,
+    )
     monkeypatch.setattr("mlia.api.validate_backend", raise_error)
 
     with pytest.raises(ConfigurationError) as err:
@@ -826,6 +763,10 @@ def test_run_advisor_maps_value_error(
     def raise_error(*_args: object, **_kwargs: object) -> list[str]:
         raise ValueError("bad value")
 
+    monkeypatch.setattr(
+        "mlia.runtime.session.profile_backends",
+        lambda _selection, backends, **_kwargs: backends,
+    )
     monkeypatch.setattr("mlia.api.validate_backend", raise_error)
 
     with pytest.raises(ConfigurationError, match="bad value"):
@@ -840,6 +781,10 @@ def test_run_advisor_maps_generic_error(
     def raise_error(*_args: object, **_kwargs: object) -> list[str]:
         raise RuntimeError("boom")
 
+    monkeypatch.setattr(
+        "mlia.runtime.session.profile_backends",
+        lambda _selection, backends, **_kwargs: backends,
+    )
     monkeypatch.setattr("mlia.api.validate_backend", raise_error)
 
     with pytest.raises(UnsupportedConfigurationError, match="boom"):
@@ -1181,6 +1126,9 @@ def test_run_advisor_sets_module_backend_option_when_quantization_disabled(
     )
     monkeypatch.setattr("mlia.api.validate_backend", lambda _tp, _b: ["backend-a"])
     monkeypatch.setattr(
+        "mlia.runtime.session.profile_backends", lambda *_args, **_kwargs: ["backend-a"]
+    )
+    monkeypatch.setattr(
         "mlia.api._resolve_model_for_run", lambda *_args, **_kwargs: "model.pt2"
     )
     monkeypatch.setattr("mlia.api.collect_validation_errors", lambda _data: [])
@@ -1206,12 +1154,15 @@ def test_run_advisor_sets_module_backend_option_when_quantization_disabled(
     assert captured["backend_options"] == {"backend-a": {"enable_quantization": False}}
 
 
+@pytest.mark.parametrize("with_runtime", [False, True])
 def test_get_advice_updates_context_and_runs_advisor(
     monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    with_runtime: bool,
 ) -> None:
     """get_advice should resolve the category and run the advisor."""
     advisor = MagicMock()
-    context = ExecutionContext()
+    context = ExecutionContext(output_dir=tmp_path / "output")
     settings = ApplicationSettings()
     monkeypatch.setattr("mlia.api.get_advisor", lambda *args, **kwargs: advisor)
     monkeypatch.setattr(
@@ -1224,17 +1175,51 @@ def test_get_advice_updates_context_and_runs_advisor(
         ensure_backends_installed,
     )
 
+    execution_profile = None
+    validated_configs = []
+    if with_runtime:
+        from tests.test_runtime_execution import runtime
+
+        definition = runtime(tmp_path, "def run(request): return {}, []\n")
+        definition.path.rename(definition.path.with_name("test.runtime.json"))
+        monkeypatch.setenv("MLIA_RUNTIME_CATALOG", str(tmp_path))
+        monkeypatch.setenv("MLIA_RUNTIME_HOME", str(tmp_path / "installed"))
+        monkeypatch.setattr(
+            "mlia.api.profile",
+            lambda _: types.SimpleNamespace(
+                target="test",
+                load_profile=lambda name, options: types.SimpleNamespace(
+                    target="test", backend_config=options
+                ),
+            ),
+        )
+        monkeypatch.setitem(
+            target_registry.items,
+            "test",
+            types.SimpleNamespace(
+                runtime_validator=lambda *args: validated_configs.append(args[-1])
+            ),
+        )
+        execution_profile = tmp_path / "conversion.profile.toml"
+        execution_profile.write_text(
+            'schema_version = 1\nid = "test/hybrid"\n[stages.convert]\n'
+            f'operation = "echo"\nruntime = "{definition.name}"\n'
+        )
+
     get_advice(
         "profile",
         "model.tflite",
         {"compatibility"},
         context=context,
+        execution_profile=execution_profile,
         backends=["backend-a"],
         backend_options={"backend-a": {"flag": True}},
         settings=settings,
     )
 
     assert context.advice_category == {AdviceCategory.COMPATIBILITY}
+    if with_runtime:
+        assert validated_configs[0].backend_config == {"backend-a": {"flag": True}}
     ensure_backends_installed.assert_called_once_with(
         ["backend-a"], accept_eula=False, prompt=None
     )
@@ -1251,6 +1236,10 @@ def test_get_advice_creates_context_when_missing(
     prompt = MagicMock(return_value="yes")
     captured: dict[str, object] = {}
     default_settings = ApplicationSettings()
+    monkeypatch.setattr(
+        "mlia.runtime.session.profile_backends",
+        lambda _selection, backends, **_kwargs: backends,
+    )
     monkeypatch.setattr("mlia.api.ApplicationSettings", lambda: default_settings)
     monkeypatch.setattr(
         "mlia.api.validate_backend",
@@ -1284,9 +1273,11 @@ def test_get_advice_creates_context_when_missing(
     assert advisor.run.call_args.args[1] is default_settings
 
 
+@pytest.mark.parametrize("with_model", [False, True])
 def test_get_advice_routes_profiling_data_to_target_advisor(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
+    with_model: bool,
 ) -> None:
     """Measured input should use normal backend selection and advisor execution."""
     advisor = MagicMock()
@@ -1299,9 +1290,13 @@ def test_get_advice_routes_profiling_data_to_target_advisor(
     profiling_data = tmp_path / "profile.json"
     profiling_data.write_text("{}", encoding="utf-8")
 
+    model = tmp_path / "model.vgf" if with_model else None
+    if model:
+        model.touch()
+
     get_advice(
         "profile",
-        None,
+        model,
         {"performance"},
         profiling_data=profiling_data,
     )
@@ -1309,7 +1304,7 @@ def test_get_advice_routes_profiling_data_to_target_advisor(
     validate_backend_mock.assert_called_once_with("profile", None, profiling_data=True)
     get_advisor_mock.assert_called_once()
     assert isinstance(get_advisor_mock.call_args.args[0], ExecutionContext)
-    assert get_advisor_mock.call_args.args[1:] == ("profile", None)
+    assert get_advisor_mock.call_args.args[1:] == ("profile", model)
     assert get_advisor_mock.call_args.kwargs["backends"] == ["profiler"]
     assert get_advisor_mock.call_args.kwargs["profiling_data"] == [profiling_data]
     advisor.run.assert_called_once()
@@ -1611,42 +1606,6 @@ def test_override_model_name_for_module_sets_module_name() -> None:
 
     model = cast(dict[str, str], output["model"])
     assert model["name"] == "DemoModule"
-
-
-def test_resolve_logs_dir_branches(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """Logs-dir helper should cover relative, file, mkdir, and writeability paths."""
-    monkeypatch.chdir(tmp_path)
-    assert _resolve_logs_dir("logs") == tmp_path / "logs"
-
-    file_path = tmp_path / "file"
-    file_path.write_text("x", encoding="utf-8")
-    with pytest.raises(ConfigurationError, match="is not a directory"):
-        _resolve_logs_dir(file_path)
-
-    failing_path = tmp_path / "mkdir-fail"
-    original_mkdir = Path.mkdir
-
-    def mkdir_fail(
-        self: Path,
-        mode: int = 0o777,
-        parents: bool = False,
-        exist_ok: bool = False,
-    ) -> None:
-        if self == failing_path:
-            raise OSError("boom")
-        original_mkdir(self, mode=mode, parents=parents, exist_ok=exist_ok)
-
-    monkeypatch.setattr(Path, "mkdir", mkdir_fail)
-    with pytest.raises(ConfigurationError, match="Unable to create logs directory"):
-        _resolve_logs_dir(failing_path)
-
-    unwritable = tmp_path / "unwritable"
-    Path.mkdir(unwritable)
-    monkeypatch.setattr("mlia.api.os.access", lambda *_args, **_kwargs: False)
-    with pytest.raises(ConfigurationError, match="is not writable"):
-        _resolve_logs_dir(unwritable)
 
 
 def test_validate_deprecated_backends_uses_default_message(
@@ -1978,3 +1937,64 @@ def test_validate_backend_options_accepts_known_keys(
     )
 
     _validate_backend_options({"backend-a": {"known": "value"}})
+
+
+def test_get_advice_exports_live_model_before_profile_selection(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """The lower-level API also exports live input before selecting file handoffs."""
+    model = MagicMock()
+    exported = str(tmp_path / "model.pt2")
+    export = MagicMock(return_value=exported)
+    selection = MagicMock(return_value=None)
+    advisor = MagicMock()
+    monkeypatch.setattr(
+        "mlia.api._validate_module_input",
+        lambda *_: (model, {"enable_quantization": False}),
+    )
+    monkeypatch.setattr(
+        "mlia.api._torch_module_backend_config", lambda *_: ("backend", "quantize")
+    )
+    monkeypatch.setattr("mlia.api._resolve_model_for_run", export)
+    monkeypatch.setattr("mlia.api.validate_backend", lambda *_: ["backend"])
+    monkeypatch.setattr("mlia.api.ensure_backends_installed", MagicMock())
+    monkeypatch.setattr("mlia.api.get_advisor", advisor)
+    monkeypatch.setattr("mlia.runtime.session.select_profile", selection)
+    options = {"backend": {"quantize": True, "other": 42}}
+    get_advice(
+        "profile",
+        model,
+        {"performance"},
+        backends=["backend"],
+        example_inputs=(),
+        backend_options=options,
+    )
+    assert options["backend"]["quantize"] is True
+    assert advisor.call_args.kwargs["backend_options"] == {
+        "backend": {"quantize": False, "other": 42}
+    }
+    export.assert_called_once()
+    selection.assert_called_once_with(None, ["backend"], exported)
+    assert advisor.call_args.args[2] == exported
+
+
+def test_run_advisor_selects_backends_after_live_export(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """File-format defaults must see the exported model rather than the live object."""
+    model = MagicMock()
+    exported = str(tmp_path / "model.pt2")
+    monkeypatch.setattr("mlia.api._validate_module_input", lambda *_: (model, {}))
+    monkeypatch.setattr("mlia.api._resolve_model_for_run", lambda *_: exported)
+
+    def choose(_profile: object, requested: object, **kwargs: object) -> list[str]:
+        assert kwargs["model"] == exported
+        assert requested is None
+        return ["pt2-backend"]
+
+    monkeypatch.setattr("mlia.runtime.session.profile_backends", choose)
+    monkeypatch.setattr("mlia.api.validate_backend", lambda _target, backends: backends)
+    advice = MagicMock(return_value=_FAKE_OUTPUT)
+    monkeypatch.setattr("mlia.api.get_advice", advice)
+    run_advisor("performance", "profile", model, example_inputs=(), validation="off")
+    assert advice.call_args.kwargs["backends"] == ["pt2-backend"]

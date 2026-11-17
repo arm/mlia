@@ -171,8 +171,6 @@ class CheckOptionCommand(typer.core.TyperCommand):
                     analysis_plugin_registry=analysis_plugin_registry,
                 )
         except ConfigurationError as err:
-            if not ctx.params["tui"] and not isinstance(err, CheckError):
-                raise
             exit_code = err.exit_code if isinstance(err, CheckError) else 1
             prefix = "" if not ctx.params["tui"] and exit_code == 2 else "Error: "
             typer.echo(f"{prefix}{err}", err=True)
@@ -574,6 +572,19 @@ def check_command(
             is_eager=True,  # Resolve the launch mode before validating the target.
         ),
     ] = False,
+    execution_profile: Annotated[
+        str | None,
+        typer.Option(
+            "--execution-profile", help="Named runtime execution profile or TOML file"
+        ),
+    ] = None,
+    show_plan: Annotated[
+        bool,
+        typer.Option(
+            "--show-plan",
+            help="Preview runtime selections without installing or running them",
+        ),
+    ] = False,
     debug: bool = debug_option(),
 ) -> CheckRequest:
     """Prepare the check request from resolved Typer values."""
@@ -585,6 +596,8 @@ def check_command(
 
     return prepare_check(
         model=model,
+        execution_profile=execution_profile,
+        show_plan=show_plan,
         target_profile=target_profile,
         output_dir=output_dir,
         backend=backend,
@@ -634,13 +647,17 @@ def backend_install(
     from mlia.api import install_backends
 
     _setup_command_logging(debug)
-    install_backends(
-        names=names,
-        path=path,
-        accept_eula=accept_eula,
-        noninteractive=noninteractive,
-        force=force,
-    )
+    try:
+        install_backends(
+            names=names,
+            path=path,
+            accept_eula=accept_eula,
+            noninteractive=noninteractive,
+            force=force,
+        )
+    except ConfigurationError as err:
+        typer.echo(f"Error: {err}", err=True)
+        raise typer.Exit(code=1) from err
 
 
 @backend_app.command("uninstall")
@@ -656,17 +673,36 @@ def backend_uninstall(
     from mlia.api import uninstall_backends
 
     _setup_command_logging(debug)
-    uninstall_backends(names)
+    try:
+        uninstall_backends(names)
+    except ConfigurationError as err:
+        typer.echo(f"Error: {err}", err=True)
+        raise typer.Exit(code=1) from err
 
 
 @backend_app.command("list")
 def backend_list(
     ctx: typer.Context,
+    runtimes: Annotated[
+        bool,
+        typer.Option("--runtimes", help="List supplied isolated runtime definitions"),
+    ] = False,
     debug: bool = debug_option(),
 ) -> None:
     """List available backend plugins and backend installation status."""
     _setup_command_logging(debug)
-    format_backend_info(ctx.obj)
+    if runtimes:
+        import json
+
+        from mlia.api import list_runtimes
+
+        try:
+            typer.echo(json.dumps(list_runtimes(), indent=2))
+        except ConfigurationError as err:
+            typer.echo(f"Error: {err}", err=True)
+            raise typer.Exit(code=1) from err
+    else:
+        format_backend_info(ctx.obj)
 
 
 @target_app.command("list")

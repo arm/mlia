@@ -26,10 +26,12 @@ import pytest
             ["backend", "list", "--help"],
             ["target", "list", "--help"],
             ["target", "list"],
+            ["backend", "list", "--runtimes"],
         ]
     ]
     + [
         ("api", ["list_target_profiles"]),
+        ("api", ["list_runtimes"]),
         ("import", ["mlia.api"]),
         ("import", ["mlia.backend", "mlia.target", "mlia.transformers"]),
     ],

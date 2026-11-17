@@ -65,6 +65,17 @@ def test_target_profile_load_data_merges_config_and_overrides() -> None:
     }
 
 
+def test_repeated_profile_load_preserves_cached_config(tmp_path: Path) -> None:
+    """Loading a profile with overrides must not change subsequent loads."""
+    path = tmp_path / "target.toml"
+    path.write_text('[config]\ntarget = "dummy"\n[backend.vela]\ncount = 1\n')
+    first = _DummyTargetProfile.load(path, {"vela": {"count": 2}})
+    second = _DummyTargetProfile.load(path)
+    assert first.target == second.target == "dummy"
+    assert first.backend_config == {"vela": {"count": 2}}
+    assert second.backend_config == {"vela": {"count": 1}}
+
+
 def test_create_target_profile_uses_load_data(monkeypatch: pytest.MonkeyPatch) -> None:
     """Registry profile creation should use the canonical load_data path."""
     create_target_profile.cache_clear()
