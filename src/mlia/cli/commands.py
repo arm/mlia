@@ -104,15 +104,21 @@ class CheckOptionCommand(typer.core.TyperCommand):
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         """Initialize the command with backend and analysis-plugin options."""
-        self._backend_option_specs = discover_backend_option_specs()
-        self._analysis_plugin_registry = _load_analysis_plugin_registry()
-        self._analysis_plugin_options = self._analysis_plugin_registry.cli_options()
+        self._dynamic_options_loaded = False
+        super().__init__(*args, **kwargs)
 
-        params = list(kwargs["params"])
-        params.extend(spec["click_option"] for spec in self._backend_option_specs)
-        params.extend(self._analysis_plugin_options)
-        command_kwargs = {**kwargs, "params": params}
-        super().__init__(*args, **command_kwargs)
+    def get_params(self, ctx: click.Context) -> list[click.Parameter]:
+        """Discover dynamic options only when parsing or displaying this command."""
+        if not self._dynamic_options_loaded:
+            self._backend_option_specs = discover_backend_option_specs()
+            self._analysis_plugin_registry = _load_analysis_plugin_registry()
+            self._analysis_plugin_options = self._analysis_plugin_registry.cli_options()
+            self.params.extend(
+                spec["click_option"] for spec in self._backend_option_specs
+            )
+            self.params.extend(self._analysis_plugin_options)
+            self._dynamic_options_loaded = True
+        return super().get_params(ctx)
 
     def prepare_request(self, ctx: click.Context) -> CheckRequest:
         """Collect dynamic options and run the shared Typer preparation callback."""

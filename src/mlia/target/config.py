@@ -194,6 +194,14 @@ class TargetInfo:
     torch_module_backend: str | None = None
     torch_module_quantization_option: str = "enable_quantization"
 
+    default_backend_resolver: Callable[[], list[str]] | None = None
+
+    def resolve_default_backends(self) -> list[str]:
+        """Resolve environment-dependent defaults only for a consuming operation."""
+        if self.default_backend_resolver is not None:
+            return self.default_backend_resolver()
+        return self.default_backends
+
     def __str__(self) -> str:
         """List supported backends."""
         return ", ".join(sorted(self.supported_backends))

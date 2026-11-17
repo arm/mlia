@@ -10,7 +10,6 @@ from dataclasses import dataclass
 from functools import lru_cache
 
 from mlia.backend.registry import registry as backend_registry
-from mlia.plugins.plugins import load_backend_plugins, load_target_plugins
 from mlia.target.registry import profiles_by_target
 from mlia.target.registry import registry as target_registry
 
@@ -38,23 +37,18 @@ def normalize_constant_name(value: str) -> str:
 @lru_cache
 def backend_entries() -> tuple[ConstantEntry, ...]:
     """Return exported backend constants for the installed plugin set."""
-    load_backend_plugins(backend_registry)
     return _build_entries(sorted(backend_registry.items))
 
 
 @lru_cache
 def target_entries() -> tuple[ConstantEntry, ...]:
     """Return exported target constants for the installed plugin set."""
-    load_backend_plugins(backend_registry)
-    load_target_plugins(target_registry)
     return _build_entries(sorted(target_registry.items))
 
 
 @lru_cache
 def target_profile_entries() -> tuple[ConstantEntry, ...]:
     """Return exported target profile constants for the installed plugin set."""
-    load_backend_plugins(backend_registry)
-    load_target_plugins(target_registry)
     profile_names = sorted(
         profile_name
         for profile_names in profiles_by_target().values()

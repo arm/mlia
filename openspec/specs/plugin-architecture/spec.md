@@ -82,21 +82,16 @@ reported through logging instead of aborting the host process.
   plugins in that entry point group
 
 ### Requirement: Initialize plugin-backed surfaces consistently
-MLIA SHALL connect the plugin loader to package initialization and public APIs
-so supported plugin-backed surfaces are populated before callers use them.
-Backend and target package initialization SHALL load the plugins for those
-surfaces, and target-facing flows that depend on backend registrations SHALL
-load backend plugins before target plugins.
+MLIA SHALL initialize plugins on demand through registry queries and public APIs.
+Importing backend and target packages SHALL NOT execute plugin entry points.
+Target-facing flows that depend on backend registrations SHALL load backend
+plugins before target plugins. Callers that previously relied on package-import
+side effects MUST use registry queries or the explicit plugin loader instead.
 
-#### Scenario: Importing the backend package loads backend plugins
-- **WHEN** callers import the `mlia.backend` package
-- **THEN** MLIA SHALL load backend plugins into the backend registry during
-  package initialization
-
-#### Scenario: Importing the target package loads backend plugins before target plugins
-- **WHEN** callers import the `mlia.target` package
-- **THEN** MLIA SHALL load backend plugins before target plugins during package
-  initialization
+#### Scenario: Package imports defer plugin loading
+- **WHEN** callers import `mlia.backend` or `mlia.target`
+- **THEN** MLIA SHALL leave plugin entry points unloaded until a consuming API
+  requires registrations
 
 #### Scenario: Backend registry access loads backend plugins once
 - **WHEN** callers query supported backends through the backend registry module

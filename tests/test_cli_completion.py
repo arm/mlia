@@ -55,10 +55,10 @@ def test_target_profile_names_skip_missing_namespace_resources(
     assert completion.target_profile_names() == ()
 
 
-def test_root_completion_lists_static_commands_with_backend_option_discovery(
+def test_root_completion_lists_static_commands_without_plugin_discovery(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Root completion should build the full plugin-provided command tree."""
+    """Root completion needs only the static core command names."""
     discover_backend_option_specs = MagicMock(return_value=[])
     monkeypatch.setattr(
         cli_commands, "discover_backend_option_specs", discover_backend_option_specs
@@ -78,7 +78,7 @@ def test_root_completion_lists_static_commands_with_backend_option_discovery(
 
     assert result.exit_code == 0
     assert result.stdout.splitlines() == ["check", "backend", "target"]
-    discover_backend_option_specs.assert_called_once_with()
+    discover_backend_option_specs.assert_not_called()
 
 
 def test_check_option_completion_includes_plugin_provided_options(

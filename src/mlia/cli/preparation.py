@@ -22,6 +22,13 @@ def _enter_context(
     parent: click.Context | None = None,
 ) -> click.Context:
     """Own the context before parsing so failed callbacks release resources."""
+    ctx = stack.enter_context(
+        command.context_class(
+            command, info_name=name, parent=parent, **command.context_settings
+        )
+    )
+    # Materialize deferred plugin options before disabling their prompts.
+    command.get_params(ctx)
     params = []
     for param in command.params:
         if isinstance(param, click.Option) and param.prompt is not None:
@@ -29,11 +36,7 @@ def _enter_context(
             param.prompt = None
         params.append(param)
     command.params = params
-    return stack.enter_context(
-        command.context_class(
-            command, info_name=name, parent=parent, **command.context_settings
-        )
-    )
+    return ctx
 
 
 @contextmanager

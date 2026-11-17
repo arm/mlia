@@ -664,6 +664,7 @@ def list_targets() -> list[dict[str, object]]:
             str(advice.name).lower() for advice in advice_order if advice in supported
         ]
         target_info = target_registry.items[target]
+        target_defaults = target_info.resolve_default_backends()
         supported_backend_names = sorted(target_supported_backends(target))
         backends = []
         for backend_name in supported_backend_names:
@@ -680,7 +681,7 @@ def list_targets() -> list[dict[str, object]]:
                 {
                     "name": backend_name,
                     "pretty_name": backend_registry.pretty_name(backend_name),
-                    "default": backend_name in target_info.default_backends,
+                    "default": backend_name in target_defaults,
                     "selectable": config.selectable,
                     "capabilities": capabilities,
                 }

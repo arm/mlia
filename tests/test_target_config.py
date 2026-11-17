@@ -68,7 +68,6 @@ def test_target_profile_load_data_merges_config_and_overrides() -> None:
 def test_create_target_profile_uses_load_data(monkeypatch: pytest.MonkeyPatch) -> None:
     """Registry profile creation should use the canonical load_data path."""
     create_target_profile.cache_clear()
-    monkeypatch.setattr("mlia.target.registry._ensure_plugins_loaded", lambda: None)
     monkeypatch.setattr(
         "mlia.target.registry.load_profile",
         lambda _path: {"target": "dummy"},

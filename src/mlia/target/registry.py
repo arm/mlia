@@ -13,7 +13,7 @@ from mlia.backend.manager import get_installation_manager
 from mlia.backend.registry import registry as backend_registry
 from mlia.core.common import AdviceCategory
 from mlia.core.reporting import Column, Table
-from mlia.plugins.plugins import load_backend_plugins, load_target_plugins
+from mlia.plugins.plugins import load_target_plugins
 from mlia.target.config import (
     TargetInfo,
     TargetProfile,
@@ -42,41 +42,34 @@ class TargetRegistry(Registry[TargetInfo]):
 
 
 # All supported targets are required to be registered here.
-registry = TargetRegistry()
-
-_plugins_loaded = False
-
-
-def _ensure_plugins_loaded() -> None:
-    """Load backend/target plugins once before registry access."""
-    global _plugins_loaded  # pylint: disable=global-statement
-    if _plugins_loaded:
-        return
-    load_backend_plugins(backend_registry)
+def _load_plugins() -> None:
+    backend_registry.ensure_loaded()
     load_target_plugins(registry)
-    _plugins_loaded = True
+
+
+registry = TargetRegistry(loader=_load_plugins)
 
 
 def builtin_profile_names() -> list[str]:
     """Return a list of built-in profile names (not file paths)."""
-    _ensure_plugins_loaded()
     return get_builtin_supported_profile_names()
 
 
 def builtin_optimization_names() -> list[str]:
     """Return a list of built-in profile names (not file paths)."""
-    _ensure_plugins_loaded()
     return get_builtin_supported_optimization_names()
 
 
 def profiles_by_target() -> dict[str, list[str]]:
     """Return profiles grouped by target name."""
-    _ensure_plugins_loaded()
     target_profiles: dict[str, list[str]] = {}
 
     for profile_name in get_builtin_supported_profile_names():
         try:
-            target_name = get_target(profile_name)
+            data = load_profile(get_builtin_target_profile_path(profile_name))
+            target_name = data.get("target_type") or data.get("target")
+            if not isinstance(target_name, str) or not target_name:
+                continue
             if target_name not in target_profiles:
                 target_profiles[target_name] = []
             target_profiles[target_name].append(profile_name)
@@ -94,7 +87,6 @@ def profiles_by_target() -> dict[str, list[str]]:
 @lru_cache
 def profile(target_profile: str | Path) -> TargetProfile:
     """Get the target profile data (built-in or custom file)."""
-    _ensure_plugins_loaded()
     if not target_profile:
         raise ValueError("No valid target profile was provided.")
     if is_builtin_target_profile(target_profile):
@@ -115,7 +107,6 @@ def profile(target_profile: str | Path) -> TargetProfile:
 
 def get_optimization_profile(optimization_profile: str | Path) -> dict:
     """Get the optimization profile data (built-in or custom file)."""
-    _ensure_plugins_loaded()
     if not optimization_profile:
         raise ValueError("No valid optimization profile was provided.")
     if is_builtin_optimization_profile(optimization_profile):
@@ -137,14 +128,12 @@ def get_optimization_profile(optimization_profile: str | Path) -> dict:
 
 def get_target(target_profile: str | Path) -> str:
     """Return target for the provided target_profile."""
-    _ensure_plugins_loaded()
     return profile(target_profile).target
 
 
 @lru_cache
 def create_target_profile(path: Path) -> TargetProfile:
     """Create a new instance of a TargetProfile from the file."""
-    _ensure_plugins_loaded()
     profile_data = load_profile(path)
     # Support both old 'target' field and new 'target_type' field
     target = profile_data.get("target_type") or profile_data.get("target")
@@ -158,7 +147,6 @@ def create_target_profile(path: Path) -> TargetProfile:
 
 def supported_advice(target: str) -> list[AdviceCategory]:
     """Get a list of supported advice for the given target."""
-    _ensure_plugins_loaded()
     advice: set[AdviceCategory] = set()
     for supported_backend in registry.items[target].supported_backends:
         advice.update(backend_registry.items[supported_backend].supported_advice)
@@ -167,19 +155,16 @@ def supported_advice(target: str) -> list[AdviceCategory]:
 
 def supported_backends(target: str) -> list[str]:
     """Get a list of backends supported by the given target."""
-    _ensure_plugins_loaded()
     return registry.items[target].filter_supported_backends(check_system=False)
 
 
 def default_backends(target: str) -> list[str]:
     """Get a list of default backends for the given target."""
-    _ensure_plugins_loaded()
-    return registry.items[target].default_backends
+    return registry.items[target].resolve_default_backends()
 
 
 def get_backend_to_supported_targets() -> dict[str, list]:
     """Get a dict that maps a list of supported targets given backend."""
-    _ensure_plugins_loaded()
     targets = dict(registry.items)
     supported_backends_dict: dict[str, list] = {}
     for target, info in targets.items():
@@ -191,7 +176,6 @@ def get_backend_to_supported_targets() -> dict[str, list]:
 
 def is_supported(backend: str, target: str | None = None) -> bool:
     """Check if the backend (and optionally target) is supported."""
-    _ensure_plugins_loaded()
     backends = get_backend_to_supported_targets()
     if target is None:
         if backend in backends:
@@ -205,7 +189,6 @@ def is_supported(backend: str, target: str | None = None) -> bool:
 
 def supported_targets(advice: AdviceCategory) -> list[str]:
     """Get a list of all targets supporting the given advice category."""
-    _ensure_plugins_loaded()
     return [
         name
         for name, info in registry.items.items()
@@ -215,7 +198,6 @@ def supported_targets(advice: AdviceCategory) -> list[str]:
 
 def all_supported_backends() -> set[str]:
     """Return set of all supported backends by all targets."""
-    _ensure_plugins_loaded()
     return {
         backend
         for item in registry.items.values()
@@ -225,7 +207,6 @@ def all_supported_backends() -> set[str]:
 
 def table() -> Table:
     """Get a table representation of registered targets with backends."""
-    _ensure_plugins_loaded()
 
     def get_status(backend: str) -> str:
         if backend_registry.items[backend].type == BackendType.BUILTIN:

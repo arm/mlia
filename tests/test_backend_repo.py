@@ -31,6 +31,7 @@ def test_get_backend_repository(
     assert config_file.is_file()
     assert json.loads(config_file.read_text()) == {"backends": []}
 
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
     monkeypatch.setenv("VIRTUAL_ENV", "")
     repo = get_backend_repository()
     assert repo.repository == Path.home() / ".mlia"

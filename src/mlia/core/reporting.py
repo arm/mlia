@@ -12,8 +12,6 @@ from enum import Enum
 from textwrap import fill, indent
 from typing import Any, Callable, Collection, Iterable
 
-import numpy as np
-
 from mlia.core.typing import OutputFormat
 from mlia.utils.console import apply_style, produce_table
 from mlia.utils.types import is_list_of
@@ -475,6 +473,9 @@ class CustomJSONEncoder(json.JSONEncoder):
 
     def default(self, o: Any) -> Any:
         """Support custom types."""
+        # Keep CLI help/version startup NumPy-free; import for custom JSON values.
+        import numpy as np
+
         # Convert numpy integer types to Python int
         if isinstance(o, np.integer):
             return int(o)

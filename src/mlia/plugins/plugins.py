@@ -130,6 +130,8 @@ def call_entry_points(
     supported_versions: frozenset[str] = SUPPORTED_PLUGIN_INTERFACE_VERSIONS,
 ) -> None:
     """Call registry-backed entry points of the given group."""
+    if isinstance(registry, Registry) and registry.ensure_loaded():
+        return  # The configured loader already registered this registry's providers.
     for entry_point, module in _load_plugin_modules(group, supported_versions):
         previous_registry_names = set(registry.items)
 

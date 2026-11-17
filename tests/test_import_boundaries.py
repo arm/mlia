@@ -184,7 +184,7 @@ def test_generic_completion_avoids_runtime_state_modules(
         "completion_succeeded": True,
         "expected_candidate_present": True,
         "backend_loaded": True,
-        "plugin_load_count": 1,
+        "plugin_load_count": 0 if comp_words == "mlia " else 1,
         "mlia.api": False,
         "mlia.backend.install": False,
         "mlia.cli.command_validators": False,
@@ -266,7 +266,7 @@ def test_backend_completion_uses_package_plugin_boundary(
     assert result == {
         "completion_succeeded": True,
         "candidates": ["backend-a", "backend-b"],
-        "plugin_load_count": 1,
+        "plugin_load_count": 0 if comp_words == "mlia " else 1,
         "mlia.api": False,
         "mlia.backend.install": False,
         "mlia.backend.manager": False,

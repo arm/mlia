@@ -36,12 +36,14 @@ class Transformer(Protocol):
         ...
 
 
-transformer_registry = Registry[Transformer]()
+transformer_registry: Registry[Transformer] = Registry(
+    loader=lambda: load_transformer_plugins(transformer_registry)
+)
 
 
 def ensure_transformer_plugins_loaded() -> None:
     """Load transformer plugins into the shared transformer registry."""
-    load_transformer_plugins(transformer_registry)
+    transformer_registry.ensure_loaded()
 
 
 @dataclass

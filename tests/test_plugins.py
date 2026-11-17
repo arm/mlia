@@ -573,3 +573,20 @@ def test_plugin_loader_incompatible_core_version(
 
     mock_logging.mock_error.assert_called_once()
     assert "plugin" in mock_logging.mock_error.call_args.args[1]
+
+
+@pytest.mark.parametrize("discover_first", [False, True])
+def test_explicit_loader_does_not_repeat_lazy_registration(
+    single_entrypoint: MockEntrypoints,
+    discover_first: bool,
+) -> None:
+    """Discovery and explicit loading register each provider once, in either order."""
+    lazy_registry: Registry[str] = Registry(
+        loader=lambda: call_entry_points("stub.entrypoint", lazy_registry)
+    )
+    if discover_first:
+        lazy_registry.names()
+    call_entry_points("stub.entrypoint", lazy_registry)
+    lazy_registry.names()
+    call_entry_points("stub.entrypoint", lazy_registry)
+    single_entrypoint.first_plugin.register.assert_called_once_with(lazy_registry)
