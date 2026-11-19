@@ -4,15 +4,18 @@
 
 from __future__ import annotations
 
+import importlib
+import json
 import logging
 from collections.abc import Mapping
 from pathlib import Path
-from typing import Annotated, Any, cast
+from typing import TYPE_CHECKING, Annotated, Any, cast
 
 import click
 import typer
 from rich.panel import Panel
 from rich.table import Table
+from typer.completion import completion_init, show_callback
 
 from mlia import __version__
 from mlia.backend.options import (
@@ -20,14 +23,10 @@ from mlia.backend.options import (
     discover_backend_option_specs,
 )
 from mlia.backend.registry import get_selectable_backends
-from mlia.check import CheckError, CheckRequest, execute_check, prepare_check
 from mlia.cli.completion import target_profile_names
 from mlia.cli.settings import get_environment, new_settings
 from mlia.core.errors import ConfigurationError
 from mlia.core.logging import setup_logging
-from mlia.core.output_rendering import (
-    standardized_output_to_json,
-)
 from mlia.core.settings import ApplicationSettings
 from mlia.plugins.analysis import AnalysisPluginRegistry
 from mlia.plugins.plugins import (
@@ -36,9 +35,18 @@ from mlia.plugins.plugins import (
     load_analysis_plugins,
 )
 from mlia.plugins.registry import list_entry_points
+from mlia.utils.boundaries.filesystem import install_shell_completion_with_notice
 from mlia.utils.console import create_section_header
 
+if TYPE_CHECKING:
+    from mlia.check import CheckRequest
+else:
+    # Typer resolves callback annotations while building completion commands.
+    CheckRequest = Any
+
 logger = logging.getLogger(__name__)
+
+completion_init()
 
 CONFIG = create_section_header("ML Inference Advisor configuration")
 LIST_TABLE_WIDTH = 120
@@ -99,6 +107,11 @@ def _load_analysis_plugin_registry() -> AnalysisPluginRegistry:
     registry = AnalysisPluginRegistry()
     load_analysis_plugins(registry)
     return registry
+
+
+def execute_check(*args: Any, **kwargs: Any) -> Any:
+    """Load check execution only when an analysis actually runs."""
+    return importlib.import_module("mlia.check").execute_check(*args, **kwargs)
 
 
 def _exit_with_help_on_empty_args(ctx: click.Context, args: list[str]) -> None:
@@ -196,17 +209,19 @@ class CheckOptionCommand(typer.core.TyperCommand):
 
     def invoke(self, ctx: click.Context) -> None:
         """Prepare a request and dispatch to the selected frontend."""
+        check_error = importlib.import_module("mlia.check").CheckError
+
         request = self.prepare_request(ctx)
         settings = ctx.ensure_object(ApplicationSettings)
         analysis_plugin_registry = self._analysis_plugin_registry
         try:
             if ctx.params["tui"]:
                 try:
-                    from mlia_tui import launch
+                    launch = importlib.import_module("mlia_tui").launch
                 except ModuleNotFoundError as err:
                     if err.name != "mlia_tui":
                         raise
-                    raise CheckError(
+                    raise check_error(
                         "The optional TUI package is not installed. "
                         "Install it in this environment with 'pip install mlia-tui'."
                     ) from err
@@ -217,7 +232,10 @@ class CheckOptionCommand(typer.core.TyperCommand):
                     typer.echo(result.skip_reason or "Check skipped.", err=True)
                 elif request.json_output and result.output is not None:
                     settings.console.out(
-                        standardized_output_to_json(result.output), highlight=False
+                        importlib.import_module(
+                            "mlia.core.output_rendering"
+                        ).standardized_output_to_json(result.output),
+                        highlight=False,
                     )
             else:
                 execute_check(
@@ -226,7 +244,7 @@ class CheckOptionCommand(typer.core.TyperCommand):
                     analysis_plugin_registry=analysis_plugin_registry,
                 )
         except ConfigurationError as err:
-            exit_code = err.exit_code if isinstance(err, CheckError) else 1
+            exit_code = err.exit_code if isinstance(err, check_error) else 1
             prefix = "" if not ctx.params["tui"] and exit_code == 2 else "Error: "
             typer.echo(f"{prefix}{err}", err=True)
             raise typer.Exit(code=exit_code) from err
@@ -349,14 +367,14 @@ def _print_list_table(settings: ApplicationSettings, title: str, table: Table) -
 
 def format_target_info(settings: ApplicationSettings) -> None:
     """List available target profiles."""
-    from mlia.target.config import get_builtin_target_profile_path, load_profile
-    from mlia.target.registry import profiles_by_target
+    target_config = importlib.import_module("mlia.target.config")
+    target_registry = importlib.import_module("mlia.target.registry")
 
     logger.info(CONFIG)
 
     _log_plugin_table(settings, "Target Plugins", TARGET_PLUGIN_GROUP)
 
-    grouped_profiles = profiles_by_target()
+    grouped_profiles = target_registry.profiles_by_target()
 
     logger.info("Available Target Profiles\n")
 
@@ -368,8 +386,10 @@ def format_target_info(settings: ApplicationSettings) -> None:
 
         for profile_name in profile_names:
             try:
-                profile_path = get_builtin_target_profile_path(profile_name)
-                profile_data = load_profile(profile_path)
+                profile_path = target_config.get_builtin_target_profile_path(
+                    profile_name
+                )
+                profile_data = target_config.load_profile(profile_path)
 
                 description = profile_data.get("description", "")
                 table.add_row(
@@ -385,7 +405,7 @@ def format_target_info(settings: ApplicationSettings) -> None:
 
 def format_backend_info(settings: ApplicationSettings) -> None:
     """List available backend plugins and installation status."""
-    from mlia.api import list_backends
+    api = importlib.import_module("mlia.api")
 
     logger.info(CONFIG)
     _log_plugin_table(settings, "Backend Plugins", BACKEND_PLUGIN_GROUP)
@@ -396,7 +416,7 @@ def format_backend_info(settings: ApplicationSettings) -> None:
             "yes" if backend["installed"] else "no",
             "yes" if backend["could_be_installed"] else "no",
         )
-        for backend in list_backends()
+        for backend in api.list_backends()
     ]
 
     if not rows:
@@ -423,6 +443,7 @@ def format_backend_info(settings: ApplicationSettings) -> None:
 
 mlia_app = typer.Typer(
     cls=RootHelpGroup,
+    add_completion=False,
     no_args_is_help=True,
     epilog=MLIA_HELP_EPILOG,
     context_settings={
@@ -432,6 +453,7 @@ mlia_app = typer.Typer(
 
 backend_app = typer.Typer(
     cls=HelpOnEmptyGroup,
+    add_completion=False,
     no_args_is_help=True,
     context_settings={
         "help_option_names": ["-h", "--help"],
@@ -440,6 +462,7 @@ backend_app = typer.Typer(
 
 target_app = typer.Typer(
     cls=HelpOnEmptyGroup,
+    add_completion=False,
     no_args_is_help=True,
     context_settings={
         "help_option_names": ["-h", "--help"],
@@ -476,9 +499,42 @@ def debug_option() -> Any:
     )
 
 
+def enable_completion_callback(
+    ctx: click.Context, param: click.Parameter, value: Any
+) -> Any:
+    """Delegate completion installation to the logged filesystem gateway."""
+    if value and not ctx.resilient_parsing:
+        _setup_command_logging(debug=False)
+    return install_shell_completion_with_notice(logger, ctx, param, value)
+
+
+def enable_completion_option() -> Any:
+    """Return the option for setting up shell completion."""
+    return typer.Option(
+        None,
+        "--enable-completion",
+        callback=enable_completion_callback,
+        expose_value=False,
+        help="Set up Tab completion for your shell",
+    )
+
+
+def print_completion_script_option() -> Any:
+    """Return the option for printing the shell completion script."""
+    return typer.Option(
+        None,
+        "--print-completion-script",
+        callback=show_callback,
+        expose_value=False,
+        help="Print the shell completion script for manual setup",
+    )
+
+
 @mlia_app.callback()
 def mlia_app_main(
     ctx: typer.Context,
+    enable_completion: bool = enable_completion_option(),
+    print_completion_script: bool = print_completion_script_option(),
     version: bool = typer.Option(
         False,
         "--version",
@@ -494,14 +550,22 @@ def mlia_app_main(
 
 
 @backend_app.callback()
-def backend_app_main(ctx: typer.Context) -> None:
+def backend_app_main(
+    ctx: typer.Context,
+    enable_completion: bool = enable_completion_option(),
+    print_completion_script: bool = print_completion_script_option(),
+) -> None:
     """Configure the backend CLI namespace."""
     src = ctx.obj if isinstance(ctx.obj, ApplicationSettings) else None
     ctx.obj = new_settings(source=src)
 
 
 @target_app.callback()
-def target_app_main(ctx: typer.Context) -> None:
+def target_app_main(
+    ctx: typer.Context,
+    enable_completion: bool = enable_completion_option(),
+    print_completion_script: bool = print_completion_script_option(),
+) -> None:
     """Configure the target CLI namespace."""
     src = ctx.obj if isinstance(ctx.obj, ApplicationSettings) else None
     ctx.obj = new_settings(source=src)
@@ -649,23 +713,26 @@ def check_command(
         ctx.meta[ANALYSIS_PLUGIN_ARGS_META_KEY],
     )
 
-    return prepare_check(
-        model=model,
-        execution_profile=execution_profile,
-        show_plan=show_plan,
-        target_profile=target_profile,
-        output_dir=output_dir,
-        backend=backend,
-        performance=performance,
-        compatibility=compatibility,
-        profiling_data=profiling_data,
-        companion_model=companion_model,
-        json_output=json_output,
-        i_agree_to_the_contained_eula=i_agree_to_the_contained_eula,
-        noninteractive=noninteractive,
-        debug=debug,
-        settings=settings,
-        plugin_args=plugin_args,
+    return cast(
+        CheckRequest,
+        importlib.import_module("mlia.check").prepare_check(
+            model=model,
+            execution_profile=execution_profile,
+            show_plan=show_plan,
+            target_profile=target_profile,
+            output_dir=output_dir,
+            backend=backend,
+            performance=performance,
+            compatibility=compatibility,
+            profiling_data=profiling_data,
+            companion_model=companion_model,
+            json_output=json_output,
+            i_agree_to_the_contained_eula=i_agree_to_the_contained_eula,
+            noninteractive=noninteractive,
+            debug=debug,
+            settings=settings,
+            plugin_args=plugin_args,
+        ),
     )
 
 
@@ -699,11 +766,9 @@ def backend_install(
     debug: bool = debug_option(),
 ) -> None:
     """Install backend packages."""
-    from mlia.api import install_backends
-
     _setup_command_logging(debug)
     try:
-        install_backends(
+        importlib.import_module("mlia.api").install_backends(
             names=names,
             path=path,
             accept_eula=accept_eula,
@@ -725,11 +790,9 @@ def backend_uninstall(
     debug: bool = debug_option(),
 ) -> None:
     """Uninstall backend packages."""
-    from mlia.api import uninstall_backends
-
     _setup_command_logging(debug)
     try:
-        uninstall_backends(names)
+        importlib.import_module("mlia.api").uninstall_backends(names)
     except ConfigurationError as err:
         typer.echo(f"Error: {err}", err=True)
         raise typer.Exit(code=1) from err
@@ -747,12 +810,12 @@ def backend_list(
     """List available backend plugins and backend installation status."""
     _setup_command_logging(debug)
     if runtimes:
-        import json
-
-        from mlia.api import list_runtimes
-
         try:
-            typer.echo(json.dumps(list_runtimes(), indent=2))
+            typer.echo(
+                json.dumps(
+                    importlib.import_module("mlia.api").list_runtimes(), indent=2
+                )
+            )
         except ConfigurationError as err:
             typer.echo(f"Error: {err}", err=True)
             raise typer.Exit(code=1) from err

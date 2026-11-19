@@ -15,6 +15,7 @@ from unittest.mock import MagicMock, patch
 
 import click
 import pytest
+import typer.completion
 from typer import rich_utils
 from typer.testing import CliRunner
 
@@ -27,6 +28,7 @@ from mlia.check import CheckError, CheckResult
 from mlia.cli.settings import configure_typer_help
 from mlia.core import check_validation as command_validators
 from mlia.core.errors import ConfigurationError
+from mlia.core.logging import close_configured_handlers
 from mlia.core.settings import ApplicationSettings
 from mlia.plugins.analysis import AnalysisPluginRegistry, AnalysisRunResult
 
@@ -74,6 +76,60 @@ def test_plan_preview_reports_invalid_target_without_traceback(tmp_path: Path) -
     assert "missing-target" in result.output
     assert "Traceback" not in result.output
     assert not (tmp_path / "output").exists()
+
+
+@pytest.mark.parametrize(
+    "app",
+    [cli_commands.mlia_app, cli_commands.backend_app, cli_commands.target_app],
+)
+def test_completion_options_have_clear_names_and_help(app: Any) -> None:
+    """All CLI entry points advertise the renamed completion options."""
+    help_result = CliRunner().invoke(app, ["--help"])
+
+    assert help_result.exit_code == 0
+    help_text = " ".join(_strip_ansi(help_result.stdout).split())
+    assert "--enable-completion" in help_text
+    assert "Set up Tab completion for your shell" in help_text
+    assert "--print-completion-script" in help_text
+    assert "Print the shell completion script" in help_text
+    assert "--install-completion" not in help_text
+    assert "--show-completion" not in help_text
+
+
+def test_print_completion_script_uses_new_option(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The renamed option still prints a usable shell completion script."""
+    monkeypatch.setattr(typer.completion, "_get_shell_name", lambda: "bash")
+
+    result = CliRunner().invoke(cli_commands.mlia_app, ["--print-completion-script"])
+
+    assert result.exit_code == 0
+    assert "_root_completion()" in result.stdout
+
+
+def test_enable_completion_uses_logged_gateway(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The installation notice is visible before Typer starts installing."""
+
+    def start_installation(*_args: Any) -> None:
+        click.echo("INSTALLATION_STARTED")
+        raise SystemExit(0)
+
+    installer = MagicMock(side_effect=start_installation)
+    monkeypatch.setattr("mlia.utils.boundaries.filesystem.install_callback", installer)
+
+    try:
+        result = CliRunner().invoke(cli_commands.mlia_app, ["--enable-completion"])
+    finally:
+        close_configured_handlers()
+
+    assert result.exit_code == 0
+    assert result.stdout.index("Installing shell completion.") < result.stdout.index(
+        "INSTALLATION_STARTED"
+    )
+    installer.assert_called_once()
 
 
 def _backend_option_spec() -> BackendOptionSpec:

@@ -27,6 +27,13 @@ The most important entry points are:
 Together, these commands define the basic MLIA flow: discovery first, then
 analysis.
 
+## Shell Tab completion
+
+Run `mlia --enable-completion` to set up Tab completion for your current shell.
+Restart your terminal to use it. For manual setup, run
+`mlia --print-completion-script` and add the printed script to your shell
+configuration.
+
 ## Optional terminal interface
 
 With the optional `mlia-tui` package installed, `mlia check --tui` opens an

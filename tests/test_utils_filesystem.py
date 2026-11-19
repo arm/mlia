@@ -10,7 +10,10 @@ from unittest.mock import MagicMock, call
 
 import pytest
 
-from mlia.utils.boundaries.filesystem import write_persistent_state_text_with_notice
+from mlia.utils.boundaries.filesystem import (
+    install_shell_completion_with_notice,
+    write_persistent_state_text_with_notice,
+)
 from mlia.utils.filesystem import (
     USER_ONLY_PERM_MASK,
     all_files_exist,
@@ -197,4 +200,28 @@ def test_write_persistent_state_notice_precedes_write(
     assert events.mock_calls == [
         call.notice(logger, "Updating state."),
         call.write("{}"),
+    ]
+
+
+def test_shell_completion_notice_precedes_install(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Completion installation is announced before Typer changes shell state."""
+    events = MagicMock()
+    monkeypatch.setattr(
+        "mlia.utils.boundaries.filesystem.log_boundary_action", events.notice
+    )
+    monkeypatch.setattr(
+        "mlia.utils.boundaries.filesystem.install_callback", events.install
+    )
+    logger = logging.getLogger("test")
+    ctx = MagicMock(resilient_parsing=False)
+    param = MagicMock()
+
+    result = install_shell_completion_with_notice(logger, ctx, param, True)
+
+    assert result is events.install.return_value
+    assert events.mock_calls == [
+        call.notice(logger, "Installing shell completion."),
+        call.install(ctx, param, True),
     ]

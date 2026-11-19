@@ -160,6 +160,7 @@ def test_generic_completion_avoids_runtime_state_modules(
             )
         modules = (
             "mlia.api",
+            "mlia.check",
             "mlia.backend.install",
             "mlia.cli.command_validators",
             "mlia.core.advisor",
@@ -186,6 +187,7 @@ def test_generic_completion_avoids_runtime_state_modules(
         "backend_loaded": True,
         "plugin_load_count": 0 if comp_words == "mlia " else 1,
         "mlia.api": False,
+        "mlia.check": False,
         "mlia.backend.install": False,
         "mlia.cli.command_validators": False,
         "mlia.core.advisor": False,
