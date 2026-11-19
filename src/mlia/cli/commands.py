@@ -7,6 +7,7 @@ from __future__ import annotations
 import importlib
 import json
 import logging
+import re
 from collections.abc import Mapping
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, Any, cast
@@ -52,8 +53,8 @@ CONFIG = create_section_header("ML Inference Advisor configuration")
 LIST_TABLE_WIDTH = 120
 PLUGIN_URL = "https://github.com/orgs/arm/repositories?q=mlia"
 MLIA_HELP_EPILOG = (
-    "Plugin discovery: Run 'mlia target list' and 'mlia backend list' "
-    "to see installed plugin capabilities.\n\n"
+    "Tip: Run 'mlia <command> --help' for options and examples, "
+    "such as 'mlia check --help'.\n\n"
     f"Browse MLIA repositories: {PLUGIN_URL}"
 )
 PLUGIN_DISCOVERY_FAILURE = (
@@ -133,11 +134,93 @@ class HelpOnEmptyGroup(typer.core.TyperGroup):
 class RootHelpGroup(HelpOnEmptyGroup):
     """Root command group with an installed-plugin example in its help."""
 
+    def get_help_option(self, ctx: click.Context) -> click.Option | None:
+        """Explain how to find help for an individual command."""
+        option = super().get_help_option(ctx)
+        if option is not None:
+            option.help = (
+                "Show help for this command. Tip: Run mlia <command> --help "
+                "for command-specific help, for example: 'mlia check --help'."
+            )
+            if self.rich_markup_mode == "rich":
+                from typer import rich_utils
+
+                option.help = _markup_quoted_help_commands(
+                    option.help, rich_utils.STYLE_OPTION
+                )
+        return option
+
     def get_help(self, ctx: click.Context) -> str:
         """Append a plugin-specific example to the root command help."""
-        help_text = super().get_help(ctx)
+        from typer import rich_utils
+
+        original_help = {name: command.help for name, command in self.commands.items()}
+        original_epilog = self.epilog
+        if self.rich_markup_mode == "rich":
+            for command in self.commands.values():
+                if command.help:
+                    command.help = _markup_quoted_help_commands(
+                        command.help, rich_utils.STYLE_OPTION
+                    )
+            if self.epilog:
+                self.epilog = _markup_quoted_help_commands(
+                    self.epilog, rich_utils.STYLE_OPTION
+                )
+                self.epilog = self.epilog.replace(
+                    "Tip:", f"[{rich_utils.STYLE_USAGE}]Tip:[/]", 1
+                )
+        try:
+            help_text = super().get_help(ctx)
+        finally:
+            for name, command in self.commands.items():
+                command.help = original_help[name]
+            self.epilog = original_epilog
         example = _root_help_example()
+        if self.rich_markup_mode == "rich":
+            highlight = _help_rgb(rich_utils.STYLE_USAGE)
+            option_color = _help_rgb(rich_utils.STYLE_OPTION)
+            example = example.replace(
+                "Example Usage:",
+                click.style("Example Usage:", fg=highlight, bold=True),
+                1,
+            )
+            example = _style_quoted_help_commands(example, option_color)
         return f"{help_text.rstrip()}\n\n{example}" if help_text else example
+
+
+def _help_rgb(style: str) -> str | tuple[int, int, int]:
+    """Convert a Rich color to a format accepted by Click."""
+    color = style.rsplit(" ", 1)[-1]
+    if not color.startswith("#"):
+        return color
+    hex_color = color.lstrip("#")
+    return (
+        int(hex_color[0:2], 16),
+        int(hex_color[2:4], 16),
+        int(hex_color[4:6], 16),
+    )
+
+
+def _style_quoted_help_commands(
+    help_text: str, color: str | tuple[int, int, int]
+) -> str:
+    """Color command examples and option names within quoted help text."""
+    return re.sub(
+        r"(?<=')(?:mlia\s+[^']+|check\s+[^']+|--[a-z-]+)(?=')",
+        lambda match: click.style(
+            re.sub(r"\x1b\[[0-9;]*m", "", match.group()), fg=color, bold=True
+        ),
+        help_text,
+    )
+
+
+def _markup_quoted_help_commands(help_text: str, style: str) -> str:
+    """Add Rich styling to quoted commands before Typer renders help panels."""
+    return re.sub(
+        r"'((?:mlia\s+[^']+|check\s+[^']+|--[a-z-]+))'",
+        lambda match: f"'[{style}]{match.group(1)}[/]'",
+        help_text,
+    )
 
 
 def _root_help_example() -> str:
@@ -150,7 +233,9 @@ def _root_help_example() -> str:
                 f"enable model analysis. Find plugins at: {PLUGIN_URL}"
             )
 
-        for target in targets:
+        for target in sorted(
+            targets, key=lambda plugin: plugin.name != "neural_technology"
+        ):
             if example := PLUGIN_HELP_EXAMPLES.get(target.name):
                 profile, backend, analysis_flag, action = example
                 return (
@@ -472,13 +557,19 @@ target_app = typer.Typer(
 mlia_app.add_typer(
     backend_app,
     name="backend",
-    help="Manage MLIA backends",
+    help=(
+        "List analysis backends and their installation status, or install and "
+        "uninstall them. Use 'mlia backend list' to see what's available."
+    ),
 )
 
 mlia_app.add_typer(
     target_app,
     name="target",
-    help="Manage MLIA targets",
+    help=(
+        "List installed target plugins and their available profiles. Use "
+        "'mlia target list' to find a profile for 'check --target-profile'."
+    ),
 )
 
 
@@ -541,7 +632,7 @@ def mlia_app_main(
         "-v",
         callback=version_callback,
         is_eager=True,
-        help="Show the MLIA version",
+        help="Show the MLIA version.",
     ),
 ) -> None:
     """Configure top-level MLIA CLI callback options."""
@@ -583,7 +674,11 @@ def _require_cli_target(
 @mlia_app.command(
     "check",
     cls=CheckOptionCommand,
-    help="Generate compatibility/performance advice for a model",
+    help=(
+        "Check model compatibility with a target, or estimate performance with "
+        "'--performance'. Select a target with '--target-profile' and optionally "
+        "choose a backend with '--backend'."
+    ),
     epilog=(
         "Examples:\n\n"
         "  mlia target list\n\n"

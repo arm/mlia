@@ -291,6 +291,34 @@ def test_help_uses_selected_mlia_colors(
         assert f"38;2;{expected_color}" in result.stdout
 
 
+def test_root_help_colors_quoted_commands_and_uses_one_blank_line(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Color quoted commands and separate the final note by one blank line."""
+    monkeypatch.delenv("NO_COLOR", raising=False)
+    monkeypatch.setattr(rich_utils, "FORCE_TERMINAL", True)
+    monkeypatch.setattr(rich_utils, "COLOR_SYSTEM", "truecolor")
+    monkeypatch.setattr(cli_main.mlia_app, "rich_markup_mode", "rich")
+    monkeypatch.setattr(cli_commands, "list_entry_points", lambda group: [])
+    for style_name in TYPER_HELP_STYLE_NAMES:
+        monkeypatch.setattr(rich_utils, style_name, getattr(rich_utils, style_name))
+    configure_typer_help(True)
+
+    result = CliRunner().invoke(cli_main.mlia_app, ["--help"], color=True)
+
+    assert result.exit_code == 0
+    assert re.search(r"'\x1b\[[0-9;]*mmlia target list", result.stdout)
+    assert re.search(r"'\x1b\[[0-9;]*mmlia backend list", result.stdout)
+    lines = _strip_ansi(result.stdout).splitlines()
+    final_note = next(
+        index
+        for index, line in enumerate(lines)
+        if line.startswith("No target plugins")
+    )
+    assert not lines[final_note - 1].strip()
+    assert lines[final_note - 2].strip()
+
+
 @pytest.mark.parametrize(
     ("theme", "required_color"),
     [("dark", "237;86;77"), ("light", "180;24;27")],
@@ -406,7 +434,7 @@ def test_check_without_arguments_shows_help_and_exit_code_2(
 
     assert result.exit_code == 2
     assert "Usage:" in result.stdout
-    assert "Generate compatibility/performance advice for a model" in result.stdout
+    assert "Check model compatibility with a target" in result.stdout
 
 
 def test_check_help_includes_discovery_and_compatibility_example() -> None:
@@ -513,7 +541,7 @@ def test_root_help_shows_installed_plugin_example(
         f"{analysis_flag}' to {action}."
     ) in help_output
     entry_points.assert_called_once_with(cli_commands.TARGET_PLUGIN_GROUP)
-    assert "Plugin discovery:" in help_output
+    assert "Tip: Run 'mlia <command> --help'" in help_output
     assert "mlia target list" in help_output
     assert "mlia backend list" in help_output
     assert cli_commands.PLUGIN_URL in help_output
@@ -533,16 +561,32 @@ def test_root_help_has_one_blank_line_before_example(
 
     assert result.exit_code == 0
     lines = _strip_ansi(result.stdout).splitlines()
-    assert any(
-        line.strip().startswith("Plugin discovery: Run 'mlia target list'")
-        for line in lines
-    )
+    assert any(line.strip().startswith("Tip: Run") for line in lines)
     assert any(line.strip().startswith("Browse MLIA repositories:") for line in lines)
     example_line = next(
         index for index, line in enumerate(lines) if line.startswith("Example Usage:")
     )
     assert not lines[example_line - 1].strip()
     assert lines[example_line - 2].strip()
+
+
+def test_root_help_prefers_neural_technology_plugin(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Prefer Neural Technology when several known target plugins are installed."""
+    monkeypatch.setattr(
+        cli_commands,
+        "list_entry_points",
+        lambda group: [
+            SimpleNamespace(name="ethos_u"),
+            SimpleNamespace(name="neural_technology"),
+        ],
+    )
+
+    result = CliRunner().invoke(cli_main.mlia_app, ["--help"])
+
+    assert result.exit_code == 0
+    assert "--target-profile neural-technology" in _strip_ansi(result.stdout)
 
 
 @pytest.mark.parametrize("app", [cli_main.backend_app, cli_main.target_app])
