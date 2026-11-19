@@ -416,20 +416,150 @@ def test_check_help_lists_backend_option_metadata(
     assert "backend option." in help_output
 
 
-def test_root_help_lists_plugin_discovery_resources() -> None:
-    """The root help should point users to plugin discovery resources."""
-    result = CliRunner().invoke(
-        cli_main.mlia_app,
-        ["--help"],
-        terminal_width=120,
-    )
+@pytest.mark.parametrize(
+    ("plugin", "profile", "backend", "analysis_flag", "action"),
+    [
+        (
+            "ethos_u",
+            "ethos-u85-2048",
+            "vela",
+            "--compatibility",
+            "perform a compatibility check",
+        ),
+        (
+            "neural_technology",
+            "neural-technology",
+            "nx-performance-estimator",
+            "--performance",
+            "estimate performance",
+        ),
+    ],
+)
+def test_root_help_shows_installed_plugin_example(
+    monkeypatch: pytest.MonkeyPatch,
+    plugin: str,
+    profile: str,
+    backend: str,
+    analysis_flag: str,
+    action: str,
+) -> None:
+    """Root help uses entry-point metadata without loading plugin modules."""
+    entry_points = MagicMock(return_value=[SimpleNamespace(name=plugin)])
+    monkeypatch.setattr(cli_commands, "list_entry_points", entry_points)
+
+    result = CliRunner().invoke(cli_main.mlia_app, ["--help"])
     help_output = _strip_ansi(result.stdout)
 
     assert result.exit_code == 0
+    assert (
+        "Example Usage: Run 'mlia check model.ext "
+        f"--target-profile {profile} --backend {backend} "
+        f"{analysis_flag}' to {action}."
+    ) in help_output
+    entry_points.assert_called_once_with(cli_commands.TARGET_PLUGIN_GROUP)
     assert "Plugin discovery:" in help_output
     assert "mlia target list" in help_output
     assert "mlia backend list" in help_output
-    assert "https://github.com/orgs/arm/repositories?q=mlia" in help_output
+    assert cli_commands.PLUGIN_URL in help_output
+
+
+def test_root_help_has_one_blank_line_before_example(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Keep only one blank line between the Rich epilog and the example."""
+    monkeypatch.setattr(
+        cli_commands,
+        "list_entry_points",
+        lambda group: [SimpleNamespace(name="neural_technology")],
+    )
+
+    result = CliRunner().invoke(cli_main.mlia_app, ["--help"])
+
+    assert result.exit_code == 0
+    lines = _strip_ansi(result.stdout).splitlines()
+    assert any(
+        line.strip().startswith("Plugin discovery: Run 'mlia target list'")
+        for line in lines
+    )
+    assert any(line.strip().startswith("Browse MLIA repositories:") for line in lines)
+    example_line = next(
+        index for index, line in enumerate(lines) if line.startswith("Example Usage:")
+    )
+    assert not lines[example_line - 1].strip()
+    assert lines[example_line - 2].strip()
+
+
+@pytest.mark.parametrize("app", [cli_main.backend_app, cli_main.target_app])
+def test_standalone_plugin_help_omits_root_example(app: Any) -> None:
+    """Legacy standalone entry points should only show their own help."""
+    result = CliRunner().invoke(app, ["--help"])
+
+    assert result.exit_code == 0
+    assert "Example Usage: Run 'mlia check" not in result.stdout
+    assert "No target plugins are installed." not in result.stdout
+    assert "MLIA couldn't detect installed plugins." not in result.stdout
+    assert "Explore your installed target plugins:" not in result.stdout
+
+
+def test_root_help_without_target_plugins(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The root help should explain how to install target plugins."""
+    monkeypatch.setattr(cli_commands, "list_entry_points", lambda group: [])
+    result = CliRunner().invoke(cli_main.mlia_app, ["--help"])
+
+    assert result.exit_code == 0
+    assert "No target plugins are installed." in result.stdout
+    assert cli_commands.PLUGIN_URL in result.stdout
+
+
+def test_root_help_with_unknown_target_plugin(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Unknown target plugins receive guidance without loading them."""
+    monkeypatch.setattr(
+        cli_commands,
+        "list_entry_points",
+        lambda group: [SimpleNamespace(name="third_party_target")],
+    )
+
+    result = CliRunner().invoke(cli_main.mlia_app, ["--help"])
+
+    assert result.exit_code == 0
+    assert "Explore your installed target plugins:" in result.stdout
+    assert "mlia target list" in result.stdout
+    assert "mlia backend list" in result.stdout
+    assert "Example Usage:" not in result.stdout
+
+
+def test_root_help_skips_unknown_plugin_before_known_plugin(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A known installed plugin can supply the example after an unknown one."""
+    monkeypatch.setattr(
+        cli_commands,
+        "list_entry_points",
+        lambda group: [
+            SimpleNamespace(name="third_party_target"),
+            SimpleNamespace(name="ethos_u"),
+        ],
+    )
+
+    result = CliRunner().invoke(cli_main.mlia_app, ["--help"])
+
+    assert result.exit_code == 0
+    assert "--target-profile ethos-u85-2048 --backend vela" in result.stdout
+
+
+def test_root_help_when_plugin_discovery_fails(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The root help should offer discovery commands after an error."""
+    monkeypatch.setattr(
+        cli_commands, "list_entry_points", MagicMock(side_effect=RuntimeError("broken"))
+    )
+    result = CliRunner().invoke(cli_main.mlia_app, ["--help"])
+
+    assert result.exit_code == 0
+    assert "MLIA couldn't detect installed plugins." in result.stdout
+    assert "mlia target list" in result.stdout
+    assert "mlia backend list" in result.stdout
 
 
 @pytest.mark.parametrize(

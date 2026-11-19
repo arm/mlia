@@ -42,13 +42,31 @@ logger = logging.getLogger(__name__)
 
 CONFIG = create_section_header("ML Inference Advisor configuration")
 LIST_TABLE_WIDTH = 120
+PLUGIN_URL = "https://github.com/orgs/arm/repositories?q=mlia"
 MLIA_HELP_EPILOG = (
-    "Plugin discovery:\n"
-    "  Run 'mlia target list' and 'mlia backend list' to see installed plugin "
-    "capabilities.\n"
-    "  Browse MLIA repositories: "
-    "https://github.com/orgs/arm/repositories?q=mlia"
+    "Plugin discovery: Run 'mlia target list' and 'mlia backend list' "
+    "to see installed plugin capabilities.\n\n"
+    f"Browse MLIA repositories: {PLUGIN_URL}"
 )
+PLUGIN_DISCOVERY_FAILURE = (
+    "MLIA couldn't detect installed plugins. Run 'mlia target list' and "
+    "'mlia backend list' to check plugin discovery. Find plugins and "
+    f"installation instructions at: {PLUGIN_URL}"
+)
+PLUGIN_HELP_EXAMPLES = {
+    "ethos_u": (
+        "ethos-u85-2048",
+        "vela",
+        "--compatibility",
+        "perform a compatibility check",
+    ),
+    "neural_technology": (
+        "neural-technology",
+        "nx-performance-estimator",
+        "--performance",
+        "estimate performance",
+    ),
+}
 ANALYSIS_PLUGIN_ARGS_META_KEY = "mlia.analysis_plugin_args"
 
 
@@ -97,6 +115,43 @@ class HelpOnEmptyGroup(typer.core.TyperGroup):
         """Print help for empty arguments without disrupting shell completion."""
         _exit_with_help_on_empty_args(ctx, args)
         return super().parse_args(ctx, args)
+
+
+class RootHelpGroup(HelpOnEmptyGroup):
+    """Root command group with an installed-plugin example in its help."""
+
+    def get_help(self, ctx: click.Context) -> str:
+        """Append a plugin-specific example to the root command help."""
+        help_text = super().get_help(ctx)
+        example = _root_help_example()
+        return f"{help_text.rstrip()}\n\n{example}" if help_text else example
+
+
+def _root_help_example() -> str:
+    """Build an example from installed target entry-point metadata only."""
+    try:
+        targets = list_entry_points(TARGET_PLUGIN_GROUP)
+        if not targets:
+            return (
+                "No target plugins are installed. Install a target plugin to "
+                f"enable model analysis. Find plugins at: {PLUGIN_URL}"
+            )
+
+        for target in targets:
+            if example := PLUGIN_HELP_EXAMPLES.get(target.name):
+                profile, backend, analysis_flag, action = example
+                return (
+                    "Example Usage: Run 'mlia check model.ext "
+                    f"--target-profile {profile} --backend {backend} "
+                    f"{analysis_flag}' to {action}."
+                )
+    except Exception:  # pylint: disable=broad-except
+        logger.debug("Could not discover plugins for root help", exc_info=True)
+        return PLUGIN_DISCOVERY_FAILURE
+    return (
+        "Explore your installed target plugins: run 'mlia target list' to find "
+        "a target profile, and 'mlia backend list' to choose a backend for your model."
+    )
 
 
 class CheckOptionCommand(typer.core.TyperCommand):
@@ -367,7 +422,7 @@ def format_backend_info(settings: ApplicationSettings) -> None:
 
 
 mlia_app = typer.Typer(
-    cls=HelpOnEmptyGroup,
+    cls=RootHelpGroup,
     no_args_is_help=True,
     epilog=MLIA_HELP_EPILOG,
     context_settings={
