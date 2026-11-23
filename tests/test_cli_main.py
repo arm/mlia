@@ -33,6 +33,7 @@ from mlia.core.settings import ApplicationSettings
 from mlia.plugins.analysis import AnalysisPluginRegistry, AnalysisRunResult
 
 ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-9;?]*[ -/]*[@-~]")
+ORIGINAL_NO_PLUGINS_INSTALLED = cli_commands._no_plugins_installed
 TYPER_HELP_STYLE_NAMES = (
     "STYLE_OPTION",
     "STYLE_SWITCH",
@@ -51,6 +52,80 @@ TYPER_HELP_STYLE_NAMES = (
 def _strip_ansi(value: str) -> str:
     """Remove ANSI escape sequences from captured CLI output."""
     return ANSI_ESCAPE_RE.sub("", value)
+
+
+@pytest.fixture(autouse=True)
+def _assume_plugins_available(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Keep unrelated CLI tests focused on their mocked command behavior."""
+    monkeypatch.setattr(cli_commands, "_no_plugins_installed", lambda: False)
+
+
+@pytest.mark.parametrize(
+    "args",
+    [
+        ["check", "model.tflite"],
+        ["check", "model.tflite", "--target-profile", "example"],
+        ["check", "model.tflite", "--json"],
+        ["target", "list"],
+        ["backend", "list"],
+    ],
+)
+def test_commands_explain_missing_plugins(
+    monkeypatch: pytest.MonkeyPatch, args: list[str]
+) -> None:
+    """Commands provide installation guidance when no plugins are installed."""
+    monkeypatch.setattr(cli_commands, "_no_plugins_installed", lambda: True)
+
+    result = CliRunner().invoke(cli_main.mlia_app, args)
+
+    output = _strip_ansi(result.output)
+    assert "No MLIA plugins are installed." in output
+    assert "MLIA requires plugins to analyse models." in output
+    assert "model converters.\nFind available plugins" in output
+    assert cli_commands.NO_PLUGINS_URL in output
+    assert "No backends found." not in output
+    assert "No plugins found." not in output
+    if args[0] == "check":
+        assert result.stdout == ""
+        assert "No MLIA plugins are installed." in _strip_ansi(result.stderr)
+    else:
+        assert result.stderr == ""
+        assert "No MLIA plugins are installed." in _strip_ansi(result.stdout)
+
+
+@pytest.mark.parametrize(
+    "installed_group",
+    [
+        cli_commands.TARGET_PLUGIN_GROUP,
+        cli_commands.BACKEND_PLUGIN_GROUP,
+        cli_commands.TRANSFORMER_PLUGIN_GROUP,
+        cli_commands.ANALYSIS_PLUGIN_GROUP,
+    ],
+)
+def test_any_supported_plugin_prevents_no_plugins_message(
+    monkeypatch: pytest.MonkeyPatch, installed_group: str
+) -> None:
+    """An installed plugin in any supported group prevents a false warning."""
+    monkeypatch.setattr(
+        cli_commands,
+        "list_entry_points",
+        lambda group: [object()] if group == installed_group else [],
+    )
+
+    assert not ORIGINAL_NO_PLUGINS_INSTALLED()
+
+
+def test_cli_entry_point_does_not_hide_missing_plugin_message(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """An unused CLI entry point cannot suppress missing-plugin guidance."""
+    monkeypatch.setattr(
+        cli_commands,
+        "list_entry_points",
+        lambda group: [object()] if group == "mlia.plugin.cli" else [],
+    )
+
+    assert ORIGINAL_NO_PLUGINS_INSTALLED()
 
 
 def test_plan_preview_reports_invalid_target_without_traceback(tmp_path: Path) -> None:
@@ -449,9 +524,10 @@ def test_check_help_includes_discovery_and_compatibility_example() -> None:
     assert result.exit_code == 0
     assert "mlia target list" in help_output
     assert "mlia backend list" in help_output
-    assert re.search(
-        r"mlia check \S+ --target-profile \S+ --compatibility", help_output
-    ), help_output
+    assert (
+        "mlia check <model.ext> --target-profile <profile> --compatibility"
+        in help_output
+    )
 
 
 def test_check_help_lists_profiling_data_option(

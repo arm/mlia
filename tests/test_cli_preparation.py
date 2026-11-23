@@ -29,6 +29,7 @@ def plugin_options(monkeypatch: pytest.MonkeyPatch) -> list[click.Option]:
     registry.cli_options.return_value = options
     monkeypatch.setattr(commands, "_load_analysis_plugin_registry", lambda: registry)
     monkeypatch.setattr(commands, "discover_backend_option_specs", lambda: [])
+    monkeypatch.setattr(commands, "_no_plugins_installed", lambda: False)
     return options
 
 

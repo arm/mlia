@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING, Annotated, Any, cast
 
 import click
 import typer
+from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 from typer.completion import completion_init, show_callback
@@ -31,8 +32,10 @@ from mlia.core.logging import setup_logging
 from mlia.core.settings import ApplicationSettings
 from mlia.plugins.analysis import AnalysisPluginRegistry
 from mlia.plugins.plugins import (
+    ANALYSIS_PLUGIN_GROUP,
     BACKEND_PLUGIN_GROUP,
     TARGET_PLUGIN_GROUP,
+    TRANSFORMER_PLUGIN_GROUP,
     load_analysis_plugins,
 )
 from mlia.plugins.registry import list_entry_points
@@ -52,6 +55,12 @@ completion_init()
 CONFIG = create_section_header("ML Inference Advisor configuration")
 LIST_TABLE_WIDTH = 120
 PLUGIN_URL = "https://github.com/orgs/arm/repositories?q=mlia"
+NO_PLUGINS_URL = "https://github.com/search?q=org%3Aarm+mlia-*&type=repositories"
+NO_PLUGINS_MESSAGE = (
+    "MLIA requires plugins to analyse models. Plugins provide access to targets, "
+    "backends and model converters.\nFind available plugins and installation "
+    f"instructions: {NO_PLUGINS_URL}"
+)
 MLIA_HELP_EPILOG = (
     "Tip: Run 'mlia <command> --help' for options and examples, "
     "such as 'mlia check --help'.\n\n"
@@ -108,6 +117,35 @@ def _load_analysis_plugin_registry() -> AnalysisPluginRegistry:
     registry = AnalysisPluginRegistry()
     load_analysis_plugins(registry)
     return registry
+
+
+def _no_plugins_installed() -> bool:
+    """Return whether no supported MLIA plugin entry points are installed."""
+    return not any(
+        list_entry_points(group)
+        for group in (
+            TARGET_PLUGIN_GROUP,
+            BACKEND_PLUGIN_GROUP,
+            TRANSFORMER_PLUGIN_GROUP,
+            ANALYSIS_PLUGIN_GROUP,
+        )
+    )
+
+
+def _print_no_plugins_message(
+    settings: ApplicationSettings, *, stderr: bool = False
+) -> None:
+    """Show installation guidance with an orange first line."""
+    console = (
+        Console(stderr=True, no_color=not settings.color, width=settings.console.width)
+        if stderr
+        else settings.console
+    )
+    console.print(
+        "No MLIA plugins are installed.",
+        style=settings.console.get_style("warning"),
+    )
+    console.print(NO_PLUGINS_MESSAGE)
 
 
 def execute_check(*args: Any, **kwargs: Any) -> Any:
@@ -294,6 +332,11 @@ class CheckOptionCommand(typer.core.TyperCommand):
 
     def invoke(self, ctx: click.Context) -> None:
         """Prepare a request and dispatch to the selected frontend."""
+        if _no_plugins_installed():
+            _print_no_plugins_message(
+                ctx.ensure_object(ApplicationSettings), stderr=True
+            )
+            ctx.exit(1)
         check_error = importlib.import_module("mlia.check").CheckError
 
         request = self.prepare_request(ctx)
@@ -452,6 +495,9 @@ def _print_list_table(settings: ApplicationSettings, title: str, table: Table) -
 
 def format_target_info(settings: ApplicationSettings) -> None:
     """List available target profiles."""
+    if _no_plugins_installed():
+        _print_no_plugins_message(settings)
+        return
     target_config = importlib.import_module("mlia.target.config")
     target_registry = importlib.import_module("mlia.target.registry")
 
@@ -490,6 +536,9 @@ def format_target_info(settings: ApplicationSettings) -> None:
 
 def format_backend_info(settings: ApplicationSettings) -> None:
     """List available backend plugins and installation status."""
+    if _no_plugins_installed():
+        _print_no_plugins_message(settings)
+        return
     api = importlib.import_module("mlia.api")
 
     logger.info(CONFIG)
@@ -667,6 +716,11 @@ def _require_cli_target(
 ) -> str | None:
     """Reject a missing CLI target before unspecified plugin options are resolved."""
     if value is None and not ctx.resilient_parsing and not ctx.params.get("tui"):
+        if _no_plugins_installed():
+            _print_no_plugins_message(
+                ctx.ensure_object(ApplicationSettings), stderr=True
+            )
+            ctx.exit(1)
         raise click.MissingParameter(ctx=ctx, param=param)
     return value
 
@@ -682,7 +736,7 @@ def _require_cli_target(
     epilog=(
         "Examples:\n\n"
         "  mlia target list\n\n"
-        "  mlia check model.tflite --target-profile <profile> --compatibility\n\n"
+        "  mlia check <model.ext> --target-profile <profile> --compatibility\n\n"
         "Replace <profile> with a listed profile name or a custom profile path."
     ),
     no_args_is_help=True,

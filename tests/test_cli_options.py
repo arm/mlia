@@ -6,8 +6,10 @@ from __future__ import annotations
 
 import re
 
+import pytest
 from typer.testing import CliRunner
 
+import mlia.cli.commands as cli_commands
 import mlia.cli.main as cli_main
 
 ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-9;?]*[ -/]*[@-~]")
@@ -41,8 +43,9 @@ def test_check_help_lists_expected_options() -> None:
         assert option in help_output
 
 
-def test_check_accepts_eula_flag() -> None:
+def test_check_accepts_eula_flag(monkeypatch: pytest.MonkeyPatch) -> None:
     """The check command parser should accept the EULA flag name."""
+    monkeypatch.setattr(cli_commands, "_no_plugins_installed", lambda: False)
     result = CliRunner().invoke(
         cli_main.mlia_app,
         [

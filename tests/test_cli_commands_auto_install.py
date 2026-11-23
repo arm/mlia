@@ -33,6 +33,7 @@ def test_backend_list_does_not_install(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(mlia_api, "list_backends", list_backends)
     monkeypatch.setattr(mlia_api, "install_backends", install_backends)
     monkeypatch.setattr(cli_commands, "setup_logging", MagicMock())
+    monkeypatch.setattr(cli_commands, "_no_plugins_installed", lambda: False)
 
     cli_commands.backend_list(_get_app_settings())
 

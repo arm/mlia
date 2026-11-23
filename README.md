@@ -6,10 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 # ML Inference Advisor
 
 ML Inference Advisor (MLIA) helps AI developers evaluate model compatibility
-and performance for supported inference targets. The core `mlia` package
-provides the shared CLI, public Python API, backend management, and standardized
-output model. Installed plugins register target, backend, converter, and
-post-analysis capabilities.
+and performance for supported inference targets.
 
 [Read the documentation on Arm Developer](https://developer.arm.com/dev-docs/mlia/).
 
@@ -19,6 +16,7 @@ post-analysis capabilities.
 - [Quick start](#quick-start)
 - [Documentation](#documentation)
 - [Plugin model](#plugin-model)
+- [Backend runtimes](#backend-runtimes)
 - [Python API](#python-api)
 - [Configuration](#configuration)
 - [Development](#development)
@@ -107,6 +105,8 @@ Use the core docs for:
 - Shared CLI guidance: [docs/source/cli.md](docs/source/cli.md).
 - Backend discovery and installation:
   [docs/source/backends.md](docs/source/backends.md).
+- Isolated backend runtimes and execution profiles:
+  [docs/source/isolated_runtimes.md](docs/source/isolated_runtimes.md).
 - Output structure and JSON results:
   [docs/source/metrics.md](docs/source/metrics.md).
 - Architecture and package boundaries:
@@ -119,15 +119,13 @@ documentation for the plugin package that owns that functionality.
 
 ## Plugin model
 
-`mlia` is the core package. Targets, backends, and converters are provided
-through separate plugin wheels.
+`mlia` is the core package. It provides the CLI, Python API, backend management,
+and a common output format. Plugins add the targets, backends, and converters
+needed for a particular model and hardware.
 
-MLIA uses the following plugin model:
-
-- `mlia` provides the command-line experience and shared output model.
-- Plugin packages add target definitions, backend implementations, and converter
-  paths.
-- MLIA discovers those plugins at runtime and exposes them through the same CLI.
+For a check, you select a target profile describing the hardware configuration.
+MLIA uses a compatible backend to check compatibility or estimate performance.
+If the backend needs another model format, a converter prepares it first.
 
 ### Target plugins
 
@@ -147,13 +145,15 @@ MLIA uses the following plugin model:
   (`mlia-converters-litert`) converts LiteRT / TensorFlow Lite `.tflite` models
   into TOSA artifacts for supported MLIA target flows.
 
-Install only the plugin packages you need, then use the discovery commands to
-see what is available in the current environment:
+### Backend runtimes
 
-```bash
-mlia target list
-mlia backend list
-```
+A plugin registers a backend with MLIA. If that backend needs tools and Python
+dependencies, MLIA installs them in an isolated runtime so they do not affect
+your MLIA environment. For each check, the target profile describes the hardware
+and an execution profile selects the backend and converter versions. See the
+[Backend Guide](docs/source/backends.md) for backend capabilities and
+[Isolated backend runtimes](docs/source/isolated_runtimes.md) for choosing
+versions and managing installations.
 
 ## Python API
 
