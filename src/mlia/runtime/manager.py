@@ -18,7 +18,6 @@ import shutil
 import signal
 import subprocess
 import sys
-import time
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Iterator, cast
@@ -28,9 +27,20 @@ from uv import find_uv_bin
 
 from mlia.core.errors import ConfigurationError
 from mlia.runtime.catalog import RuntimeDefinition, contained, digest
-from mlia.utils.logging import log_boundary_action
+from mlia.utils.logging import log_boundary_action, progress_heartbeat
 
 logger = logging.getLogger(__name__)
+
+
+def runtime_label(definition: RuntimeDefinition) -> str:
+    """Read a provider's runtime label with an identifier fallback."""
+    return str(definition.data.get("label") or f"runtime {definition.name}")
+
+
+def operation_label(definition: RuntimeDefinition, operation: str) -> str:
+    """Read a provider's operation label with an identifier fallback."""
+    spec = definition.data["operations"][operation]
+    return str(spec.get("label") or operation.replace("/", " ").replace("-", " "))
 
 
 def _environment() -> dict[str, str]:
@@ -76,23 +86,12 @@ def _wait_for_process(
     progress: str | None,
     log: Path,
 ) -> int:
-    """Wait for completion, reporting progress during long provisioning steps."""
+    """Wait for completion while displaying active work when it is quiet."""
     if progress is None:
         return process.wait(timeout=timeout)
-    started = time.monotonic()
-    while True:
-        remaining = timeout - (time.monotonic() - started)
-        if remaining <= 0:
-            raise subprocess.TimeoutExpired(process.args, timeout)
-        try:
-            return process.wait(timeout=min(10, remaining))
-        except subprocess.TimeoutExpired:
-            logger.info(
-                "%s — still working (%ds elapsed). Log: %s",
-                progress,
-                int(time.monotonic() - started),
-                log,
-            )
+    logger.info("Runtime process details: %s", log)
+    with progress_heartbeat(logger, progress):
+        return process.wait(timeout=timeout)
 
 
 def _stop_process_group(process: subprocess.Popen[bytes]) -> None:
@@ -350,7 +349,7 @@ class RuntimeManager:
             log,
             600,
             env=env,
-            progress=f"Preparing Python for {definition.name}",
+            progress=f"Installing {runtime_label(definition)}",
         )
         if code:
             raise ConfigurationError(
@@ -389,7 +388,7 @@ class RuntimeManager:
             log,
             3600,
             env=env,
-            progress=f"Installing dependencies for {definition.name}",
+            progress=f"Installing {runtime_label(definition)}",
         )
         if code:
             raise ConfigurationError(
@@ -476,7 +475,11 @@ class RuntimeManager:
                 timeout,
                 env=env,
                 cwd=job,
-                progress=f"Checking runtime {definition.name}" if handshake else None,
+                progress=(
+                    f"Validating {runtime_label(definition)}"
+                    if handshake
+                    else f"Running {operation_label(definition, operation)}"
+                ),
             )
         except subprocess.TimeoutExpired as exc:
             raise ConfigurationError(

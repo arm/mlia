@@ -55,6 +55,12 @@ def test_py_package_manager_install(
     assert record.getMessage() == (
         f"Running pip install using Python interpreter '{sys.executable}'."
     )
+    progress = [
+        item.getMessage()
+        for item in caplog.records
+        if getattr(item, "progress_action", False)
+    ]
+    assert progress == ["Installing Python packages...", "Python packages installed."]
     mock_check_output.assert_called_once_with(
         [
             sys.executable,
@@ -112,6 +118,7 @@ def test_py_package_manager_uninstall(mock_check_output: MagicMock) -> None:
 
 def test_py_package_manager_called_process_error(
     monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test PyPackageManager handling CalledProcessError."""
     monkeypatch.setattr(
@@ -124,5 +131,7 @@ def test_py_package_manager_called_process_error(
     )
 
     manager = PyPackageManager()
-    with pytest.raises(InternalError, match=r"^Unable to install python package"):
-        manager.install(["mlia", "pytest"])
+    with caplog.at_level(logging.INFO, logger="mlia.utils.py_manager"):
+        with pytest.raises(InternalError, match=r"^Unable to install python package"):
+            manager.install(["mlia", "pytest"])
+    assert "Python packages installed." not in caplog.text

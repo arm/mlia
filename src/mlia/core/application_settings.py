@@ -87,6 +87,8 @@ def _rich_theme(colors: ThemeColors) -> Theme:
             "tbl.name": f"bold {colors.name}",
             "tbl.version": colors.version,
             "tbl.highlight": colors.highlight,
+            "tbl.heading": f"bold {colors.highlight}",
+            "tbl.error": colors.required,
         }
     )
 
@@ -104,6 +106,8 @@ NO_COLOR = Theme(
         "tbl.name": "",
         "tbl.version": "",
         "tbl.highlight": "",
+        "tbl.heading": "bold",
+        "tbl.error": "",
     },
     inherit=False,
 )

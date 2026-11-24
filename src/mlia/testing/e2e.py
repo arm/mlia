@@ -29,16 +29,16 @@ E2E_COMPATIBILITY = "compatibility"
 E2E_PERFORMANCE = "performance"
 
 COMMON_PATTERNS = (
-    r".*ML Inference Advisor started.*",
-    r".*Target information:.*",
-    r".*Model Analysis Results.*",
+    r".*ML INFERENCE ADVISOR.*",
+    r".*Target:.*",
+    r".*FULL RESULTS.*",
 )
 
-COMPATIBILITY_PATTERNS = (r".*Result \d+: Compatibility.*",)
+COMPATIBILITY_PATTERNS = (r".*RESULT \d+: COMPATIBILITY.*",)
 
 PERFORMANCE_PATTERNS = (
-    r".*Result \d+: Performance.*",
-    r".*Metrics:.*",
+    r".*RESULT \d+: PERFORMANCE.*",
+    r".*PERFORMANCE FINDINGS AND ADVICE.*",
 )
 
 F = TypeVar("F", bound=Callable[..., object])

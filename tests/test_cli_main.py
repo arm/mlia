@@ -5,13 +5,14 @@
 from __future__ import annotations
 
 import json
+import logging
 import re
 import sys
 from collections.abc import Mapping
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, TextIO, cast
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, call, patch
 
 import click
 import pytest
@@ -31,6 +32,7 @@ from mlia.core.errors import ConfigurationError
 from mlia.core.logging import close_configured_handlers
 from mlia.core.settings import ApplicationSettings
 from mlia.plugins.analysis import AnalysisPluginRegistry, AnalysisRunResult
+from mlia.utils.boundaries.completion import install_shell_completion_with_notice
 
 ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-9;?]*[ -/]*[@-~]")
 ORIGINAL_NO_PLUGINS_INSTALLED = cli_commands._no_plugins_installed
@@ -183,6 +185,30 @@ def test_print_completion_script_uses_new_option(
     assert "_root_completion()" in result.stdout
 
 
+def test_shell_completion_notice_precedes_install(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Completion installation is announced before Typer changes shell state."""
+    events = MagicMock()
+    monkeypatch.setattr(
+        "mlia.utils.boundaries.completion.log_boundary_action", events.notice
+    )
+    monkeypatch.setattr(
+        "mlia.utils.boundaries.completion.install_callback", events.install
+    )
+    logger = logging.getLogger("test")
+    ctx = MagicMock(resilient_parsing=False)
+    param = MagicMock()
+
+    result = install_shell_completion_with_notice(logger, ctx, param, True)
+
+    assert result is events.install.return_value
+    assert events.mock_calls == [
+        call.notice(logger, "Installing shell completion."),
+        call.install(ctx, param, True),
+    ]
+
+
 def test_enable_completion_uses_logged_gateway(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -193,7 +219,7 @@ def test_enable_completion_uses_logged_gateway(
         raise SystemExit(0)
 
     installer = MagicMock(side_effect=start_installation)
-    monkeypatch.setattr("mlia.utils.boundaries.filesystem.install_callback", installer)
+    monkeypatch.setattr("mlia.utils.boundaries.completion.install_callback", installer)
 
     try:
         result = CliRunner().invoke(cli_commands.mlia_app, ["--enable-completion"])
@@ -1307,6 +1333,9 @@ def test_target_main_warns_about_deprecated_entry_point(
         ({}, False),
         ({"DEBUG": ""}, False),
         ({"DEBUG": "1"}, True),
+        ({"DEBUG": "true"}, True),
+        ({"DEBUG": "release"}, False),
+        ({"DEBUG": "0"}, False),
     ],
 )
 def test_debug_option_is_set_from_environment(

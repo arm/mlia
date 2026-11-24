@@ -28,13 +28,11 @@ from mlia.core.context import ExecutionContext
 from mlia.core.errors import ConfigurationError
 from mlia.core.logging import close_configured_handlers, setup_logging
 from mlia.core.output_persistence import persist_standardized_output
-from mlia.core.output_rendering import (
-    standardized_output_to_json,
-    standardized_output_to_text,
-)
+from mlia.core.output_rendering import check_report, standardized_output_to_json
 from mlia.core.settings import ApplicationSettings, FilteringSettings, ThemeName
 from mlia.plugins.analysis import AnalysisPluginRegistry, AnalysisRunResult
 from mlia.plugins.plugins import load_analysis_plugins
+from mlia.utils.logging import log_progress_action
 
 logger = logging.getLogger(__name__)
 
@@ -201,20 +199,22 @@ def _emit_standardized_output(
     settings: ApplicationSettings,
     context: ExecutionContext,
     output: dict[str, object] | None,
+    preceded_by_progress: bool = False,
 ) -> None:
     """Render canonical output to the selected frontend console."""
     if output is not None:
-        text = (
-            standardized_output_to_json(output)
-            if context.output_format == "json"
-            else standardized_output_to_text(output)
-        )
-        settings.console.out(
-            text.encode(settings.console.encoding, errors="replace").decode(
-                settings.console.encoding
-            ),
-            highlight=False,
-        )
+        if context.output_format == "json":
+            settings.console.out(standardized_output_to_json(output), highlight=False)
+        else:
+            report = check_report(
+                output, context.output_dir, width=settings.console.width
+            )
+            report.plain = report.plain.encode(
+                settings.console.encoding, errors="replace"
+            ).decode(settings.console.encoding)
+            if context.verbose or preceded_by_progress:
+                settings.console.print()
+            settings.console.print(report, highlight=False)
 
 
 def _preview_execution(
@@ -294,6 +294,7 @@ def execute_check(
     output_stream: TextIO | None = None,
     analysis_plugin_registry: AnalysisPluginRegistry | None = None,
     prompt: Callable[[str], str] | None = None,
+    show_progress: bool = False,
 ) -> CheckResult:
     """Execute, persist, render, and postprocess a prepared check.
 
@@ -376,7 +377,16 @@ def execute_check(
         output_format: Literal["json", "plain_text"] = (
             "json" if request.json_output else "plain_text"
         )
-        setup_logging(verbose=request.debug, output_format=output_format)
+        # Normal CLI checks show named stages; detailed logs remain in the file.
+        cli_logging = request.debug or request.json_output or show_progress
+        progress_only = show_progress and not request.debug and not request.json_output
+        setup_logging(
+            verbose=request.debug,
+            output_format=output_format,
+            cli_mode=cli_logging,
+            progress_only=progress_only,
+            console=settings.console,
+        )
         try:
             context = ExecutionContext(
                 verbose=request.debug,
@@ -386,12 +396,21 @@ def execute_check(
             )
         except Exception as err:
             raise CheckError(str(err)) from err
-        setup_logging(context.logs_path, context.verbose, context.output_format)
+        setup_logging(
+            context.logs_path,
+            context.verbose,
+            context.output_format,
+            cli_mode=cli_logging,
+            progress_only=progress_only,
+            console=settings.console,
+        )
         companion_args: dict[str, Any] = {}
         if request.companion_model is not None:
             companion_args["companion_model"] = request.companion_model
         if request.execution_profile:
             companion_args["execution_profile"] = request.execution_profile
+        if show_progress and not request.json_output:
+            log_progress_action(logger, "Preparing model check...")
         output = get_advice(
             request.target_profile,
             request.model,
@@ -411,7 +430,14 @@ def execute_check(
         )
         if output is not None:
             persist_standardized_output(output, context.output_dir)
-        _emit_standardized_output(settings, context, output)
+        if show_progress and not request.json_output:
+            log_progress_action(logger, "Model check complete.")
+        _emit_standardized_output(
+            settings,
+            context,
+            output,
+            preceded_by_progress=show_progress and not request.json_output,
+        )
         registry = analysis_plugin_registry
         if registry is None:
             registry = AnalysisPluginRegistry()

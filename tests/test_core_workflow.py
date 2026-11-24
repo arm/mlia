@@ -2,10 +2,14 @@
 # SPDX-License-Identifier: Apache-2.0
 """Tests for module workflow."""
 
+import logging
+from collections.abc import Iterator
+from contextlib import contextmanager
 from unittest.mock import MagicMock
 
 import pytest
 
+from mlia.core.common import AdviceCategory
 from mlia.core.context import ExecutionContext
 from mlia.core.data_analysis import ContextAwareDataAnalyzer
 from mlia.core.data_collection import ContextAwareDataCollector
@@ -59,6 +63,95 @@ def test_workflow_executor_failed(tmpdir: str) -> None:
 
     with pytest.raises(RuntimeError, match="Collection failed"):
         executor.run()
+
+
+def test_workflow_reports_main_check_stages(
+    tmpdir: str, caplog: pytest.LogCaptureFixture
+) -> None:
+    """The user sees each requested check begin and finish in execution order."""
+    performance = MagicMock(spec=ContextAwareDataCollector)
+    performance.name.return_value = "renamed_collector"
+    performance.kind = AdviceCategory.PERFORMANCE
+    performance.collect_data.return_value = None
+    compatibility = MagicMock(spec=ContextAwareDataCollector)
+    compatibility.name.return_value = "another_name"
+    compatibility.kind = AdviceCategory.COMPATIBILITY
+    compatibility.collect_data.return_value = None
+    executor = DefaultWorkflowExecutor(
+        ExecutionContext(output_dir=tmpdir), [performance, compatibility], []
+    )
+
+    with caplog.at_level(logging.INFO, logger="mlia.core.workflow"):
+        executor.collect_data()
+
+    messages = [
+        record.message
+        for record in caplog.records
+        if record.name == "mlia.core.workflow"
+    ]
+    assert messages == [
+        "Checking performance...",
+        "Performance check complete.",
+        "Checking compatibility...",
+        "Compatibility check complete.",
+    ]
+
+
+def test_workflow_keeps_progress_visible_during_collection(
+    tmpdir: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A backend without its own heartbeat still shows active work."""
+    collector = MagicMock(spec=ContextAwareDataCollector)
+    collector.kind = AdviceCategory.PERFORMANCE
+    collector.progress_label = "Running Ethos-U analysis"
+    events: list[str] = []
+
+    @contextmanager
+    def display(_logger: logging.Logger, label: str) -> Iterator[None]:
+        events.append(f"start {label}")
+        try:
+            yield
+        finally:
+            events.append(f"stop {label}")
+
+    collector.collect_data.side_effect = lambda: events.append("collect")
+    monkeypatch.setattr("mlia.core.workflow.progress_heartbeat", display)
+    executor = DefaultWorkflowExecutor(
+        ExecutionContext(output_dir=tmpdir), [collector], []
+    )
+
+    executor.collect_data()
+
+    assert events == [
+        "start Running Ethos-U analysis",
+        "collect",
+        "stop Running Ethos-U analysis",
+    ]
+
+
+def test_workflow_uses_declared_progress_label_without_kind(
+    tmpdir: str, caplog: pytest.LogCaptureFixture
+) -> None:
+    """A combined collector can name its work without claiming one category."""
+    collector = MagicMock(spec=ContextAwareDataCollector)
+    collector.kind = None
+    collector.progress_label = "Ethos-U analysis"
+    collector.collect_data.return_value = None
+    executor = DefaultWorkflowExecutor(
+        ExecutionContext(output_dir=tmpdir), [collector], []
+    )
+
+    with caplog.at_level(logging.INFO, logger="mlia.core.workflow"):
+        executor.collect_data()
+
+    assert [
+        record.message
+        for record in caplog.records
+        if record.name == "mlia.core.workflow"
+    ] == [
+        "Ethos-U analysis...",
+        "Ethos-U analysis complete.",
+    ]
 
 
 def test_workflow_executor_preserves_result_local_advice(tmpdir: str) -> None:

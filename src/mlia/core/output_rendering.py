@@ -1,16 +1,19 @@
 # SPDX-FileCopyrightText: Copyright 2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
-"""Target-agnostic rendering for MLIA standardized output."""
+"""JSON serialization and compact console rendering of MLIA output."""
 
 from __future__ import annotations
 
 import json
+from pathlib import Path
 from typing import Any
 
-from rich.markup import escape
+from rich.cells import cell_len, set_cell_size
+from rich.text import Text
 
 from mlia.core.reporting import CustomJSONEncoder
-from mlia.utils.console import create_section_header, produce_table
+
+STANDARDIZED_OUTPUT_FILENAME = "mlia-output.json"
 
 
 def standardized_output_to_json(output: dict[str, Any]) -> str:
@@ -18,339 +21,244 @@ def standardized_output_to_json(output: dict[str, Any]) -> str:
     return json.dumps(output, indent=4, cls=CustomJSONEncoder)
 
 
-def standardized_output_to_text(output: dict[str, Any]) -> str:
-    """Render standardized output as target-agnostic human-readable text."""
-    sections = [create_section_header("ML Inference Advisor started").rstrip()]
-    sections.extend(
-        section
-        for section in (
-            _target_section(output.get("target")),
-            _model_section(output.get("model")),
-            _backends_section(output.get("backends")),
-            _results_section(output.get("results")),
+MAX_REPORT_WIDTH = 78
+
+
+def check_report(output: dict[str, Any], output_dir: Path, *, width: int = 78) -> Text:
+    """Summarize completed analyses and point to their canonical JSON data."""
+    width = min(MAX_REPORT_WIDTH, max(4, width))
+    boxed_results = width >= 20
+    report = Text()
+    _heading(report, "ML INFERENCE ADVISOR", width=width)
+    model = output.get("model")
+    target = output.get("target")
+    results = output.get("results")
+    results = results if isinstance(results, list) else []
+    _line(report, "Model", _field(model, "name"), width=width)
+    _line(report, "Target", _field(target, "profile_name"), width=width)
+    _line(
+        report,
+        "Results",
+        ", ".join(
+            str(result["kind"]).capitalize()
+            for result in results
+            if isinstance(result, dict) and result.get("kind")
         )
-        if section
-    )
-    return "\n\n".join(sections)
-
-
-def _target_section(target: object) -> str | None:
-    if not isinstance(target, dict) or not target:
-        return None
-    rows: list[tuple[str, str]] = []
-    _append(rows, "Profile", target.get("profile_name"))
-    _append(rows, "Target type", target.get("target_type"))
-    _append(rows, "Description", target.get("description"))
-    configuration = target.get("configuration")
-    if isinstance(configuration, dict):
-        for key, value in configuration.items():
-            _append(rows, _title(str(key)), value)
-    components = target.get("components")
-    if isinstance(components, list) and components:
-        _append(
-            rows, "Components", ", ".join(_component_name(item) for item in components)
-        )
-    if not rows:
-        return None
-    return "Target information:\n" + produce_table(rows, table_style="nested")
-
-
-def _model_section(model: object) -> str | None:
-    if not isinstance(model, dict) or not model:
-        return None
-    rows: list[tuple[str, str]] = []
-    _append(rows, "Name", model.get("name"))
-    _append(rows, "Format", model.get("format"))
-    _append(rows, "Hash", model.get("hash"))
-    _append(rows, "Size", _format_with_unit(model.get("size_bytes"), "bytes"))
-    if not rows:
-        return None
-    return "Model information:\n" + produce_table(rows, table_style="nested")
-
-
-def _backends_section(backends: object) -> str | None:
-    if not isinstance(backends, list) or not backends:
-        return None
-    rows = []
-    for backend in backends:
-        if isinstance(backend, dict):
-            rows.append(
-                (
-                    str(backend.get("id") or "-"),
-                    str(backend.get("name") or "-"),
-                    str(backend.get("version") or "-"),
-                )
-            )
-    if not rows:
-        return None
-    return "Backends:\n" + produce_table(
-        rows, headers=["ID", "Name", "Version"], table_style="default"
+        or "None",
+        width=width,
     )
 
+    backends = output.get("backends")
+    backends = backends if isinstance(backends, list) else []
+    for index, result in enumerate(results, 1):
+        if not isinstance(result, dict):
+            continue
+        kind = str(result.get("kind") or "result")
+        _heading(
+            report,
+            f"RESULT {index}: {kind.upper()}",
+            width=width,
+            boxed=boxed_results,
+        )
+        status = str(result.get("status") or "unknown")
+        status_text = "Completed" if status == "ok" else status.capitalize()
+        if result.get("warnings") or any(
+            isinstance(item, dict) and item.get("severity") == "warning"
+            for item in (result.get("advice") or [])
+        ):
+            status_text += " with warnings"
+        _line(report, "Status", status_text, width=width, boxed=boxed_results)
+        producer = str(result.get("producer") or "Unknown")
+        for backend in backends:
+            if isinstance(backend, dict) and backend.get("id") == producer:
+                producer = str(backend.get("name") or producer)
+                if backend.get("version"):
+                    version = str(backend["version"])
+                    producer += (
+                        " (unknown version)"
+                        if version.lower() == "unknown"
+                        else f" {version}"
+                    )
+                break
+        _line(report, "Producer", producer, width=width, boxed=boxed_results)
+        if kind == "performance" and result.get("mode"):
+            scope = f"{str(result['mode']).capitalize()} results"
+            _line(report, "Scope", scope, width=width, boxed=boxed_results)
+        if boxed_results:
+            report.append("\n╰" + "─" * (width - 2) + "╯", style="tbl.border")
+        _heading(report, f"{kind.upper()} FINDINGS AND ADVICE", width=width)
+        _findings(report, result, kind)
 
-def _results_section(results: object) -> str | None:
-    if not isinstance(results, list) or not results:
-        return None
-    rendered = [create_section_header("Model Analysis Results").rstrip()]
-    for index, result in enumerate(results, start=1):
-        if isinstance(result, dict):
-            rendered.append(_result_section(index, result))
-    return "\n\n".join(section for section in rendered if section)
-
-
-def _result_section(index: int, result: dict[str, Any]) -> str:
-    title = f"Result {index}: {_title(str(result.get('kind') or 'result'))}"
-    rows: list[tuple[str, str]] = []
-    _append(rows, "Status", result.get("status"))
-    _append(rows, "Producer", result.get("producer"))
-    _append(rows, "Mode", result.get("mode"))
-    lines = [title, produce_table(rows, table_style="nested") if rows else ""]
-    entities_by_id = _entities_by_id(result.get("entities"))
-    for key in ("warnings", "errors"):
-        values = result.get(key)
-        if isinstance(values, list) and values:
-            lines.append(_list_block(_title(key), values))
-    metrics = _metrics_table(result.get("metrics"))
-    if metrics:
-        lines.append("Metrics:\n" + metrics)
-    entities = _entities_table(result.get("entities"), result.get("checks"))
-    if entities:
-        lines.append("Entities:\n" + entities)
-    breakdowns = _breakdowns_table(result.get("breakdowns"), entities_by_id)
-    if breakdowns:
-        lines.append("Breakdowns:\n" + breakdowns)
-    checks = _checks_table(result.get("checks"), entities_by_id)
-    if checks:
-        lines.append("Checks:\n" + checks)
-    advice = _advice_block(result.get("advice"), entities_by_id)
-    if advice:
-        lines.append("Advice:\n" + advice)
-    return "\n".join(line for line in lines if line)
-
-
-def _metrics_table(metrics: object) -> str | None:
-    if not isinstance(metrics, list) or not metrics:
-        return None
-    rows = []
-    for metric in metrics:
-        if isinstance(metric, dict):
-            rows.append(
-                (
-                    str(metric.get("name") or "-"),
-                    _metric_value(metric),
-                    str(metric.get("unit") or ""),
-                )
-            )
-    return produce_table(rows, headers=["Metric", "Value", "Unit"]) if rows else None
+    _heading(report, "FULL RESULTS", width=width)
+    report.append("\n\n")
+    report.append("Full metrics, operator details and breakdowns are available in:\n")
+    report.append(str(output_dir / STANDARDIZED_OUTPUT_FILENAME), style="tbl.name")
+    return report
 
 
-def _entities_table(entities: object, checks: object = None) -> str | None:
-    if not isinstance(entities, list) or not entities:
-        return None
-    rows: list[tuple[str, ...]] = []
-    truncated = len(entities) > 20
-    for entity in entities[:20]:
-        if isinstance(entity, dict):
-            rows.append(
-                (
-                    str(entity.get("name") or "-"),
-                    str(entity.get("kind") or "-"),
-                    str(entity.get("id") or "-"),
-                    str(entity.get("placement") or "-"),
-                    escape(_entity_reason(entity, checks)),
-                )
-            )
-    if not rows:
-        return None
-    headers = ["Name", "Kind", "ID", "Placement"]
-    if any(row[-1] != "-" for row in rows):
-        headers.append("Reason")
-    else:
-        rows = [row[:-1] for row in rows]
-    table = produce_table(rows, headers=headers)
-    if truncated:
-        table += f"\nShowing 20 of {len(entities)} entities."
-    return table
+def _field(value: object, key: str) -> str:
+    return str(value.get(key) or "Unknown") if isinstance(value, dict) else "Unknown"
 
 
-def _entity_reason(entity: dict[str, Any], checks: object) -> str:
-    """Render entity-linked check reasons without inferring missing evidence."""
-    reasons: list[str] = []
-    if isinstance(checks, list) and entity.get("id"):
+def _fit(value: str, cells: int) -> str:
+    """Fit a label inside a rule or box without splitting a wide character."""
+    if cells <= 0:
+        return ""
+    if cell_len(value) > cells:
+        return set_cell_size(value, cells - 1) + "…"
+    return value
+
+
+def _heading(report: Text, title: str, *, width: int, boxed: bool = False) -> None:
+    """Append a short section heading with distinct title and rule styles."""
+    if report:
+        report.append("\n\n")
+    title = _fit(title, width - 4)
+    if boxed:
+        report.append("╭" + "─" * (width - 2) + "╮\n", style="tbl.border")
+        report.append("│ ", style="tbl.border")
+        report.append(title, style="tbl.heading")
+        report.append(" " * (width - cell_len(title) - 3) + "│", style="tbl.border")
+        return
+    report.append("── ", style="tbl.border")
+    report.append(title, style="tbl.name")
+    report.append(" " + "─" * (width - cell_len(title) - 4), style="tbl.border")
+
+
+def _line(
+    report: Text, label: str, value: str, *, width: int, boxed: bool = False
+) -> None:
+    report.append("\n")
+    if boxed:
+        report.append("│ ", style="tbl.border")
+    report.append(f"{label}: ", style="tbl.border")
+    if boxed:
+        value = _fit(value, width - cell_len(label) - 6)
+    report.append(value, style="tbl.version" if label == "Status" else "tbl.name")
+    if boxed:
+        padding = " " * (width - cell_len(label) - cell_len(value) - 5)
+        report.append(padding + "│", style="tbl.border")
+
+
+def _findings(report: Text, result: dict[str, Any], kind: str) -> None:
+    """Group repeated advice while preserving distinct diagnostics."""
+    advice = result.get("advice")
+    warnings = result.get("warnings")
+    errors = result.get("errors")
+    entities = result.get("entities")
+    entities_by_id = {
+        str(entity["id"]): entity
+        for entity in (entities if isinstance(entities, list) else [])
+        if isinstance(entity, dict) and entity.get("id")
+    }
+    findings: dict[tuple[str, str], set[str]] = {}
+    if isinstance(advice, list):
+        for item in advice:
+            if not isinstance(item, dict) or not item.get("message"):
+                continue
+            key = (str(item.get("severity") or "info"), str(item["message"]))
+            ids = item.get("affected_entity_ids")
+            findings.setdefault(key, set()).update(ids if isinstance(ids, list) else [])
+    if isinstance(warnings, list):
+        for warning in warnings:
+            findings.setdefault(("warning", str(warning)), set())
+    if isinstance(errors, list):
+        for error in errors:
+            findings.setdefault(("error", str(error)), set())
+    checks = result.get("checks")
+    if isinstance(checks, list):
         for check in checks:
-            if not isinstance(check, dict) or check.get("entity_id") != entity["id"]:
+            if not isinstance(check, dict) or check.get("status") not in (
+                "fail",
+                "partial",
+            ):
                 continue
             details = check.get("details")
-            if not isinstance(details, dict):
+            reasons = details.get("reasons") if isinstance(details, dict) else None
+            if not isinstance(reasons, list):
                 continue
-            values = details.get("reasons")
-            if isinstance(values, list):
-                for value in values:
-                    if isinstance(value, str) and value:
-                        reasons.append(value)
-                    elif isinstance(value, dict):
-                        text = ": ".join(
-                            part
-                            for key in ("description", "detail")
-                            if isinstance(part := value.get(key), str) and part
-                        )
-                        if text:
-                            reasons.append(text)
-    return "; ".join(dict.fromkeys(reasons)) or "-"
+            for reason in reasons:
+                if isinstance(reason, dict):
+                    description = str(
+                        reason.get("description") or reason.get("category") or ""
+                    )
+                    detail = str(reason.get("detail") or "")
+                    message = (
+                        f"{description}: {detail}"
+                        if description and detail and detail != description
+                        else description or detail
+                    )
+                else:
+                    message = str(reason) if isinstance(reason, str) else ""
+                if message:
+                    key = (
+                        "error" if check["status"] == "fail" else "warning",
+                        message,
+                    )
+                    ids = findings.setdefault(key, set())
+                    if check.get("entity_id"):
+                        ids.add(str(check["entity_id"]))
 
-
-def _breakdowns_table(
-    breakdowns: object, entities_by_id: dict[str, dict[str, Any]]
-) -> str | None:
-    if not isinstance(breakdowns, list) or not breakdowns:
-        return None
-    rows = []
-    truncated = len(breakdowns) > 20
-    for breakdown in breakdowns[:20]:
-        if not isinstance(breakdown, dict):
-            continue
-        entity = entities_by_id.get(str(breakdown.get("entity_id") or ""), {})
-        metrics = breakdown.get("metrics")
-        metric_text = ""
-        if isinstance(metrics, list):
-            metric_text = ", ".join(
-                (
-                    f"{metric.get('name')}={_metric_value(metric)} "
-                    f"{metric.get('unit', '')}"
-                ).strip()
-                for metric in metrics
-                if isinstance(metric, dict)
-            )
-        rows.append(
-            (
-                _entity_name(breakdown.get("entity_id"), entity),
-                str(entity.get("kind") or "-"),
-                str(breakdown.get("entity_id") or "-"),
-                metric_text or "-",
-            )
+    if kind == "compatibility" and result.get("status") == "ok":
+        entities = result.get("entities")
+        source = (
+            [
+                item
+                for item in entities
+                if isinstance(item, dict) and item.get("kind") == "source_operator"
+            ]
+            if isinstance(entities, list)
+            else []
         )
-    if not rows:
-        return None
-    table = produce_table(rows, headers=["Name", "Kind", "ID", "Metrics"])
-    if truncated:
-        table += f"\nShowing 20 of {len(breakdowns)} breakdowns."
-    return table
-
-
-def _checks_table(
-    checks: object, entities_by_id: dict[str, dict[str, Any]]
-) -> str | None:
-    if not isinstance(checks, list) or not checks:
-        return None
-    rows = []
-    truncated = len(checks) > 20
-    for check in checks[:20]:
-        if isinstance(check, dict):
-            entity = entities_by_id.get(str(check.get("entity_id") or ""), {})
-            rows.append(
-                (
-                    str(check.get("id") or "-"),
-                    str(check.get("status") or "-"),
-                    _entity_name(check.get("entity_id"), entity),
-                )
+        if source and all(item.get("placement") == "NPU" for item in source):
+            report.append(
+                f"\n\nAll {len(source)} source operators are placed on the NPU."
             )
-    if not rows:
-        return None
-    table = produce_table(rows, headers=["Check", "Status", "Entity"])
-    if truncated:
-        table += f"\nShowing 20 of {len(checks)} checks."
-    return table
-
-
-def _advice_block(
-    advice: object, entities_by_id: dict[str, dict[str, Any]]
-) -> str | None:
-    if not isinstance(advice, list) or not advice:
-        return None
-    rows = []
-    for item in advice:
-        if isinstance(item, dict):
-            rows.append(
-                (
-                    str(item.get("severity") or "info"),
-                    str(item.get("category") or "-"),
-                    str(item.get("message") or ""),
-                    _entity_names(item.get("affected_entity_ids"), entities_by_id),
-                )
-            )
-    return (
-        produce_table(
-            rows,
-            headers=["Severity", "Category", "Message", "Entities"],
-            table_style="no_borders",
-        )
-        if rows
-        else None
+    if not findings:
+        if result.get("status") in ("failed", "partial", "incompatible"):
+            report.append("\n\nNo further reason or recovery advice was reported.")
+        else:
+            report.append("\n\nNo warnings or advice were reported.")
+    else:
+        for (severity, message), ids in findings.items():
+            report.append("\n\n")
+            severity_style = {
+                "warning": "tbl.highlight",
+                "error": "tbl.error",
+            }.get(severity, "tbl.name")
+            report.append(severity.upper(), style=severity_style)
+            report.append(" · ", style="tbl.border")
+            _finding_message(report, message)
+            if ids:
+                labels = []
+                for entity_id in sorted(ids)[:3]:
+                    entity = entities_by_id.get(entity_id, {})
+                    name = str(entity.get("name") or entity_id)
+                    labels.append(
+                        f"{name} ({entity_id})" if name != entity_id else entity_id
+                    )
+                remaining = len(ids) - len(labels)
+                report.append("\nAffects: " + ", ".join(labels))
+                if remaining:
+                    report.append(
+                        f", and {remaining} more (see {STANDARDIZED_OUTPUT_FILENAME})"
+                    )
+                report.append(".")
+    report.append("\n\nDetails in full results: ", style="tbl.border")
+    report.append(
+        "checks, advice and entities."
+        if kind == "compatibility"
+        else "advice, breakdowns and entities."
     )
 
 
-def _entities_by_id(entities: object) -> dict[str, dict[str, Any]]:
-    if not isinstance(entities, list):
-        return {}
-    return {
-        str(entity["id"]): entity
-        for entity in entities
-        if isinstance(entity, dict) and isinstance(entity.get("id"), str)
-    }
-
-
-def _entity_name(entity_id: object, entity: dict[str, Any]) -> str:
-    if entity.get("name"):
-        return str(entity["name"])
-    if entity_id:
-        return str(entity_id)
-    return "-"
-
-
-def _entity_names(entity_ids: object, entities_by_id: dict[str, dict[str, Any]]) -> str:
-    if not isinstance(entity_ids, list) or not entity_ids:
-        return "-"
-    return ", ".join(
-        _entity_name(entity_id, entities_by_id.get(str(entity_id), {}))
-        for entity_id in entity_ids
-    )
-
-
-def _list_block(title: str, values: list[object]) -> str:
-    return title + ":\n" + "\n".join(f"  - {value}" for value in values)
-
-
-def _metric_value(metric: dict[str, Any]) -> str:
-    if "value" in metric:
-        return str(metric.get("value"))
-    if metric.get("availability"):
-        reason = metric.get("reason")
-        return str(reason or metric.get("availability"))
-    return "-"
-
-
-def _component_name(component: object) -> str:
-    if not isinstance(component, dict):
-        return str(component)
-    values = [
-        component.get("type"),
-        component.get("family"),
-        component.get("model"),
-        component.get("variant"),
-    ]
-    return " ".join(str(value) for value in values if value is not None)
-
-
-def _append(rows: list[tuple[str, str]], key: str, value: object) -> None:
-    if value is not None and value != "":
-        rows.append((key, str(value)))
-
-
-def _title(value: str) -> str:
-    return value.replace("_", " ").title()
-
-
-def _format_with_unit(value: object, unit: str) -> str | None:
-    if value is None:
-        return None
-    return f"{value} {unit}"
+def _finding_message(report: Text, message: str) -> None:
+    """Place a suggested MLIA command on a distinct, colored line."""
+    description, marker, command = message.partition("mlia ")
+    if not marker or not command:
+        report.append(message)
+        return
+    report.append(description.rstrip())
+    if description:
+        report.append("\n  ")
+    report.append(marker + command.strip(), style="tbl.name")

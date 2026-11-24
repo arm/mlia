@@ -44,8 +44,10 @@ modules = ["mlia.helpers.entry"]
 [tool.mlia.runtime]
 python = "3.11"
 id = "test/public"
+label = "Test runtime"
 architectures = ["x86_64", "aarch64"]
 [tool.mlia.runtime.operations.echo]
+label = "Test operation"
 entrypoint = "worker:run"
 result_schema = "echo/1"
 """)
@@ -69,6 +71,8 @@ def test_build_and_sdist_rebuild(
         definition = RuntimeDefinition.load(manifest)
         definition.verify_sources()
         assert definition.data["package"] == "test-worker==1.0"
+        assert definition.data["label"] == "Test runtime"
+        assert definition.data["operations"]["echo"]["label"] == "Test operation"
         assert "artifacts" not in definition.data
         assert (
             f"py311-none-linux_{definition.data['architecture']}"

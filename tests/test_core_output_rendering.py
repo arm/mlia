@@ -1,234 +1,322 @@
 # SPDX-FileCopyrightText: Copyright 2026, Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
-"""Tests for standardized output rendering."""
+"""Tests for the compact check console report."""
 
-from __future__ import annotations
+from io import StringIO
+from pathlib import Path
 
-from typing import Any
+from rich.console import Console
 
-import pytest
+from mlia.core.application_settings import DARK
+from mlia.core.output_rendering import check_report
 
-from mlia.core.output_rendering import _entities_table, standardized_output_to_text
 
-
-def test_standardized_output_text_resolves_entity_references() -> None:
-    """Breakdowns, checks, and advice should render referenced entity metadata."""
+def test_check_report_summarizes_and_groups_findings(tmp_path: Path) -> None:
+    """The console stays compact while retaining distinct actionable findings."""
     output = {
-        "target": {
-            "profile_name": "test-profile",
-            "target_type": "test-target",
-            "components": [{"type": "npu", "family": "ethos-u"}],
-            "configuration": {},
-        },
-        "model": {
-            "name": "model.tflite",
-            "format": "tflite",
-            "hash": "a" * 64,
-        },
-        "backends": [
-            {"id": "backend", "name": "Backend", "version": "1.0.0"},
-        ],
+        "model": {"name": "network.tflite", "hash": "secret"},
+        "target": {"profile_name": "ethos-u", "configuration": {"secret": 1}},
+        "backends": [{"id": "vela", "name": "Vela", "version": "4.0"}],
         "results": [
+            {
+                "kind": "compatibility",
+                "status": "ok",
+                "producer": "vela",
+                "entities": [
+                    {"id": "a", "kind": "source_operator", "placement": "NPU"},
+                    {"id": "b", "kind": "source_operator", "placement": "NPU"},
+                ],
+            },
             {
                 "kind": "performance",
-                "status": "ok",
-                "producer": "backend",
-                "entities": [
-                    {
-                        "id": "source_operator/operator/0",
-                        "kind": "source_operator",
-                        "name": "CONV_2D",
-                        "placement": "NPU",
-                    }
-                ],
-                "breakdowns": [
-                    {
-                        "entity_id": "source_operator/operator/0",
-                        "metrics": [
-                            {"name": "npu_cycles", "value": 1000, "unit": "cycles"}
-                        ],
-                    }
-                ],
-                "checks": [
-                    {
-                        "id": "operator_supported",
-                        "status": "pass",
-                        "entity_id": "source_operator/operator/0",
-                    }
-                ],
+                "status": "partial",
+                "producer": "vela",
+                "mode": "simulated",
+                "warnings": ["Some measurements unavailable"],
+                "metrics": [{"name": "cycles", "value": 123456}],
                 "advice": [
                     {
-                        "id": "0",
-                        "category": "performance",
-                        "severity": "info",
-                        "message": "Review operator performance.",
-                        "affected_entity_ids": ["source_operator/operator/0"],
-                    }
-                ],
-            }
-        ],
-    }
-
-    text = standardized_output_to_text(output)
-
-    assert "CONV_2D" in text
-    assert "operator/0" in text
-    assert "npu_cycles=1000 cycles" in text
-    assert "operator_supported" in text
-    assert "Review operator performance." in text
-
-
-@pytest.mark.parametrize(
-    ("details", "expected"),
-    [
-        (
-            {
-                "reasons": [
-                    {"description": "Torch operation not lowered", "detail": ""},
-                    {"description": "TOSA rank violation", "detail": ""},
-                ]
-            },
-            "Torch operation not lowered; TOSA rank violation",
-        ),
-        (
-            {
-                "reasons": [
-                    {"description": "Unsupported shape", "detail": "Rank must be 4"}
-                ]
-            },
-            "Unsupported shape: Rank must be 4",
-        ),
-        (
-            {"reasons": [{"description": "Unsupported datatype", "detail": ""}]},
-            "Unsupported datatype",
-        ),
-        ({"reasons": ["Rejected", "Rejected"]}, "Rejected"),
-        ({"reasons": []}, "-"),
-        (None, "-"),
-        ({"reasons": [None, {}]}, "-"),
-    ],
-)
-def test_entity_table_displays_backend_reasons(details: object, expected: str) -> None:
-    """All targets render reasons through the same entity-linked checks."""
-    entity = {
-        "id": "op/0",
-        "name": "custom",
-        "kind": "source_operator",
-        "placement": "CPU",
-    }
-    output = {
-        "results": [
-            {
-                "entities": [entity],
-                "checks": [
-                    {"id": "support", "entity_id": "op/0", "details": details},
-                    {
-                        "id": "other",
-                        "entity_id": "op/1",
-                        "details": {
-                            "reasons": [{"description": "Unrelated rejection"}]
-                        },
+                        "severity": "warning",
+                        "message": "Review high-cycle layers",
+                        "affected_entity_ids": ["a"],
                     },
                     {
-                        "id": "global",
-                        "details": {"reasons": [{"description": "Whole-model error"}]},
+                        "severity": "warning",
+                        "message": "Review high-cycle layers",
+                        "affected_entity_ids": ["b"],
                     },
                 ],
-            }
-        ]
+            },
+        ],
     }
-    text = standardized_output_to_text(output)
-    assert ("Reason" in text) == (expected != "-")
-    assert "Kind" in text
-    assert "source_operator" in text
-    assert expected in text
-    assert "Unrelated rejection" not in text
-    assert "Whole-model error" not in text
-    assert entity["kind"] == "source_operator"
+
+    report = check_report(output, tmp_path).plain
+
+    assert "Model: network.tflite" in report
+    assert "Target: ethos-u" in report
+    assert "Results: Compatibility, Performance" in report
+    assert "All 2 source operators are placed on the NPU." in report
+    assert "Status: Partial with warnings" in report
+    assert "Producer: Vela 4.0" in report
+    assert "Scope: Simulated results" in report
+    assert report.count("Review high-cycle layers") == 1
+    assert "Affects: a, b." in report
+    assert "Some measurements unavailable" in report
+    assert "Details in full results: checks, advice and entities." in report
+    assert "Details in full results: advice, breakdowns and entities." in report
+    assert "path below" not in report
+    assert str(tmp_path / "mlia-output.json") in report
+    assert "123456" not in report
+    assert "secret" not in report
 
 
-def test_mixed_entity_table_keeps_reason_and_kind() -> None:
-    """One rejection exposes Reason, while other operators retain empty cells."""
-    text = _entities_table(
-        [
-            {
-                "id": "0",
-                "name": "supported",
-                "kind": "source_operator",
-                "placement": "NPU",
-            },
-            {
-                "id": "1",
-                "name": "fallback",
-                "kind": "source_operator",
-                "placement": "CPU",
-            },
-        ],
-        [
-            {
-                "entity_id": "1",
-                "details": {"reasons": [{"description": "Rejected", "detail": ""}]},
-            }
-        ],
-    )
-    assert text is not None
-    assert "Reason" in text
-    assert "Kind" in text
-    assert "Rejected" in text
-    supported_row = next(line for line in text.splitlines() if "supported" in line)
-    assert "-" in supported_row
-
-
-def test_long_entity_reason_wraps_without_losing_text(
-    monkeypatch: pytest.MonkeyPatch,
+def test_check_report_keeps_failed_reason_and_only_requested_result(
+    tmp_path: Path,
 ) -> None:
-    """The existing Rich table wraps diagnostic text to terminal width."""
-    monkeypatch.setattr("mlia.utils.console._output_width", lambda: 100)
-    text = _entities_table(
-        [{"id": "0", "name": "op", "kind": "source_operator", "placement": "CPU"}],
-        [
-            {
-                "entity_id": "0",
-                "details": {
-                    "reasons": [{"description": "explanation " * 40, "detail": ""}]
-                },
-            }
-        ],
+    """Failed checks show their reason without inventing a second analysis."""
+    report = check_report(
+        {
+            "results": [
+                {
+                    "kind": "performance",
+                    "status": "failed",
+                    "producer": "backend",
+                    "errors": ["Backend could not read the model"],
+                }
+            ]
+        },
+        tmp_path,
+    ).plain
+
+    assert "Status: Failed" in report
+    assert "Backend could not read the model" in report
+    assert "COMPATIBILITY FINDINGS" not in report
+    assert "No warnings or advice" not in report
+
+
+def test_check_report_names_unknown_producer_version(tmp_path: Path) -> None:
+    """An unknown backend version is identified as a version."""
+    report = check_report(
+        {
+            "backends": [
+                {
+                    "id": "nx",
+                    "name": "Neural Accelerator (NX) Performance Estimator",
+                    "version": "unknown",
+                }
+            ],
+            "results": [{"kind": "performance", "status": "ok", "producer": "nx"}],
+        },
+        tmp_path,
+    ).plain
+
+    assert (
+        "Producer: Neural Accelerator (NX) Performance Estimator (unknown version)"
+        in report
     )
-    assert text is not None
-    assert text.count("explanation") == 40
-    assert all(len(line) <= 100 for line in text.splitlines())
 
 
-@pytest.mark.parametrize(
-    "reason",
-    [
-        "dtype [int8] is unsupported",
-        "unexpected closing tag [/int8]",
-        "[bold]literal backend diagnostic[/bold]",
-        r"dtype \[int8] is unsupported",
-    ],
-)
-def test_entity_reasons_are_literal_text(reason: str) -> None:
-    """Backend diagnostics must not be interpreted as Rich markup."""
-    output: dict[str, Any] = {
-        "results": [
-            {
-                "entities": [{"id": "0", "name": "op", "placement": "CPU"}],
-                "checks": [
-                    {
-                        "entity_id": "0",
-                        "details": {
-                            "reasons": [{"description": reason, "detail": reason}]
-                        },
-                    }
-                ],
-            }
-        ]
-    }
-    text = standardized_output_to_text(output)
-    assert text.count(reason) == 2
-    assert output["results"][0]["checks"][0]["details"]["reasons"][0] == {
-        "description": reason,
-        "detail": reason,
-    }
+def test_check_report_includes_failing_check_reasons(tmp_path: Path) -> None:
+    """Failure diagnostics in checks must not be hidden by the empty fallback."""
+    report = check_report(
+        {
+            "results": [
+                {
+                    "kind": "compatibility",
+                    "status": "incompatible",
+                    "producer": "vela",
+                    "entities": [{"id": "op-1", "name": "Conv2D"}],
+                    "checks": [
+                        {
+                            "id": "npu_support_op-1",
+                            "status": "fail",
+                            "entity_id": "op-1",
+                            "details": {
+                                "reasons": [
+                                    {
+                                        "description": "Unsupported kernel",
+                                        "detail": "Size exceeds the limit",
+                                    }
+                                ]
+                            },
+                        }
+                    ],
+                }
+            ]
+        },
+        tmp_path,
+    ).plain
+
+    assert "ERROR · Unsupported kernel: Size exceeds the limit" in report
+    assert "Affects: Conv2D (op-1)." in report
+    assert "No further reason" not in report
+
+
+def test_check_report_sized_to_console_width(tmp_path: Path) -> None:
+    """Rules and box lines fit even when the terminal is narrow."""
+    width = 42
+    report = check_report(
+        {
+            "results": [
+                {
+                    "kind": "compatibility",
+                    "status": "incompatible",
+                    "producer": "a very long backend producer name",
+                }
+            ]
+        },
+        tmp_path,
+        width=width,
+    ).plain
+
+    assert all(
+        len(line) <= width
+        for line in report.splitlines()
+        if line.startswith(("── ", "╭", "│", "╰"))
+    )
+    assert "╭" + "─" * (width - 2) + "╮" in report
+
+    tiny = check_report(
+        {"results": [{"kind": "performance", "status": "ok"}]},
+        tmp_path,
+        width=16,
+    ).plain
+    assert "╭" not in tiny
+    assert all(len(line) <= 16 for line in tiny.splitlines() if line.startswith("── "))
+
+
+def test_check_report_names_one_affected_operator(tmp_path: Path) -> None:
+    """A single affected entity is identified without requiring a JSON lookup."""
+    report = check_report(
+        {
+            "results": [
+                {
+                    "kind": "performance",
+                    "status": "ok",
+                    "producer": "backend",
+                    "entities": [
+                        {
+                            "id": "source_operator/segment_0/spirv-42",
+                            "kind": "source_operator",
+                            "name": "Conv2D",
+                        }
+                    ],
+                    "advice": [
+                        {
+                            "severity": "warning",
+                            "message": "Review low MAC utilisation",
+                            "affected_entity_ids": [
+                                "source_operator/segment_0/spirv-42"
+                            ],
+                        }
+                    ],
+                }
+            ]
+        },
+        tmp_path,
+    ).plain
+
+    assert "Affects: Conv2D (source_operator/segment_0/spirv-42)." in report
+
+
+def test_check_report_limits_operator_names(tmp_path: Path) -> None:
+    """Long findings stay short while pointing to complete JSON identities."""
+    report = check_report(
+        {
+            "results": [
+                {
+                    "kind": "compatibility",
+                    "status": "partial",
+                    "producer": "backend",
+                    "advice": [
+                        {
+                            "severity": "warning",
+                            "message": "Review placement",
+                            "affected_entity_ids": ["A", "B", "C", "D", "E"],
+                        }
+                    ],
+                }
+            ]
+        },
+        tmp_path,
+    ).plain
+
+    assert "Affects: A, B, C, and 2 more (see mlia-output.json)." in report
+    assert "Affects: A, B, C, D" not in report
+
+
+def test_check_report_styles_headings_and_severity(tmp_path: Path) -> None:
+    """Semantic styles let configured light and dark themes supply the colors."""
+    report = check_report(
+        {
+            "results": [
+                {
+                    "kind": "performance",
+                    "status": "ok",
+                    "producer": "backend",
+                    "warnings": ["Check this layer"],
+                }
+            ]
+        },
+        tmp_path,
+    )
+    styles = {span.style for span in report.spans}
+    assert "tbl.border" in styles
+    assert "tbl.name" in styles
+    assert "tbl.heading" in styles
+    assert "tbl.highlight" in styles
+
+    stream = StringIO()
+    Console(
+        file=stream,
+        force_terminal=True,
+        no_color=False,
+        color_system="truecolor",
+        theme=DARK,
+    ).print(report)
+    assert "\x1b[1;38;2;107;155;248m" in stream.getvalue()  # blue section title
+    assert "\x1b[1;38;2;246;155;79m" in stream.getvalue()  # orange result title
+
+
+def test_check_report_highlights_suggested_command(tmp_path: Path) -> None:
+    """Follow-up commands sit on their own line in the help screen's blue."""
+    command = "mlia check model.tflite --target-profile ethos-u85-2048 --performance"
+    report = check_report(
+        {
+            "results": [
+                {
+                    "kind": "compatibility",
+                    "status": "ok",
+                    "producer": "backend",
+                    "advice": [
+                        {
+                            "severity": "info",
+                            "message": (
+                                "Check performance with this command:  " + command
+                            ),
+                        }
+                    ],
+                }
+            ]
+        },
+        tmp_path,
+    )
+
+    assert "command:\n  " + command in report.plain
+    command_start = report.plain.index(command)
+    assert any(
+        span.style == "tbl.name"
+        and span.start <= command_start
+        and span.end >= command_start + len(command)
+        for span in report.spans
+    )
+    stream = StringIO()
+    Console(
+        file=stream,
+        force_terminal=True,
+        no_color=False,
+        color_system="truecolor",
+        theme=DARK,
+        width=200,
+    ).print(report)
+    assert "\x1b[1;38;2;107;155;248m" + command in stream.getvalue()

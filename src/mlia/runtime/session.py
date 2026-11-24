@@ -11,6 +11,7 @@ Profile selection and licence handling are shared by CLI and API callers.
 from __future__ import annotations
 
 import json
+import logging
 import os
 import pydoc
 from collections.abc import Callable, Iterator
@@ -30,7 +31,10 @@ from mlia.runtime.catalog import (
     load_profile,
     selected_backends,
 )
-from mlia.runtime.manager import RuntimeManager
+from mlia.runtime.manager import RuntimeManager, operation_label, runtime_label
+from mlia.utils.logging import log_progress_action
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from mlia.target.config import TargetProfile
@@ -82,6 +86,8 @@ class RuntimeSession:
                     **stage_options.get("options", {}),
                     **payload.get("options", {}),
                 }
+            label = operation_label(definition, operation)
+            log_progress_action(logger, "Running %s...", label)
             result = self.manager.execute(
                 definition, operation, effective, self.output_dir / "runtime-jobs"
             )
@@ -95,6 +101,7 @@ class RuntimeSession:
                 }
             )
             self.persist()
+            log_progress_action(logger, "Completed %s.", label)
             return result
         raise ConfigurationError(
             f"Execution profile {self.profile.data['id']} does not "
@@ -296,6 +303,7 @@ def provision_runtimes(
         )
     # Validate every supplied input before displaying terms or starting installation.
     for definition in missing:
+        log_progress_action(logger, "Preparing %s...", runtime_label(definition))
         definition.verify_sources()
     if licences and not accepted:
         for definition in licences:
@@ -303,6 +311,8 @@ def provision_runtimes(
         accepted = True
     for definition in definitions:
         manager.install(definition, accept_eula=accepted, force=force)
+        if definition in missing:
+            log_progress_action(logger, "Ready: %s.", runtime_label(definition))
 
 
 def _accept_runtime_license(

@@ -8,18 +8,152 @@ import logging
 import os
 import sys
 import threading
+import time
 from contextlib import ExitStack, contextmanager, redirect_stderr, redirect_stdout
+from contextvars import ContextVar
 from pathlib import Path
 from typing import Any, Callable, Generator, Iterable, TextIO
+
+from rich.console import Console
+from rich.progress import Progress, SpinnerColumn, TaskID, TextColumn, TimeElapsedColumn
 
 from mlia.utils.boundaries.logging import create_file_handler
 from mlia.utils.boundaries.temporary import temporary_text_stream
 from mlia.utils.console import remove_ascii_codes
 
+_INTERACTIVE_PROGRESS: ContextVar[bool] = ContextVar(
+    "mlia_interactive_progress", default=False
+)
+_PROGRESS_CONSOLE: ContextVar[Console | None] = ContextVar(
+    "mlia_progress_console", default=None
+)
+_LIVE_TASK: ContextVar[tuple[Progress, TaskID] | None] = ContextVar(
+    "mlia_live_progress_task", default=None
+)
+_CURRENT_PROGRESS_LABEL: ContextVar[str | None] = ContextVar(
+    "mlia_current_progress_label", default=None
+)
+_ACTIVE_PROGRESS: ContextVar[bool] = ContextVar("mlia_active_progress", default=False)
+_TEXT_PROGRESS_LABELS: ContextVar[list[str] | None] = ContextVar(
+    "mlia_text_progress_labels", default=None
+)
+
+
+def configure_interactive_progress(
+    enabled: bool, console: Console | None = None
+) -> None:
+    """Select an animated indicator for human-facing terminal output."""
+    _INTERACTIVE_PROGRESS.set(enabled)
+    _PROGRESS_CONSOLE.set(console)
+
+
+class ProgressStreamHandler(logging.StreamHandler):
+    """Write stage messages through the configured console when present."""
+
+    def __init__(self, stream: TextIO, console: Console | None = None) -> None:
+        """Keep the configured console available to heartbeat worker threads."""
+        super().__init__(stream)
+        self.console = console
+
+    def emit(self, record: logging.LogRecord) -> None:
+        """Keep the spinner and log line from writing over one another."""
+        console = self.console
+        if console is None:
+            super().emit(record)
+            return
+        try:
+            console.print(self.format(record), markup=False, highlight=False)
+        except Exception:  # pragma: no cover - logging handlers must not raise
+            self.handleError(record)
+
 
 def log_boundary_action(logger: logging.Logger, message: str, *args: object) -> None:
     """Log an externally visible runtime action."""
     logger.info(message, *args, extra={"boundary_action": True})
+
+
+def log_progress_action(logger: logging.Logger, message: str, *args: object) -> None:
+    """Log a short check stage for the ordinary CLI and the log file."""
+    logger.info(message, *args, extra={"progress_action": True})
+
+
+@contextmanager
+def progress_heartbeat(
+    logger: logging.Logger, label: str, interval: float = 10.0
+) -> Generator[None, None, None]:
+    """Show a transient spinner or timed text while a step is quiet."""
+    if _ACTIVE_PROGRESS.get():
+        live_task = _LIVE_TASK.get()
+        if live_task is None:
+            labels = _TEXT_PROGRESS_LABELS.get()
+            if labels is None:
+                yield
+                return
+            labels.append(label)
+            try:
+                yield
+            finally:
+                labels.pop()
+            return
+        progress, task_id = live_task
+        previous_label = _CURRENT_PROGRESS_LABEL.get()
+        label_token = _CURRENT_PROGRESS_LABEL.set(label)
+        try:
+            progress.update(task_id, description=label, refresh=True)
+            yield
+        finally:
+            _CURRENT_PROGRESS_LABEL.reset(label_token)
+            if previous_label is not None:
+                progress.update(task_id, description=previous_label, refresh=True)
+        return
+    token = _ACTIVE_PROGRESS.set(True)
+    try:
+        if _INTERACTIVE_PROGRESS.get():
+            console = _PROGRESS_CONSOLE.get()
+            if console is not None and console.is_terminal:
+                with Progress(
+                    SpinnerColumn(style="cyan"),
+                    TextColumn("{task.description}", markup=False),
+                    TimeElapsedColumn(),
+                    console=console,
+                    transient=True,
+                    redirect_stdout=True,
+                    redirect_stderr=True,
+                ) as progress:
+                    task_id = progress.add_task(label, total=None)
+                    task_token = _LIVE_TASK.set((progress, task_id))
+                    label_token = _CURRENT_PROGRESS_LABEL.set(label)
+                    try:
+                        yield
+                    finally:
+                        _CURRENT_PROGRESS_LABEL.reset(label_token)
+                        _LIVE_TASK.reset(task_token)
+                return
+
+        stopped = threading.Event()
+        started = time.monotonic()
+        labels = [label]
+        labels_token = _TEXT_PROGRESS_LABELS.set(labels)
+
+        def report() -> None:
+            while not stopped.wait(interval):
+                log_progress_action(
+                    logger,
+                    "%s still in progress (%ds elapsed).",
+                    labels[-1],
+                    int(time.monotonic() - started),
+                )
+
+        thread = threading.Thread(target=report, daemon=True)
+        thread.start()
+        try:
+            yield
+        finally:
+            stopped.set()
+            thread.join()
+            _TEXT_PROGRESS_LABELS.reset(labels_token)
+    finally:
+        _ACTIVE_PROGRESS.reset(token)
 
 
 class LoggerWriter:
@@ -183,6 +317,8 @@ def create_log_handler(
     log_format: str | logging.Formatter | None = None,
     log_filter: logging.Filter | None = None,
     delay: bool = True,
+    progress_safe: bool = False,
+    console: Console | None = None,
 ) -> logging.Handler:
     """Create logger handler."""
     handler: logging.Handler | None = None
@@ -190,7 +326,11 @@ def create_log_handler(
     if file_path is not None:
         handler = create_file_handler(file_path, delay=delay)
     elif stream is not None:
-        handler = logging.StreamHandler(stream)
+        handler = (
+            ProgressStreamHandler(stream, console)
+            if progress_safe
+            else logging.StreamHandler(stream)
+        )
 
     if handler is None:
         raise RuntimeError("Unable to create logging handler.")
@@ -220,9 +360,9 @@ def attach_handlers(
 
 @contextmanager
 def log_action(action: str) -> Generator[None, None, None]:
-    """Log action."""
+    """Log an action and identify the work completed on success."""
     logger = logging.getLogger(__name__)
 
     logger.info(action)
     yield
-    logger.info("Done\n")
+    logger.info("Completed: %s", action.rstrip(". "))

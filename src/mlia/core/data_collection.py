@@ -7,8 +7,9 @@ of the ML Inference Advisor workflow - data collection.
 """
 
 from abc import abstractmethod
+from typing import ClassVar
 
-from mlia.core.common import DataItem, NamedEntity
+from mlia.core.common import AdviceCategory, DataItem, NamedEntity
 from mlia.core.mixins import ContextMixin, ParameterResolverMixin
 
 
@@ -22,6 +23,9 @@ class DataCollector(NamedEntity):
     information about model or target. This information is being used
     at later stages.
     """
+
+    kind: ClassVar[AdviceCategory | None] = None
+    progress_label: ClassVar[str | None] = None
 
     @abstractmethod
     def collect_data(self) -> DataItem:

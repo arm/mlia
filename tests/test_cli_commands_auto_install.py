@@ -9,6 +9,7 @@ from unittest.mock import MagicMock
 
 import pytest
 import typer
+from rich.console import Console
 
 import mlia.api as mlia_api
 import mlia.check as check
@@ -92,4 +93,7 @@ def test_contextless_commands_pass_debug_to_logging(
 
     command(*args, debug=True)
 
-    setup_logging.assert_called_once_with(verbose=True, cli_mode=True)
+    setup_logging.assert_called_once()
+    assert setup_logging.call_args.kwargs["verbose"] is True
+    assert setup_logging.call_args.kwargs["cli_mode"] is True
+    assert isinstance(setup_logging.call_args.kwargs["console"], Console)

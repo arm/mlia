@@ -5,15 +5,126 @@
 import hashlib
 import json
 import platform
+import subprocess
 import sys
 import zipfile
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
 
 from mlia.core.errors import ConfigurationError
 from mlia.runtime.catalog import RuntimeDefinition, load_profile
-from mlia.runtime.manager import RuntimeManager
+from mlia.runtime.manager import (
+    RuntimeManager,
+    _wait_for_process,
+    operation_label,
+    runtime_label,
+)
+
+
+@pytest.mark.parametrize("outcome", [0, 1, "timeout"])
+def test_runtime_wait_clears_progress_on_exit(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    outcome: int | str,
+) -> None:
+    """Silent workers clear progress on success, failure, and timeout."""
+    process = MagicMock()
+    if outcome == "timeout":
+        process.wait.side_effect = subprocess.TimeoutExpired("worker", 120)
+    else:
+        process.wait.return_value = outcome
+    events: list[str] = []
+
+    @contextmanager
+    def display(*_args: object) -> Iterator[None]:
+        events.append("start")
+        try:
+            yield
+        finally:
+            events.append("stop")
+
+    monkeypatch.setattr("mlia.runtime.manager.progress_heartbeat", display)
+
+    if outcome == "timeout":
+        with pytest.raises(subprocess.TimeoutExpired):
+            _wait_for_process(process, 120, "Model run", tmp_path / "worker.log")
+    else:
+        assert (
+            _wait_for_process(process, 120, "Model run", tmp_path / "worker.log")
+            == outcome
+        )
+    assert events == ["start", "stop"]
+
+
+def test_runtime_jobs_enable_heartbeat(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Model execution enables the same heartbeat used by runtime installation."""
+    definition = runtime(tmp_path, "def run(request): return {}, []\n")
+    manager = RuntimeManager(tmp_path / "installed")
+    labels: list[object] = []
+
+    def fake_run(*_args: object, **kwargs: object) -> int:
+        labels.append(kwargs.get("progress"))
+        return 0
+
+    monkeypatch.setattr("mlia.runtime.manager._run", fake_run)
+    monkeypatch.setattr(manager, "_read_result", lambda *_args: {})
+
+    manager._execute(definition, "echo", {}, tmp_path / "jobs")
+    manager._execute(definition, "echo", {}, tmp_path / "jobs", handshake=True)
+
+    assert labels == ["Running echo", f"Validating runtime {definition.name}"]
+
+
+def test_managed_plugin_progress_names(tmp_path: Path) -> None:
+    """Progress labels come from the provider manifest, with a fallback."""
+    definition = runtime(tmp_path, "def run(request): return {}, []\n")
+    assert runtime_label(definition) == f"runtime {definition.name}"
+    assert operation_label(definition, "echo") == "echo"
+
+    data = json.loads(definition.path.read_text())
+    data["label"] = "NX runtime"
+    data["operations"]["echo"]["label"] = "NX Performance Estimator"
+    definition.path.write_text(json.dumps(data))
+    labeled = RuntimeDefinition.load(definition.path)
+    assert runtime_label(labeled) == "NX runtime"
+    assert operation_label(labeled, "echo") == "NX Performance Estimator"
+
+
+@pytest.mark.parametrize("field", ["runtime", "operation"])
+@pytest.mark.parametrize("separator", ["\n", "\u009b", "\u2028", "\u200e"])
+def test_runtime_rejects_invalid_progress_labels(
+    tmp_path: Path, field: str, separator: str
+) -> None:
+    """Provider labels cannot inject terminal control characters."""
+    definition = runtime(tmp_path, "def run(request): return {}, []\n")
+    data = json.loads(definition.path.read_text())
+    if field == "runtime":
+        data["label"] = f"bad{separator}label"
+    else:
+        data["operations"]["echo"]["label"] = f"bad{separator}label"
+    definition.path.write_text(json.dumps(data))
+    with pytest.raises(ConfigurationError, match="label"):
+        RuntimeDefinition.load(definition.path)
+
+
+@pytest.mark.parametrize("separator", ["\n", "\u009b", "\u2028", "\u200e"])
+def test_runtime_rejects_unlabeled_control_operation_ids(
+    tmp_path: Path, separator: str
+) -> None:
+    """Fallback progress text cannot contain control characters."""
+    definition = runtime(tmp_path, "def run(request): return {}, []\n")
+    data = json.loads(definition.path.read_text())
+    data["operations"] = {f"bad{separator}id": data["operations"]["echo"]}
+    definition.path.write_text(json.dumps(data))
+
+    with pytest.raises(ConfigurationError, match="Operation id"):
+        RuntimeDefinition.load(definition.path)
 
 
 def wheel_file(

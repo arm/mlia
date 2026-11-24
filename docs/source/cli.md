@@ -101,6 +101,13 @@ Every successful `mlia check` writes the canonical standardized output to
 `mlia-output/mlia-output.json`, or beneath the directory selected with
 `--output-dir`. The `--json` option additionally selects JSON instead of text
 for stdout; it does not control whether the canonical file is written.
+The default console report summarizes each requested analysis and its findings.
+Use the JSON file for full metrics, operator identities, checks and breakdowns.
+Text output shows the main check stages. Long installs and model runs show a
+spinner with elapsed time in an interactive terminal, or timed progress messages
+when output is redirected. JSON output remains free of progress indicators.
+Detailed execution logs are saved in
+`mlia-output/logs/mlia.log`; use `--debug` to show them on the console.
 
 Use measured profiling data alongside a source model:
 

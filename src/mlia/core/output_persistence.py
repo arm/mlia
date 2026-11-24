@@ -7,10 +7,11 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from mlia.core.output_rendering import standardized_output_to_json
+from mlia.core.output_rendering import (
+    STANDARDIZED_OUTPUT_FILENAME,
+    standardized_output_to_json,
+)
 from mlia.utils.boundaries.filesystem import write_user_output_text
-
-STANDARDIZED_OUTPUT_FILENAME = "mlia-output.json"
 
 
 def persist_standardized_output(output: dict[str, Any], output_dir: Path) -> Path:

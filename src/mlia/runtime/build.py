@@ -283,6 +283,8 @@ def _build_runtime(
         "wheels": [{"source": item.name, "sha256": digest(item)} for item in wheels],
         "operations": runtime["operations"],
     }
+    if runtime.get("label"):
+        data["label"] = runtime["label"]
     if architecture:
         data["architecture"] = architecture
     if runtime.get("indexes"):

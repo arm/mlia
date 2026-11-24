@@ -11,25 +11,11 @@ import tarfile
 from contextlib import contextmanager
 from pathlib import Path
 from tempfile import TemporaryDirectory, mkstemp
-from typing import Any, Generator, Iterable
-
-import click
-from typer.completion import install_callback
+from typing import Generator, Iterable
 
 from mlia.utils.logging import log_boundary_action
 
 USER_ONLY_PERM_MASK = 0o700
-
-
-def install_shell_completion_with_notice(
-    logger: logging.Logger, ctx: click.Context, param: click.Parameter, value: Any
-) -> Any:
-    """Announce shell configuration changes before Typer installs completion."""
-    if not value or ctx.resilient_parsing:
-        return value
-
-    log_boundary_action(logger, "Installing shell completion.")
-    return install_callback(ctx, param, value)
 
 
 def ensure_user_output_directory(path: Path) -> None:

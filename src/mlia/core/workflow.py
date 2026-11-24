@@ -6,16 +6,21 @@
 from __future__ import annotations
 
 import itertools
+import logging
 from abc import ABC, abstractmethod
+from contextlib import nullcontext
 from typing import Any, Sequence
 
-from mlia.core.common import DataItem
+from mlia.core.common import AdviceCategory, DataItem
 from mlia.core.context import Context
 from mlia.core.data_analysis import DataAnalyzer, PatternAnalyzer
 from mlia.core.data_collection import DataCollector
 from mlia.core.errors import FunctionalityNotSupportedError
 from mlia.core.mixins import ContextMixin
 from mlia.core.output_collection import StandardizedOutputCollector
+from mlia.utils.logging import log_progress_action, progress_heartbeat
+
+logger = logging.getLogger(__name__)
 
 
 class WorkflowExecutor(ABC):
@@ -60,12 +65,40 @@ class DefaultWorkflowExecutor(WorkflowExecutor):
         """Run data collectors."""
         collected_data = []
         for collector in self.collectors:
+            kind = collector.kind
+            kind_name = kind.name if isinstance(kind, AdviceCategory) else None
+            stage = (
+                kind_name.lower()
+                if kind_name in ("PERFORMANCE", "COMPATIBILITY")
+                else None
+            )
+            declared_label = collector.progress_label
+            label = (
+                declared_label
+                if isinstance(declared_label, str) and declared_label.strip()
+                else None
+            )
+            if label is None and stage:
+                label = f"Checking {stage}"
+            if stage:
+                log_progress_action(logger, "Checking %s...", stage)
+            elif label:
+                log_progress_action(logger, "%s...", label)
             try:
-                if (data_item := collector.collect_data()) is not None:
-                    collected_data.append(data_item)
-                    self.output_collector.submit_data_item(data_item)
+                with progress_heartbeat(logger, label) if label else nullcontext():
+                    if (data_item := collector.collect_data()) is not None:
+                        collected_data.append(data_item)
+                        self.output_collector.submit_data_item(data_item)
             except FunctionalityNotSupportedError:
+                if stage:
+                    log_progress_action(logger, "Skipped %s check.", stage)
+                elif label:
+                    log_progress_action(logger, "Skipped %s.", label)
                 continue
+            if stage:
+                log_progress_action(logger, "%s check complete.", stage.capitalize())
+            elif label:
+                log_progress_action(logger, "%s complete.", label)
 
         return collected_data
 

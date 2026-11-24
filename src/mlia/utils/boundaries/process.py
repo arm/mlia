@@ -11,7 +11,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Generator
 
-from mlia.utils.logging import log_boundary_action
+from mlia.utils.logging import (
+    log_boundary_action,
+    log_progress_action,
+    progress_heartbeat,
+)
 
 
 @dataclass(frozen=True)
@@ -51,20 +55,31 @@ def run_pip_with_notice(
         subcommand,
         sys.executable,
     )
+    if subcommand == "install":
+        log_progress_action(logger, "Installing Python packages...")
 
     try:
-        output = subprocess.check_output(  # nosec
-            [
-                sys.executable,
-                "-m",
-                "pip",
-                "--disable-pip-version-check",
-                subcommand,
-                *params,
-            ],
-            stderr=subprocess.STDOUT,
-            text=True,
+        label = (
+            "Python package installation"
+            if subcommand == "install"
+            else "Python package removal"
         )
+        with progress_heartbeat(logger, label):
+            output = subprocess.check_output(  # nosec
+                [
+                    sys.executable,
+                    "-m",
+                    "pip",
+                    "--disable-pip-version-check",
+                    subcommand,
+                    *params,
+                ],
+                stderr=subprocess.STDOUT,
+                text=True,
+            )
+
+        if subcommand == "install":
+            log_progress_action(logger, "Python packages installed.")
 
         return output, 0
     except subprocess.CalledProcessError as err:

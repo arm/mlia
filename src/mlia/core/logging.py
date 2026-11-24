@@ -9,9 +9,16 @@ import sys
 from pathlib import Path
 from typing import Iterable
 
+from rich.console import Console
+
 from mlia.core.typing import OutputFormat
 from mlia.utils.boundaries.filesystem import ensure_user_output_directory
-from mlia.utils.logging import LogFilter, NoASCIIFormatter, create_log_handler
+from mlia.utils.logging import (
+    LogFilter,
+    NoASCIIFormatter,
+    configure_interactive_progress,
+    create_log_handler,
+)
 
 _CONSOLE_DEBUG_FORMAT = "%(name)s - %(levelname)s - %(message)s"
 _FILE_DEBUG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -52,6 +59,7 @@ def close_configured_handlers() -> None:
     for handler in configured_handlers:
         handler.close()
     _CONFIGURED_HANDLERS.clear()
+    configure_interactive_progress(False)
 
 
 def setup_logging(
@@ -60,6 +68,8 @@ def setup_logging(
     output_format: OutputFormat = "plain_text",
     log_filename: str = "mlia.log",
     cli_mode: bool = True,
+    progress_only: bool = False,
+    console: Console | None = None,
 ) -> None:
     """Set up logging.
 
@@ -73,8 +83,14 @@ def setup_logging(
            logging system
     :param log_filename: name of the log file in the logs directory
     :param cli_mode: enable console handlers intended for CLI presentation
+    :param progress_only: show only named check stages and errors on the console
+    :param console: configured CLI console to use for animated progress
     """
     mlia_logger = logging.getLogger("mlia")
+    configure_interactive_progress(
+        cli_mode and output_format == "plain_text" and not verbose,
+        console,
+    )
     tensorflow_logger = logging.getLogger("tensorflow")
     py_warnings_logger = logging.getLogger("py.warnings")
 
@@ -84,7 +100,7 @@ def setup_logging(
         logger.setLevel(logging.DEBUG)
 
     mlia_handlers = _get_mlia_handlers(
-        logs_dir, log_filename, verbose, output_format, cli_mode
+        logs_dir, log_filename, verbose, output_format, cli_mode, progress_only, console
     )
     _replace_configured_handlers(mlia_handlers, [mlia_logger])
 
@@ -101,6 +117,8 @@ def _get_mlia_handlers(
     verbose: bool,
     output_format: OutputFormat,
     cli_mode: bool,
+    progress_only: bool = False,
+    console: Console | None = None,
 ) -> Iterable[logging.Handler]:
     """Get handlers for the MLIA loggers."""
     # MLIA needs output to standard output via the logging system only when the
@@ -118,7 +136,20 @@ def _get_mlia_handlers(
 
         # Create log handler for stdout
         yield create_log_handler(
-            stream=sys.stdout, log_level=log_level, log_format=log_format
+            stream=sys.stdout,
+            log_level=log_level,
+            log_format=log_format,
+            log_filter=LogFilter(
+                lambda record: (
+                    record.levelno >= logging.WARNING
+                    or bool(getattr(record, "progress_action", False))
+                    or bool(getattr(record, "boundary_action", False))
+                )
+            )
+            if progress_only
+            else None,
+            progress_safe=True,
+            console=console,
         )
     elif cli_mode:
         # Keep JSON stdout machine-readable while making boundary actions and

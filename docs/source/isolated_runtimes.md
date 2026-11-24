@@ -47,6 +47,11 @@ IDs such as `arm/nx/public@VERSION` identify a particular backend variant and
 version. Current runtime versions follow the corresponding plugin package version.
 Several versions may be available together.
 
+Runtime providers may set `label` in `[tool.mlia.runtime]` and in each
+`[tool.mlia.runtime.operations."OPERATION_ID"]` table. MLIA uses these labels in
+installation and model-run progress messages. Older runtime manifests without
+labels display their IDs in a readable form.
+
 Select a supplied execution profile by name or pass a custom TOML file:
 
 ```bash

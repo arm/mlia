@@ -3,6 +3,7 @@
 """Tests for shared check preparation and execution."""
 
 import logging
+import sys
 from collections.abc import Callable
 from dataclasses import replace
 from io import StringIO
@@ -10,6 +11,8 @@ from pathlib import Path
 from unittest.mock import MagicMock, call
 
 import pytest
+from rich.console import Console
+from rich.text import Text
 
 import mlia.api
 from mlia import check as check_api
@@ -19,6 +22,7 @@ from mlia.core.context import ExecutionContext
 from mlia.core.logging import setup_logging
 from mlia.core.settings import ApplicationSettings, ThemeName
 from mlia.plugins.analysis import AnalysisPluginRegistry
+from mlia.utils.logging import log_boundary_action
 
 
 @pytest.mark.parametrize(
@@ -322,15 +326,27 @@ def test_check_output_stream_preserves_configured_styles(
     assert result.report == ""
 
 
+@pytest.mark.parametrize(
+    ("encoding", "rendered", "expected"),
+    [
+        ("utf-8", "[literal]", "[literal]"),
+        ("cp1252", "┌─┐ café", "??? café"),
+    ],
+)
 def test_check_uses_application_console(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    encoding: str,
+    rendered: str,
+    expected: str,
 ) -> None:
-    """Standardized output uses the caller's console without markup highlighting."""
+    """Render literal text with the caller's console and encoding."""
     console = MagicMock()
-    console.encoding = "utf-8"
+    console.encoding = encoding
+    console.width = 52
     output: dict[str, object] = {"result": "[literal]"}
-    render = MagicMock(return_value="[literal]")
-    monkeypatch.setattr(check_api, "standardized_output_to_text", render)
+    render = MagicMock(return_value=Text(rendered))
+    monkeypatch.setattr(check_api, "check_report", render)
     monkeypatch.setattr(mlia.api, "get_advice", MagicMock(return_value=output))
     request = prepare_check(
         target_profile="tosa", model="model.tflite", output_dir=tmp_path
@@ -340,29 +356,95 @@ def test_check_uses_application_console(
         request, console=console, analysis_plugin_registry=AnalysisPluginRegistry()
     )
 
-    render.assert_called_once_with(output)
-    console.out.assert_called_once_with("[literal]", highlight=False)
+    render.assert_called_once_with(output, tmp_path / "mlia-output", width=52)
+    console.print.assert_called_once()
+    assert console.print.call_args.args[0].plain == expected
+    assert console.print.call_args.kwargs == {"highlight": False}
 
 
-def test_check_replaces_unencodable_characters(
+@pytest.mark.parametrize("verbose", [False, True])
+def test_check_report_spacing_after_progress(tmp_path: Path, verbose: bool) -> None:
+    """The report starts cleanly, with a gap when debug progress precedes it."""
+    stream = StringIO()
+    console = Console(file=stream, no_color=True, width=100)
+    settings = ApplicationSettings(console=console)
+    context = ExecutionContext(output_dir=tmp_path, verbose=verbose)
+    if verbose:
+        stream.write("Completed: Checking performance\n")
+
+    check_api._emit_standardized_output(
+        settings,
+        context,
+        {"results": [{"kind": "performance", "status": "ok"}]},
+        preceded_by_progress=True,
+    )
+
+    expected_start = (
+        "Completed: Checking performance\n\n── ML INFERENCE ADVISOR"
+        if verbose
+        else "\n── ML INFERENCE ADVISOR"
+    )
+    assert stream.getvalue().startswith(expected_start)
+
+
+def test_check_keeps_routine_progress_in_log_file(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """Standardized output respects the caller's console encoding."""
-    console = MagicMock()
-    console.encoding = "cp1252"
-    output: dict[str, object] = {"result": "table"}
-    render = MagicMock(return_value="┌─┐ café")
-    monkeypatch.setattr(check_api, "standardized_output_to_text", render)
-    monkeypatch.setattr(mlia.api, "get_advice", MagicMock(return_value=output))
+    """Default checks show the report while retaining detailed execution logs."""
+
+    def analyze(*_args: object, **_kwargs: object) -> dict[str, object]:
+        logger = logging.getLogger("mlia.test")
+        logger.info("Checking performance...")
+        log_boundary_action(logger, "Running NX Performance Estimator")
+        return {"results": [{"kind": "performance", "status": "ok"}]}
+
+    monkeypatch.setattr(mlia.api, "get_advice", analyze)
+    request = prepare_check(
+        target_profile="tosa", model="model.tflite", output_dir=tmp_path
+    )
+
+    result = execute_check(request, analysis_plugin_registry=AnalysisPluginRegistry())
+
+    assert result.report.startswith("── ML INFERENCE ADVISOR")
+    assert "Checking performance..." not in result.report
+    assert "Running NX Performance Estimator" not in result.report
+    log = (tmp_path / "mlia-output" / "logs" / "mlia.log").read_text()
+    assert "Checking performance..." in log
+    assert "Running NX Performance Estimator" in log
+
+
+def test_cli_check_shows_named_progress_without_debug(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Release mode reports that work has started before analysis returns."""
+    monkeypatch.setattr(
+        mlia.api,
+        "get_advice",
+        MagicMock(return_value={"results": [{"kind": "performance", "status": "ok"}]}),
+    )
     request = prepare_check(
         target_profile="tosa", model="model.tflite", output_dir=tmp_path
     )
 
     execute_check(
-        request, console=console, analysis_plugin_registry=AnalysisPluginRegistry()
+        request,
+        console=Console(file=sys.stdout, no_color=True, width=100),
+        show_progress=True,
+        analysis_plugin_registry=AnalysisPluginRegistry(),
     )
 
-    console.out.assert_called_once_with("??? café", highlight=False)
+    progress = capsys.readouterr().out
+    assert "Preparing model check..." in progress
+    assert "Model check complete." in progress
+    assert progress.index("Preparing model check...") < progress.index(
+        "Model check complete."
+    )
+    assert progress.index("Model check complete.") < progress.index(
+        "ML INFERENCE ADVISOR"
+    )
+    assert "Model check complete.\n\n── ML INFERENCE ADVISOR" in progress
 
 
 @pytest.mark.parametrize(
@@ -453,7 +535,21 @@ def test_check_passes_cli_context_settings(
     assert context.output_format == "json"
     assert context.verbose is True
     assert events == ["logging", "context", "logging"]
+    console = get_advice.call_args.kwargs["settings"].console
     assert setup_logging.call_args_list == [
-        call(verbose=True, output_format="json"),
-        call(context.logs_path, True, "json"),
+        call(
+            verbose=True,
+            output_format="json",
+            cli_mode=True,
+            progress_only=False,
+            console=console,
+        ),
+        call(
+            context.logs_path,
+            True,
+            "json",
+            cli_mode=True,
+            progress_only=False,
+            console=console,
+        ),
     ]

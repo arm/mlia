@@ -39,7 +39,7 @@ from mlia.plugins.plugins import (
     load_analysis_plugins,
 )
 from mlia.plugins.registry import list_entry_points
-from mlia.utils.boundaries.filesystem import install_shell_completion_with_notice
+from mlia.utils.boundaries.completion import install_shell_completion_with_notice
 from mlia.utils.console import create_section_header
 
 if TYPE_CHECKING:
@@ -370,6 +370,7 @@ class CheckOptionCommand(typer.core.TyperCommand):
                     request,
                     console=settings.console,
                     analysis_plugin_registry=analysis_plugin_registry,
+                    show_progress=True,
                 )
         except ConfigurationError as err:
             exit_code = err.exit_code if isinstance(err, check_error) else 1
@@ -401,7 +402,13 @@ def complete_target_profile_names(incomplete: str) -> list[str]:
 
 def _setup_command_logging(debug: bool) -> None:
     """Set up logging for commands without an execution context."""
-    setup_logging(verbose=debug, cli_mode=True)
+    context = click.get_current_context(silent=True)
+    settings = (
+        context.obj
+        if context is not None and isinstance(context.obj, ApplicationSettings)
+        else new_settings()
+    )
+    setup_logging(verbose=debug, cli_mode=True, console=settings.console)
 
 
 def _replace_unencodable_characters(text: str, encoding: str) -> str:
@@ -631,8 +638,9 @@ def version_callback(value: bool) -> None:
 
 def debug_option() -> Any:
     """Return the shared debug option declaration."""
+    debug_value = (get_environment().get("DEBUG") or "").strip().lower()
     return typer.Option(
-        get_environment().get("DEBUG", "") != "",
+        debug_value in {"1", "true", "yes", "on"},
         "--debug",
         "-d",
         help="Produce verbose output",

@@ -5,13 +5,20 @@
 from __future__ import annotations
 
 import logging
+from io import StringIO
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
+from rich.console import Console
 
-from mlia.core.logging import setup_logging
+from mlia.core.logging import close_configured_handlers, setup_logging
 from mlia.core.typing import OutputFormat
-from mlia.utils.logging import log_boundary_action
+from mlia.utils.logging import (
+    log_boundary_action,
+    log_progress_action,
+    progress_heartbeat,
+)
 from tests.utils.logging import clear_loggers
 
 
@@ -114,6 +121,48 @@ def test_setup_logging_defaults_to_cli_console_output(
     assert stderr == ""
 
 
+def test_check_progress_filter_keeps_routine_logs_out_of_release_output(
+    tmp_path: Path, capfd: pytest.CaptureFixture
+) -> None:
+    """A normal check shows its named stages and retains details in the log."""
+    logs_dir = tmp_path / "logs"
+    setup_logging(logs_dir, progress_only=True)
+    logger = logging.getLogger("mlia.test")
+
+    logger.info("Checking performance...")
+    log_boundary_action(logger, "Running tool in a long output path")
+    log_progress_action(logger, "Running NX Performance Estimator...")
+    logger.warning("Backend reported a warning")
+
+    stdout, stderr = capfd.readouterr()
+    assert stdout == (
+        "Running tool in a long output path\n"
+        "Running NX Performance Estimator...\n"
+        "Backend reported a warning\n"
+    )
+    assert stderr == ""
+    log = (logs_dir / "mlia.log").read_text()
+    assert "Checking performance..." in log
+    assert "Running tool in a long output path" in log
+
+
+def test_stage_logs_share_configured_spinner_console() -> None:
+    """Stage logs remain readable during progress without adding color."""
+    stream = StringIO()
+    console = Console(file=stream, force_terminal=True, no_color=True)
+    logger = logging.getLogger("mlia.test")
+    setup_logging(progress_only=True, console=console)
+    try:
+        with progress_heartbeat(logger, "Checking performance"):
+            log_progress_action(logger, "Running NX Performance Estimator...")
+    finally:
+        close_configured_handlers()
+
+    output = stream.getvalue()
+    assert "Running NX Performance Estimator..." in output
+    assert "\x1b[36m" not in output
+
+
 def test_setup_logging_defaults_to_cli_verbose_tool_output(
     capfd: pytest.CaptureFixture,
 ) -> None:
@@ -144,6 +193,7 @@ def test_setup_logging_closes_replaced_file_handlers(tmp_path: Path) -> None:
 
 def test_json_logging_sends_only_boundary_info_and_errors_to_stderr(
     capfd: pytest.CaptureFixture,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Boundary notices remain visible without corrupting JSON stdout."""
     setup_logging(output_format="json", cli_mode=True)
@@ -151,13 +201,20 @@ def test_json_logging_sends_only_boundary_info_and_errors_to_stderr(
 
     logger.info("ordinary info")
     log_boundary_action(logger, "runtime boundary")
+    log_progress_action(logger, "Model run still in progress")
+    spinner = MagicMock()
+    monkeypatch.setattr("mlia.utils.logging.Progress", spinner)
+    with progress_heartbeat(logger, "Model run"):
+        pass
     logger.error("failure")
 
     stdout, stderr = capfd.readouterr()
     assert stdout == ""
     assert "ordinary info" not in stderr
+    assert "Model run still in progress" not in stderr
     assert "runtime boundary" in stderr
     assert "failure" in stderr
+    spinner.assert_not_called()
 
 
 def test_non_cli_json_logging_writes_only_to_file(

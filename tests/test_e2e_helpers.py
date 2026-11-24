@@ -12,7 +12,7 @@ from unittest.mock import ANY, MagicMock, call
 
 import pytest
 
-from mlia.core.output_rendering import standardized_output_to_text
+from mlia.core.output_rendering import check_report
 from mlia.testing.e2e import (
     COMMON_PATTERNS,
     COMPATIBILITY_PATTERNS,
@@ -58,19 +58,20 @@ def _clear_backend_install_cache() -> None:
         ),
     ],
 )
-def test_shared_patterns_match_standardized_output(
+def test_shared_patterns_match_check_report(
     result: dict[str, object], patterns: tuple[str, ...]
 ) -> None:
-    """Shared e2e patterns should match target-neutral standardized output."""
-    output = standardized_output_to_text(
+    """Shared e2e patterns should match the compact check report."""
+    output = check_report(
         {
             "target": {
                 "profile_name": "test-profile",
                 "target_type": "test-target",
             },
             "results": [result],
-        }
-    )
+        },
+        Path("mlia-output"),
+    ).plain
 
     for pattern in patterns:
         assert re.search(pattern, output), f"Pattern: {pattern}\n\n{output}"
@@ -532,12 +533,11 @@ def test_run_case_runs_command_once(
             0,
             stdout="\n".join(
                 [
-                    "ML Inference Advisor started",
-                    "Target information",
-                    "Model Analysis",
-                    "Model Analysis Results",
-                    "Advice Generation",
-                    "Operators:",
+                    "ML INFERENCE ADVISOR",
+                    "Target: test-profile",
+                    "RESULT 1: COMPATIBILITY",
+                    "COMPATIBILITY FINDINGS AND ADVICE",
+                    "FULL RESULTS",
                 ]
             ),
             stderr="",

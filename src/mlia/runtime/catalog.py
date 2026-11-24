@@ -16,6 +16,7 @@ import os
 import platform
 import re
 import sys
+import unicodedata
 import zipfile
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -209,6 +210,24 @@ def _validate_runtime(data: dict[str, Any]) -> None:
         not isinstance(data["architecture"], str) or not data["architecture"]
     ):
         raise ValueError("Runtime architecture must be a nonempty string")
+    _validate_label(data.get("label"))
+
+
+def _validate_label(label: Any, field: str = "Runtime label") -> None:
+    """Accept short, single-line presentation text from a provider manifest."""
+    if label is None:
+        return
+    if (
+        not isinstance(label, str)
+        or not label.strip()
+        or len(label) > 120
+        or any(
+            unicodedata.category(char).startswith("C")
+            or unicodedata.category(char) in {"Zl", "Zp"}
+            for char in label
+        )
+    ):
+        raise ValueError(f"{field} must be nonempty single-line text")
 
 
 def _validate_package(data: dict[str, Any]) -> None:
@@ -265,6 +284,7 @@ def validate_operations(operations: Any) -> None:
     for name, operation in operations.items():
         if not isinstance(name, str) or not name or not isinstance(operation, dict):
             raise ValueError("Invalid operation declaration")
+        _validate_label(name, "Operation id")
         if not isinstance(operation.get("entrypoint"), str) or not re.fullmatch(
             r"[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*:[A-Za-z_]\w*", operation["entrypoint"]
         ):
@@ -274,6 +294,7 @@ def validate_operations(operations: Any) -> None:
             or not operation["result_schema"]
         ):
             raise ValueError("An operation result schema is required")
+        _validate_label(operation.get("label"))
 
 
 def _profile_content(path: Path) -> bytes:
