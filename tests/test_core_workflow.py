@@ -78,7 +78,12 @@ def test_workflow_reports_main_check_stages(
     compatibility.kind = AdviceCategory.COMPATIBILITY
     compatibility.collect_data.return_value = None
     executor = DefaultWorkflowExecutor(
-        ExecutionContext(output_dir=tmpdir), [performance, compatibility], []
+        ExecutionContext(
+            output_dir=tmpdir,
+            advice_category={AdviceCategory.PERFORMANCE, AdviceCategory.COMPATIBILITY},
+        ),
+        [performance, compatibility],
+        [],
     )
 
     with caplog.at_level(logging.INFO, logger="mlia.core.workflow"):
@@ -95,6 +100,54 @@ def test_workflow_reports_main_check_stages(
         "Checking compatibility...",
         "Compatibility check complete.",
     ]
+
+
+@pytest.mark.parametrize(
+    ("categories", "start", "finish"),
+    [
+        (
+            {AdviceCategory.PERFORMANCE},
+            "Checking performance...",
+            "Performance check complete.",
+        ),
+        (
+            {AdviceCategory.COMPATIBILITY},
+            "Checking compatibility...",
+            "Compatibility check complete.",
+        ),
+        (
+            {AdviceCategory.PERFORMANCE, AdviceCategory.COMPATIBILITY},
+            "Checking performance and compatibility...",
+            "Performance and compatibility checks complete.",
+        ),
+    ],
+)
+def test_workflow_names_requested_checks_in_combined_collection(
+    tmpdir: str,
+    caplog: pytest.LogCaptureFixture,
+    categories: set[AdviceCategory],
+    start: str,
+    finish: str,
+) -> None:
+    """A combined collector runs once and names only requested checks."""
+    collector = MagicMock(spec=ContextAwareDataCollector)
+    collector.kind = AdviceCategory.PERFORMANCE | AdviceCategory.COMPATIBILITY
+    collector.collect_data.return_value = None
+    executor = DefaultWorkflowExecutor(
+        ExecutionContext(output_dir=tmpdir, advice_category=categories),
+        [collector],
+        [],
+    )
+
+    with caplog.at_level(logging.INFO, logger="mlia.core.workflow"):
+        executor.collect_data()
+
+    collector.collect_data.assert_called_once()
+    assert [
+        record.message
+        for record in caplog.records
+        if record.name == "mlia.core.workflow"
+    ] == [start, finish]
 
 
 def test_workflow_keeps_progress_visible_during_collection(
@@ -117,7 +170,11 @@ def test_workflow_keeps_progress_visible_during_collection(
     collector.collect_data.side_effect = lambda: events.append("collect")
     monkeypatch.setattr("mlia.core.workflow.progress_heartbeat", display)
     executor = DefaultWorkflowExecutor(
-        ExecutionContext(output_dir=tmpdir), [collector], []
+        ExecutionContext(
+            output_dir=tmpdir, advice_category={AdviceCategory.PERFORMANCE}
+        ),
+        [collector],
+        [],
     )
 
     executor.collect_data()

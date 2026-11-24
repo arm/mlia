@@ -66,12 +66,20 @@ class DefaultWorkflowExecutor(WorkflowExecutor):
         collected_data = []
         for collector in self.collectors:
             kind = collector.kind
-            kind_name = kind.name if isinstance(kind, AdviceCategory) else None
-            stage = (
-                kind_name.lower()
-                if kind_name in ("PERFORMANCE", "COMPATIBILITY")
-                else None
+            stages = (
+                [
+                    name
+                    for category, name in (
+                        (AdviceCategory.PERFORMANCE, "performance"),
+                        (AdviceCategory.COMPATIBILITY, "compatibility"),
+                    )
+                    if kind & category and self.context.category_enabled(category)
+                ]
+                if isinstance(kind, AdviceCategory)
+                else []
             )
+            stage = " and ".join(stages) or None
+            check_word = "check" if len(stages) == 1 else "checks"
             declared_label = collector.progress_label
             label = (
                 declared_label
@@ -91,12 +99,14 @@ class DefaultWorkflowExecutor(WorkflowExecutor):
                         self.output_collector.submit_data_item(data_item)
             except FunctionalityNotSupportedError:
                 if stage:
-                    log_progress_action(logger, "Skipped %s check.", stage)
+                    log_progress_action(logger, "Skipped %s %s.", stage, check_word)
                 elif label:
                     log_progress_action(logger, "Skipped %s.", label)
                 continue
             if stage:
-                log_progress_action(logger, "%s check complete.", stage.capitalize())
+                log_progress_action(
+                    logger, "%s %s complete.", stage.capitalize(), check_word
+                )
             elif label:
                 log_progress_action(logger, "%s complete.", label)
 
