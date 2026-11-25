@@ -1,0 +1,133 @@
+# SPDX-FileCopyrightText: Copyright 2026, Arm Limited and/or its affiliates.
+# SPDX-License-Identifier: Apache-2.0
+
+name: Archive CI audit
+on:
+  workflow_run:
+    workflows:
+      - "Release"
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      run-id:
+        description: Successful Release workflow run ID for a release tag to archive before GitHub retention expires.
+        type: string
+        required: true
+      run-attempt:
+        description: Attempt number; leave empty for the latest attempt.
+        type: string
+        default: ""
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  check-release-tag:
+    if: >-
+      github.repository_owner == 'Arm-Debug' &&
+      github.event.repository.private &&
+      (github.event_name == 'workflow_dispatch' ||
+       github.event.workflow_run.conclusion == 'success')
+    runs-on: ubuntu-latest
+    outputs:
+      eligible: ${{ steps.tag.outputs.eligible }}
+      run-attempt: ${{ steps.tag.outputs.run-attempt }}
+      release-tag: ${{ steps.tag.outputs.release-tag }}
+      release-commit: ${{ steps.tag.outputs.release-commit }}
+    steps:
+      - name: Check source run belongs to a release tag
+        id: tag
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
+        env:
+          SOURCE_RUN_ID: ${{ inputs.run-id || format('{0}', github.event.workflow_run.id) }}
+          SOURCE_RUN_ATTEMPT: ${{ inputs.run-attempt }}
+        with:
+          script: |
+            core.setOutput('eligible', 'false');
+            const request = { ...context.repo, run_id: process.env.SOURCE_RUN_ID };
+            const run = context.payload.workflow_run || (process.env.SOURCE_RUN_ATTEMPT
+              ? (await github.rest.actions.getWorkflowRunAttempt({
+                  ...request, attempt_number: Number(process.env.SOURCE_RUN_ATTEMPT),
+                })).data
+              : (await github.rest.actions.getWorkflowRun(request)).data);
+            core.setOutput('run-attempt', String(run.run_attempt));
+            if (run.path !== '.github/workflows/release.yml' ||
+                !['push', 'workflow_dispatch'].includes(run.event) ||
+                run.status !== 'completed' || run.conclusion !== 'success') {
+              core.info('Skipping: not a successful Release workflow run for a release tag.');
+              return;
+            }
+            let releaseTag, releaseCommit;
+            if (run.event === 'workflow_dispatch') {
+              const published = [];
+              for (let attempt = 1; attempt <= run.run_attempt; attempt++) {
+                const jobs = await github.paginate(github.rest.actions.listJobsForWorkflowRunAttempt, {
+                  ...request, attempt_number: attempt, per_page: 100,
+                });
+                published.push(...jobs.filter(job => job.conclusion === 'success' &&
+                  /^Publish Release \(v[^/]*\.[^/]*\.[^/]* @[0-9a-f]{40}\)$/.test(job.name) &&
+                  job.steps.some(step => step.name === 'Publish package to PyPI' &&
+                    step.conclusion === 'success')));
+              }
+              if (new Set(published.map(job => job.name)).size !== 1) {
+                core.info('Skipping: no consistent successful tagged Publish Release job.');
+                return;
+              }
+              [, releaseTag, releaseCommit] = published[0].name.match(
+                /^Publish Release \((v[^/]*\.[^/]*\.[^/]*) @([0-9a-f]{40})\)$/);
+            } else {
+              if (!/^v[^/]*\.[^/]*\.[^/]*$/.test(run.head_branch || '')) {
+                core.info('Skipping: push was not for a release tag.');
+                return;
+              }
+              releaseTag = run.head_branch;
+              releaseCommit = run.head_sha;
+            }
+            try {
+              const { data: commit } = await github.rest.repos.getCommit({
+                ...context.repo, ref: `refs/tags/${releaseTag}`,
+              });
+              const matches = commit.sha === releaseCommit;
+              core.setOutput('eligible', String(matches));
+              if (matches && run.event === 'workflow_dispatch') {
+                core.setOutput('release-tag', releaseTag);
+                core.setOutput('release-commit', releaseCommit);
+              }
+              core.info(`Release tag: ${releaseTag}; matching commit: ${matches}`);
+            } catch (error) {
+              if (![404, 422].includes(error.status)) throw error;
+              core.info('Skipping: no matching release tag exists.');
+            }
+
+  archive:
+    needs: check-release-tag
+    if: needs.check-release-tag.outputs.eligible == 'true'
+    runs-on: ${{ fromJson(vars.UBUNTU_RUNNER || '["ubuntu-24.04-arm"]') }}
+    timeout-minutes: 60
+    steps:
+      - name: Import archive settings from Vault
+        id: vault
+        uses: hashicorp/vault-action@892a26828f195e65540a40b4768ae4571f51ebfc # v4
+        with:
+          url: ${{ secrets.VAULT_URL }}
+          method: approle
+          roleId: ${{ secrets.VAULT_ROLE_ID }}
+          secretId: ${{ secrets.VAULT_SECRET_ID }}
+          namespace: ${{ vars.VAULT_NAMESPACE || 'iac-expkits/prod' }}
+          exportEnv: false
+          secrets: |
+            kv/data/MLIA/CI?version=${{ vars.VAULT_CI_SECRET_VERSION || '0' }} CI_AUDIT_ARTIFACTORY_URL | AUDIT_REPOSITORY_URL ;
+            kv/data/MLIA/CI?version=${{ vars.VAULT_CI_SECRET_VERSION || '0' }} PUBLISH_PYPI_USERNAME | AUDIT_USERNAME ;
+            kv/data/MLIA/CI?version=${{ vars.VAULT_CI_SECRET_VERSION || '0' }} PUBLISH_PYPI_PASSWORD | AUDIT_PASSWORD
+      - name: Archive evidence
+        uses: Arm-Debug/github-workflow-wizardry/.github/actions/archive-workflow-run@16c976a3b87565fd18f1333c90ca8220d66ef050
+        with:
+          run-id: ${{ inputs.run-id || format('{0}', github.event.workflow_run.id) }}
+          run-attempt: ${{ needs.check-release-tag.outputs.run-attempt }}
+          release-tag: ${{ needs.check-release-tag.outputs.release-tag }}
+          release-commit: ${{ needs.check-release-tag.outputs.release-commit }}
+          repository-url: ${{ steps.vault.outputs.AUDIT_REPOSITORY_URL }}
+          username: ${{ steps.vault.outputs.AUDIT_USERNAME }}
+          password: ${{ steps.vault.outputs.AUDIT_PASSWORD }}
+          github-token: ${{ github.token }}
