@@ -55,8 +55,8 @@ def test_check_report_summarizes_and_groups_findings(tmp_path: Path) -> None:
     assert "Model: network.tflite" in report
     assert "Target: ethos-u" in report
     assert "Results: Compatibility, Performance" in report
-    assert "All 2 source operators are placed on the NPU." in report
-    assert "Status: Partial with warnings" in report
+    assert "Status: Compatible" in report
+    assert "Status: Partial" in report
     assert "Producer: Vela 4.0" in report
     assert "Scope: Simulated results" in report
     assert report.count("Review high-cycle layers") == 1
@@ -92,6 +92,26 @@ def test_check_report_keeps_failed_reason_and_only_requested_result(
     assert "Backend could not read the model" in report
     assert "COMPATIBILITY FINDINGS" not in report
     assert "No warnings or advice" not in report
+
+
+def test_check_report_preserves_target_wording(tmp_path: Path) -> None:
+    """Render supplied wording without deriving status or findings from placement."""
+    result = {
+        "kind": "compatibility",
+        "status": "ok",
+        "status_summary": "Target assessment complete",
+        "entities": [{"id": "op", "kind": "source_operator", "placement": "NPU"}],
+        "metrics": [{"name": "accelerator_operator_percentage", "value": 40}],
+        "warnings": ["A target limitation"],
+        "advice": [{"severity": "info", "message": "Target placement explanation"}],
+    }
+    report = check_report({"results": [result]}, tmp_path).plain
+    assert "Status: Target assessment complete" in report
+    assert "Target assessment complete with warnings" not in report
+    assert "WARNING · A target limitation" in report
+    assert "INFO · Target placement explanation" in report
+    assert "All 1 source operators" not in report
+    assert "40%" not in report
 
 
 def test_check_report_names_unknown_producer_version(tmp_path: Path) -> None:

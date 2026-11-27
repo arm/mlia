@@ -1570,3 +1570,39 @@ def test_entity_graph_accepts_valid_multi_parent_dag_without_reciprocals() -> No
 
     assert validate_basic_structure(data) == []
     validate_standardized_output(data, use_jsonschema=False)
+
+
+def test_status_summary_contract() -> None:
+    """Optional target wording survives serialization and schema validation."""
+    result = schema.Result(
+        kind=schema.ResultKind.PERFORMANCE,
+        status=schema.ResultStatus.PARTIAL,
+        producer="example",
+        status_summary="Partial — accelerator execution only",
+    )
+    serialized = result.to_dict()
+    assert schema.Result.from_dict(serialized).status_summary == result.status_summary
+    output = _valid_standardized_output_with_result(serialized)
+    validate_standardized_output(output)
+    for invalid in ("", " \t", "two\nlines", "ok\n", "ok\r", 42):
+        serialized["status_summary"] = invalid
+        with pytest.raises(SchemaValidationError):
+            validate_standardized_output(output)
+        with pytest.raises(SchemaValidationError):
+            validate_with_jsonschema(output, load_schema())
+
+
+@pytest.mark.parametrize("version", ["1.2.0", schema.SCHEMA_VERSION])
+def test_validation_entry_points_accept_supported_versions(
+    tmp_path: Path, version: str
+) -> None:
+    """Saved results and in-memory results use the schema they declare."""
+    output = _valid_standardized_output(
+        {"name": "inference_time", "value": 1.0, "unit": "ms"}
+    )
+    output["schema_version"] = version
+    assert collect_validation_errors(output) == []
+    validate_standardized_output(output)
+    path = tmp_path / "result.json"
+    path.write_text(json.dumps(output), encoding="utf-8")
+    validate_output_file(path)

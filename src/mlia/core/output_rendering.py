@@ -61,12 +61,11 @@ def check_report(output: dict[str, Any], output_dir: Path, *, width: int = 78) -
             boxed=boxed_results,
         )
         status = str(result.get("status") or "unknown")
-        status_text = "Completed" if status == "ok" else status.capitalize()
-        if result.get("warnings") or any(
-            isinstance(item, dict) and item.get("severity") == "warning"
-            for item in (result.get("advice") or [])
-        ):
-            status_text += " with warnings"
+        if status == "ok":
+            status_text = "Compatible" if kind == "compatibility" else "Completed"
+        else:
+            status_text = status.capitalize()
+        status_text = result.get("status_summary") or status_text
         _line(report, "Status", status_text, width=width, boxed=boxed_results)
         producer = str(result.get("producer") or "Unknown")
         for backend in backends:
@@ -199,21 +198,6 @@ def _findings(report: Text, result: dict[str, Any], kind: str) -> None:
                     if check.get("entity_id"):
                         ids.add(str(check["entity_id"]))
 
-    if kind == "compatibility" and result.get("status") == "ok":
-        entities = result.get("entities")
-        source = (
-            [
-                item
-                for item in entities
-                if isinstance(item, dict) and item.get("kind") == "source_operator"
-            ]
-            if isinstance(entities, list)
-            else []
-        )
-        if source and all(item.get("placement") == "NPU" for item in source):
-            report.append(
-                f"\n\nAll {len(source)} source operators are placed on the NPU."
-            )
     if not findings:
         if result.get("status") in ("failed", "partial", "incompatible"):
             report.append("\n\nNo further reason or recovery advice was reported.")

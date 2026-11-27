@@ -29,18 +29,25 @@ class SchemaValidationError(Exception):
     """Raised when schema validation fails."""
 
 
-def load_schema() -> dict[str, Any]:
+def load_schema(version: str | None = None) -> dict[str, Any]:
     """Load the standardized output JSON schema."""
     schema_path = (
         Path(__file__).parent.parent
         / "resources"
-        / f"mlia-output-schema-{schema.SCHEMA_VERSION}.json"
+        / f"mlia-output-schema-{version or schema.SCHEMA_VERSION}.json"
     )
     if not schema_path.exists():
         raise FileNotFoundError(f"Schema file not found: {schema_path}")
 
     with open(schema_path, encoding="utf-8") as schema_file:
         return json.load(schema_file)  # type: ignore[no-any-return]
+
+
+def _schema_for_output(data: dict[str, Any]) -> dict[str, Any]:
+    """Select the bundled schema for current results or saved 1.2 results."""
+    return (
+        load_schema("1.2.0") if data.get("schema_version") == "1.2.0" else load_schema()
+    )
 
 
 def load_target_schema() -> dict[str, Any]:
@@ -155,7 +162,7 @@ def collect_validation_errors(
         None,
     )
     try:
-        output_schema = load_schema()
+        output_schema = _schema_for_output(data)
         errors.extend(_collect_jsonschema_errors(data, output_schema))
     except Exception as err:
         if isinstance(validation_error, type) and isinstance(err, validation_error):
@@ -522,6 +529,18 @@ def _validate_results(data: dict[str, Any], errors: list[str]) -> None:
     for result_index, result in enumerate(data["results"]):
         if not isinstance(result, dict):
             continue
+        if "status_summary" in result:
+            summary = result["status_summary"]
+            if (
+                not isinstance(summary, str)
+                or not summary.strip()
+                or "\n" in summary
+                or "\r" in summary
+            ):
+                errors.append(
+                    f"results[{result_index}].status_summary must be "
+                    "a nonempty single-line string"
+                )
         backend_kind_ids, allowed_kind_edges = _validate_entity_kinds(
             result, result_index, errors
         )
@@ -686,7 +705,7 @@ def validate_standardized_output(
                 UserWarning,
             )
         else:
-            output_schema = load_schema()
+            output_schema = _schema_for_output(data)
             validate_with_jsonschema(data, output_schema)
 
 

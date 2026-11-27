@@ -165,6 +165,13 @@ Every backend-defined entity kind used by an entity must be declared in
 well-known kinds do not require result-level declarations; core already defines
 relationships for well-known `code_stack` and derived `code_line` entities.
 
+### Schema 1.3.0
+
+The optional `status_summary` supplies the result header text; without it, MLIA
+shows a generic status label. Warnings and advice appear separately in the
+findings. Use `status`, rather than display text, for programmatic decisions.
+Schema 1.2.0 results remain supported.
+
 ## How to read a result
 
 A recommended reading order is:

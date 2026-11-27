@@ -17,7 +17,7 @@ from uuid import uuid4
 from mlia.utils.boundaries.filesystem import write_user_output_text
 
 # Schema version for standardized output
-SCHEMA_VERSION = "1.2.0"
+SCHEMA_VERSION = "1.3.0"
 
 # Target schema version
 TARGET_SCHEMA_VERSION = "1.0.0"
@@ -843,6 +843,7 @@ class Result:  # pylint: disable=too-many-instance-attributes
     entities: list[Entity] = field(default_factory=list)
     entity_kinds: list[EntityKind] = field(default_factory=list)
     advice: list[Advice] = field(default_factory=list)
+    status_summary: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
@@ -851,6 +852,8 @@ class Result:  # pylint: disable=too-many-instance-attributes
             "status": self.status.value,
             "producer": self.producer,
         }
+        if self.status_summary is not None:
+            result["status_summary"] = self.status_summary
         if self.warnings:
             result["warnings"] = self.warnings
         if self.errors:
@@ -889,6 +892,7 @@ class Result:  # pylint: disable=too-many-instance-attributes
                 EntityKind.from_dict(k) for k in data.get("entity_kinds", [])
             ],
             advice=[Advice.from_dict(a) for a in data.get("advice", [])],
+            status_summary=data.get("status_summary"),
         )
 
 
